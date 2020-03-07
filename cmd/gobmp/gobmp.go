@@ -1,14 +1,13 @@
 package main
 
 import (
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"os/signal"
-
-	"github.com/google/nftables/binaryutil"
 
 	"github.com/golang/glog"
 )
@@ -94,7 +93,7 @@ func parser(queue chan []byte, stop chan struct{}) {
 func parsingWorker(b []byte) {
 	glog.V(6).Infof("parser received buffer: %+v length: %d", b, len(b))
 	// Recovering common header first
-	ch, err := unmarshalCommonHeader(b[0:7])
+	ch, err := UnmarshalCommonHeader(b[0:7])
 	if err != nil {
 		glog.Errorf("fail to recover BMP message Common Header with error: %+v", err)
 		return
@@ -111,7 +110,7 @@ func parsingWorker(b []byte) {
 		// *  Type = 3: Peer Up Notification
 	case 4:
 		// *  Type = 4: Initiation Message
-		im, err := unmarshalInitiationMessage(b[7:ch.MessageLength])
+		im, err := UnmarshalInitiationMessage(b[7:ch.MessageLength])
 		if err != nil {
 			glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 			return
@@ -129,7 +128,7 @@ func main() {
 	_ = flag.Set("logtostderr", "true")
 	incoming, err := net.Listen("tcp", fmt.Sprintf(":%d", srcPort))
 	if err != nil {
-		glog.Errorf("fail to setup listener on port %d with error: %+v", err)
+		glog.Errorf("fail to setup listener on port %d with error: %+v", srcPort, err)
 		os.Exit(1)
 	}
 
@@ -163,13 +162,13 @@ type BMPCommonHeader struct {
 	MessageType   byte
 }
 
-func unmarshalCommonHeader(b []byte) (*BMPCommonHeader, error) {
+func UnmarshalCommonHeader(b []byte) (*BMPCommonHeader, error) {
 	ch := &BMPCommonHeader{}
 	if b[0] != 3 {
 		return nil, fmt.Errorf("invalid version in common header, expected 3 found %d", b[0])
 	}
 	ch.Version = b[0]
-	ch.MessageLength = int32(binaryutil.BigEndian.Uint32(b[1:5]))
+	ch.MessageLength = int32(binary.BigEndian.Uint32(b[1:5]))
 	ch.MessageType = b[5]
 	// *  Type = 0: Route Monitoring
 	// *  Type = 1: Statistics Report
@@ -205,9 +204,32 @@ type BMPInitiationMessage struct {
 	TLV []BMPInformationalTLV
 }
 
-func unmarshalInitiationMessage(b []byte) (*BMPInitiationMessage, error) {
+func UnmarshalInitiationMessage(b []byte) (*BMPInitiationMessage, error) {
 	im := &BMPInitiationMessage{
 		TLV: make([]BMPInformationalTLV, 0),
+	}
+	for i := 0; i < len(b); {
+		// Extracting TLV type 2 bytes
+		t := int16(binary.BigEndian.Uint16(b[i : i+2]))
+		switch t {
+		case 0:
+		case 1:
+		case 2:
+		default:
+			return nil, fmt.Errorf("invalid tlv type, expected between 0 and 2 found %d", t)
+		}
+		// Extracting TLV length
+		l := int16(binary.BigEndian.Uint16(b[i+2 : i+4]))
+		if l > int16(len(b)-(i+4)) {
+			return nil, fmt.Errorf("invalid tlv length %d", l)
+		}
+		v := b[i+4 : i+4+int(l)]
+		im.TLV = append(im.TLV, BMPInformationalTLV{
+			InformationType:   t,
+			InformationLength: l,
+			Information:       v,
+		})
+		i += 4 + int(l)
 	}
 
 	return im, nil

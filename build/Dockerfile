@@ -1,4 +1,4 @@
 FROM scratch
 
-COPY ./cmd/bin/openbmpsr /openbmpsr
-ENTRYPOINT ["/openbmpsr"]
+COPY ./cmd/bin/gobmp /gobmp
+ENTRYPOINT ["/gobmp"]

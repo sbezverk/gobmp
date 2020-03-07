@@ -1,7 +1,7 @@
 REGISTRY_NAME?=docker.io/sbezverk
 IMAGE_VERSION?=0.0.0
 
-.PHONY: all openbmpsr container push clean test
+.PHONY: all gobmp container push clean test
 
 ifdef V
 TESTARGS = -v -args -alsologtostderr -v 5
@@ -9,17 +9,17 @@ else
 TESTARGS =
 endif
 
-all: openbmpsr
+all: gobmp
 
-openbmpsr:
+gobmp:
 	mkdir -p ./cmd/bin
-	CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -ldflags '-extldflags "-static"' -o ./cmd/bin/openbmpsr ./cmd/openbmpsr/openbmpsr.go
+	CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -ldflags '-extldflags "-static"' -o ./cmd/bin/gobmp ./cmd/gobmp/gobmp.go
 
-container: openbmpsr
-	docker build -t $(REGISTRY_NAME)/openbmpsr:$(IMAGE_VERSION) -f ./build/Dockerfile .
+container: gobmp
+	docker build -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile .
 
 push: container
-	docker push $(REGISTRY_NAME)/openbmpsr:$(IMAGE_VERSION)
+	docker push $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION)
 
 clean:
 	rm -rf bin
