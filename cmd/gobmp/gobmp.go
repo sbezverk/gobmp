@@ -92,34 +92,44 @@ func parser(queue chan []byte, stop chan struct{}) {
 
 func parsingWorker(b []byte) {
 	glog.V(6).Infof("parser received buffer: %+v length: %d", b, len(b))
-	// Recovering common header first
-	ch, err := UnmarshalCommonHeader(b[0:7])
-	if err != nil {
-		glog.Errorf("fail to recover BMP message Common Header with error: %+v", err)
-		return
-	}
-	glog.V(6).Infof("recovered common header, version: %d message length: %d message type: %d", ch.Version, ch.MessageLength, ch.MessageType)
-	switch ch.MessageType {
-	case 0:
-		// *  Type = 0: Route Monitoring
-	case 1:
-		// *  Type = 1: Statistics Report
-	case 2:
-		// *  Type = 2: Peer Down Notification
-	case 3:
-		// *  Type = 3: Peer Up Notification
-	case 4:
-		// *  Type = 4: Initiation Message
-		im, err := UnmarshalInitiationMessage(b[7:ch.MessageLength])
+	// Loop through all found Common Headers in the slice and process them
+	for i := 0; i < len(b); {
+		// Recovering common header first
+		ch, err := UnmarshalCommonHeader(b[i : i+6])
 		if err != nil {
-			glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
+			glog.Errorf("fail to recover BMP message Common Header with error: %+v", err)
 			return
 		}
-		glog.V(6).Infof("recovered Initiation message %+v", *im)
-	case 5:
-		// *  Type = 5: Termination Message
-	case 6:
-		// *  Type = 6: Route Mirroring Message
+		glog.V(5).Infof("recovered common header, version: %d message length: %d message type: %d", ch.Version, ch.MessageLength, ch.MessageType)
+		switch ch.MessageType {
+		case 0:
+			// *  Type = 0: Route Monitoring
+			glog.V(5).Infof("found Route Monitoring")
+		case 1:
+			// *  Type = 1: Statistics Report
+			glog.V(5).Infof("found Statistics Report")
+		case 2:
+			// *  Type = 2: Peer Down Notification
+			glog.V(5).Infof("found Peer Down Notification message")
+		case 3:
+			// *  Type = 3: Peer Up Notification
+			glog.V(5).Infof("found Peer Up Notification message")
+		case 4:
+			// *  Type = 4: Initiation Message
+			glog.V(5).Infof("found Initiation message")
+			_, err := UnmarshalInitiationMessage(b[i+6 : i+int(ch.MessageLength)])
+			if err != nil {
+				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
+				return
+			}
+		case 5:
+			// *  Type = 5: Termination Message
+			glog.V(5).Infof("found Termination message")
+		case 6:
+			// *  Type = 6: Route Mirroring Message
+			glog.V(5).Infof("found Route Mirroring message")
+		}
+		i += int(ch.MessageLength)
 	}
 }
 
