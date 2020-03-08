@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -100,7 +101,19 @@ func parsingWorker(b []byte) {
 			glog.Errorf("fail to recover BMP message Common Header with error: %+v", err)
 			return
 		}
+		i += 6
 		glog.V(5).Infof("recovered common header, version: %d message length: %d message type: %d", ch.Version, ch.MessageLength, ch.MessageType)
+		// TODO Figure out reliable way to detect if Per-Peer Header exist
+		if ch.MessageLength > 64 {
+			pph, err := UnmarshalPerPeerHeader(b[i : i+int(ch.MessageLength-6)])
+			if err != nil {
+				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
+				return
+			}
+			glog.V(5).Infof("recovered per peer heder %+v", *pph)
+			// Move buffer pointer for the length of Per-Peer header
+			i += 42
+		}
 		switch ch.MessageType {
 		case 0:
 			// *  Type = 0: Route Monitoring
@@ -114,10 +127,17 @@ func parsingWorker(b []byte) {
 		case 3:
 			// *  Type = 3: Peer Up Notification
 			glog.V(5).Infof("found Peer Up Notification message")
+			pu, err := UnmarshalPeerUpMessage(b[i : i+int(ch.MessageLength-6-42)])
+			if err != nil {
+				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
+				return
+			}
+			glog.V(5).Infof("recovered per peer up message %+v", *pu)
+			i += int(ch.MessageLength) - 6 - 42
 		case 4:
 			// *  Type = 4: Initiation Message
 			glog.V(5).Infof("found Initiation message")
-			_, err := UnmarshalInitiationMessage(b[i+6 : i+int(ch.MessageLength)])
+			_, err := UnmarshalInitiationMessage(b[i : i+int(ch.MessageLength-6)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
@@ -129,7 +149,7 @@ func parsingWorker(b []byte) {
 			// *  Type = 6: Route Mirroring Message
 			glog.V(5).Infof("found Route Mirroring message")
 		}
-		i += int(ch.MessageLength)
+		i += int(ch.MessageLength - 6)
 	}
 }
 
@@ -172,6 +192,7 @@ type BMPCommonHeader struct {
 	MessageType   byte
 }
 
+// UnmarshalCommonHeader processes Common Header and returns BMPCommonHeader object
 func UnmarshalCommonHeader(b []byte) (*BMPCommonHeader, error) {
 	ch := &BMPCommonHeader{}
 	if b[0] != 3 {
@@ -214,6 +235,7 @@ type BMPInitiationMessage struct {
 	TLV []BMPInformationalTLV
 }
 
+// UnmarshalInitiationMessage processes Initiation Message and returns BMPInitiationMessage object
 func UnmarshalInitiationMessage(b []byte) (*BMPInitiationMessage, error) {
 	im := &BMPInitiationMessage{
 		TLV: make([]BMPInformationalTLV, 0),
@@ -243,4 +265,118 @@ func UnmarshalInitiationMessage(b []byte) (*BMPInitiationMessage, error) {
 	}
 
 	return im, nil
+}
+
+// UnmarshalTLV builds a slice of Informational TLVs
+func UnmarshalTLV(b []byte) ([]BMPInformationalTLV, error) {
+	tlvs := make([]BMPInformationalTLV, 0)
+	for i := 0; i < len(b); {
+		// Extracting TLV type 2 bytes
+		t := int16(binary.BigEndian.Uint16(b[i : i+2]))
+		// Extracting TLV length
+		l := int16(binary.BigEndian.Uint16(b[i+2 : i+4]))
+		if l > int16(len(b)-(i+4)) {
+			return nil, fmt.Errorf("invalid tlv length %d", l)
+		}
+		v := b[i+4 : i+4+int(l)]
+		tlvs = append(tlvs, BMPInformationalTLV{
+			InformationType:   t,
+			InformationLength: l,
+			Information:       v,
+		})
+		i += 4 + int(l)
+	}
+
+	return tlvs, nil
+}
+
+// BMPPerPeerHeader defines BMP Per-Peer Header per rfc7854
+type BMPPerPeerHeader struct {
+	PeerType          byte
+	FlagV             bool
+	FlagL             bool
+	FlagA             bool
+	PeerDistinguisher []byte
+	PeerAddress       []byte
+	PeerAS            int32
+	PeerBGPID         []byte
+	PeerTimestamp     time.Duration
+}
+
+// UnmarshalPerPeerHeader processes Per-Peer header
+func UnmarshalPerPeerHeader(b []byte) (*BMPPerPeerHeader, error) {
+	pph := &BMPPerPeerHeader{
+		PeerDistinguisher: make([]byte, 8),
+		PeerAddress:       make([]byte, 14),
+		PeerBGPID:         make([]byte, 4),
+	}
+	// Extracting Peer type
+	// *  Peer Type = 0: Global Instance Peer
+	// *  Peer Type = 1: RD Instance Peer
+	// *  Peer Type = 2: Local Instance Peer
+	switch b[0] {
+	case 0:
+	case 1:
+	case 2:
+	default:
+		return nil, fmt.Errorf("invalid peer type, expected between 0 and 2 found %d", b[0])
+	}
+	pph.PeerType = b[0]
+	pph.FlagV = b[1]&0x80 == 0x80
+	pph.FlagL = b[1]&0x40 == 0x40
+	pph.FlagA = b[1]&0x20 == 0x20
+	// RD 8 bytes
+	copy(pph.PeerDistinguisher, b[4:12])
+	// Peer Address 16 bytes
+	copy(pph.PeerAddress, b[12:26])
+	pph.PeerAS = int32(binary.BigEndian.Uint32(b[26:30]))
+	copy(pph.PeerBGPID, b[30:34])
+	pph.PeerTimestamp = time.Duration(binary.BigEndian.Uint64(b[34:42]))
+
+	return pph, nil
+}
+
+// BMPPeerUpMessage defines BMPPeerUpMessage per rfc7854
+type BMPPeerUpMessage struct {
+	LocalAddress []byte
+	LocalPort    int16
+	RemotePort   int16
+	SentOpen     []byte
+	ReceivedOpen []byte
+	Information  []BMPInformationalTLV
+}
+
+// UnmarshalPeerUpMessage processes Peer Up message and returns BMPPeerUpMessage object
+func UnmarshalPeerUpMessage(b []byte) (*BMPPeerUpMessage, error) {
+	pu := &BMPPeerUpMessage{
+		LocalAddress: make([]byte, 16),
+		//		SentOpen:     make([]byte, 16),
+		//		ReceivedOpen: make([]byte, 16),
+		Information: make([]BMPInformationalTLV, 0),
+	}
+	p := 0
+	copy(pu.LocalAddress, b[:16])
+	p += 16
+	pu.LocalPort = int16(binary.BigEndian.Uint16(b[p : p+2]))
+	p += 2
+	pu.RemotePort = int16(binary.BigEndian.Uint16(b[p : p+2]))
+	p += 2
+	l1 := int16(binary.BigEndian.Uint16(b[p+16 : p+16+2]))
+	pu.SentOpen = make([]byte, l1)
+	copy(pu.SentOpen, b[p:p+int(l1)])
+	p += int(l1)
+	l2 := int16(binary.BigEndian.Uint16(b[p+16 : p+16+2]))
+	pu.ReceivedOpen = make([]byte, l2)
+	copy(pu.ReceivedOpen, b[p:p+int(l2)])
+	p += int(l2)
+	if len(b) > int(p) {
+		// Since pointer p does not point to the end of buffer,
+		// then processing Informational TLVs
+		tlvs, err := UnmarshalTLV(b[p : len(b)-int(p)])
+		if err != nil {
+			return nil, err
+		}
+		pu.Information = tlvs
+	}
+	return pu, nil
 }
