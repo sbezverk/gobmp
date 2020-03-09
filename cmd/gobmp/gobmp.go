@@ -92,52 +92,57 @@ func parser(queue chan []byte, stop chan struct{}) {
 }
 
 func parsingWorker(b []byte) {
-	glog.V(6).Infof("parser received buffer: %+v length: %d", b, len(b))
+	perPerHeaderLen := 0
+	glog.V(6).Infof("parser received buffer of length: %d", len(b))
 	// Loop through all found Common Headers in the slice and process them
-	for i := 0; i < len(b); {
+	for p := 0; p < len(b); {
 		// Recovering common header first
-		ch, err := UnmarshalCommonHeader(b[i : i+6])
+		ch, err := UnmarshalCommonHeader(b[p : p+6])
 		if err != nil {
 			glog.Errorf("fail to recover BMP message Common Header with error: %+v", err)
 			return
 		}
-		i += 6
+		p += 6
 		glog.V(5).Infof("recovered common header, version: %d message length: %d message type: %d", ch.Version, ch.MessageLength, ch.MessageType)
 		// TODO Figure out reliable way to detect if Per-Peer Header exist
 		if ch.MessageLength > 64 {
-			pph, err := UnmarshalPerPeerHeader(b[i : i+int(ch.MessageLength-6)])
+			pph, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("recovered per peer heder %+v", *pph)
+			glog.V(5).Infof("recovered per peer header %+v", *pph)
 			// Move buffer pointer for the length of Per-Peer header
-			i += 42
+			perPerHeaderLen = 42
 		}
 		switch ch.MessageType {
 		case 0:
 			// *  Type = 0: Route Monitoring
 			glog.V(5).Infof("found Route Monitoring")
+			glog.V(6).Infof("Message: %+v", b[p:len(b)])
 		case 1:
 			// *  Type = 1: Statistics Report
 			glog.V(5).Infof("found Statistics Report")
+			glog.V(6).Infof("Message: %+v", b[p:len(b)])
 		case 2:
 			// *  Type = 2: Peer Down Notification
-			glog.V(5).Infof("found Peer Down Notification message")
+			glog.V(5).Infof("found Peer Down message")
+			glog.V(6).Infof("Message: %+v", b[p:len(b)])
 		case 3:
 			// *  Type = 3: Peer Up Notification
-			glog.V(5).Infof("found Peer Up Notification message")
-			pu, err := UnmarshalPeerUpMessage(b[i : i+int(ch.MessageLength-6-42)])
+			glog.V(5).Infof("found Peer Up message")
+			pu, err := UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+(int(ch.MessageLength)-6-perPerHeaderLen)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
 			}
+			p += perPerHeaderLen
+			perPerHeaderLen = 0
 			glog.V(5).Infof("recovered per peer up message %+v", *pu)
-			i += int(ch.MessageLength) - 6 - 42
 		case 4:
 			// *  Type = 4: Initiation Message
 			glog.V(5).Infof("found Initiation message")
-			_, err := UnmarshalInitiationMessage(b[i : i+int(ch.MessageLength-6)])
+			_, err := UnmarshalInitiationMessage(b[p : p+(int(ch.MessageLength)-6)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
@@ -149,7 +154,7 @@ func parsingWorker(b []byte) {
 			// *  Type = 6: Route Mirroring Message
 			glog.V(5).Infof("found Route Mirroring message")
 		}
-		i += int(ch.MessageLength - 6)
+		p += (int(ch.MessageLength) - 6)
 	}
 }
 
@@ -223,8 +228,8 @@ func UnmarshalCommonHeader(b []byte) (*BMPCommonHeader, error) {
 	return ch, nil
 }
 
-// BMPInformationalTLV defines Informational TLV per rfc7854
-type BMPInformationalTLV struct {
+// InformationalTLV defines Informational TLV per rfc7854
+type InformationalTLV struct {
 	InformationType   int16
 	InformationLength int16
 	Information       []byte
@@ -232,13 +237,13 @@ type BMPInformationalTLV struct {
 
 // BMPInitiationMessage defines BMP Initiation Message per rfc7854
 type BMPInitiationMessage struct {
-	TLV []BMPInformationalTLV
+	TLV []InformationalTLV
 }
 
 // UnmarshalInitiationMessage processes Initiation Message and returns BMPInitiationMessage object
 func UnmarshalInitiationMessage(b []byte) (*BMPInitiationMessage, error) {
 	im := &BMPInitiationMessage{
-		TLV: make([]BMPInformationalTLV, 0),
+		TLV: make([]InformationalTLV, 0),
 	}
 	for i := 0; i < len(b); {
 		// Extracting TLV type 2 bytes
@@ -256,7 +261,7 @@ func UnmarshalInitiationMessage(b []byte) (*BMPInitiationMessage, error) {
 			return nil, fmt.Errorf("invalid tlv length %d", l)
 		}
 		v := b[i+4 : i+4+int(l)]
-		im.TLV = append(im.TLV, BMPInformationalTLV{
+		im.TLV = append(im.TLV, InformationalTLV{
 			InformationType:   t,
 			InformationLength: l,
 			Information:       v,
@@ -268,8 +273,8 @@ func UnmarshalInitiationMessage(b []byte) (*BMPInitiationMessage, error) {
 }
 
 // UnmarshalTLV builds a slice of Informational TLVs
-func UnmarshalTLV(b []byte) ([]BMPInformationalTLV, error) {
-	tlvs := make([]BMPInformationalTLV, 0)
+func UnmarshalTLV(b []byte) ([]InformationalTLV, error) {
+	tlvs := make([]InformationalTLV, 0)
 	for i := 0; i < len(b); {
 		// Extracting TLV type 2 bytes
 		t := int16(binary.BigEndian.Uint16(b[i : i+2]))
@@ -279,7 +284,7 @@ func UnmarshalTLV(b []byte) ([]BMPInformationalTLV, error) {
 			return nil, fmt.Errorf("invalid tlv length %d", l)
 		}
 		v := b[i+4 : i+4+int(l)]
-		tlvs = append(tlvs, BMPInformationalTLV{
+		tlvs = append(tlvs, InformationalTLV{
 			InformationType:   t,
 			InformationLength: l,
 			Information:       v,
@@ -341,18 +346,19 @@ type BMPPeerUpMessage struct {
 	LocalAddress []byte
 	LocalPort    int16
 	RemotePort   int16
-	SentOpen     []byte
-	ReceivedOpen []byte
-	Information  []BMPInformationalTLV
+	SentOpen     *BGPOpenMessage
+	ReceivedOpen *BGPOpenMessage
+	Information  []InformationalTLV
 }
 
 // UnmarshalPeerUpMessage processes Peer Up message and returns BMPPeerUpMessage object
 func UnmarshalPeerUpMessage(b []byte) (*BMPPeerUpMessage, error) {
+	var err error
 	pu := &BMPPeerUpMessage{
 		LocalAddress: make([]byte, 16),
-		//		SentOpen:     make([]byte, 16),
-		//		ReceivedOpen: make([]byte, 16),
-		Information: make([]BMPInformationalTLV, 0),
+		SentOpen:     &BGPOpenMessage{},
+		ReceivedOpen: &BGPOpenMessage{},
+		Information:  make([]InformationalTLV, 0),
 	}
 	p := 0
 	copy(pu.LocalAddress, b[:16])
@@ -361,14 +367,24 @@ func UnmarshalPeerUpMessage(b []byte) (*BMPPeerUpMessage, error) {
 	p += 2
 	pu.RemotePort = int16(binary.BigEndian.Uint16(b[p : p+2]))
 	p += 2
-	l1 := int16(binary.BigEndian.Uint16(b[p+16 : p+16+2]))
-	pu.SentOpen = make([]byte, l1)
-	copy(pu.SentOpen, b[p:p+int(l1)])
+	// Skip first marker 16 bytes
+	p += 16
+	l1 := int16(binary.BigEndian.Uint16(b[p : p+2]))
+	pu.SentOpen, err = UnmarshalBGPOpenMessage(b[p : p+int(l1)])
+	if err != nil {
+		return nil, err
+	}
+	// Moving pointer to the next marker
 	p += int(l1)
-	l2 := int16(binary.BigEndian.Uint16(b[p+16 : p+16+2]))
-	pu.ReceivedOpen = make([]byte, l2)
-	copy(pu.ReceivedOpen, b[p:p+int(l2)])
+	// Skip second marker
+	p += 16
+	l2 := int16(binary.BigEndian.Uint16(b[p : p+2]))
+	pu.SentOpen, err = UnmarshalBGPOpenMessage(b[p : p+int(l2)])
+	if err != nil {
+		return nil, err
+	}
 	p += int(l2)
+	// Last part is optional Informational TLVs
 	if len(b) > int(p) {
 		// Since pointer p does not point to the end of buffer,
 		// then processing Informational TLVs
@@ -379,4 +395,78 @@ func UnmarshalPeerUpMessage(b []byte) (*BMPPeerUpMessage, error) {
 		pu.Information = tlvs
 	}
 	return pu, nil
+}
+
+// BGPOpenMessage defines BGP Open Message structure
+type BGPOpenMessage struct {
+	Length             int16
+	Type               byte
+	Version            byte
+	MyAS               uint16
+	HoldTime           int16
+	BGPID              []byte
+	OptParamLen        byte
+	OptionalParameters []BGPInformationalTLV
+}
+
+// BGPInformationalTLV defines BGP informational TLV object
+type BGPInformationalTLV struct {
+	Type   byte
+	Length byte
+	Value  []byte
+}
+
+// UnmarshalBGPOpenMessage validate information passed in byte slice and returns BGPOpenMessage object
+func UnmarshalBGPOpenMessage(b []byte) (*BGPOpenMessage, error) {
+	var err error
+	p := 0
+	m := BGPOpenMessage{
+		BGPID: make([]byte, 4),
+	}
+	m.Length = int16(binary.BigEndian.Uint16(b[p : p+2]))
+	p += 2
+	if b[p] != 1 {
+		return nil, fmt.Errorf("invalid message type %d for BGP Open Message", b[p])
+	}
+	m.Type = b[p]
+	p++
+	if b[p] != 4 {
+		return nil, fmt.Errorf("invalid message version %d for BGP Open Message", b[p])
+	}
+	m.Version = b[p]
+	p++
+	m.MyAS = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	m.HoldTime = int16(binary.BigEndian.Uint16(b[p : p+2]))
+	p += 2
+	copy(m.BGPID, b[p:p+4])
+	p += 4
+	m.OptParamLen = b[p]
+	p++
+	if m.OptParamLen != 0 {
+		m.OptionalParameters, err = UnmarshalBGPTLV(b[p : p+int(m.OptParamLen)])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &m, nil
+}
+
+// UnmarshalBGPTLV builds a slice of Informational TLVs
+func UnmarshalBGPTLV(b []byte) ([]BGPInformationalTLV, error) {
+	tlvs := make([]BGPInformationalTLV, 0)
+	for p := 0; p < len(b); {
+		t := b[p]
+		l := b[p+1]
+		v := b[p+2 : p+2+int(l)]
+		tlvs = append(tlvs, BGPInformationalTLV{
+			Type:   t,
+			Length: l,
+			Value:  v,
+		})
+		p += 2 + int(l)
+	}
+
+	return tlvs, nil
 }
