@@ -48,8 +48,7 @@ func interceptor(client net.Conn, dstPort int, queue chan []byte) {
 	glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
 	// b := make([]byte, 4096)
 	var n int
-	var b []byte
-	b = make([]byte, 4096)
+	b := make([]byte, 4096)
 	defer glog.V(5).Infof("all done with client %+v and server %+v", client.RemoteAddr(), server.RemoteAddr())
 	for {
 		n, err = client.Read(b)
@@ -71,7 +70,6 @@ func interceptor(client net.Conn, dstPort int, queue chan []byte) {
 		glog.V(5).Infof("write to server %+v %d bytes", server.RemoteAddr(), n)
 		// Sending buffer for parsing
 		queue <- b[:n]
-		b = make([]byte, 4096)
 	}
 }
 
@@ -89,7 +87,8 @@ func parser(queue chan []byte, stop chan struct{}) {
 
 func parsingWorker(b []byte) {
 	perPerHeaderLen := 0
-	glog.V(6).Infof("parser received buffer of length: %d", len(b))
+	glog.V(5).Infof("parser received buffer of length: %d", len(b))
+	glog.V(6).Infof("><SB>%+v<SB><", b)
 	// Loop through all found Common Headers in the slice and process them
 	for p := 0; p < len(b); {
 		// Recovering common header first
