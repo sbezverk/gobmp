@@ -131,7 +131,7 @@ func parsingWorker(b []byte) {
 		case 3:
 			// *  Type = 3: Peer Up Notification
 			glog.V(5).Infof("found Peer Up message")
-			pu, err := UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+(int(ch.MessageLength)-6-perPerHeaderLen)])
+			pu, err := UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-6])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
@@ -139,6 +139,8 @@ func parsingWorker(b []byte) {
 			p += perPerHeaderLen
 			perPerHeaderLen = 0
 			glog.V(5).Infof("recovered per peer up message %+v", *pu)
+			glog.V(6).Infof("Sent Open %+v", *pu.SentOpen)
+			glog.V(6).Infof("Received Open %+v", *pu.ReceivedOpen)
 		case 4:
 			// *  Type = 4: Initiation Message
 			glog.V(5).Infof("found Initiation message")
@@ -344,8 +346,8 @@ func UnmarshalPerPeerHeader(b []byte) (*BMPPerPeerHeader, error) {
 // BMPPeerUpMessage defines BMPPeerUpMessage per rfc7854
 type BMPPeerUpMessage struct {
 	LocalAddress []byte
-	LocalPort    int16
-	RemotePort   int16
+	LocalPort    uint16
+	RemotePort   uint16
 	SentOpen     *BGPOpenMessage
 	ReceivedOpen *BGPOpenMessage
 	Information  []InformationalTLV
@@ -363,27 +365,27 @@ func UnmarshalPeerUpMessage(b []byte) (*BMPPeerUpMessage, error) {
 	p := 0
 	copy(pu.LocalAddress, b[:16])
 	p += 16
-	pu.LocalPort = int16(binary.BigEndian.Uint16(b[p : p+2]))
+	pu.LocalPort = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	pu.RemotePort = int16(binary.BigEndian.Uint16(b[p : p+2]))
+	pu.RemotePort = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	// Skip first marker 16 bytes
 	p += 16
 	l1 := int16(binary.BigEndian.Uint16(b[p : p+2]))
-	pu.SentOpen, err = UnmarshalBGPOpenMessage(b[p : p+int(l1)])
+	pu.SentOpen, err = UnmarshalBGPOpenMessage(b[p : p+int(l1-16)])
 	if err != nil {
 		return nil, err
 	}
 	// Moving pointer to the next marker
-	p += int(l1)
+	p += int(l1) - 16
 	// Skip second marker
 	p += 16
 	l2 := int16(binary.BigEndian.Uint16(b[p : p+2]))
-	pu.SentOpen, err = UnmarshalBGPOpenMessage(b[p : p+int(l2)])
+	pu.ReceivedOpen, err = UnmarshalBGPOpenMessage(b[p : p+int(l2-16)])
 	if err != nil {
 		return nil, err
 	}
-	p += int(l2)
+	p += int(l2) - 16
 	// Last part is optional Informational TLVs
 	if len(b) > int(p) {
 		// Since pointer p does not point to the end of buffer,

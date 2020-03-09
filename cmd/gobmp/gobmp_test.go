@@ -4,8 +4,6 @@ import (
 	"flag"
 	"reflect"
 	"testing"
-
-	"github.com/golang/glog"
 )
 
 func TestMain(m *testing.M) {
@@ -193,7 +191,6 @@ func TestUnmarshalBGPOpenMessage(t *testing.T) {
 					t.Fatal("expected to fail but succeeded")
 				}
 			}
-			glog.V(6).Infof("%+v", message)
 			if !reflect.DeepEqual(message, tt.expect) {
 				t.Error("unmarshaled and expected messages do not much")
 			}
