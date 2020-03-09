@@ -46,37 +46,32 @@ func interceptor(client net.Conn, dstPort int, queue chan []byte) {
 	}
 	defer server.Close()
 	glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
-	b := make([]byte, 4096)
+	// b := make([]byte, 4096)
 	var n int
-	defer glog.V(5).Infof("all done with client %+v and server %+v error: %+v", client.RemoteAddr(), server.RemoteAddr(), err)
+	var b []byte
+	b = make([]byte, 4096)
+	defer glog.V(5).Infof("all done with client %+v and server %+v", client.RemoteAddr(), server.RemoteAddr())
 	for {
 		n, err = client.Read(b)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
+		// glog.V(5).Infof("read from client %+v %d bytes error: %+v", client.RemoteAddr(), n, err)
+		if err != nil && err != io.ErrShortBuffer {
 			glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
-			continue
+			return
 		}
+		// glog.V(5).Infof("read from client %+v %d bytes", client.RemoteAddr(), n)
 		if n == 0 {
 			continue
 		}
 		glog.V(5).Infof("read from client %+v %d bytes", client.RemoteAddr(), n)
 		n, err = server.Write(b[:n])
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
 			glog.Errorf("fail to write to server %+v with error: %+v", server.RemoteAddr(), err)
-			continue
+			return
 		}
 		glog.V(5).Infof("write to server %+v %d bytes", server.RemoteAddr(), n)
-		// Never block main message loop
-		go func(b []byte) {
-			queue <- b
-		}(b[:n])
-		// Cleanning up
-		b = b[:0]
+		// Sending buffer for parsing
+		queue <- b[:n]
+		b = make([]byte, 4096)
 	}
 }
 
@@ -87,6 +82,7 @@ func parser(queue chan []byte, stop chan struct{}) {
 			go parsingWorker(b)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
+		default:
 		}
 	}
 }
@@ -137,7 +133,6 @@ func parsingWorker(b []byte) {
 				return
 			}
 			p += perPerHeaderLen
-			perPerHeaderLen = 0
 			glog.V(5).Infof("recovered per peer up message %+v", *pu)
 			glog.V(6).Infof("Sent Open %+v", *pu.SentOpen)
 			glog.V(6).Infof("Received Open %+v", *pu.ReceivedOpen)
@@ -156,6 +151,7 @@ func parsingWorker(b []byte) {
 			// *  Type = 6: Route Mirroring Message
 			glog.V(5).Infof("found Route Mirroring message")
 		}
+		perPerHeaderLen = 0
 		p += (int(ch.MessageLength) - 6)
 	}
 }
