@@ -23,7 +23,7 @@ func init() {
 	flag.IntVar(&dstPort, "destination-port", 5050, "port openBMP is listening")
 }
 
-func server(incoming net.Listener, dstPort int, queue chan []byte) {
+func server(incoming net.Listener, dstPort int) {
 	glog.V(5).Infof("server running on port %d", srcPort)
 	for {
 		client, err := incoming.Accept()
@@ -32,11 +32,11 @@ func server(incoming net.Listener, dstPort int, queue chan []byte) {
 			continue
 		}
 		glog.V(5).Infof("client %+v accepted, calling the interceptor.", client.RemoteAddr())
-		go interceptor(client, dstPort, queue)
+		go interceptor(client, dstPort)
 	}
 }
 
-func interceptor(client net.Conn, dstPort int, queue chan []byte) {
+func interceptor(client net.Conn, dstPort int) {
 	var err error
 	defer client.Close()
 	server, err := net.Dial("tcp", ":"+fmt.Sprintf("%d", dstPort))
@@ -46,44 +46,49 @@ func interceptor(client net.Conn, dstPort int, queue chan []byte) {
 	}
 	defer server.Close()
 	glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
-	// b := make([]byte, 4096)
-	var n int
-	b := make([]byte, 4096)
-	defer glog.V(5).Infof("all done with client %+v and server %+v", client.RemoteAddr(), server.RemoteAddr())
+	queue := make(chan []byte)
+	pstop := make(chan struct{})
+	// Starting parser per client with dedicated work queue
+	go parser(queue, pstop)
+	defer func() {
+		glog.V(5).Infof("all done with client %+v and server %+v", client.RemoteAddr(), server.RemoteAddr())
+		close(pstop)
+	}()
 	for {
-		n, err = client.Read(b)
-		// glog.V(5).Infof("read from client %+v %d bytes error: %+v", client.RemoteAddr(), n, err)
-		if err != nil && err != io.ErrShortBuffer {
+		headerMsg := make([]byte, 6)
+		if _, err := io.ReadAtLeast(client, headerMsg, 6); err != nil {
 			glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
 			return
 		}
-		// glog.V(5).Infof("read from client %+v %d bytes", client.RemoteAddr(), n)
-		if n == 0 {
+		// Recovering common header first
+		header, err := UnmarshalCommonHeader(headerMsg[:6])
+		if err != nil {
+			glog.Errorf("fail to recover BMP message Common Header with error: %+v", err)
 			continue
 		}
-		glog.V(5).Infof("read from client %+v %d bytes", client.RemoteAddr(), n)
-		n, err = server.Write(b[:n])
-		if err != nil {
+		// Allocating space for the message body
+		msg := make([]byte, int(header.MessageLength)-6)
+		// glog.V(5).Infof("Expected message lngth from client %+v is %d bytes", client.RemoteAddr(), int(header.MessageLength)-6)
+		if _, err := io.ReadFull(client, msg); err != nil {
+			glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
+			return
+		}
+
+		fullMsg := make([]byte, int(header.MessageLength))
+		copy(fullMsg, headerMsg)
+		copy(fullMsg[6:], msg)
+		if _, err := server.Write(fullMsg); err != nil {
 			glog.Errorf("fail to write to server %+v with error: %+v", server.RemoteAddr(), err)
 			return
 		}
-		glog.V(5).Infof("write to server %+v %d bytes", server.RemoteAddr(), n)
-		// Sending buffer for parsing
-		msg := make([]byte, n)
-		copy(msg, b[:n])
-		glog.V(6).Infof("1 Sending msg of len: %d -- %+v", len(msg), msg)
-		queue <- msg
-		b = make([]byte, 4096)
+		queue <- fullMsg
 	}
 }
 
 func parser(queue chan []byte, stop chan struct{}) {
 	for {
 		select {
-		case b := <-queue:
-			msg := make([]byte, len(b))
-			copy(msg, b)
-			glog.V(6).Infof("2 Received msg of len: %d -- %+v", len(msg), msg)
+		case msg := <-queue:
 			go parsingWorker(msg)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
@@ -94,7 +99,6 @@ func parser(queue chan []byte, stop chan struct{}) {
 
 func parsingWorker(b []byte) {
 	perPerHeaderLen := 0
-	glog.V(6).Infof("3 Received msg of len: %d -- %+v", len(b), b)
 	// Loop through all found Common Headers in the slice and process them
 	for p := 0; p < len(b); {
 		// Recovering common header first
@@ -104,7 +108,7 @@ func parsingWorker(b []byte) {
 			return
 		}
 		p += 6
-		glog.V(5).Infof("recovered common header, version: %d message length: %d message type: %d", ch.Version, ch.MessageLength, ch.MessageType)
+		// glog.V(5).Infof("recovered common header, version: %d message length: %d message type: %d", ch.Version, ch.MessageLength, ch.MessageType)
 		switch ch.MessageType {
 		case 0:
 			// *  Type = 0: Route Monitoring
@@ -158,8 +162,8 @@ func parsingWorker(b []byte) {
 			}
 			p += perPerHeaderLen
 			glog.V(5).Infof("recovered per peer up message %+v", *pu)
-			glog.V(6).Infof("Sent Open %+v", *pu.SentOpen)
-			glog.V(6).Infof("Received Open %+v", *pu.ReceivedOpen)
+			// glog.V(6).Infof("Sent Open %+v", *pu.SentOpen)
+			// glog.V(6).Infof("Received Open %+v", *pu.ReceivedOpen)
 		case 4:
 			// *  Type = 4: Initiation Message
 			glog.V(5).Infof("found Initiation message")
@@ -200,13 +204,8 @@ func main() {
 		}
 	}()
 
-	queue := make(chan []byte)
-	pstop := make(chan struct{})
-	// Starting openBMP message parser
-	go parser(queue, pstop)
-
 	// Starting Interceptor server
-	go server(incoming, dstPort, queue)
+	go server(incoming, dstPort)
 
 	<-stop
 	os.Exit(0)
