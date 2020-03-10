@@ -77,7 +77,9 @@ func parser(queue chan []byte, stop chan struct{}) {
 	for {
 		select {
 		case b := <-queue:
-			go parsingWorker(b)
+			msg := make([]byte, len(b))
+			copy(msg, b)
+			go parsingWorker(msg)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 		default:
@@ -100,7 +102,7 @@ func parsingWorker(b []byte) {
 		p += 6
 		glog.V(5).Infof("recovered common header, version: %d message length: %d message type: %d", ch.Version, ch.MessageLength, ch.MessageType)
 		// TODO Figure out reliable way to detect if Per-Peer Header exist
-		if ch.MessageLength > 64 {
+		if ch.MessageLength >= 48 {
 			pph, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
@@ -114,11 +116,18 @@ func parsingWorker(b []byte) {
 		case 0:
 			// *  Type = 0: Route Monitoring
 			glog.V(5).Infof("found Route Monitoring")
-			glog.V(6).Infof("Message: %+v", b[p:len(b)])
+			glog.V(6).Infof("Message: %+v", b[p+perPerHeaderLen:len(b)])
+			p += perPerHeaderLen
 		case 1:
 			// *  Type = 1: Statistics Report
-			glog.V(5).Infof("found Statistics Report")
-			glog.V(6).Infof("Message: %+v", b[p:len(b)])
+			glog.V(5).Infof("found Stats Report")
+			sr, err := UnmarshalBMPStatsReportMessage(b[p+perPerHeaderLen : len(b)])
+			if err != nil {
+				glog.Errorf("fail to recover BMP Stats Reports message with error: %+v", err)
+				return
+			}
+			p += perPerHeaderLen
+			glog.V(6).Infof("recovered per stats reports message %+v", *sr)
 		case 2:
 			// *  Type = 2: Peer Down Notification
 			glog.V(5).Infof("found Peer Down message")
@@ -466,4 +475,29 @@ func UnmarshalBGPTLV(b []byte) ([]BGPInformationalTLV, error) {
 	}
 
 	return tlvs, nil
+}
+
+// BMPStatsReport defines BMP Stats message structure
+type BMPStatsReport struct {
+	StatsCount int32
+	StatsTLV   []InformationalTLV
+}
+
+// UnmarshalBMPStatsReportMessage builds BMP Stats Reports object
+func UnmarshalBMPStatsReportMessage(b []byte) (*BMPStatsReport, error) {
+	sr := BMPStatsReport{}
+	p := 0
+	l := int32(binary.BigEndian.Uint32(b[p : p+4]))
+	if l > int32(len(b)) {
+		return nil, fmt.Errorf("invalid length of Stats Report %d", l)
+	}
+	sr.StatsCount = l
+	p += 4
+	tlvs, err := UnmarshalTLV(b[p:])
+	if err != nil {
+		return nil, err
+	}
+	sr.StatsTLV = tlvs
+
+	return &sr, nil
 }
