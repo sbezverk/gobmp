@@ -69,7 +69,10 @@ func interceptor(client net.Conn, dstPort int, queue chan []byte) {
 		}
 		glog.V(5).Infof("write to server %+v %d bytes", server.RemoteAddr(), n)
 		// Sending buffer for parsing
-		queue <- b[:n]
+		msg := make([]byte, n)
+		copy(msg, b[:n])
+		queue <- msg
+		b = make([]byte, 4096)
 	}
 }
 
@@ -77,9 +80,7 @@ func parser(queue chan []byte, stop chan struct{}) {
 	for {
 		select {
 		case b := <-queue:
-			msg := make([]byte, len(b))
-			copy(msg, b)
-			go parsingWorker(msg)
+			go parsingWorker(b)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 		default:
@@ -101,8 +102,17 @@ func parsingWorker(b []byte) {
 		}
 		p += 6
 		glog.V(5).Infof("recovered common header, version: %d message length: %d message type: %d", ch.Version, ch.MessageLength, ch.MessageType)
-		// TODO Figure out reliable way to detect if Per-Peer Header exist
-		if ch.MessageLength >= 48 {
+		switch ch.MessageType {
+		case 0:
+			// *  Type = 0: Route Monitoring
+			glog.V(5).Infof("found Route Monitoring")
+			// glog.V(6).Infof("Message: %+v", b[p+perPerHeaderLen:len(b)])
+			UnmarshalBMPRouteMonitorMessage(b[p : p+int(ch.MessageLength-6)])
+		case 1:
+			// *  Type = 1: Statistics Report
+			glog.V(5).Infof("found Stats Report")
+			// TODO Figure out reliable way to detect if Per-Peer Header exist
+
 			pph, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
@@ -111,16 +121,7 @@ func parsingWorker(b []byte) {
 			glog.V(5).Infof("recovered per peer header %+v", *pph)
 			// Move buffer pointer for the length of Per-Peer header
 			perPerHeaderLen = 42
-		}
-		switch ch.MessageType {
-		case 0:
-			// *  Type = 0: Route Monitoring
-			glog.V(5).Infof("found Route Monitoring")
-			glog.V(6).Infof("Message: %+v", b[p+perPerHeaderLen:len(b)])
-			p += perPerHeaderLen
-		case 1:
-			// *  Type = 1: Statistics Report
-			glog.V(5).Infof("found Stats Report")
+
 			sr, err := UnmarshalBMPStatsReportMessage(b[p+perPerHeaderLen : len(b)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Stats Reports message with error: %+v", err)
@@ -131,10 +132,18 @@ func parsingWorker(b []byte) {
 		case 2:
 			// *  Type = 2: Peer Down Notification
 			glog.V(5).Infof("found Peer Down message")
-			glog.V(6).Infof("Message: %+v", b[p:len(b)])
+			// glog.V(6).Infof("Message: %+v", b[p:len(b)])
 		case 3:
 			// *  Type = 3: Peer Up Notification
 			glog.V(5).Infof("found Peer Up message")
+			pph, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
+			if err != nil {
+				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
+				return
+			}
+			glog.V(5).Infof("recovered per peer header %+v", *pph)
+			// Move buffer pointer for the length of Per-Peer header
+			perPerHeaderLen = 42
 			pu, err := UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-6])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
@@ -500,4 +509,21 @@ func UnmarshalBMPStatsReportMessage(b []byte) (*BMPStatsReport, error) {
 	sr.StatsTLV = tlvs
 
 	return &sr, nil
+}
+
+// UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
+func UnmarshalBMPRouteMonitorMessage(b []byte) {
+	for p := 0; p < len(b); {
+		_, err := UnmarshalPerPeerHeader(b[p : p+42])
+		if err != nil {
+			glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
+			return
+		}
+		p += 42
+		// Skip 16 bytes of a marker
+		p += 16
+		l := binary.BigEndian.Uint16(b[p : p+2])
+		glog.V(6).Infof("route: %+v", b[p+2:p+int(l)])
+		p += int(l - 16)
+	}
 }
