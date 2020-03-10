@@ -71,6 +71,7 @@ func interceptor(client net.Conn, dstPort int, queue chan []byte) {
 		// Sending buffer for parsing
 		msg := make([]byte, n)
 		copy(msg, b[:n])
+		glog.V(6).Infof("1 Sending msg of len: %d -- %+v", len(msg), msg)
 		queue <- msg
 		b = make([]byte, 4096)
 	}
@@ -80,7 +81,10 @@ func parser(queue chan []byte, stop chan struct{}) {
 	for {
 		select {
 		case b := <-queue:
-			go parsingWorker(b)
+			msg := make([]byte, len(b))
+			copy(msg, b)
+			glog.V(6).Infof("2 Received msg of len: %d -- %+v", len(msg), msg)
+			go parsingWorker(msg)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 		default:
@@ -90,8 +94,7 @@ func parser(queue chan []byte, stop chan struct{}) {
 
 func parsingWorker(b []byte) {
 	perPerHeaderLen := 0
-	glog.V(5).Infof("parser received buffer of length: %d", len(b))
-	glog.V(6).Infof("><SB>%+v<SB><", b)
+	glog.V(6).Infof("3 Received msg of len: %d -- %+v", len(b), b)
 	// Loop through all found Common Headers in the slice and process them
 	for p := 0; p < len(b); {
 		// Recovering common header first
@@ -107,7 +110,11 @@ func parsingWorker(b []byte) {
 			// *  Type = 0: Route Monitoring
 			glog.V(5).Infof("found Route Monitoring")
 			// glog.V(6).Infof("Message: %+v", b[p+perPerHeaderLen:len(b)])
-			UnmarshalBMPRouteMonitorMessage(b[p : p+int(ch.MessageLength-6)])
+			lb := p + int(ch.MessageLength-6)
+			if p+int(ch.MessageLength-6) > len(b) {
+				lb = len(b)
+			}
+			UnmarshalBMPRouteMonitorMessage(b[p:lb])
 		case 1:
 			// *  Type = 1: Statistics Report
 			glog.V(5).Infof("found Stats Report")
@@ -523,7 +530,7 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) {
 		// Skip 16 bytes of a marker
 		p += 16
 		l := binary.BigEndian.Uint16(b[p : p+2])
-		glog.V(6).Infof("route: %+v", b[p+2:p+int(l)])
+		glog.V(6).Infof("route: %+v", b[p+2:p+int(l-16)])
 		p += int(l - 16)
 	}
 }
