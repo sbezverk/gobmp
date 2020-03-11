@@ -116,17 +116,21 @@ func parsingWorker(b []byte) {
 			if lb > len(b) {
 				lb = len(b)
 			}
-			glog.V(6).Infof("found Route Monitoring message: %s, length: %d", messageHex(b), len(b))
+			// glog.V(6).Infof("found Route Monitoring message: %s, length: %d", messageHex(b), len(b))
 			rm, err := UnmarshalBMPRouteMonitorMessage(b[p:lb])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Route Monitoring with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("parsed route monitor: \n%s", rm.String())
-			// glog.V(6).Infof("recovered route monitoring message %+v", *rm)
+			if rm.CheckSAFI(71) {
+				glog.V(5).Infof("route monitor message carries BGP-LS SAFI")
+			} else {
+				glog.V(5).Infof("route monitor message does not carry BGP-LS SAFI")
+			}
+			glog.V(6).Infof("parsed route monitor: \n%s", rm.String())
 		case 1:
 			// *  Type = 1: Statistics Report
-			glog.V(5).Infof("found Stats Report")
+			//glog.V(5).Infof("found Stats Report")
 
 			/*pph*/
 			_, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
@@ -148,11 +152,11 @@ func parsingWorker(b []byte) {
 			// glog.V(6).Infof("recovered per stats reports message %+v", *sr)
 		case 2:
 			// *  Type = 2: Peer Down Notification
-			glog.V(5).Infof("found Peer Down message")
+			glog.V(5).Infof("Peer Down message")
 			// glog.V(6).Infof("Message: %+v", b[p:len(b)])
 		case 3:
 			// *  Type = 3: Peer Up Notification
-			glog.V(5).Infof("found Peer Up message")
+			glog.V(5).Infof("Peer Up message")
 			/*pph*/ _, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
@@ -172,7 +176,7 @@ func parsingWorker(b []byte) {
 			// glog.V(6).Infof("Received Open %+v", *pu.ReceivedOpen)
 		case 4:
 			// *  Type = 4: Initiation Message
-			glog.V(5).Infof("found Initiation message")
+			glog.V(5).Infof("Initiation message")
 			_, err := UnmarshalInitiationMessage(b[p : p+(int(ch.MessageLength)-6)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
@@ -180,10 +184,10 @@ func parsingWorker(b []byte) {
 			}
 		case 5:
 			// *  Type = 5: Termination Message
-			glog.V(5).Infof("found Termination message")
+			glog.V(5).Infof("Termination message")
 		case 6:
 			// *  Type = 6: Route Mirroring Message
-			glog.V(5).Infof("found Route Mirroring message")
+			glog.V(5).Infof("Route Mirroring message")
 		}
 		perPerHeaderLen = 0
 		p += (int(ch.MessageLength) - 6)
@@ -610,6 +614,22 @@ func (rm *BMPRouteMonitor) String() string {
 	return s
 }
 
+// CheckSAFI checks if Route Monitor message carries specified SAFI and returns true or false
+func (rm *BMPRouteMonitor) CheckSAFI(safi int) bool {
+	for _, u := range rm.Updates {
+		for _, pa := range u.PathAttributes {
+			if pa.AttributeType == 0x0e {
+				mp, _ := UnmarshalMPReachNLRI(pa.Attribute)
+				if mp.SubAddressFamilyID == uint8(safi) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
 // UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
 func UnmarshalBMPRouteMonitorMessage(b []byte) (*BMPRouteMonitor, error) {
 	rm := BMPRouteMonitor{
@@ -625,10 +645,7 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) (*BMPRouteMonitor, error) {
 	// Skip 16 bytes of a marker
 	p += 16
 	l := binary.BigEndian.Uint16(b[p : p+2])
-	glog.V(6).Infof("update length: %d", l)
 	p += 2
-	glog.V(6).Infof("bgp message type: %d", b[p])
-	// glog.V(6).Infof("route: %+v", b[p+2:p+int(l-16)])
 	u, err := UnmarshalBGPUpdate(b[p+1 : p+int(l-18)])
 	if err != nil {
 		return nil, err

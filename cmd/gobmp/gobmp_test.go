@@ -232,8 +232,10 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 			expect: &BMPRouteMonitor{
 				Updates: []BGPUpdate{
 					{
-						WithdrawnRoutesLength:    0,
-						WithdrawnRoutes:          BGPWithdrawnRoutes{},
+						WithdrawnRoutesLength: 0,
+						WithdrawnRoutes: BGPWithdrawnRoutes{
+							WithdrawnRoutes: nil,
+						},
 						TotalPathAttributeLength: 56,
 						PathAttributes: []BGPPathAttribute{
 							{
@@ -252,7 +254,7 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 								AttributeTypeFlags: 64,
 								AttributeType:      2,
 								AttributeLength:    0,
-								Attribute:          nil,
+								Attribute:          []byte{},
 							},
 							{
 								AttributeTypeFlags: 128,
@@ -273,7 +275,7 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 								Attribute:          []byte{1, 0, 7, 0, 0, 0, 0, 0, 0, 1},
 							},
 						},
-						NLRI: nil,
+						NLRI: []byte{},
 					},
 				},
 			},
@@ -297,7 +299,6 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 			if !reflect.DeepEqual(ru, tt.expect) {
 				t.Error("unmarshaled and expected messages do not much")
 			}
-			parsingWorker(tt.input)
 		})
 	}
 }
