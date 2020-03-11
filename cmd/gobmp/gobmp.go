@@ -112,34 +112,41 @@ func parsingWorker(b []byte) {
 		switch ch.MessageType {
 		case 0:
 			// *  Type = 0: Route Monitoring
-			glog.V(5).Infof("found Route Monitoring")
 			// glog.V(6).Infof("Message: %+v", b[p+perPerHeaderLen:len(b)])
 			lb := p + int(ch.MessageLength-6)
-			if p+int(ch.MessageLength-6) > len(b) {
+			if lb > len(b) {
 				lb = len(b)
 			}
-			UnmarshalBMPRouteMonitorMessage(b[p:lb])
+			// glog.V(5).Infof("found Route Monitoring message: [%s], length: %d", messageHex(b), len(b))
+			rm, err := UnmarshalBMPRouteMonitorMessage(b[p:lb])
+			if err != nil {
+				glog.Errorf("fail to recover BMP Route Monitoring with error: %+v", err)
+				return
+			}
+			glog.V(6).Infof("recovered route monitoring message %+v", *rm)
 		case 1:
 			// *  Type = 1: Statistics Report
 			glog.V(5).Infof("found Stats Report")
 			// TODO Figure out reliable way to detect if Per-Peer Header exist
 
-			pph, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
+			/*pph*/
+			_, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("recovered per peer header %+v", *pph)
+			//glog.V(5).Infof("recovered per peer header %+v", *pph)
 			// Move buffer pointer for the length of Per-Peer header
 			perPerHeaderLen = 42
 
-			sr, err := UnmarshalBMPStatsReportMessage(b[p+perPerHeaderLen : len(b)])
+			/*sr*/
+			_, err = UnmarshalBMPStatsReportMessage(b[p+perPerHeaderLen : len(b)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Stats Reports message with error: %+v", err)
 				return
 			}
 			p += perPerHeaderLen
-			glog.V(6).Infof("recovered per stats reports message %+v", *sr)
+			// glog.V(6).Infof("recovered per stats reports message %+v", *sr)
 		case 2:
 			// *  Type = 2: Peer Down Notification
 			glog.V(5).Infof("found Peer Down message")
@@ -147,21 +154,21 @@ func parsingWorker(b []byte) {
 		case 3:
 			// *  Type = 3: Peer Up Notification
 			glog.V(5).Infof("found Peer Up message")
-			pph, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
+			/*pph*/ _, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("recovered per peer header %+v", *pph)
+			// glog.V(5).Infof("recovered per peer header %+v", *pph)
 			// Move buffer pointer for the length of Per-Peer header
 			perPerHeaderLen = 42
-			pu, err := UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-6])
+			/*pu*/ _, err = UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-6])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
 			}
 			p += perPerHeaderLen
-			glog.V(5).Infof("recovered per peer up message %+v", *pu)
+			// glog.V(5).Infof("recovered per peer up message %+v", *pu)
 			// glog.V(6).Infof("Sent Open %+v", *pu.SentOpen)
 			// glog.V(6).Infof("Received Open %+v", *pu.ReceivedOpen)
 		case 4:
@@ -517,19 +524,122 @@ func UnmarshalBMPStatsReportMessage(b []byte) (*BMPStatsReport, error) {
 	return &sr, nil
 }
 
+// BGPWithdrawnRoute defines a structure of BGP Withdrawn prefix
+type BGPWithdrawnRoute struct {
+	Length uint8
+	Prefix []byte
+}
+
+// BGPWithdrawnRoutes defines collection of BGP Withdrawn prefixes
+type BGPWithdrawnRoutes struct {
+	WithdrawnRoutes []BGPWithdrawnRoute
+}
+
+// BGPPathAttribute defines a structure of an attribute
+type BGPPathAttribute struct {
+	AttributeTypeFlags uint8
+	AttributeType      uint8
+	AttributeLength    uint16
+	Attribute          []byte
+}
+
+// BGPUpdate defines a structure of BGP Update message
+type BGPUpdate struct {
+	WithdrawnRoutesLength    uint16
+	WithdrawnRoutes          BGPWithdrawnRoutes
+	TotalPathAttributeLength uint16
+	PathAttributes           []BGPPathAttribute
+	NLRI                     []byte
+}
+
+// BMPRouteMonitor defines a structure of BMP Route Monitoring message
+type BMPRouteMonitor struct {
+	Updates []BGPUpdate
+}
+
 // UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
-func UnmarshalBMPRouteMonitorMessage(b []byte) {
-	for p := 0; p < len(b); {
-		_, err := UnmarshalPerPeerHeader(b[p : p+42])
-		if err != nil {
-			glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
-			return
-		}
-		p += 42
-		// Skip 16 bytes of a marker
-		p += 16
-		l := binary.BigEndian.Uint16(b[p : p+2])
-		glog.V(6).Infof("route: %+v", b[p+2:p+int(l-16)])
-		p += int(l - 16)
+func UnmarshalBMPRouteMonitorMessage(b []byte) (*BMPRouteMonitor, error) {
+	rm := BMPRouteMonitor{
+		Updates: make([]BGPUpdate, 0),
 	}
+	p := 0
+	_, err := UnmarshalPerPeerHeader(b[p : p+42])
+	if err != nil {
+		return nil, fmt.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
+	}
+	// Skip Per-Peer header's 42 bytes
+	p += 42
+	// Skip 16 bytes of a marker
+	p += 16
+	l := binary.BigEndian.Uint16(b[p : p+2])
+	glog.V(6).Infof("update length: %d", l)
+	p += 2
+	glog.V(6).Infof("bgp message type: %d", b[p])
+	// glog.V(6).Infof("route: %+v", b[p+2:p+int(l-16)])
+	u, err := UnmarshalBGPUpdate(b[p+1 : p+int(l-18)])
+	if err != nil {
+		return nil, err
+	}
+	rm.Updates = append(rm.Updates, *u)
+	// p += int(l - 18)
+
+	return &rm, nil
+}
+
+// UnmarshalBGPUpdate build BGP Update object from the byte slice provided
+func UnmarshalBGPUpdate(b []byte) (*BGPUpdate, error) {
+	p := 0
+	u := BGPUpdate{}
+	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	// Skip Withdrawn Routes
+	p += int(u.WithdrawnRoutesLength)
+	u.TotalPathAttributeLength = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	attrs, err := UnmarshalPathAttributes(b[p : p+int(u.TotalPathAttributeLength)])
+	if err != nil {
+		return nil, err
+	}
+	u.PathAttributes = attrs
+	p += int(u.TotalPathAttributeLength)
+	u.NLRI = b[p:len(b)]
+
+	return &u, nil
+}
+
+// UnmarshalPathAttributes builds BGP Path attributes slice
+func UnmarshalPathAttributes(b []byte) ([]BGPPathAttribute, error) {
+	attrs := make([]BGPPathAttribute, 0)
+
+	for p := 0; p < len(b); {
+		f := b[p]
+		t := b[p+1]
+		p += 2
+		var l uint16
+		// Chcking for Extened
+		if f&0x10 == 0x10 {
+			l = binary.BigEndian.Uint16(b[p : p+2])
+			p += 2
+		} else {
+			l = uint16(b[p])
+			p++
+		}
+		attrs = append(attrs, BGPPathAttribute{
+			AttributeTypeFlags: f,
+			AttributeType:      t,
+			AttributeLength:    l,
+			Attribute:          b[p : p+int(l)],
+		})
+		p += int(l)
+	}
+
+	return attrs, nil
+}
+
+func messageHex(b []byte) string {
+	var s string
+	for i := 0; i < len(b); i++ {
+		s += fmt.Sprintf("%02x ", b[i])
+	}
+	return s
 }

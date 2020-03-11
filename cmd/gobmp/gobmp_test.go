@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -213,6 +214,89 @@ func TestParsingWorker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			parsingWorker(tt.input)
+		})
+	}
+}
+
+func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []byte
+		expect *BMPRouteMonitor
+		fail   bool
+	}{
+		{
+			name:  "update 1",
+			input: []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0xa8, 0x08, 0x08, 0x00, 0x00, 0x13, 0xce, 0xc0, 0xa8, 0x08, 0x08, 0x5e, 0x68, 0x0a, 0xe9, 0x00, 0x0b, 0x90, 0x14, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x4f, 0x02, 0x00, 0x00, 0x00, 0x38, 0x90, 0x0e, 0x00, 0x12, 0x00, 0x01, 0x01, 0x04, 0xc0, 0xa8, 0x08, 0x08, 0x00, 0x00, 0x00, 0x00, 0x01, 0x20, 0xc0, 0xa8, 0x08, 0x08, 0x40, 0x01, 0x01, 0x00, 0x40, 0x02, 0x00, 0x80, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x40, 0x05, 0x04, 0x00, 0x00, 0x00, 0x64, 0xc0, 0x28, 0x0a, 0x01, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
+			expect: &BMPRouteMonitor{
+				Updates: []BGPUpdate{
+					{
+						WithdrawnRoutesLength:    0,
+						WithdrawnRoutes:          BGPWithdrawnRoutes{},
+						TotalPathAttributeLength: 56,
+						PathAttributes: []BGPPathAttribute{
+							{
+								AttributeTypeFlags: 144,
+								AttributeType:      14,
+								AttributeLength:    18,
+								Attribute:          []byte{0, 1, 1, 4, 192, 168, 8, 8, 0, 0, 0, 0, 1, 32, 192, 168, 8, 8},
+							},
+							{
+								AttributeTypeFlags: 64,
+								AttributeType:      1,
+								AttributeLength:    1,
+								Attribute:          []byte{0},
+							},
+							{
+								AttributeTypeFlags: 64,
+								AttributeType:      2,
+								AttributeLength:    0,
+								Attribute:          nil,
+							},
+							{
+								AttributeTypeFlags: 128,
+								AttributeType:      4,
+								AttributeLength:    4,
+								Attribute:          []byte{0, 0, 0, 0},
+							},
+							{
+								AttributeTypeFlags: 64,
+								AttributeType:      5,
+								AttributeLength:    4,
+								Attribute:          []byte{0, 0, 0, 100},
+							},
+							{
+								AttributeTypeFlags: 192,
+								AttributeType:      40,
+								AttributeLength:    10,
+								Attribute:          []byte{1, 0, 7, 0, 0, 0, 0, 0, 0, 1},
+							},
+						},
+						NLRI: nil,
+					},
+				},
+			},
+			fail: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ru, err := UnmarshalBMPRouteMonitorMessage(tt.input)
+			if err != nil {
+				if !tt.fail {
+					t.Fatal("expected to succeed but failed")
+				}
+			}
+			if err == nil {
+				if tt.fail {
+					t.Fatal("expected to fail but succeeded")
+				}
+			}
+			fmt.Printf("%+v\n", ru)
+			if !reflect.DeepEqual(ru, tt.expect) {
+				t.Error("unmarshaled and expected messages do not much")
+			}
 			parsingWorker(tt.input)
 		})
 	}
