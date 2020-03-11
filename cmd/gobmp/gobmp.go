@@ -89,7 +89,7 @@ func parser(queue chan []byte, stop chan struct{}) {
 	for {
 		select {
 		case msg := <-queue:
-			go parsingWorker(msg)
+			parsingWorker(msg)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 		default:
@@ -112,22 +112,21 @@ func parsingWorker(b []byte) {
 		switch ch.MessageType {
 		case 0:
 			// *  Type = 0: Route Monitoring
-			// glog.V(6).Infof("Message: %+v", b[p+perPerHeaderLen:len(b)])
 			lb := p + int(ch.MessageLength-6)
 			if lb > len(b) {
 				lb = len(b)
 			}
-			// glog.V(5).Infof("found Route Monitoring message: [%s], length: %d", messageHex(b), len(b))
+			glog.V(6).Infof("found Route Monitoring message: %s, length: %d", messageHex(b), len(b))
 			rm, err := UnmarshalBMPRouteMonitorMessage(b[p:lb])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Route Monitoring with error: %+v", err)
 				return
 			}
-			glog.V(6).Infof("recovered route monitoring message %+v", *rm)
+			glog.V(5).Infof("parsed route monitor: \n%s", rm.String())
+			// glog.V(6).Infof("recovered route monitoring message %+v", *rm)
 		case 1:
 			// *  Type = 1: Statistics Report
 			glog.V(5).Infof("found Stats Report")
-			// TODO Figure out reliable way to detect if Per-Peer Header exist
 
 			/*pph*/
 			_, err := UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
@@ -530,6 +529,15 @@ type BGPWithdrawnRoute struct {
 	Prefix []byte
 }
 
+func (wr *BGPWithdrawnRoute) String() string {
+	var s string
+	s += fmt.Sprintf("Withdrawn prefix length: %d\n", wr.Length)
+	s += messageHex(wr.Prefix)
+	s += "\n"
+
+	return s
+}
+
 // BGPWithdrawnRoutes defines collection of BGP Withdrawn prefixes
 type BGPWithdrawnRoutes struct {
 	WithdrawnRoutes []BGPWithdrawnRoute
@@ -543,6 +551,22 @@ type BGPPathAttribute struct {
 	Attribute          []byte
 }
 
+func (pa *BGPPathAttribute) String() string {
+	var s string
+	s += fmt.Sprintf("Attribute Type Flags: 0x%02X\n", pa.AttributeTypeFlags)
+	s += fmt.Sprintf("Attribute Type: 0x%02X\n", pa.AttributeType)
+	s += fmt.Sprintf("Attribute Length: %d\n", pa.AttributeLength)
+	if pa.AttributeType == 0x0e {
+		// Found MP_REACH_NLRI attribute
+		mp, _ := UnmarshalMPReachNLRI(pa.Attribute)
+		s += mp.String()
+	} else {
+		s += messageHex(pa.Attribute)
+		s += "\n"
+	}
+	return s
+}
+
 // BGPUpdate defines a structure of BGP Update message
 type BGPUpdate struct {
 	WithdrawnRoutesLength    uint16
@@ -552,9 +576,38 @@ type BGPUpdate struct {
 	NLRI                     []byte
 }
 
+func (up *BGPUpdate) String() string {
+	var s string
+	s += fmt.Sprintf("Withdrawn Routes Length: %d\n", up.WithdrawnRoutesLength)
+	if up.WithdrawnRoutesLength != 0 {
+		for _, wr := range up.WithdrawnRoutes.WithdrawnRoutes {
+			s += wr.String()
+		}
+	}
+	s += fmt.Sprintf("Total Path Attribute Length: %d\n", up.TotalPathAttributeLength)
+	if up.TotalPathAttributeLength != 0 {
+		for _, pa := range up.PathAttributes {
+			s += pa.String()
+		}
+	}
+	s += "NLRI: "
+	s += messageHex(up.NLRI)
+	s += "\n"
+
+	return s
+}
+
 // BMPRouteMonitor defines a structure of BMP Route Monitoring message
 type BMPRouteMonitor struct {
 	Updates []BGPUpdate
+}
+
+func (rm *BMPRouteMonitor) String() string {
+	var s string
+	for _, u := range rm.Updates {
+		s += u.String()
+	}
+	return s
 }
 
 // UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
@@ -636,10 +689,67 @@ func UnmarshalPathAttributes(b []byte) ([]BGPPathAttribute, error) {
 	return attrs, nil
 }
 
+// +---------------------------------------------------------+
+// | Address Family Identifier (2 octets)                    |
+// +---------------------------------------------------------+
+// | Subsequent Address Family Identifier (1 octet)          |
+// +---------------------------------------------------------+
+// | Length of Next Hop Network Address (1 octet)            |
+// +---------------------------------------------------------+
+// | Network Address of Next Hop (variable)                  |
+// +---------------------------------------------------------+
+// | Reserved (1 octet)                                      |
+// +---------------------------------------------------------+
+// | Network Layer Reachability Information (variable)       |
+// +---------------------------------------------------------+
+
+// MPReachNLRI defines an MP Reach NLRI object
+type MPReachNLRI struct {
+	AddressFamilyID      uint16
+	SubAddressFamilyID   uint8
+	NextHopAddressLength uint8
+	NextHopAddress       []byte
+	Reserved             uint8
+	NLRI                 []byte
+}
+
+// UnmarshalMPReachNLRI builds MP Reach NLRI attributes
+func UnmarshalMPReachNLRI(b []byte) (*MPReachNLRI, error) {
+	mp := MPReachNLRI{}
+	p := 0
+	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	mp.SubAddressFamilyID = uint8(b[p])
+	p++
+	mp.NextHopAddressLength = uint8(b[p])
+	p++
+	mp.NextHopAddress = b[p : p+int(mp.NextHopAddressLength)]
+	p += int(mp.NextHopAddressLength)
+	// Skip reserved byte
+	p++
+	mp.NLRI = b[p:len(b)]
+
+	return &mp, nil
+}
+
+func (mp *MPReachNLRI) String() string {
+	var s string
+	s += fmt.Sprintf("Address Family ID: %d\n", mp.AddressFamilyID)
+	s += fmt.Sprintf("Subsequent Address Family ID: %d\n", mp.SubAddressFamilyID)
+	s += fmt.Sprintf("Length of Next Hop Network Address: %d\n", mp.NextHopAddressLength)
+	s += fmt.Sprintf("Next Hop Network Address: %s\n", messageHex(mp.NextHopAddress))
+	s += fmt.Sprintf("NLRI: %s\n", messageHex(mp.NLRI))
+
+	return s
+}
+
 func messageHex(b []byte) string {
 	var s string
+	s += "[ "
 	for i := 0; i < len(b); i++ {
 		s += fmt.Sprintf("%02x ", b[i])
 	}
+	s += " ]"
+
 	return s
 }
