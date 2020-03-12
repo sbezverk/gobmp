@@ -919,16 +919,69 @@ func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {
 	return &nd, nil
 }
 
+// LinkDescriptorSubTLV defines Link Descriptor Sub TLVs object
+// https://tools.ietf.org/html/rfc7752#section-3.2.2
+type LinkDescriptorSubTLV struct {
+	Type   uint16
+	Length uint16
+	Value  []byte
+}
+
+func (stlv *LinkDescriptorSubTLV) String() string {
+	var s string
+	s += fmt.Sprintf("Link Descriptor Sub TLV Type: %d\n", stlv.Type)
+	s += fmt.Sprintf("Link Descriptor Sub TLV Length: %d\n", stlv.Length)
+	s += "Value: "
+	s += messageHex(stlv.Value)
+	s += "\n"
+
+	return s
+}
+
+// UnmarshalLinkDescriptorSubTLV builds Link Descriptor Sub TLVs object
+func UnmarshalLinkDescriptorSubTLV(b []byte) ([]LinkDescriptorSubTLV, error) {
+	stlvs := make([]LinkDescriptorSubTLV, 0)
+	for p := 0; p < len(b); {
+		stlv := LinkDescriptorSubTLV{}
+		t := binary.BigEndian.Uint16(b[p : p+2])
+		switch t {
+		case 258:
+		case 259:
+		case 260:
+		case 261:
+		case 262:
+		case 263:
+		default:
+			return nil, fmt.Errorf("invalid Link Descriptor Sub TLV type %d", t)
+		}
+		stlv.Type = t
+		p += 2
+		stlv.Length = binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		stlv.Value = make([]byte, stlv.Length)
+		copy(stlv.Value, b[p:p+int(stlv.Length)])
+		stlvs = append(stlvs, stlv)
+		p += int(stlv.Length)
+	}
+
+	return stlvs, nil
+}
+
 // LinkDescriptor defines Link Descriptor object
 // https://tools.ietf.org/html/rfc7752#section-3.2.2
 type LinkDescriptor struct {
-	data []byte
+	Type   uint16
+	Length uint16
+	SubTLV []LinkDescriptorSubTLV
 }
 
 func (ld *LinkDescriptor) String() string {
 	var s string
-	s += messageHex(ld.data)
-	s += "\n"
+	s += fmt.Sprintf("Link Descriptors Type: %d\n", ld.Type)
+	s += fmt.Sprintf("Link Descriptors Length: %d\n", ld.Length)
+	for _, stlv := range ld.SubTLV {
+		s += stlv.String()
+	}
 
 	return s
 }
@@ -936,9 +989,16 @@ func (ld *LinkDescriptor) String() string {
 // UnmarshalLinkDescriptor build Link Descriptor object
 func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
 	ld := LinkDescriptor{}
-	// TODO Figure out format and add real Unmarshal
-	ld.data = make([]byte, len(b))
-	copy(ld.data, b)
+	p := 0
+	ld.Type = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	ld.Length = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	stlv, err := UnmarshalLinkDescriptorSubTLV(b[p : p+len(b)])
+	if err != nil {
+		return nil, err
+	}
+	ld.SubTLV = stlv
 
 	return &ld, nil
 }
@@ -1039,46 +1099,67 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	return &l, nil
 }
 
-// PrefixDescriptor defines Prefix Descriptor object
-// https://tools.ietf.org/html/rfc7752#section-3.2.3
-type PrefixDescriptor struct {
-	data []byte
+// PrefixDescriptorSubTLV defines Prefix Descriptor Sub TLVs object
+// https://tools.ietf.org/html/rfc7752#section-3.2.2
+type PrefixDescriptorTLV struct {
+	Type   uint16
+	Length uint16
+	Value  []byte
 }
 
-func (pd *PrefixDescriptor) String() string {
+func (stlv *PrefixDescriptorTLV) String() string {
 	var s string
-	s += "Prefix Descriptor: "
-	s += messageHex(pd.data)
+	s += fmt.Sprintf("Prefix Descriptor TLV Type: %d\n", stlv.Type)
+	s += fmt.Sprintf("Prefix Descriptor TLV Length: %d\n", stlv.Length)
+	s += "Value: "
+	s += messageHex(stlv.Value)
 	s += "\n"
 
 	return s
 }
 
-func ProtocolIDString(id uint8) string {
-	switch id {
-	case 1:
-		return "IS-IS Level 1"
-	case 2:
-		return "IS-IS Level 2"
-	case 3:
-		return "OSPFv2"
-	case 4:
-		return "Direct"
-	case 5:
-		return "Static configuration"
-	case 6:
-		return "OSPFv3"
-	default:
-		return "Unknown"
+// UnmarshalPrefixDescriptorTLV builds Prefix Descriptor Sub TLVs object
+func UnmarshalPrefixDescriptorTLV(b []byte) ([]PrefixDescriptorTLV, error) {
+	stlvs := make([]PrefixDescriptorTLV, 0)
+	for p := 0; p < len(b); {
+		stlv := PrefixDescriptorTLV{}
+		stlv.Type = binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		stlv.Length = binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		stlv.Value = make([]byte, stlv.Length)
+		copy(stlv.Value, b[p:p+int(stlv.Length)])
+		stlvs = append(stlvs, stlv)
+		p += int(stlv.Length)
 	}
+
+	return stlvs, nil
 }
 
-// UnmarshalPrefixDescriptor builds Prefix Descriptor object
+// PrefixDescriptor defines Prefix Descriptor object
+// https://tools.ietf.org/html/rfc7752#section-3.2.3
+type PrefixDescriptor struct {
+	PrefixTLV []PrefixDescriptorTLV
+}
+
+func (pd *PrefixDescriptor) String() string {
+	var s string
+	for _, stlv := range pd.PrefixTLV {
+		s += stlv.String()
+	}
+
+	return s
+}
+
+// UnmarshalPrefixDescriptor build Prefix Descriptor object
 func UnmarshalPrefixDescriptor(b []byte) (*PrefixDescriptor, error) {
 	pd := PrefixDescriptor{}
-	// TODO Figure out format and add real Unmarshal
-	pd.data = make([]byte, len(b))
-	copy(pd.data, b)
+	p := 0
+	ptlv, err := UnmarshalPrefixDescriptorTLV(b[p : p+len(b)])
+	if err != nil {
+		return nil, err
+	}
+	pd.PrefixTLV = ptlv
 
 	return &pd, nil
 }
@@ -1137,4 +1218,24 @@ func messageHex(b []byte) string {
 	s += " ]"
 
 	return s
+}
+
+// ProtocolIDString returns string with protocol deacription based on the id
+func ProtocolIDString(id uint8) string {
+	switch id {
+	case 1:
+		return "IS-IS Level 1"
+	case 2:
+		return "IS-IS Level 2"
+	case 3:
+		return "OSPFv2"
+	case 4:
+		return "Direct"
+	case 5:
+		return "Static configuration"
+	case 6:
+		return "OSPFv3"
+	default:
+		return "Unknown"
+	}
 }
