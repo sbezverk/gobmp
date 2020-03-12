@@ -776,6 +776,35 @@ type LSNLRI71 struct {
 	LS     []byte
 }
 
+func (ls *LSNLRI71) String() string {
+	var s, t, nlri string
+	switch ls.Type {
+	case 1:
+		t = "Node NLRI"
+		n, _ := UnmarshalNodeNLRI(ls.LS)
+		nlri = n.String()
+	case 2:
+		t = "Link NLRI"
+		n, _ := UnmarshalLinkNLRI(ls.LS)
+		nlri = n.String()
+	case 3:
+		t = "IPv4 Topology Prefix NLRI"
+		n, _ := UnmarshalPrefixNLRI(ls.LS)
+		nlri = n.String()
+	case 4:
+		t = "IPv6 Topology Prefix NLRI"
+		n, _ := UnmarshalPrefixNLRI(ls.LS)
+		nlri = n.String()
+	default:
+		t = "Unknown NLRI"
+	}
+	s += fmt.Sprintf("NLRI Type: %s\n", t)
+	s += fmt.Sprintf("Total NLRI Length: %d\n", ls.Length)
+	s += nlri
+
+	return s
+}
+
 // UnmarshalLSNLRI71 builds Link State NLRI object ofor SAFI 71
 func UnmarshalLSNLRI71(b []byte) (*LSNLRI71, error) {
 	ls := LSNLRI71{}
@@ -807,6 +836,12 @@ type NodeDescriptorSubTLV struct {
 	data []byte
 }
 
+func (stlv *NodeDescriptorSubTLV) String() string {
+	var s string
+	s += messageHex(stlv.data)
+	return s
+}
+
 // UnmarshalNodeDescriptorSubTLV builds Node Descriptor Sub TLVs object
 func UnmarshalNodeDescriptorSubTLV(b []byte) (*NodeDescriptorSubTLV, error) {
 	stlv := NodeDescriptorSubTLV{}
@@ -823,6 +858,15 @@ type NodeDescriptor struct {
 	Type   uint16
 	Length uint16
 	SubTLV *NodeDescriptorSubTLV
+}
+
+func (nd *NodeDescriptor) String() string {
+	var s string
+	s += fmt.Sprintf("Node Descriptors Type: %d\n", nd.Type)
+	s += fmt.Sprintf("Node Descriptors Length: %d\n", nd.Length)
+	s += nd.SubTLV.String()
+
+	return s
 }
 
 // UnmarshalNodeDescriptor build Node Descriptor object
@@ -848,6 +892,12 @@ type LinkDescriptor struct {
 	data []byte
 }
 
+func (ld *LinkDescriptor) String() string {
+	var s string
+	s += messageHex(ld.data)
+	return s
+}
+
 // UnmarshalLinkDescriptor build Link Descriptor object
 func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
 	ld := LinkDescriptor{}
@@ -865,6 +915,15 @@ type NodeNLRI struct {
 	Reserved   [3]byte
 	Identifier uint64
 	LocalNode  *NodeDescriptor
+}
+
+func (n *NodeNLRI) String() string {
+	var s string
+	s += fmt.Sprintf("Protocol ID: %d", n.ProtocolID)
+	s += fmt.Sprintf("Identifier: %d", n.Identifier)
+	s += n.LocalNode.String()
+
+	return s
 }
 
 // UnmarshalNodeNLRI builds Node NLRI object
@@ -896,6 +955,17 @@ type LinkNLRI struct {
 	LocalNode  *NodeDescriptor
 	RemoteNode *NodeDescriptor
 	Link       *LinkDescriptor
+}
+
+func (l *LinkNLRI) String() string {
+	var s string
+	s += fmt.Sprintf("Protocol ID: %d", l.ProtocolID)
+	s += fmt.Sprintf("Identifier: %d", l.Identifier)
+	s += l.LocalNode.String()
+	s += l.RemoteNode.String()
+	s += l.Link.String()
+
+	return s
 }
 
 // UnmarshalLinkNLRI builds Link NLRI object
@@ -940,6 +1010,12 @@ type PrefixDescriptor struct {
 	data []byte
 }
 
+func (pd *PrefixDescriptor) String() string {
+	var s string
+	s += messageHex(pd.data)
+	return s
+}
+
 // UnmarshalPrefixDescriptor builds Prefix Descriptor object
 func UnmarshalPrefixDescriptor(b []byte) (*PrefixDescriptor, error) {
 	pd := PrefixDescriptor{}
@@ -958,6 +1034,16 @@ type PrefixNLRI struct {
 	Identifier uint64
 	LocalNode  *NodeDescriptor
 	Prefix     *PrefixDescriptor
+}
+
+func (p *PrefixNLRI) String() string {
+	var s string
+	s += fmt.Sprintf("Protocol ID: %d", p.ProtocolID)
+	s += fmt.Sprintf("Identifier: %d", p.Identifier)
+	s += p.LocalNode.String()
+	s += p.Prefix.String()
+
+	return s
 }
 
 // UnmarshalPrefixNLRI builds Prefix NLRI object
