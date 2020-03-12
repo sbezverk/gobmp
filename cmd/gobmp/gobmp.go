@@ -768,23 +768,15 @@ func (mp *MPReachNLRI) String() string {
 	return s
 }
 
-// 0                   1                   2                   3
-// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |            NLRI Type          |     Total NLRI Length         |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                                                               |
-// //                  Link-State NLRI (variable)                 //
-// |                                                               |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-// LSNLRI71 defines Link State NLRI object
+// LSNLRI71 defines Link State NLRI object for SAFI 71
+// https://tools.ietf.org/html/rfc7752#section-3.2
 type LSNLRI71 struct {
 	Type   uint16
 	Length uint16 // Not including Type and itself
 	LS     []byte
 }
 
+// UnmarshalLSNLRI71 builds Link State NLRI object ofor SAFI 71
 func UnmarshalLSNLRI71(b []byte) (*LSNLRI71, error) {
 	ls := LSNLRI71{}
 	p := 0
@@ -809,70 +801,188 @@ func UnmarshalLSNLRI71(b []byte) (*LSNLRI71, error) {
 	return &ls, nil
 }
 
+// NodeDescriptorSubTLV defines Node Descriptor Sub TLVs object
+// https://tools.ietf.org/html/rfc7752#section-3.2.1.4
 type NodeDescriptorSubTLV struct {
 	data []byte
 }
 
+// UnmarshalNodeDescriptorSubTLV builds Node Descriptor Sub TLVs object
+func UnmarshalNodeDescriptorSubTLV(b []byte) (*NodeDescriptorSubTLV, error) {
+	stlv := NodeDescriptorSubTLV{}
+	// TODO Figure out format and add real Unmarshal
+	stlv.data = make([]byte, len(b))
+	copy(stlv.data, b)
+
+	return &stlv, nil
+}
+
+// NodeDescriptor defines Node Descriptor object
+// https://tools.ietf.org/html/rfc7752#section-3.2.1
 type NodeDescriptor struct {
 	Type   uint16
 	Length uint16
-	SubTLV NodeDescriptorSubTLV
+	SubTLV *NodeDescriptorSubTLV
 }
 
+// UnmarshalNodeDescriptor build Node Descriptor object
 func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {
 	nd := NodeDescriptor{}
+	p := 0
+	nd.Type = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	nd.Length = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	stlv, err := UnmarshalNodeDescriptorSubTLV(b[p : p+len(b)])
+	if err != nil {
+		return nil, err
+	}
+	nd.SubTLV = stlv
 
 	return &nd, nil
 }
 
+// LinkDescriptor defines Link Descriptor object
+// https://tools.ietf.org/html/rfc7752#section-3.2.2
 type LinkDescriptor struct {
 	data []byte
 }
 
+// UnmarshalLinkDescriptor build Link Descriptor object
+func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
+	ld := LinkDescriptor{}
+	// TODO Figure out format and add real Unmarshal
+	ld.data = make([]byte, len(b))
+	copy(ld.data, b)
+
+	return &ld, nil
+}
+
 // NodeNLRI defines Node NLRI onject
+// https://tools.ietf.org/html/rfc7752#section-3.2
 type NodeNLRI struct {
 	ProtocolID uint8
 	Reserved   [3]byte
-	LocalNode  NodeDescriptor
+	Identifier uint64
+	LocalNode  *NodeDescriptor
 }
 
+// UnmarshalNodeNLRI builds Node NLRI object
 func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
 	n := NodeNLRI{}
+	p := 0
+	n.ProtocolID = b[p]
+	p++
+	n.Identifier = binary.BigEndian.Uint64(b[p : p+8])
+	p += 8
+	// Local Node Descriptor
+	// Get Node Descriptor's length, skip Node Descriptor Type
+	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
+	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
+	if err != nil {
+		return nil, err
+	}
+	n.LocalNode = ln
 
 	return &n, nil
 }
 
 // LinkNLRI defines Node NLRI onject
+// https://tools.ietf.org/html/rfc7752#section-3.2
 type LinkNLRI struct {
 	ProtocolID uint8
 	Reserved   [3]byte
-	LocalNode  NodeDescriptor
-	RemoteNode NodeDescriptor
-	Link       LinkDescriptor
+	Identifier uint64
+	LocalNode  *NodeDescriptor
+	RemoteNode *NodeDescriptor
+	Link       *LinkDescriptor
 }
 
+// UnmarshalLinkNLRI builds Link NLRI object
 func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	l := LinkNLRI{}
+	p := 0
+	l.ProtocolID = b[p]
+	p++
+	l.Identifier = binary.BigEndian.Uint64(b[p : p+8])
+	p += 8
+	// Local Node Descriptor
+	// Get Node Descriptor's length, skip Node Descriptor Type
+	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
+	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
+	if err != nil {
+		return nil, err
+	}
+	l.LocalNode = ln
+	p += int(ndl)
+	// Remote Node Descriptor
+	// Get Node Descriptor's length, skip Node Descriptor Type
+	ndl = binary.BigEndian.Uint16(b[p+2 : p+4])
+	rn, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
+	if err != nil {
+		return nil, err
+	}
+	l.RemoteNode = rn
+	p += int(ndl)
+	// Link Descriptor
+	ld, err := UnmarshalLinkDescriptor(b[p : p+len(b)])
+	if err != nil {
+		return nil, err
+	}
+	l.Link = ld
 
 	return &l, nil
 }
 
+// PrefixDescriptor defines Prefix Descriptor object
+// https://tools.ietf.org/html/rfc7752#section-3.2.3
 type PrefixDescriptor struct {
 	data []byte
 }
 
+// UnmarshalPrefixDescriptor builds Prefix Descriptor object
+func UnmarshalPrefixDescriptor(b []byte) (*PrefixDescriptor, error) {
+	pd := PrefixDescriptor{}
+	// TODO Figure out format and add real Unmarshal
+	pd.data = make([]byte, len(b))
+	copy(pd.data, b)
+
+	return &pd, nil
+}
+
 // PrefixNLRI defines Prefix NLRI onject
+// https://tools.ietf.org/html/rfc7752#section-3.2
 type PrefixNLRI struct {
 	ProtocolID uint8
 	Reserved   [3]byte
-	LocalNode  NodeDescriptor
-	Prefix     PrefixDescriptor
+	Identifier uint64
+	LocalNode  *NodeDescriptor
+	Prefix     *PrefixDescriptor
 }
 
+// UnmarshalPrefixNLRI builds Prefix NLRI object
 func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
-	p := PrefixNLRI{}
+	pr := PrefixNLRI{}
+	p := 0
+	pr.ProtocolID = b[p]
+	p++
+	pr.Identifier = binary.BigEndian.Uint64(b[p : p+8])
+	p += 8
+	// Get Node Descriptor's length, skip Node Descriptor Type
+	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
+	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
+	if err != nil {
+		return nil, err
+	}
+	pr.LocalNode = ln
+	p += int(ndl)
+	pn, err := UnmarshalPrefixDescriptor(b[p:len(b)])
+	if err != nil {
+		return nil, err
+	}
+	pr.Prefix = pn
 
-	return &p, nil
+	return &pr, nil
 }
 
 func messageHex(b []byte) string {
