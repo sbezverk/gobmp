@@ -89,7 +89,7 @@ func parser(queue chan []byte, stop chan struct{}) {
 	for {
 		select {
 		case msg := <-queue:
-			parsingWorker(msg)
+			go parsingWorker(msg)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 		default:
@@ -744,6 +744,14 @@ func UnmarshalMPReachNLRI(b []byte) (*MPReachNLRI, error) {
 	p += int(mp.NextHopAddressLength)
 	// Skip reserved byte
 	p++
+	switch mp.SubAddressFamilyID {
+	// TODO Define constants
+	case 71:
+		_, err := UnmarshalLSNLRI71(b[p:len(b)])
+		if err != nil {
+			return nil, err
+		}
+	}
 	mp.NLRI = b[p:len(b)]
 
 	return &mp, nil
@@ -758,6 +766,113 @@ func (mp *MPReachNLRI) String() string {
 	s += fmt.Sprintf("NLRI: %s\n", messageHex(mp.NLRI))
 
 	return s
+}
+
+// 0                   1                   2                   3
+// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |            NLRI Type          |     Total NLRI Length         |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                                                               |
+// //                  Link-State NLRI (variable)                 //
+// |                                                               |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+// LSNLRI71 defines Link State NLRI object
+type LSNLRI71 struct {
+	Type   uint16
+	Length uint16 // Not including Type and itself
+	LS     []byte
+}
+
+func UnmarshalLSNLRI71(b []byte) (*LSNLRI71, error) {
+	ls := LSNLRI71{}
+	p := 0
+	ls.Type = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	ls.Length = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	switch ls.Type {
+	case 1:
+		// Node NLRI
+	case 2:
+		// Link NLRI
+	case 3:
+		// IPv4 Topology Prefix NLRI
+	case 4:
+		// IPv6 Topology Prefix NLRI
+	default:
+		return nil, fmt.Errorf("invalid LS NLRI type %d", ls.Type)
+	}
+	ls.LS = b[p : p+int(ls.Length)]
+
+	return &ls, nil
+}
+
+type NodeDescriptorSubTLV struct {
+	data []byte
+}
+
+type NodeDescriptor struct {
+	Type   uint16
+	Length uint16
+	SubTLV NodeDescriptorSubTLV
+}
+
+func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {
+	nd := NodeDescriptor{}
+
+	return &nd, nil
+}
+
+type LinkDescriptor struct {
+	data []byte
+}
+
+// NodeNLRI defines Node NLRI onject
+type NodeNLRI struct {
+	ProtocolID uint8
+	Reserved   [3]byte
+	LocalNode  NodeDescriptor
+}
+
+func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
+	n := NodeNLRI{}
+
+	return &n, nil
+}
+
+// LinkNLRI defines Node NLRI onject
+type LinkNLRI struct {
+	ProtocolID uint8
+	Reserved   [3]byte
+	LocalNode  NodeDescriptor
+	RemoteNode NodeDescriptor
+	Link       LinkDescriptor
+}
+
+func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
+	l := LinkNLRI{}
+
+	return &l, nil
+}
+
+type PrefixDescriptor struct {
+	data []byte
+}
+
+// PrefixNLRI defines Prefix NLRI onject
+type PrefixNLRI struct {
+	ProtocolID uint8
+	Reserved   [3]byte
+	LocalNode  NodeDescriptor
+	Prefix     PrefixDescriptor
+}
+
+func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
+	p := PrefixNLRI{}
+
+	return &p, nil
 }
 
 func messageHex(b []byte) string {
