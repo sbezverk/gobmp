@@ -919,67 +919,52 @@ func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {
 	return &nd, nil
 }
 
-// LinkDescriptorSubTLV defines Link Descriptor Sub TLVs object
+// LinkDescriptorTLV defines Link Descriptor TLVs object
 // https://tools.ietf.org/html/rfc7752#section-3.2.2
-type LinkDescriptorSubTLV struct {
+type LinkDescriptorTLV struct {
 	Type   uint16
 	Length uint16
 	Value  []byte
 }
 
-func (stlv *LinkDescriptorSubTLV) String() string {
+func (ltlv *LinkDescriptorTLV) String() string {
 	var s string
-	s += fmt.Sprintf("Link Descriptor Sub TLV Type: %d\n", stlv.Type)
-	s += fmt.Sprintf("Link Descriptor Sub TLV Length: %d\n", stlv.Length)
+	s += fmt.Sprintf("Link Descriptor TLV Type: %d\n", ltlv.Type)
+	s += fmt.Sprintf("Link Descriptor TLV Length: %d\n", ltlv.Length)
 	s += "Value: "
-	s += messageHex(stlv.Value)
+	s += messageHex(ltlv.Value)
 	s += "\n"
 
 	return s
 }
 
-// UnmarshalLinkDescriptorSubTLV builds Link Descriptor Sub TLVs object
-func UnmarshalLinkDescriptorSubTLV(b []byte) ([]LinkDescriptorSubTLV, error) {
-	stlvs := make([]LinkDescriptorSubTLV, 0)
+// UnmarshalLinkDescriptorTLV builds Link Descriptor TLVs object
+func UnmarshalLinkDescriptorTLV(b []byte) ([]LinkDescriptorTLV, error) {
+	ltlvs := make([]LinkDescriptorTLV, 0)
 	for p := 0; p < len(b); {
-		stlv := LinkDescriptorSubTLV{}
-		t := binary.BigEndian.Uint16(b[p : p+2])
-		switch t {
-		case 258:
-		case 259:
-		case 260:
-		case 261:
-		case 262:
-		case 263:
-		default:
-			return nil, fmt.Errorf("invalid Link Descriptor Sub TLV type %d", t)
-		}
-		stlv.Type = t
+		ltlv := LinkDescriptorTLV{}
+		ltlv.Type = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		stlv.Length = binary.BigEndian.Uint16(b[p : p+2])
+		ltlv.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		stlv.Value = make([]byte, stlv.Length)
-		copy(stlv.Value, b[p:p+int(stlv.Length)])
-		stlvs = append(stlvs, stlv)
-		p += int(stlv.Length)
+		ltlv.Value = make([]byte, ltlv.Length)
+		copy(ltlv.Value, b[p:p+int(ltlv.Length)])
+		ltlvs = append(ltlvs, ltlv)
+		p += int(ltlv.Length)
 	}
 
-	return stlvs, nil
+	return ltlvs, nil
 }
 
 // LinkDescriptor defines Link Descriptor object
 // https://tools.ietf.org/html/rfc7752#section-3.2.2
 type LinkDescriptor struct {
-	Type   uint16
-	Length uint16
-	SubTLV []LinkDescriptorSubTLV
+	LinkTLV []LinkDescriptorTLV
 }
 
 func (ld *LinkDescriptor) String() string {
 	var s string
-	s += fmt.Sprintf("Link Descriptors Type: %d\n", ld.Type)
-	s += fmt.Sprintf("Link Descriptors Length: %d\n", ld.Length)
-	for _, stlv := range ld.SubTLV {
+	for _, stlv := range ld.LinkTLV {
 		s += stlv.String()
 	}
 
@@ -990,15 +975,11 @@ func (ld *LinkDescriptor) String() string {
 func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
 	ld := LinkDescriptor{}
 	p := 0
-	ld.Type = binary.BigEndian.Uint16(b[p : p+2])
-	p += 2
-	ld.Length = binary.BigEndian.Uint16(b[p : p+2])
-	p += 2
-	stlv, err := UnmarshalLinkDescriptorSubTLV(b[p : p+len(b)])
+	ltlv, err := UnmarshalLinkDescriptorTLV(b[p : p+len(b)])
 	if err != nil {
 		return nil, err
 	}
-	ld.SubTLV = stlv
+	ld.LinkTLV = ltlv
 
 	return &ld, nil
 }
@@ -1094,7 +1075,7 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	l.RemoteNode = rn
 	p += int(ndl)
 	// Link Descriptor
-	ld, err := UnmarshalLinkDescriptor(b[p : p+len(b)])
+	ld, err := UnmarshalLinkDescriptor(b[p:len(b)])
 	if err != nil {
 		return nil, err
 	}
@@ -1124,7 +1105,6 @@ func (stlv *PrefixDescriptorTLV) String() string {
 
 // UnmarshalPrefixDescriptorTLV builds Prefix Descriptor Sub TLVs object
 func UnmarshalPrefixDescriptorTLV(b []byte) ([]PrefixDescriptorTLV, error) {
-	glog.Infof("Total Prefix descriptor length: %d content: %s", len(b), messageHex(b))
 	ptlvs := make([]PrefixDescriptorTLV, 0)
 	for p := 0; p < len(b); {
 		ptlv := PrefixDescriptorTLV{}
@@ -1133,7 +1113,6 @@ func UnmarshalPrefixDescriptorTLV(b []byte) ([]PrefixDescriptorTLV, error) {
 		ptlv.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		ptlv.Value = make([]byte, ptlv.Length)
-		glog.Infof("Prefix TLV type: %d length: %d", ptlv.Type, ptlv.Length)
 		copy(ptlv.Value, b[p:p+int(ptlv.Length)])
 		p += int(ptlv.Length)
 		ptlvs = append(ptlvs, ptlv)
@@ -1192,7 +1171,6 @@ func (p *PrefixNLRI) String() string {
 
 // UnmarshalPrefixNLRI builds Prefix NLRI object
 func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
-	glog.Infof("Prefix NLRI length: %d content: %s", len(b), messageHex(b))
 	pr := PrefixNLRI{}
 	p := 0
 	pr.ProtocolID = b[p]
