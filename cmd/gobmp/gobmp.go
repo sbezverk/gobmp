@@ -1027,6 +1027,8 @@ func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
 	p := 0
 	n.ProtocolID = b[p]
 	p++
+	// Skip 3 reserved bytes
+	p += 3
 	n.Identifier = binary.BigEndian.Uint64(b[p : p+8])
 	p += 8
 	// Local Node Descriptor
@@ -1069,6 +1071,8 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	p := 0
 	l.ProtocolID = b[p]
 	p++
+	// Skip 3 reserved bytes
+	p += 3
 	l.Identifier = binary.BigEndian.Uint64(b[p : p+8])
 	p += 8
 	// Local Node Descriptor
@@ -1099,7 +1103,7 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	return &l, nil
 }
 
-// PrefixDescriptorSubTLV defines Prefix Descriptor Sub TLVs object
+// PrefixDescriptorTLV defines Prefix Descriptor Sub TLVs object
 // https://tools.ietf.org/html/rfc7752#section-3.2.2
 type PrefixDescriptorTLV struct {
 	Type   uint16
@@ -1120,20 +1124,22 @@ func (stlv *PrefixDescriptorTLV) String() string {
 
 // UnmarshalPrefixDescriptorTLV builds Prefix Descriptor Sub TLVs object
 func UnmarshalPrefixDescriptorTLV(b []byte) ([]PrefixDescriptorTLV, error) {
-	stlvs := make([]PrefixDescriptorTLV, 0)
+	glog.Infof("Total Prefix descriptor length: %d content: %s", len(b), messageHex(b))
+	ptlvs := make([]PrefixDescriptorTLV, 0)
 	for p := 0; p < len(b); {
-		stlv := PrefixDescriptorTLV{}
-		stlv.Type = binary.BigEndian.Uint16(b[p : p+2])
+		ptlv := PrefixDescriptorTLV{}
+		ptlv.Type = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		stlv.Length = binary.BigEndian.Uint16(b[p : p+2])
+		ptlv.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		stlv.Value = make([]byte, stlv.Length)
-		copy(stlv.Value, b[p:p+int(stlv.Length)])
-		stlvs = append(stlvs, stlv)
-		p += int(stlv.Length)
+		ptlv.Value = make([]byte, ptlv.Length)
+		glog.Infof("Prefix TLV type: %d length: %d", ptlv.Type, ptlv.Length)
+		copy(ptlv.Value, b[p:p+int(ptlv.Length)])
+		p += int(ptlv.Length)
+		ptlvs = append(ptlvs, ptlv)
 	}
 
-	return stlvs, nil
+	return ptlvs, nil
 }
 
 // PrefixDescriptor defines Prefix Descriptor object
@@ -1186,10 +1192,13 @@ func (p *PrefixNLRI) String() string {
 
 // UnmarshalPrefixNLRI builds Prefix NLRI object
 func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
+	glog.Infof("Prefix NLRI length: %d content: %s", len(b), messageHex(b))
 	pr := PrefixNLRI{}
 	p := 0
 	pr.ProtocolID = b[p]
 	p++
+	// Skip reserved bytes
+	p += 3
 	pr.Identifier = binary.BigEndian.Uint64(b[p : p+8])
 	p += 8
 	// Get Node Descriptor's length, skip Node Descriptor Type
