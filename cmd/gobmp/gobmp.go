@@ -794,7 +794,6 @@ func (ls *LSNLRI71) String() string {
 		} else {
 			nlri = err.Error() + "\n"
 		}
-
 	case 2:
 		t = "Link NLRI"
 		if n, err := UnmarshalLinkNLRI(ls.LS); err == nil {
@@ -1155,7 +1154,6 @@ type PrefixDescriptorTLV struct {
 }
 
 func (stlv *PrefixDescriptorTLV) String() string {
-
 	var s string
 	switch stlv.Type {
 	case 263:
@@ -1168,8 +1166,8 @@ func (stlv *PrefixDescriptorTLV) String() string {
 		s += fmt.Sprintf("Prefix Descriptor TLV Type: %d (IP Reachability Information)\n", stlv.Type)
 		s += fmt.Sprintf("Prefix Descriptor TLV Length: %d\n", stlv.Length)
 		s += fmt.Sprintf("   IP Reachability Information:\n")
-		s += fmt.Sprintf("      Prefix length: %d\n", stlv.Value[0]/8)
-		s += fmt.Sprintf("      IP Prefix: %s bytes\n", messageHex(stlv.Value[1:]))
+		s += fmt.Sprintf("      Prefix length: %d bytes\n", stlv.Value[0]/8)
+		s += fmt.Sprintf("      IP Prefix: %s\n", messageHex(stlv.Value[1:]))
 	default:
 		s += fmt.Sprintf("Prefix Descriptor TLV Type: %d\n", stlv.Type)
 		s += fmt.Sprintf("Prefix Descriptor TLV Length: %d\n", stlv.Length)
