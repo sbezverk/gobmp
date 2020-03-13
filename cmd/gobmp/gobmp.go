@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"os/signal"
 	"time"
 
 	"github.com/golang/glog"
@@ -205,20 +204,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Wait for the interrupt
-	signals := make(chan os.Signal, 1)
-	stop := make(chan bool)
-	signal.Notify(signals, os.Interrupt)
-	go func() {
-		for range signals {
-			glog.Infof("received interrupt, stopping.")
-			stop <- true
-		}
-	}()
-
 	// Starting Interceptor server
 	go server(incoming, dstPort)
 
+	stop := make(chan bool)
 	<-stop
 	os.Exit(0)
 }
@@ -559,8 +548,8 @@ type BGPPathAttribute struct {
 
 func (pa *BGPPathAttribute) String() string {
 	var s string
-	s += fmt.Sprintf("Attribute Type Flags: 0x%02X\n", pa.AttributeTypeFlags)
-	s += fmt.Sprintf("Attribute Length: %d\n", pa.AttributeLength)
+	// s += fmt.Sprintf("Attribute Type Flags: 0x%02X\n", pa.AttributeTypeFlags)
+	// s += fmt.Sprintf("Attribute Length: %d\n", pa.AttributeLength)
 	switch pa.AttributeType {
 	case 0xe:
 		// Found MP_REACH_NLRI attribute
@@ -576,6 +565,16 @@ func (pa *BGPPathAttribute) String() string {
 		s += fmt.Sprintf("Attribute Type: %d (MP_UNREACH_NLRI)\n", pa.AttributeType)
 		s += messageHex(pa.Attribute)
 		s += "\n"
+
+	case 1:
+		s += fmt.Sprintf("Attribute Type: %d (ORIGIN)\n", pa.AttributeType)
+		s += fmt.Sprintf("   Origin: %d\n", pa.Attribute)
+	case 2:
+		s += fmt.Sprintf("Attribute Type: %d (AS_PATH)\n", pa.AttributeType)
+		s += fmt.Sprintf("   AS PATH: %s\n", messageHex(pa.Attribute))
+	case 5:
+		s += fmt.Sprintf("Attribute Type: %d (LOCAL_PREF)\n", pa.AttributeType)
+		s += fmt.Sprintf("   Local Pref: %d\n", binary.BigEndian.Uint32(pa.Attribute))
 	default:
 		s += fmt.Sprintf("Attribute Type: %d\n", pa.AttributeType)
 		s += messageHex(pa.Attribute)
@@ -734,8 +733,11 @@ func (mp *MPReachNLRI) String() string {
 	var s string
 	s += fmt.Sprintf("Address Family ID: %d\n", mp.AddressFamilyID)
 	s += fmt.Sprintf("Subsequent Address Family ID: %d\n", mp.SubAddressFamilyID)
-	s += fmt.Sprintf("Length of Next Hop Network Address: %d\n", mp.NextHopAddressLength)
-	s += fmt.Sprintf("Next Hop Network Address: %s\n", messageHex(mp.NextHopAddress))
+	if mp.NextHopAddressLength == 4 {
+		s += fmt.Sprintf("Next Hop Network Address: %s\n", net.IP(mp.NextHopAddress).To4().String())
+	} else if mp.NextHopAddressLength == 16 {
+		s += fmt.Sprintf("Next Hop Network Address: %s\n", net.IP(mp.NextHopAddress).To16().String())
+	}
 	switch mp.SubAddressFamilyID {
 	case 71:
 		nlri, _ := UnmarshalLSNLRI71(mp.NLRI)
@@ -859,11 +861,26 @@ type NodeDescriptorSubTLV struct {
 
 func (stlv *NodeDescriptorSubTLV) String() string {
 	var s string
-	s += fmt.Sprintf("Node Descriptor Sub TLV Type: %d\n", stlv.Type)
-	s += fmt.Sprintf("Node Descriptor Sub TLV Length: %d\n", stlv.Length)
-	s += "Value: "
-	s += messageHex(stlv.Value)
-	s += "\n"
+	switch stlv.Type {
+	case 512:
+		s += fmt.Sprintf("   Node Descriptor Sub TLV Type: %d (Autonomous System)\n", stlv.Type)
+		s += fmt.Sprintf("      Autonomous System: %d\n", binary.BigEndian.Uint32(stlv.Value))
+	case 513:
+		s += fmt.Sprintf("   Node Descriptor Sub TLV Type: %d (BGP-LS Identifier)\n", stlv.Type)
+		s += fmt.Sprintf("      BGP-LS Identifier: %s\n", messageHex(stlv.Value))
+	case 514:
+		s += fmt.Sprintf("   Node Descriptor Sub TLV Type: %d (OSPF Area-ID)\n", stlv.Type)
+		s += fmt.Sprintf("      OSPF Area-ID: %s\n", messageHex(stlv.Value))
+	case 515:
+		s += fmt.Sprintf("   Node Descriptor Sub TLV Type: %d (IGP Router-ID)\n", stlv.Type)
+		s += fmt.Sprintf("      IGP Router-ID: %s\n", messageHex(stlv.Value))
+	default:
+		s += fmt.Sprintf("   Node Descriptor Sub TLV Type: %d\n", stlv.Type)
+		s += fmt.Sprintf("   Node Descriptor Sub TLV Length: %d\n", stlv.Length)
+		s += "      Value: "
+		s += messageHex(stlv.Value)
+		s += "\n"
+	}
 
 	return s
 }
@@ -879,8 +896,6 @@ func UnmarshalNodeDescriptorSubTLV(b []byte) ([]NodeDescriptorSubTLV, error) {
 		case 513:
 		case 514:
 		case 515:
-		case 256:
-		case 257:
 		default:
 			return nil, fmt.Errorf("invalid Node Descriptor Sub TLV type %d", t)
 		}
@@ -907,8 +922,15 @@ type NodeDescriptor struct {
 
 func (nd *NodeDescriptor) String() string {
 	var s string
-	s += fmt.Sprintf("Node Descriptors Type: %d\n", nd.Type)
-	s += fmt.Sprintf("Node Descriptors Length: %d\n", nd.Length)
+	switch nd.Type {
+	case 256:
+		s += fmt.Sprintf("Node Descriptors Type: %d (Local Node Descriptors)\n", nd.Type)
+	case 257:
+		s += fmt.Sprintf("Node Descriptors Type: %d (Remote Node Descriptors)\n", nd.Type)
+	default:
+		s += fmt.Sprintf("Node Descriptors Type: %d\n", nd.Type)
+		s += fmt.Sprintf("Node Descriptors Length: %d\n", nd.Length)
+	}
 	for _, stlv := range nd.SubTLV {
 		s += stlv.String()
 	}
@@ -943,11 +965,33 @@ type LinkDescriptorTLV struct {
 
 func (ltlv *LinkDescriptorTLV) String() string {
 	var s string
-	s += fmt.Sprintf("Link Descriptor TLV Type: %d\n", ltlv.Type)
-	s += fmt.Sprintf("Link Descriptor TLV Length: %d\n", ltlv.Length)
-	s += "Value: "
-	s += messageHex(ltlv.Value)
-	s += "\n"
+	switch ltlv.Type {
+	case 258:
+		s += fmt.Sprintf("   Link Descriptor TLV Type: %d (Link Local/Remote Identifiers)\n", ltlv.Type)
+		s += fmt.Sprintf("      Link Local Identifier: %d\n", binary.BigEndian.Uint16(ltlv.Value[:4]))
+		s += fmt.Sprintf("      Link Remote Identifier: %d\n", binary.BigEndian.Uint16(ltlv.Value[4:]))
+	case 259:
+		s += fmt.Sprintf("   Link Descriptor TLV Type: %d (IPv4 interface address)\n", ltlv.Type)
+		s += fmt.Sprintf("      IPv4 interface address: %s\n", net.IP(ltlv.Value).To4().String())
+	case 260:
+		s += fmt.Sprintf("   Link Descriptor TLV Type: %d (IPv4 neighbor address)\n", ltlv.Type)
+		s += fmt.Sprintf("      IPv4 neighbor address: %s\n", net.IP(ltlv.Value).To4().String())
+	case 261:
+		s += fmt.Sprintf("   Link Descriptor TLV Type: %d (IPv6 interface address)\n", ltlv.Type)
+		s += fmt.Sprintf("      IPv6 interface address: %s\n", net.IP(ltlv.Value).To16().String())
+	case 262:
+		s += fmt.Sprintf("   Link Descriptor TLV Type: %d (IPv6 neighbor address)\n", ltlv.Type)
+		s += fmt.Sprintf("      IPv6 neighbor address: %s\n", net.IP(ltlv.Value).To16().String())
+	case 263:
+		s += fmt.Sprintf("   Link Descriptor TLV Type: %d (Multi-Topology Identifier)\n", ltlv.Type)
+		s += fmt.Sprintf("      Multi-Topology Identifier: %s\n", messageHex(ltlv.Value))
+	default:
+		s += fmt.Sprintf("   Link Descriptor TLV Type: %d\n", ltlv.Type)
+		s += fmt.Sprintf("   Link Descriptor TLV Length: %d\n", ltlv.Length)
+		s += "      Value: "
+		s += messageHex(ltlv.Value)
+		s += "\n"
+	}
 
 	return s
 }
@@ -1111,12 +1155,28 @@ type PrefixDescriptorTLV struct {
 }
 
 func (stlv *PrefixDescriptorTLV) String() string {
+
 	var s string
-	s += fmt.Sprintf("Prefix Descriptor TLV Type: %d\n", stlv.Type)
-	s += fmt.Sprintf("Prefix Descriptor TLV Length: %d\n", stlv.Length)
-	s += "Value: "
-	s += messageHex(stlv.Value)
-	s += "\n"
+	switch stlv.Type {
+	case 263:
+		s += fmt.Sprintf("Prefix Descriptor TLV Type: %d (Multi-Topology Identifier)\n", stlv.Type)
+		s += fmt.Sprintf("   Multi-Topology Identifier: %s\n", messageHex(stlv.Value))
+	case 264:
+		s += fmt.Sprintf("Prefix Descriptor TLV Type: %d (OSPF Route Type)\n", stlv.Type)
+		s += fmt.Sprintf("   OSPF Route Type: %d\n", stlv.Value)
+	case 265:
+		s += fmt.Sprintf("Prefix Descriptor TLV Type: %d (IP Reachability Information)\n", stlv.Type)
+		s += fmt.Sprintf("Prefix Descriptor TLV Length: %d\n", stlv.Length)
+		s += fmt.Sprintf("   IP Reachability Information:\n")
+		s += fmt.Sprintf("      Prefix length: %d\n", stlv.Value[0]/8)
+		s += fmt.Sprintf("      IP Prefix: %s bytes\n", messageHex(stlv.Value[1:]))
+	default:
+		s += fmt.Sprintf("Prefix Descriptor TLV Type: %d\n", stlv.Type)
+		s += fmt.Sprintf("Prefix Descriptor TLV Length: %d\n", stlv.Length)
+		s += "Value: "
+		s += messageHex(stlv.Value)
+		s += "\n"
+	}
 
 	return s
 }
