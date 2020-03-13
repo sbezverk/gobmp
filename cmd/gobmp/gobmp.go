@@ -123,11 +123,13 @@ func parsingWorker(b []byte) {
 				return
 			}
 			if rm.CheckSAFI(71) {
-				glog.V(5).Infof("route monitor message carries BGP-LS SAFI")
+				// glog.V(5).Infof("route monitor message carries BGP-LS SAFI")
+				// glog.V(6).Infof("raw route monitor of length: %d raw data: %s", len(b), messageHex(b))
+				glog.V(6).Infof("parsed route monitor: \n%s", rm.String())
 			} else {
 				glog.V(5).Infof("route monitor message does not carry BGP-LS SAFI")
 			}
-			glog.V(6).Infof("parsed route monitor: \n%s", rm.String())
+			// glog.V(6).Infof("parsed route monitor: \n%s", rm.String())
 		case 1:
 			// *  Type = 1: Statistics Report
 			//glog.V(5).Infof("found Stats Report")
@@ -988,7 +990,7 @@ func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type NodeNLRI struct {
 	ProtocolID uint8
-	Reserved   [3]byte
+	//	Reserved   [3]byte
 	Identifier uint64
 	LocalNode  *NodeDescriptor
 }
@@ -1009,7 +1011,7 @@ func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
 	n.ProtocolID = b[p]
 	p++
 	// Skip 3 reserved bytes
-	p += 3
+	//	p += 3
 	n.Identifier = binary.BigEndian.Uint64(b[p : p+8])
 	p += 8
 	// Local Node Descriptor
@@ -1028,7 +1030,7 @@ func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type LinkNLRI struct {
 	ProtocolID uint8
-	Reserved   [3]byte
+	//	Reserved   [3]byte
 	Identifier uint64
 	LocalNode  *NodeDescriptor
 	RemoteNode *NodeDescriptor
@@ -1053,7 +1055,7 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	l.ProtocolID = b[p]
 	p++
 	// Skip 3 reserved bytes
-	p += 3
+	//	p += 3
 	l.Identifier = binary.BigEndian.Uint64(b[p : p+8])
 	p += 8
 	// Local Node Descriptor
@@ -1064,6 +1066,8 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 		return nil, err
 	}
 	l.LocalNode = ln
+	// Skip Node Type and Length 4 bytes
+	p += 4
 	p += int(ndl)
 	// Remote Node Descriptor
 	// Get Node Descriptor's length, skip Node Descriptor Type
@@ -1074,6 +1078,8 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	}
 	l.RemoteNode = rn
 	p += int(ndl)
+	// Skip Node Type and Length 4 bytes
+	p += 4
 	// Link Descriptor
 	ld, err := UnmarshalLinkDescriptor(b[p:len(b)])
 	if err != nil {
@@ -1153,7 +1159,7 @@ func UnmarshalPrefixDescriptor(b []byte) (*PrefixDescriptor, error) {
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type PrefixNLRI struct {
 	ProtocolID uint8
-	Reserved   [3]byte
+	//	Reserved   [3]byte
 	Identifier uint64
 	LocalNode  *NodeDescriptor
 	Prefix     *PrefixDescriptor
@@ -1176,7 +1182,7 @@ func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
 	pr.ProtocolID = b[p]
 	p++
 	// Skip reserved bytes
-	p += 3
+	//	p += 3
 	pr.Identifier = binary.BigEndian.Uint64(b[p : p+8])
 	p += 8
 	// Get Node Descriptor's length, skip Node Descriptor Type
@@ -1186,6 +1192,8 @@ func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
 		return nil, err
 	}
 	pr.LocalNode = ln
+	// Skip Node Descriptor Type and Length 4 bytes
+	p += 4
 	p += int(ndl)
 	pn, err := UnmarshalPrefixDescriptor(b[p:len(b)])
 	if err != nil {
