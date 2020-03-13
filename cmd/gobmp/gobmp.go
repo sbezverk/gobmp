@@ -1230,6 +1230,10 @@ func (ls *BGPLSTLV) String() string {
 
 	// List of TLV to skip processing
 
+	case 263:
+		fallthrough
+	case 266:
+		fallthrough
 	case 267: // expires 2020-11-02
 		fallthrough
 	case 1173:
@@ -1267,6 +1271,15 @@ func (ls *BGPLSTLV) String() string {
 	case 1035:
 		s += fmt.Sprintf("BGP-LS TLV Type: %d (SR Algorithm)\n", ls.Type)
 		s += fmt.Sprintf("   SR Algorithm: %s\n", messageHex(ls.Value))
+	case 1036:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d (SR Local Block)\n", ls.Type)
+		s += fmt.Sprintf("   SR Local Block: %s\n", messageHex(ls.Value))
+	case 1088:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d (Administrative group (color))\n", ls.Type)
+		s += fmt.Sprintf("   Administrative group (color): %d\n", binary.BigEndian.Uint32(ls.Value))
+	case 1089:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d (Maximum link bandwidth)\n", ls.Type)
+		s += fmt.Sprintf("   Maximum link bandwidth: %d\n", binary.BigEndian.Uint32(ls.Value))
 	case 1090:
 		s += fmt.Sprintf("BGP-LS TLV Type: %d (Max. reservable link bandwidth)\n", ls.Type)
 		s += fmt.Sprintf("   Max. reservable link bandwidth: %s\n", messageHex(ls.Value))
@@ -1303,6 +1316,13 @@ func (ls *BGPLSTLV) String() string {
 	case 1170:
 		s += fmt.Sprintf("BGP-LS TLV Type: %d (Prefix Attributes Flags)\n", ls.Type)
 		s += fmt.Sprintf("   Flag: %s\n", messageHex(ls.Value))
+	case 1171:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d (Source Router-ID)\n", ls.Type)
+		if ls.Length == 4 {
+			s += fmt.Sprintf("   Source Router-ID: %s\n", net.IP(ls.Value).To4().String())
+		} else if ls.Length == 16 {
+			s += fmt.Sprintf("   Source Router-ID: %s\n", net.IP(ls.Value).To16().String())
+		}
 
 	// Default BGP-LS TLV processing
 
