@@ -1230,10 +1230,10 @@ func (ls *BGPLSTLV) String() string {
 	case 1155:
 		s += fmt.Sprintf("BGP-LS TLV Type: %d (Prefix Metric)\n", ls.Type)
 		m := binary.BigEndian.Uint32(ls.Value)
-		s += fmt.Sprintf("Prefix Metric: %d\n", m)
+		s += fmt.Sprintf("   Prefix Metric: %d\n", m)
 	case 1170:
 		s += fmt.Sprintf("BGP-LS TLV Type: %d (Prefix Attributes Flags)\n", ls.Type)
-		s += fmt.Sprintf("Flag: %s\n", messageHex(ls.Value))
+		s += fmt.Sprintf("   Flag: %s\n", messageHex(ls.Value))
 	case 1158:
 		s += fmt.Sprintf("BGP-LS TLV Type: %d (Prefix SID)\n", ls.Type)
 		psid, err := UnmarshalPrefixSIDTLV(ls.Value)
@@ -1301,8 +1301,6 @@ func UnmarshalBGPLSNLRI(b []byte) (*BGPLSNLRI, error) {
 // PrefixSIDTLV defines Prefix SID TLV Object
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.3.1
 type PrefixSIDTLV struct {
-	Type      uint16
-	Length    uint16
 	Flags     uint8
 	Algorithm uint8
 	Reserved  []byte // 2 bytes
@@ -1311,10 +1309,9 @@ type PrefixSIDTLV struct {
 
 func (psid *PrefixSIDTLV) String() string {
 	var s string
-	s += fmt.Sprintf("Prefix SID TLV Type: %d\n", psid.Type)
-	s += fmt.Sprintf("Prefix SID TLV Flags: %02x\n", psid.Flags)
-	s += fmt.Sprintf("Prefix SID TLV Algorithm: %d\n", psid.Algorithm)
-	s += fmt.Sprintf("Prefix SID TLV SID: %s\n", messageHex(psid.SID))
+	s += fmt.Sprintf("   Flags: %02x\n", psid.Flags)
+	s += fmt.Sprintf("   Algorithm: %d\n", psid.Algorithm)
+	s += fmt.Sprintf("   SID: %s\n", messageHex(psid.SID))
 
 	return s
 }
@@ -1323,17 +1320,15 @@ func (psid *PrefixSIDTLV) String() string {
 func UnmarshalPrefixSIDTLV(b []byte) (*PrefixSIDTLV, error) {
 	psid := PrefixSIDTLV{}
 	p := 0
-	psid.Type = binary.BigEndian.Uint16(b[p : p+2])
-	p += 2
-	psid.Length = binary.BigEndian.Uint16(b[p : p+2])
-	p += 2
 	psid.Flags = b[p]
 	p++
 	psid.Algorithm = b[p]
 	p++
-	// SID length would be psid.Length - Flags 1 byte - Algorithm 1 byte - 2 bytes Reserved
-	psid.SID = make([]byte, psid.Length-4)
-	copy(psid.SID, b[p:p+int(psid.Length-4)])
+	// SID length would be Length of b - Flags 1 byte - Algorithm 1 byte - 2 bytes Reserved
+	sl := len(b) - 4
+	psid.SID = make([]byte, len(b)-4)
+	p += 2
+	copy(psid.SID, b[p:p+sl])
 
 	return &psid, nil
 }
