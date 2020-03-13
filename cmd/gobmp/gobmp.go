@@ -560,16 +560,28 @@ type BGPPathAttribute struct {
 func (pa *BGPPathAttribute) String() string {
 	var s string
 	s += fmt.Sprintf("Attribute Type Flags: 0x%02X\n", pa.AttributeTypeFlags)
-	s += fmt.Sprintf("Attribute Type: 0x%02X\n", pa.AttributeType)
 	s += fmt.Sprintf("Attribute Length: %d\n", pa.AttributeLength)
-	if pa.AttributeType == 0x0e {
+	switch pa.AttributeType {
+	case 0xe:
 		// Found MP_REACH_NLRI attribute
+		s += fmt.Sprintf("Attribute Type: %d (MP_REACH_NLRI)\n", pa.AttributeType)
 		mp, _ := UnmarshalMPReachNLRI(pa.Attribute)
 		s += mp.String()
-	} else {
+	case 0x1d:
+		s += fmt.Sprintf("Attribute Type: %d (BGP-LS)\n", pa.AttributeType)
+		bgpls, _ := UnmarshalBGPLSNLRI(pa.Attribute)
+		s += bgpls.String()
+	case 0xf:
+		// Found MP_UNREACH_NLRI attribute
+		s += fmt.Sprintf("Attribute Type: %d (MP_UNREACH_NLRI)\n", pa.AttributeType)
+		s += messageHex(pa.Attribute)
+		s += "\n"
+	default:
+		s += fmt.Sprintf("Attribute Type: %d\n", pa.AttributeType)
 		s += messageHex(pa.Attribute)
 		s += "\n"
 	}
+
 	return s
 }
 
@@ -1202,6 +1214,128 @@ func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
 	pr.Prefix = pn
 
 	return &pr, nil
+}
+
+// BGPLSTLV defines BGP-LS TLV object
+// https://tools.ietf.org/html/rfc7752#section-3.3
+type BGPLSTLV struct {
+	Type   uint16
+	Length uint16
+	Value  []byte
+}
+
+func (ls *BGPLSTLV) String() string {
+	var s string
+	switch ls.Type {
+	case 1155:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d (Prefix Metric)\n", ls.Type)
+		m := binary.BigEndian.Uint32(ls.Value)
+		s += fmt.Sprintf("Prefix Metric: %d\n", m)
+	case 1170:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d (Prefix Attributes Flags)\n", ls.Type)
+		s += fmt.Sprintf("Flag: %s\n", messageHex(ls.Value))
+	case 1158:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d (Prefix SID)\n", ls.Type)
+		psid, err := UnmarshalPrefixSIDTLV(ls.Value)
+		if err != nil {
+			s += err.Error() + "\n"
+			break
+		}
+		s += psid.String()
+	default:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d\n", ls.Type)
+		s += fmt.Sprintf("BGP-LS TLV Length: %d\n", ls.Length)
+		s += "Value: "
+		s += messageHex(ls.Value)
+		s += "\n"
+	}
+
+	return s
+}
+
+// UnmarshalBGPLSTLV builds Collection of BGP-LS TLVs
+func UnmarshalBGPLSTLV(b []byte) ([]BGPLSTLV, error) {
+	lstlvs := make([]BGPLSTLV, 0)
+	for p := 0; p < len(b); {
+		lstlv := BGPLSTLV{}
+		lstlv.Type = binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		lstlv.Length = binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		lstlv.Value = make([]byte, lstlv.Length)
+		copy(lstlv.Value, b[p:p+int(lstlv.Length)])
+		p += int(lstlv.Length)
+		lstlvs = append(lstlvs, lstlv)
+	}
+
+	return lstlvs, nil
+}
+
+// BGPLSNLRI defines BGP-LS NLRI object as collection of BGP-LS TLVs
+// https://tools.ietf.org/html/rfc7752#section-3.3
+type BGPLSNLRI struct {
+	LSTLV []BGPLSTLV
+}
+
+func (ls *BGPLSNLRI) String() string {
+	var s string
+	for _, tlv := range ls.LSTLV {
+		s += tlv.String()
+	}
+
+	return s
+}
+
+// UnmarshalBGPLSNLRI builds Prefix NLRI object
+func UnmarshalBGPLSNLRI(b []byte) (*BGPLSNLRI, error) {
+	bgpls := BGPLSNLRI{}
+	ls, err := UnmarshalBGPLSTLV(b)
+	if err != nil {
+		return nil, err
+	}
+	bgpls.LSTLV = ls
+
+	return &bgpls, nil
+}
+
+// PrefixSIDTLV defines Prefix SID TLV Object
+// https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.3.1
+type PrefixSIDTLV struct {
+	Type      uint16
+	Length    uint16
+	Flags     uint8
+	Algorithm uint8
+	Reserved  []byte // 2 bytes
+	SID       []byte
+}
+
+func (psid *PrefixSIDTLV) String() string {
+	var s string
+	s += fmt.Sprintf("Prefix SID TLV Type: %d\n", psid.Type)
+	s += fmt.Sprintf("Prefix SID TLV Flags: %02x\n", psid.Flags)
+	s += fmt.Sprintf("Prefix SID TLV Algorithm: %d\n", psid.Algorithm)
+	s += fmt.Sprintf("Prefix SID TLV SID: %s\n", messageHex(psid.SID))
+
+	return s
+}
+
+// UnmarshalPrefixSIDTLV builds Prefix SID TLV Object
+func UnmarshalPrefixSIDTLV(b []byte) (*PrefixSIDTLV, error) {
+	psid := PrefixSIDTLV{}
+	p := 0
+	psid.Type = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	psid.Length = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	psid.Flags = b[p]
+	p++
+	psid.Algorithm = b[p]
+	p++
+	// SID length would be psid.Length - Flags 1 byte - Algorithm 1 byte - 2 bytes Reserved
+	psid.SID = make([]byte, psid.Length-4)
+	copy(psid.SID, b[p:p+int(psid.Length-4)])
+
+	return &psid, nil
 }
 
 func messageHex(b []byte) string {
