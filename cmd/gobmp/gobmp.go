@@ -875,21 +875,21 @@ func (stlv *NodeDescriptorSubTLV) String() string {
 	var s string
 	switch stlv.Type {
 	case 512:
-		s += fmt.Sprintf("   Node Descriptor Sub TLV Type: %d (Autonomous System)\n", stlv.Type)
-		s += fmt.Sprintf("      Autonomous System: %d\n", binary.BigEndian.Uint32(stlv.Value))
+		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (Autonomous System)\n", stlv.Type)
+		s += fmt.Sprintf("         Autonomous System: %d\n", binary.BigEndian.Uint32(stlv.Value))
 	case 513:
-		s += fmt.Sprintf("   Node Descriptor Sub TLV Type: %d (BGP-LS Identifier)\n", stlv.Type)
-		s += fmt.Sprintf("      BGP-LS Identifier: %s\n", messageHex(stlv.Value))
+		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (BGP-LS Identifier)\n", stlv.Type)
+		s += fmt.Sprintf("         BGP-LS Identifier: %s\n", messageHex(stlv.Value))
 	case 514:
-		s += fmt.Sprintf("   Node Descriptor Sub TLV Type: %d (OSPF Area-ID)\n", stlv.Type)
-		s += fmt.Sprintf("      OSPF Area-ID: %s\n", messageHex(stlv.Value))
+		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (OSPF Area-ID)\n", stlv.Type)
+		s += fmt.Sprintf("         OSPF Area-ID: %s\n", messageHex(stlv.Value))
 	case 515:
-		s += fmt.Sprintf("   Node Descriptor Sub TLV Type: %d (IGP Router-ID)\n", stlv.Type)
-		s += fmt.Sprintf("      IGP Router-ID: %s\n", messageHex(stlv.Value))
+		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (IGP Router-ID)\n", stlv.Type)
+		s += fmt.Sprintf("         IGP Router-ID: %s\n", messageHex(stlv.Value))
 	default:
-		s += fmt.Sprintf("   Node Descriptor Sub TLV Type: %d\n", stlv.Type)
-		s += fmt.Sprintf("   Node Descriptor Sub TLV Length: %d\n", stlv.Length)
-		s += "      Value: "
+		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d\n", stlv.Type)
+		s += fmt.Sprintf("      Node Descriptor Sub TLV Length: %d\n", stlv.Length)
+		s += "         Value: "
 		s += messageHex(stlv.Value)
 		s += "\n"
 	}
@@ -934,14 +934,16 @@ type NodeDescriptor struct {
 
 func (nd *NodeDescriptor) String() string {
 	var s string
+
+	s += "Node Descriptor TLVs:" + "\n"
 	switch nd.Type {
 	case 256:
-		s += fmt.Sprintf("Node Descriptors Type: %d (Local Node Descriptors)\n", nd.Type)
+		s += fmt.Sprintf("   Node Descriptor Type: %d (Local Node Descriptors)\n", nd.Type)
 	case 257:
-		s += fmt.Sprintf("Node Descriptors Type: %d (Remote Node Descriptors)\n", nd.Type)
+		s += fmt.Sprintf("   Node Descriptor Type: %d (Remote Node Descriptors)\n", nd.Type)
 	default:
-		s += fmt.Sprintf("Node Descriptors Type: %d\n", nd.Type)
-		s += fmt.Sprintf("Node Descriptors Length: %d\n", nd.Length)
+		s += fmt.Sprintf("   Node Descriptor Type: %d\n", nd.Type)
+		s += fmt.Sprintf("   Node Descriptor Length: %d\n", nd.Length)
 	}
 	for _, stlv := range nd.SubTLV {
 		s += stlv.String()
@@ -1034,6 +1036,7 @@ type LinkDescriptor struct {
 
 func (ld *LinkDescriptor) String() string {
 	var s string
+	s += "Link Desriptor TLVs:" + "\n"
 	for _, stlv := range ld.LinkTLV {
 		s += stlv.String()
 	}
@@ -1170,21 +1173,20 @@ func (stlv *PrefixDescriptorTLV) String() string {
 	var s string
 	switch stlv.Type {
 	case 263:
-		s += fmt.Sprintf("Prefix Descriptor TLV Type: %d (Multi-Topology Identifier)\n", stlv.Type)
-		s += fmt.Sprintf("   Multi-Topology Identifier: %s\n", messageHex(stlv.Value))
+		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d (Multi-Topology Identifier)\n", stlv.Type)
+		s += fmt.Sprintf("      Multi-Topology Identifier: %s\n", messageHex(stlv.Value))
 	case 264:
-		s += fmt.Sprintf("Prefix Descriptor TLV Type: %d (OSPF Route Type)\n", stlv.Type)
-		s += fmt.Sprintf("   OSPF Route Type: %d\n", stlv.Value)
+		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d (OSPF Route Type)\n", stlv.Type)
+		s += fmt.Sprintf("      OSPF Route Type: %d\n", stlv.Value)
 	case 265:
-		s += fmt.Sprintf("Prefix Descriptor TLV Type: %d (IP Reachability Information)\n", stlv.Type)
-		s += fmt.Sprintf("Prefix Descriptor TLV Length: %d\n", stlv.Length)
-		s += fmt.Sprintf("   IP Reachability Information:\n")
-		s += fmt.Sprintf("      Prefix length: %d bytes\n", stlv.Value[0]/8)
-		s += fmt.Sprintf("      IP Prefix: %s\n", messageHex(stlv.Value[1:]))
+		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d (IP Reachability Information)\n", stlv.Type)
+		s += fmt.Sprintf("      IP Reachability Information:\n")
+		s += fmt.Sprintf("         Prefix length: %d bytes\n", stlv.Value[0]/8)
+		s += fmt.Sprintf("         IP Prefix: %s\n", messageHex(stlv.Value[1:]))
 	default:
-		s += fmt.Sprintf("Prefix Descriptor TLV Type: %d\n", stlv.Type)
-		s += fmt.Sprintf("Prefix Descriptor TLV Length: %d\n", stlv.Length)
-		s += "Value: "
+		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d\n", stlv.Type)
+		s += fmt.Sprintf("   Prefix Descriptor TLV Length: %d\n", stlv.Length)
+		s += "      Value: "
 		s += messageHex(stlv.Value)
 		s += "\n"
 	}
@@ -1218,6 +1220,7 @@ type PrefixDescriptor struct {
 
 func (pd *PrefixDescriptor) String() string {
 	var s string
+	s += "Prefix Descriptor TLVs:" + "\n"
 	for _, stlv := range pd.PrefixTLV {
 		s += stlv.String()
 	}
@@ -1313,71 +1316,79 @@ func (ls *BGPLSTLV) String() string {
 		// List of TLV requireing additional processing
 
 	case 258:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Link Local/Remote Identifiers)\n", ls.Type)
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Link Local/Remote Identifiers)\n", ls.Type)
 		lid := binary.BigEndian.Uint32(ls.Value)
 		rid := binary.BigEndian.Uint32(ls.Value[4:])
-		s += fmt.Sprintf("   Link Local: %d\n", lid)
-		s += fmt.Sprintf("   Link Remote: %d\n", rid)
+		s += fmt.Sprintf("      Link Local: %d\n", lid)
+		s += fmt.Sprintf("      Link Remote: %d\n", rid)
 	case 1026:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Node Name)\n", ls.Type)
-		s += fmt.Sprintf("   Node Name: %s\n", string(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Node Name)\n", ls.Type)
+		s += fmt.Sprintf("      Node Name: %s\n", string(ls.Value))
 	case 1027:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (IS-IS Area Identifier)\n", ls.Type)
-		s += fmt.Sprintf("   IS-IS Area Identifier: %s\n", messageHex(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (IS-IS Area Identifier)\n", ls.Type)
+		s += fmt.Sprintf("      IS-IS Area Identifier: %s\n", messageHex(ls.Value))
 	case 1028:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (IPv4 Router-ID of Local Node)\n", ls.Type)
-		s += fmt.Sprintf("   IPv4 Router-ID of Local Node: %s\n", net.IP(ls.Value).To4().String())
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (IPv4 Router-ID of Local Node)\n", ls.Type)
+		s += fmt.Sprintf("      IPv4 Router-ID of Local Node: %s\n", net.IP(ls.Value).To4().String())
 	case 1029:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (IPv6 Router-ID of Local Node)\n", ls.Type)
-		s += fmt.Sprintf("   IPv6 Router-ID of Local Node: %s\n", net.IP(ls.Value).To16().String())
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (IPv6 Router-ID of Local Node)\n", ls.Type)
+		s += fmt.Sprintf("      IPv6 Router-ID of Local Node: %s\n", net.IP(ls.Value).To16().String())
 	case 1030:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (IPv4 Router-ID of Remote Node)\n", ls.Type)
-		s += fmt.Sprintf("   IPv4 Router-ID of Remote Node: %s\n", net.IP(ls.Value).To4().String())
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (IPv4 Router-ID of Remote Node)\n", ls.Type)
+		s += fmt.Sprintf("      IPv4 Router-ID of Remote Node: %s\n", net.IP(ls.Value).To4().String())
 	case 1031:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (IPv6 Router-ID of Remote Node)\n", ls.Type)
-		s += fmt.Sprintf("   IPv6 Router-ID of Remote Node: %s\n", net.IP(ls.Value).To16().String())
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (IPv6 Router-ID of Remote Node)\n", ls.Type)
+		s += fmt.Sprintf("      IPv6 Router-ID of Remote Node: %s\n", net.IP(ls.Value).To16().String())
 	case 1034:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (SR Capabilities)\n", ls.Type)
-		s += fmt.Sprintf("   SR Capabilities: %s\n", messageHex(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SR Capabilities)\n", ls.Type)
+		s += fmt.Sprintf("      SR Capabilities: %s\n", messageHex(ls.Value))
 	case 1035:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (SR Algorithm)\n", ls.Type)
-		s += fmt.Sprintf("   SR Algorithm: %s\n", messageHex(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SR Algorithm)\n", ls.Type)
+		s += fmt.Sprintf("      SR Algorithm: %s\n", messageHex(ls.Value))
 	case 1036:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (SR Local Block)\n", ls.Type)
-		s += fmt.Sprintf("   SR Local Block: %s\n", messageHex(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SR Local Block)\n", ls.Type)
+		s += fmt.Sprintf("      SR Local Block: %s\n", messageHex(ls.Value))
 	case 1088:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Administrative group (color))\n", ls.Type)
-		s += fmt.Sprintf("   Administrative group (color): %d\n", binary.BigEndian.Uint32(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Administrative group (color))\n", ls.Type)
+		s += fmt.Sprintf("      Administrative group (color): %d\n", binary.BigEndian.Uint32(ls.Value))
 	case 1089:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Maximum link bandwidth)\n", ls.Type)
-		s += fmt.Sprintf("   Maximum link bandwidth: %d\n", binary.BigEndian.Uint32(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Maximum link bandwidth)\n", ls.Type)
+		s += fmt.Sprintf("      Maximum link bandwidth: %d\n", binary.BigEndian.Uint32(ls.Value))
 	case 1090:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Max. reservable link bandwidth)\n", ls.Type)
-		s += fmt.Sprintf("   Max. reservable link bandwidth: %s\n", messageHex(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Max. reservable link bandwidth)\n", ls.Type)
+		s += fmt.Sprintf("      Max. reservable link bandwidth: %s\n", messageHex(ls.Value))
 	case 1091:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Unreserved bandwidth)\n", ls.Type)
-		s += fmt.Sprintf("   Unreserved bandwidth: %s\n", messageHex(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Unreserved bandwidth)\n", ls.Type)
+		s += fmt.Sprintf("      Unreserved bandwidth: %s\n", messageHex(ls.Value))
 	case 1092:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (IGP Metric)\n", ls.Type)
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (IGP Metric)\n", ls.Type)
 		m := binary.BigEndian.Uint32(ls.Value)
-		s += fmt.Sprintf("   IGP Metric: %d\n", m)
+		s += fmt.Sprintf("      IGP Metric: %d\n", m)
 	case 1095:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (TE Default Metric)\n", ls.Type)
-		s += fmt.Sprintf("   TE Default Metric: %s\n", messageHex(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (TE Default Metric)\n", ls.Type)
+		s += fmt.Sprintf("      TE Default Metric: %s\n", messageHex(ls.Value))
 	case 1099:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Adjacency Segment Identifier)\n", ls.Type)
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Adjacency Segment Identifier)\n", ls.Type)
 		asid, err := UnmarshalAdjacencySIDTLV(ls.Value)
 		if err != nil {
 			s += err.Error() + "\n"
 			break
 		}
 		s += asid.String()
+	case 1106:
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 End.X SID TLV)\n", ls.Type)
+		endx, err := UnmarshalSRv6EndXSIDTLV(ls.Value)
+		if err != nil {
+			s += err.Error() + "\n"
+			break
+		}
+		s += endx.String()
 	case 1155:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Prefix Metric)\n", ls.Type)
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Prefix Metric)\n", ls.Type)
 		m := binary.BigEndian.Uint32(ls.Value)
-		s += fmt.Sprintf("   Prefix Metric: %d\n", m)
+		s += fmt.Sprintf("      Prefix Metric: %d\n", m)
 	case 1158:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Prefix SID)\n", ls.Type)
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Prefix SID)\n", ls.Type)
 		psid, err := UnmarshalPrefixSIDTLV(ls.Value)
 		if err != nil {
 			s += err.Error() + "\n"
@@ -1385,39 +1396,39 @@ func (ls *BGPLSTLV) String() string {
 		}
 		s += psid.String()
 	case 1170:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Prefix Attributes Flags)\n", ls.Type)
-		s += fmt.Sprintf("   Flag: %s\n", messageHex(ls.Value))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Prefix Attributes Flags)\n", ls.Type)
+		s += fmt.Sprintf("      Flag: %s\n", messageHex(ls.Value))
 	case 1171:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (Source Router-ID)\n", ls.Type)
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Source Router-ID)\n", ls.Type)
 		if ls.Length == 4 {
 			s += fmt.Sprintf("   Source Router-ID: %s\n", net.IP(ls.Value).To4().String())
 		} else if ls.Length == 16 {
 			s += fmt.Sprintf("   Source Router-ID: %s\n", net.IP(ls.Value).To16().String())
 		}
 	case 1250:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (SRv6 Endpoint Function)\n", ls.Type)
-		s += fmt.Sprintf("   Endpoint Behavior: %s\n", messageHex(ls.Value[:2]))
-		s += fmt.Sprintf("   Flag: %02x\n", ls.Value[2])
-		s += fmt.Sprintf("   Algorithm: %d\n", ls.Value[3])
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 Endpoint Function)\n", ls.Type)
+		s += fmt.Sprintf("      Endpoint Behavior: %s\n", messageHex(ls.Value[:2]))
+		s += fmt.Sprintf("      Flag: %02x\n", ls.Value[2])
+		s += fmt.Sprintf("      Algorithm: %d\n", ls.Value[3])
 	case 1251:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (SRv6 Endpoint Function)\n", ls.Type)
-		s += fmt.Sprintf("   Flag: %02x\n", ls.Value[0])
-		s += fmt.Sprintf("   Weight: %d\n", ls.Value[1])
-		s += fmt.Sprintf("   Peer AS Number: %d\n", binary.BigEndian.Uint32(ls.Value[4:8]))
-		s += fmt.Sprintf("   Peer BGP Identifier: %s\n", messageHex(ls.Value[8:12]))
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 Endpoint Function)\n", ls.Type)
+		s += fmt.Sprintf("      Flag: %02x\n", ls.Value[0])
+		s += fmt.Sprintf("      Weight: %d\n", ls.Value[1])
+		s += fmt.Sprintf("      Peer AS Number: %d\n", binary.BigEndian.Uint32(ls.Value[4:8]))
+		s += fmt.Sprintf("      Peer BGP Identifier: %s\n", messageHex(ls.Value[8:12]))
 	case 1252:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d (SRv6 SID Structure)\n", ls.Type)
-		s += fmt.Sprintf("   LB Length: %d\n", ls.Value[0])
-		s += fmt.Sprintf("   LN Length: %d\n", ls.Value[1])
-		s += fmt.Sprintf("   Function Length: %d\n", ls.Value[2])
-		s += fmt.Sprintf("   Argument Length: %d\n", ls.Value[3])
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 SID Structure)\n", ls.Type)
+		s += fmt.Sprintf("      LB Length: %d\n", ls.Value[0])
+		s += fmt.Sprintf("      LN Length: %d\n", ls.Value[1])
+		s += fmt.Sprintf("      Function Length: %d\n", ls.Value[2])
+		s += fmt.Sprintf("      Argument Length: %d\n", ls.Value[3])
 
 	// Default BGP-LS TLV processing
 
 	default:
-		s += fmt.Sprintf("BGP-LS TLV Type: %d\n", ls.Type)
-		s += fmt.Sprintf("BGP-LS TLV Length: %d\n", ls.Length)
-		s += "Value: "
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d\n", ls.Type)
+		s += fmt.Sprintf("   BGP-LS TLV Length: %d\n", ls.Length)
+		s += "      Value: "
 		s += messageHex(ls.Value)
 		s += "\n"
 	}
@@ -1451,6 +1462,8 @@ type BGPLSNLRI struct {
 
 func (ls *BGPLSNLRI) String() string {
 	var s string
+
+	s += "BGP-LS TLVs:" + "\n"
 	for _, tlv := range ls.LSTLV {
 		s += tlv.String()
 	}
@@ -1701,6 +1714,97 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SRv6SIDNLRI, error) {
 	sr.SRv6SID = srd
 
 	return &sr, nil
+}
+
+// SRv6EndXSIDSubTLV defines SRv6 End.X SID Sub TLV object
+// No RFC yet
+type SRv6EndXSIDSubTLV struct {
+	Type   uint16
+	Length uint16
+	Value  []byte
+}
+
+func (stlv *SRv6EndXSIDSubTLV) String() string {
+	var s string
+
+	return s
+}
+
+// UnmarshalSRv6EndXSIDSubTLV builds a collection of SRv6 End.X SID Sub TLV
+func UnmarshalSRv6EndXSIDSubTLV(b []byte) ([]SRv6EndXSIDSubTLV, error) {
+	stlvs := make([]SRv6EndXSIDSubTLV, 0)
+
+	return stlvs, nil
+}
+
+// SRv6EndXSIDTLV defines SRv6 End.X SID TLV object
+// No RFC yet
+type SRv6EndXSIDTLV struct {
+	//	Type             uint16
+	//	Length           uint16
+	EndpointBehavior uint16
+	Flag             uint8
+	Algorithm        uint8
+	Weight           uint8
+	Reserved         uint8
+	SID              []byte
+	SubTLV           []SRv6EndXSIDSubTLV
+}
+
+func (x *SRv6EndXSIDTLV) String() string {
+	var s string
+	s += "      SRv6 End.X SID TLV:" + "\n"
+	//	s += fmt.Sprintf("         Type: %d\n", x.Type)
+	s += fmt.Sprintf("         Endpoint Behavior: %d\n", x.EndpointBehavior)
+	s += fmt.Sprintf("         Flag: %02x\n", x.Flag)
+	s += fmt.Sprintf("         Algorithm: %d\n", x.Algorithm)
+	s += fmt.Sprintf("         Weight: %d\n", x.Weight)
+	s += fmt.Sprintf("         SID: %s\n", messageHex(x.SID))
+	if x.SubTLV != nil {
+		for _, stlv := range x.SubTLV {
+			s += stlv.String()
+		}
+	}
+
+	return s
+}
+
+// UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object
+func UnmarshalSRv6EndXSIDTLV(b []byte) (*SRv6EndXSIDTLV, error) {
+	endx := SRv6EndXSIDTLV{
+		SID: make([]byte, 16),
+	}
+	p := 0
+	//	t := binary.BigEndian.Uint16(b[p : p+2])
+	//	if t != 1106 {
+	//		glog.Errorf("raw TLV: %s\n", messageHex(b))
+	//		return nil, fmt.Errorf("invalid SRv6 End.X SID TLV type %d", t)
+	//	}
+	//	endx.Type = t
+	//	p += 2
+	//	endx.Length = binary.BigEndian.Uint16(b[p : p+2])
+	//	p += 2
+	endx.EndpointBehavior = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	endx.Flag = b[p]
+	p++
+	endx.Algorithm = b[p]
+	p++
+	endx.Weight = b[p]
+	p++
+	// Skip reserved byte
+	p++
+	copy(endx.SID, b[p:p+16])
+	p += 16
+	if len(b) > p {
+		stlvs, err := UnmarshalSRv6EndXSIDSubTLV(b[p:])
+		if err != nil {
+			return nil, err
+		}
+		endx.SubTLV = stlvs
+	}
+
+	return &endx, nil
 }
 
 func messageHex(b []byte) string {
