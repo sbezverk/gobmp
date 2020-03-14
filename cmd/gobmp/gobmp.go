@@ -632,7 +632,11 @@ func (rm *BMPRouteMonitor) CheckSAFI(safi int) bool {
 	for _, u := range rm.Updates {
 		for _, pa := range u.PathAttributes {
 			if pa.AttributeType == 0x0e {
-				mp, _ := UnmarshalMPReachNLRI(pa.Attribute)
+				mp, err := UnmarshalMPReachNLRI(pa.Attribute)
+				if err != nil {
+					glog.Errorf("failed to unmarshal MP_REACH_NLRI with error: %+v", err)
+					return false
+				}
 				if mp.SubAddressFamilyID == uint8(safi) {
 					return true
 				}
@@ -815,6 +819,13 @@ func (ls *LSNLRI71) String() string {
 		} else {
 			nlri = err.Error() + "\n"
 		}
+	case 6:
+		t = "SRv6 SID NLRI"
+		if n, err := UnmarshalSRv6SIDNLRI(ls.LS); err == nil {
+			nlri = n.String()
+		} else {
+			nlri = err.Error() + "\n"
+		}
 	default:
 		t = "Unknown NLRI"
 	}
@@ -842,6 +853,8 @@ func UnmarshalLSNLRI71(b []byte) (*LSNLRI71, error) {
 		// IPv4 Topology Prefix NLRI
 	case 4:
 		// IPv6 Topology Prefix NLRI
+	case 6:
+		// SRv6 SID NLRI
 	default:
 		return nil, fmt.Errorf("invalid LS NLRI type %d", ls.Type)
 	}
@@ -1381,6 +1394,23 @@ func (ls *BGPLSTLV) String() string {
 		} else if ls.Length == 16 {
 			s += fmt.Sprintf("   Source Router-ID: %s\n", net.IP(ls.Value).To16().String())
 		}
+	case 1250:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d (SRv6 Endpoint Function)\n", ls.Type)
+		s += fmt.Sprintf("   Endpoint Behavior: %s\n", messageHex(ls.Value[:2]))
+		s += fmt.Sprintf("   Flag: %02x\n", ls.Value[2])
+		s += fmt.Sprintf("   Algorithm: %d\n", ls.Value[3])
+	case 1251:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d (SRv6 Endpoint Function)\n", ls.Type)
+		s += fmt.Sprintf("   Flag: %02x\n", ls.Value[0])
+		s += fmt.Sprintf("   Weight: %d\n", ls.Value[1])
+		s += fmt.Sprintf("   Peer AS Number: %d\n", binary.BigEndian.Uint32(ls.Value[4:8]))
+		s += fmt.Sprintf("   Peer BGP Identifier: %s\n", messageHex(ls.Value[8:12]))
+	case 1252:
+		s += fmt.Sprintf("BGP-LS TLV Type: %d (SRv6 SID Structure)\n", ls.Type)
+		s += fmt.Sprintf("   LB Length: %d\n", ls.Value[0])
+		s += fmt.Sprintf("   LN Length: %d\n", ls.Value[1])
+		s += fmt.Sprintf("   Function Length: %d\n", ls.Value[2])
+		s += fmt.Sprintf("   Argument Length: %d\n", ls.Value[3])
 
 	// Default BGP-LS TLV processing
 
@@ -1510,6 +1540,52 @@ func UnmarshalAdjacencySIDTLV(b []byte) (*AdjacencySIDTLV, error) {
 	return &asid, nil
 }
 
+// SRv6SIDNLRI defines Prefix NLRI onject
+// Mp RFC yet
+type SRv6SIDNLRI struct {
+	ProtocolID uint8
+	Identifier uint64
+	LocalNode  *NodeDescriptor
+}
+
+func (p *SRv6SIDNLRI) String() string {
+	var s string
+	s += fmt.Sprintf("Protocol ID: %s\n", ProtocolIDString(p.ProtocolID))
+	s += fmt.Sprintf("Identifier: %d\n", p.Identifier)
+	s += p.LocalNode.String()
+
+	return s
+}
+
+// UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object
+func UnmarshalSRv6SIDNLRI(b []byte) (*SRv6SIDNLRI, error) {
+	sr := SRv6SIDNLRI{}
+	p := 0
+	sr.ProtocolID = b[p]
+	p++
+	// Skip reserved bytes
+	//	p += 3
+	sr.Identifier = binary.BigEndian.Uint64(b[p : p+8])
+	p += 8
+	// Get Node Descriptor's length, skip Node Descriptor Type
+	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
+	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
+	if err != nil {
+		return nil, err
+	}
+	sr.LocalNode = ln
+	// Skip Node Descriptor Type and Length 4 bytes
+	p += 4
+	p += int(ndl)
+	//	pn, err := UnmarshalPrefixDescriptor(b[p:len(b)])
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	pr.Prefix = pn
+
+	return &sr, nil
+}
+
 func messageHex(b []byte) string {
 	var s string
 	s += "[ "
@@ -1536,6 +1612,8 @@ func ProtocolIDString(id uint8) string {
 		return "Static configuration"
 	case 6:
 		return "OSPFv3"
+	case 7:
+		return "BGP"
 	default:
 		return "Unknown"
 	}
