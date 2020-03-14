@@ -998,7 +998,12 @@ func (ltlv *LinkDescriptorTLV) String() string {
 		s += fmt.Sprintf("      IPv6 neighbor address: %s\n", net.IP(ltlv.Value).To16().String())
 	case 263:
 		s += fmt.Sprintf("   Link Descriptor TLV Type: %d (Multi-Topology Identifier)\n", ltlv.Type)
-		s += fmt.Sprintf("      Multi-Topology Identifier: %s\n", messageHex(ltlv.Value))
+		mit, err := UnmarshalMultiTopologyIdentifierTLV(ltlv.Value)
+		if err != nil {
+			s += err.Error() + "\n"
+			break
+		}
+		s += mit.String()
 	default:
 		s += fmt.Sprintf("   Link Descriptor TLV Type: %d\n", ltlv.Type)
 		s += fmt.Sprintf("   Link Descriptor TLV Length: %d\n", ltlv.Length)
@@ -1174,7 +1179,12 @@ func (stlv *PrefixDescriptorTLV) String() string {
 	switch stlv.Type {
 	case 263:
 		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d (Multi-Topology Identifier)\n", stlv.Type)
-		s += fmt.Sprintf("      Multi-Topology Identifier: %s\n", messageHex(stlv.Value))
+		mit, err := UnmarshalMultiTopologyIdentifierTLV(stlv.Value)
+		if err != nil {
+			s += err.Error() + "\n"
+			break
+		}
+		s += mit.String()
 	case 264:
 		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d (OSPF Route Type)\n", stlv.Type)
 		s += fmt.Sprintf("      OSPF Route Type: %d\n", stlv.Value)
@@ -1304,8 +1314,6 @@ func (ls *BGPLSTLV) String() string {
 
 	// List of TLV to skip processing
 
-	case 263:
-		fallthrough
 	case 266:
 		fallthrough
 	case 267: // expires 2020-11-02
@@ -1321,6 +1329,14 @@ func (ls *BGPLSTLV) String() string {
 		rid := binary.BigEndian.Uint32(ls.Value[4:])
 		s += fmt.Sprintf("      Link Local: %d\n", lid)
 		s += fmt.Sprintf("      Link Remote: %d\n", rid)
+	case 263:
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Multi-Topology Identifier)\n", ls.Type)
+		mit, err := UnmarshalMultiTopologyIdentifierTLV(ls.Value)
+		if err != nil {
+			s += err.Error() + "\n"
+			break
+		}
+		s += mit.String()
 	case 1026:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Node Name)\n", ls.Type)
 		s += fmt.Sprintf("      Node Name: %s\n", string(ls.Value))
@@ -1348,6 +1364,14 @@ func (ls *BGPLSTLV) String() string {
 	case 1036:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SR Local Block)\n", ls.Type)
 		s += fmt.Sprintf("      SR Local Block: %s\n", messageHex(ls.Value))
+	case 1038:
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 Capabilities TLV)\n", ls.Type)
+		cap, err := UnmarshalSRv6CapabilityTLV(ls.Value)
+		if err != nil {
+			s += err.Error() + "\n"
+			break
+		}
+		s += cap.String()
 	case 1088:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Administrative group (color))\n", ls.Type)
 		s += fmt.Sprintf("      Administrative group (color): %d\n", binary.BigEndian.Uint32(ls.Value))
@@ -1590,33 +1614,33 @@ func UnmarshalSRv6SIDInformationTLV(b []byte) (*SRv6SIDInformationTLV, error) {
 	return &srtlv, nil
 }
 
+// MultiTopologyIdentifier defines Multi Topology Identifier whcih is alias of uint16
+type MultiTopologyIdentifier uint16
+
 // MultiTopologyIdentifierTLV defines Multi Topology Identifier TLV object
 // RFC7752
 type MultiTopologyIdentifierTLV struct {
-	Type   uint16
-	Length uint16
-	MTI    []byte
+	MTI []MultiTopologyIdentifier
 }
 
 func (mti *MultiTopologyIdentifierTLV) String() string {
 	var s string
-	s += fmt.Sprintf("   Multi Topology Identifier TLV Type: %d\n", mti.Type)
-	s += fmt.Sprintf("      Identifier: %s\n", messageHex(mti.MTI))
+	s += "   Multi-Topology Identifiers:" + "\n"
+	for _, id := range mti.MTI {
+		s += fmt.Sprintf("      Identifier: %d\n", 0x0fff&id)
+	}
 	return s
 }
 
 // UnmarshalMultiTopologyIdentifierTLV builds Multi Topology Identifier TLV object
 func UnmarshalMultiTopologyIdentifierTLV(b []byte) (*MultiTopologyIdentifierTLV, error) {
-	mti := MultiTopologyIdentifierTLV{}
-	p := 0
-	t := binary.BigEndian.Uint16(b[p : p+2])
-
-	mti.Type = t
-	p += 2
-	mti.Length = binary.BigEndian.Uint16(b[p : p+2])
-	p += 2
-	mti.MTI = make([]byte, mti.Length)
-	copy(mti.MTI, b[p:p+int(mti.Length)])
+	mti := MultiTopologyIdentifierTLV{
+		MTI: make([]MultiTopologyIdentifier, 0),
+	}
+	for p := 0; p < len(b); {
+		mti.MTI = append(mti.MTI, MultiTopologyIdentifier(binary.BigEndian.Uint16(b[p:p+2])))
+		p += 2
+	}
 
 	return &mti, nil
 }
@@ -1646,7 +1670,7 @@ func UnmarshalSRv6SIDDescriptor(b []byte) (*SRv6SIDDescriptor, error) {
 	for p := 0; p < len(b); {
 		t := binary.BigEndian.Uint16(b[p : p+2])
 		switch t {
-		case 263:
+		case 518:
 			l := binary.BigEndian.Uint16(b[p+2 : p+4])
 			inf, err := UnmarshalSRv6SIDInformationTLV(b[p : p+int(l)])
 			if err != nil {
@@ -1656,7 +1680,7 @@ func UnmarshalSRv6SIDDescriptor(b []byte) (*SRv6SIDDescriptor, error) {
 			p += 2      // Type
 			p += 2      // Length
 			p += int(l) // Actual TLV length
-		case 518:
+		case 263:
 			l := binary.BigEndian.Uint16(b[p+2 : p+4])
 			mti, err := UnmarshalMultiTopologyIdentifierTLV(b[p : p+int(l)])
 			if err != nil {
@@ -1830,15 +1854,15 @@ func (l *SRv6LocatorTLV) String() string {
 
 // UnmarshalSRv6LocatorTLV builds SRv6 Locator TLV object
 func UnmarshalSRv6LocatorTLV(b []byte) (*SRv6LocatorTLV, error) {
-	endx := SRv6LocatorTLV{}
+	loc := SRv6LocatorTLV{}
 	p := 0
-	endx.Flag = b[p]
+	loc.Flag = b[p]
 	p++
-	endx.Algorithm = b[p]
+	loc.Algorithm = b[p]
 	p++
 	// Skip reserved byte
 	p += 2
-	endx.Metric = binary.BigEndian.Uint32(b[p : p+4])
+	loc.Metric = binary.BigEndian.Uint32(b[p : p+4])
 	p += 4
 
 	if len(b) > p {
@@ -1846,10 +1870,34 @@ func UnmarshalSRv6LocatorTLV(b []byte) (*SRv6LocatorTLV, error) {
 		if err != nil {
 			return nil, err
 		}
-		endx.SubTLV = stlvs
+		loc.SubTLV = stlvs
 	}
 
-	return &endx, nil
+	return &loc, nil
+}
+
+// SRv6CapabilityTLV defines SRv6 Capability TLV object
+// No RFC yet
+type SRv6CapabilityTLV struct {
+	Flag     uint16
+	Reserved uint16
+}
+
+func (l *SRv6CapabilityTLV) String() string {
+	var s string
+	s += "      SRv6 Capability TLV:" + "\n"
+	s += fmt.Sprintf("         Flag: %02x\n", l.Flag)
+
+	return s
+}
+
+// UnmarshalSRv6CapabilityTLV builds SRv6 Capability TLV object
+func UnmarshalSRv6CapabilityTLV(b []byte) (*SRv6CapabilityTLV, error) {
+	cap := SRv6CapabilityTLV{}
+	p := 0
+	cap.Flag = binary.BigEndian.Uint16(b[p : p+2])
+
+	return &cap, nil
 }
 
 func messageHex(b []byte) string {
