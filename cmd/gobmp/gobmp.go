@@ -1395,6 +1395,14 @@ func (ls *BGPLSTLV) String() string {
 			break
 		}
 		s += psid.String()
+	case 1162:
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 Locator TLV)\n", ls.Type)
+		l, err := UnmarshalSRv6LocatorTLV(ls.Value)
+		if err != nil {
+			s += err.Error() + "\n"
+			break
+		}
+		s += l.String()
 	case 1170:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Prefix Attributes Flags)\n", ls.Type)
 		s += fmt.Sprintf("      Flag: %s\n", messageHex(ls.Value))
@@ -1716,23 +1724,23 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SRv6SIDNLRI, error) {
 	return &sr, nil
 }
 
-// SRv6EndXSIDSubTLV defines SRv6 End.X SID Sub TLV object
+// SRv6SubTLV defines SRv6 Sub TLV object
 // No RFC yet
-type SRv6EndXSIDSubTLV struct {
+type SRv6SubTLV struct {
 	Type   uint16
 	Length uint16
 	Value  []byte
 }
 
-func (stlv *SRv6EndXSIDSubTLV) String() string {
+func (stlv *SRv6SubTLV) String() string {
 	var s string
 
 	return s
 }
 
-// UnmarshalSRv6EndXSIDSubTLV builds a collection of SRv6 End.X SID Sub TLV
-func UnmarshalSRv6EndXSIDSubTLV(b []byte) ([]SRv6EndXSIDSubTLV, error) {
-	stlvs := make([]SRv6EndXSIDSubTLV, 0)
+// UnmarshalSRv6SubTLV builds a collection of SRv6 Sub TLV
+func UnmarshalSRv6SubTLV(b []byte) ([]SRv6SubTLV, error) {
+	stlvs := make([]SRv6SubTLV, 0)
 
 	return stlvs, nil
 }
@@ -1740,21 +1748,18 @@ func UnmarshalSRv6EndXSIDSubTLV(b []byte) ([]SRv6EndXSIDSubTLV, error) {
 // SRv6EndXSIDTLV defines SRv6 End.X SID TLV object
 // No RFC yet
 type SRv6EndXSIDTLV struct {
-	//	Type             uint16
-	//	Length           uint16
 	EndpointBehavior uint16
 	Flag             uint8
 	Algorithm        uint8
 	Weight           uint8
 	Reserved         uint8
 	SID              []byte
-	SubTLV           []SRv6EndXSIDSubTLV
+	SubTLV           []SRv6SubTLV
 }
 
 func (x *SRv6EndXSIDTLV) String() string {
 	var s string
 	s += "      SRv6 End.X SID TLV:" + "\n"
-	//	s += fmt.Sprintf("         Type: %d\n", x.Type)
 	s += fmt.Sprintf("         Endpoint Behavior: %d\n", x.EndpointBehavior)
 	s += fmt.Sprintf("         Flag: %02x\n", x.Flag)
 	s += fmt.Sprintf("         Algorithm: %d\n", x.Algorithm)
@@ -1775,15 +1780,6 @@ func UnmarshalSRv6EndXSIDTLV(b []byte) (*SRv6EndXSIDTLV, error) {
 		SID: make([]byte, 16),
 	}
 	p := 0
-	//	t := binary.BigEndian.Uint16(b[p : p+2])
-	//	if t != 1106 {
-	//		glog.Errorf("raw TLV: %s\n", messageHex(b))
-	//		return nil, fmt.Errorf("invalid SRv6 End.X SID TLV type %d", t)
-	//	}
-	//	endx.Type = t
-	//	p += 2
-	//	endx.Length = binary.BigEndian.Uint16(b[p : p+2])
-	//	p += 2
 	endx.EndpointBehavior = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	endx.Flag = b[p]
@@ -1797,7 +1793,56 @@ func UnmarshalSRv6EndXSIDTLV(b []byte) (*SRv6EndXSIDTLV, error) {
 	copy(endx.SID, b[p:p+16])
 	p += 16
 	if len(b) > p {
-		stlvs, err := UnmarshalSRv6EndXSIDSubTLV(b[p:])
+		stlvs, err := UnmarshalSRv6SubTLV(b[p:])
+		if err != nil {
+			return nil, err
+		}
+		endx.SubTLV = stlvs
+	}
+
+	return &endx, nil
+}
+
+// SRv6LocatorTLV defines SRv6 Locator TLV object
+// No RFC yet
+type SRv6LocatorTLV struct {
+	Flag      uint8
+	Algorithm uint8
+	Reserved  uint16
+	Metric    uint32
+	SubTLV    []SRv6SubTLV
+}
+
+func (l *SRv6LocatorTLV) String() string {
+	var s string
+	s += "      SRv6 Locator TLV:" + "\n"
+	s += fmt.Sprintf("         Flag: %02x\n", l.Flag)
+	s += fmt.Sprintf("         Algorithm: %d\n", l.Algorithm)
+	s += fmt.Sprintf("         Metric: %d\n", l.Metric)
+	if l.SubTLV != nil {
+		for _, stlv := range l.SubTLV {
+			s += stlv.String()
+		}
+	}
+
+	return s
+}
+
+// UnmarshalSRv6LocatorTLV builds SRv6 Locator TLV object
+func UnmarshalSRv6LocatorTLV(b []byte) (*SRv6LocatorTLV, error) {
+	endx := SRv6LocatorTLV{}
+	p := 0
+	endx.Flag = b[p]
+	p++
+	endx.Algorithm = b[p]
+	p++
+	// Skip reserved byte
+	p += 2
+	endx.Metric = binary.BigEndian.Uint32(b[p : p+4])
+	p += 4
+
+	if len(b) > p {
+		stlvs, err := UnmarshalSRv6SubTLV(b[p:])
 		if err != nil {
 			return nil, err
 		}
