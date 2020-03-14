@@ -1540,26 +1540,143 @@ func UnmarshalAdjacencySIDTLV(b []byte) (*AdjacencySIDTLV, error) {
 	return &asid, nil
 }
 
+// SRv6SIDInformationTLV defines SRv6 SID Information TLV
+type SRv6SIDInformationTLV struct {
+	Type   uint16
+	Length uint16
+	SID    []byte
+}
+
+func (srtlv *SRv6SIDInformationTLV) String() string {
+	var s string
+	s += fmt.Sprintf("   SRv6 SID Information TLV Type: %d\n", srtlv.Type)
+	s += fmt.Sprintf("      SID: %s\n", messageHex(srtlv.SID))
+
+	return s
+}
+
+// UnmarshalSRv6SIDInformationTLV builds SRv6 SID Information TLV
+func UnmarshalSRv6SIDInformationTLV(b []byte) (*SRv6SIDInformationTLV, error) {
+	srtlv := SRv6SIDInformationTLV{}
+	p := 0
+	srtlv.Type = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	srtlv.Length = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	srtlv.SID = make([]byte, srtlv.Length)
+	copy(srtlv.SID, b[p:p+int(srtlv.Length)])
+
+	return &srtlv, nil
+}
+
+// MultiTopologyIdentifierTLV defines Multi Topology Identifier TLV object
+// RFC7752
+type MultiTopologyIdentifierTLV struct {
+	Type   uint16
+	Length uint16
+	MTI    []byte
+}
+
+func (mti *MultiTopologyIdentifierTLV) String() string {
+	var s string
+	s += fmt.Sprintf("   Multi Topology Identifier TLV Type: %d\n", mti.Type)
+	s += fmt.Sprintf("      Identifier: %s\n", messageHex(mti.MTI))
+	return s
+}
+
+// UnmarshalMultiTopologyIdentifierTLV builds Multi Topology Identifier TLV object
+func UnmarshalMultiTopologyIdentifierTLV(b []byte) (*MultiTopologyIdentifierTLV, error) {
+	mti := MultiTopologyIdentifierTLV{}
+	p := 0
+	t := binary.BigEndian.Uint16(b[p : p+2])
+
+	mti.Type = t
+	p += 2
+	mti.Length = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+	mti.MTI = make([]byte, mti.Length)
+	copy(mti.MTI, b[p:p+int(mti.Length)])
+
+	return &mti, nil
+}
+
+// SRv6SIDDescriptor defines SRv6 SID Descriptor Object
+type SRv6SIDDescriptor struct {
+	InformationTLV          *SRv6SIDInformationTLV
+	MultiTopologyIdentifier *MultiTopologyIdentifierTLV
+}
+
+func (srd *SRv6SIDDescriptor) String() string {
+	var s string
+	s += "SRv6 SID Descriptor Object:" + "\n"
+	if srd.InformationTLV != nil {
+		s += srd.InformationTLV.String()
+	}
+	if srd.MultiTopologyIdentifier != nil {
+		s += srd.MultiTopologyIdentifier.String()
+	}
+
+	return s
+}
+
+// UnmarshalSRv6SIDDescriptor build SRv6 Descriptor Object
+func UnmarshalSRv6SIDDescriptor(b []byte) (*SRv6SIDDescriptor, error) {
+	srd := SRv6SIDDescriptor{}
+	for p := 0; p < len(b); {
+		t := binary.BigEndian.Uint16(b[p : p+2])
+		switch t {
+		case 263:
+			l := binary.BigEndian.Uint16(b[p+2 : p+4])
+			inf, err := UnmarshalSRv6SIDInformationTLV(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			srd.InformationTLV = inf
+			p += 2      // Type
+			p += 2      // Length
+			p += int(l) // Actual TLV length
+		case 518:
+			l := binary.BigEndian.Uint16(b[p+2 : p+4])
+			mti, err := UnmarshalMultiTopologyIdentifierTLV(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			srd.MultiTopologyIdentifier = mti
+			p += 2      // Type
+			p += 2      // Length
+			p += int(l) // Actual TLV length
+		default:
+			return nil, fmt.Errorf("invalid SRv6 SID Descriptor Type: %d", t)
+		}
+	}
+
+	return &srd, nil
+}
+
 // SRv6SIDNLRI defines Prefix NLRI onject
 // Mp RFC yet
 type SRv6SIDNLRI struct {
 	ProtocolID uint8
 	Identifier uint64
 	LocalNode  *NodeDescriptor
+	SRv6SID    *SRv6SIDDescriptor
 }
 
-func (p *SRv6SIDNLRI) String() string {
+func (sr *SRv6SIDNLRI) String() string {
 	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", ProtocolIDString(p.ProtocolID))
-	s += fmt.Sprintf("Identifier: %d\n", p.Identifier)
-	s += p.LocalNode.String()
+	s += fmt.Sprintf("Protocol ID: %s\n", ProtocolIDString(sr.ProtocolID))
+	s += fmt.Sprintf("Identifier: %d\n", sr.Identifier)
+	s += sr.LocalNode.String()
+	s += sr.SRv6SID.String()
 
 	return s
 }
 
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object
 func UnmarshalSRv6SIDNLRI(b []byte) (*SRv6SIDNLRI, error) {
-	sr := SRv6SIDNLRI{}
+	sr := SRv6SIDNLRI{
+		SRv6SID: &SRv6SIDDescriptor{},
+	}
 	p := 0
 	sr.ProtocolID = b[p]
 	p++
@@ -1568,20 +1685,20 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SRv6SIDNLRI, error) {
 	sr.Identifier = binary.BigEndian.Uint64(b[p : p+8])
 	p += 8
 	// Get Node Descriptor's length, skip Node Descriptor Type
-	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
-	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
+	l := binary.BigEndian.Uint16(b[p+2 : p+4])
+	ln, err := UnmarshalNodeDescriptor(b[p : p+int(l)])
 	if err != nil {
 		return nil, err
 	}
 	sr.LocalNode = ln
 	// Skip Node Descriptor Type and Length 4 bytes
 	p += 4
-	p += int(ndl)
-	//	pn, err := UnmarshalPrefixDescriptor(b[p:len(b)])
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	pr.Prefix = pn
+	p += int(l)
+	srd, err := UnmarshalSRv6SIDDescriptor(b[p:len(b)])
+	if err != nil {
+		return nil, err
+	}
+	sr.SRv6SID = srd
 
 	return &sr, nil
 }
