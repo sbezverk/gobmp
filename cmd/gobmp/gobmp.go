@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/bmp/srv6"
 )
 
 var (
@@ -1366,12 +1367,12 @@ func (ls *BGPLSTLV) String() string {
 		s += fmt.Sprintf("      SR Local Block: %s\n", messageHex(ls.Value))
 	case 1038:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 Capabilities TLV)\n", ls.Type)
-		cap, err := UnmarshalSRv6CapabilityTLV(ls.Value)
+		cap, err := srv6.UnmarshalSRv6CapabilityTLV(ls.Value)
 		if err != nil {
 			s += err.Error() + "\n"
 			break
 		}
-		s += cap.String()
+		s += cap.String(2)
 	case 1088:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Administrative group (color))\n", ls.Type)
 		s += fmt.Sprintf("      Administrative group (color): %d\n", binary.BigEndian.Uint32(ls.Value))
@@ -1401,12 +1402,12 @@ func (ls *BGPLSTLV) String() string {
 		s += asid.String()
 	case 1106:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 End.X SID TLV)\n", ls.Type)
-		endx, err := UnmarshalSRv6EndXSIDTLV(ls.Value)
+		endx, err := srv6.UnmarshalSRv6EndXSIDTLV(ls.Value)
 		if err != nil {
 			s += err.Error() + "\n"
 			break
 		}
-		s += endx.String()
+		s += endx.String(1)
 	case 1155:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Prefix Metric)\n", ls.Type)
 		m := binary.BigEndian.Uint32(ls.Value)
@@ -1421,12 +1422,12 @@ func (ls *BGPLSTLV) String() string {
 		s += psid.String()
 	case 1162:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 Locator TLV)\n", ls.Type)
-		l, err := UnmarshalSRv6LocatorTLV(ls.Value)
+		l, err := srv6.UnmarshalSRv6LocatorTLV(ls.Value)
 		if err != nil {
 			s += err.Error() + "\n"
 			break
 		}
-		s += l.String()
+		s += l.String(1)
 	case 1170:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Prefix Attributes Flags)\n", ls.Type)
 		s += fmt.Sprintf("      Flag: %s\n", messageHex(ls.Value))
@@ -1746,158 +1747,6 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SRv6SIDNLRI, error) {
 	sr.SRv6SID = srd
 
 	return &sr, nil
-}
-
-// SRv6SubTLV defines SRv6 Sub TLV object
-// No RFC yet
-type SRv6SubTLV struct {
-	Type   uint16
-	Length uint16
-	Value  []byte
-}
-
-func (stlv *SRv6SubTLV) String() string {
-	var s string
-
-	return s
-}
-
-// UnmarshalSRv6SubTLV builds a collection of SRv6 Sub TLV
-func UnmarshalSRv6SubTLV(b []byte) ([]SRv6SubTLV, error) {
-	stlvs := make([]SRv6SubTLV, 0)
-
-	return stlvs, nil
-}
-
-// SRv6EndXSIDTLV defines SRv6 End.X SID TLV object
-// No RFC yet
-type SRv6EndXSIDTLV struct {
-	EndpointBehavior uint16
-	Flag             uint8
-	Algorithm        uint8
-	Weight           uint8
-	Reserved         uint8
-	SID              []byte
-	SubTLV           []SRv6SubTLV
-}
-
-func (x *SRv6EndXSIDTLV) String() string {
-	var s string
-	s += "      SRv6 End.X SID TLV:" + "\n"
-	s += fmt.Sprintf("         Endpoint Behavior: %d\n", x.EndpointBehavior)
-	s += fmt.Sprintf("         Flag: %02x\n", x.Flag)
-	s += fmt.Sprintf("         Algorithm: %d\n", x.Algorithm)
-	s += fmt.Sprintf("         Weight: %d\n", x.Weight)
-	s += fmt.Sprintf("         SID: %s\n", messageHex(x.SID))
-	if x.SubTLV != nil {
-		for _, stlv := range x.SubTLV {
-			s += stlv.String()
-		}
-	}
-
-	return s
-}
-
-// UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object
-func UnmarshalSRv6EndXSIDTLV(b []byte) (*SRv6EndXSIDTLV, error) {
-	endx := SRv6EndXSIDTLV{
-		SID: make([]byte, 16),
-	}
-	p := 0
-	endx.EndpointBehavior = binary.BigEndian.Uint16(b[p : p+2])
-	p += 2
-	endx.Flag = b[p]
-	p++
-	endx.Algorithm = b[p]
-	p++
-	endx.Weight = b[p]
-	p++
-	// Skip reserved byte
-	p++
-	copy(endx.SID, b[p:p+16])
-	p += 16
-	if len(b) > p {
-		stlvs, err := UnmarshalSRv6SubTLV(b[p:])
-		if err != nil {
-			return nil, err
-		}
-		endx.SubTLV = stlvs
-	}
-
-	return &endx, nil
-}
-
-// SRv6LocatorTLV defines SRv6 Locator TLV object
-// No RFC yet
-type SRv6LocatorTLV struct {
-	Flag      uint8
-	Algorithm uint8
-	Reserved  uint16
-	Metric    uint32
-	SubTLV    []SRv6SubTLV
-}
-
-func (l *SRv6LocatorTLV) String() string {
-	var s string
-	s += "      SRv6 Locator TLV:" + "\n"
-	s += fmt.Sprintf("         Flag: %02x\n", l.Flag)
-	s += fmt.Sprintf("         Algorithm: %d\n", l.Algorithm)
-	s += fmt.Sprintf("         Metric: %d\n", l.Metric)
-	if l.SubTLV != nil {
-		for _, stlv := range l.SubTLV {
-			s += stlv.String()
-		}
-	}
-
-	return s
-}
-
-// UnmarshalSRv6LocatorTLV builds SRv6 Locator TLV object
-func UnmarshalSRv6LocatorTLV(b []byte) (*SRv6LocatorTLV, error) {
-	loc := SRv6LocatorTLV{}
-	p := 0
-	loc.Flag = b[p]
-	p++
-	loc.Algorithm = b[p]
-	p++
-	// Skip reserved byte
-	p += 2
-	loc.Metric = binary.BigEndian.Uint32(b[p : p+4])
-	p += 4
-
-	if len(b) > p {
-		stlvs, err := UnmarshalSRv6SubTLV(b[p:])
-		if err != nil {
-			return nil, err
-		}
-		loc.SubTLV = stlvs
-	}
-
-	return &loc, nil
-}
-
-// SRv6CapabilityTLV defines SRv6 Capability TLV object
-// No RFC yet
-type SRv6CapabilityTLV struct {
-	Flag     uint16
-	Reserved uint16
-}
-
-func (l *SRv6CapabilityTLV) String() string {
-	var s string
-	s += "      SRv6 Capability TLV:" + "\n"
-	s += fmt.Sprintf("         Flag: %02x\n", l.Flag)
-
-	return s
-}
-
-// UnmarshalSRv6CapabilityTLV builds SRv6 Capability TLV object
-func UnmarshalSRv6CapabilityTLV(b []byte) (*SRv6CapabilityTLV, error) {
-	cap := SRv6CapabilityTLV{}
-	p := 0
-	cap.Flag = binary.BigEndian.Uint16(b[p : p+2])
-
-	return &cap, nil
 }
 
 func messageHex(b []byte) string {
