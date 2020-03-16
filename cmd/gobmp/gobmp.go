@@ -107,7 +107,7 @@ func parsingWorker(b []byte) {
 		p += bmp.CommonHeaderLength
 		// glog.V(5).Infof("recovered common header, version: %d message length: %d message type: %d", ch.Version, ch.MessageLength, ch.MessageType)
 		switch ch.MessageType {
-		case bmp.RouteMonitor:
+		case bmp.RouteMonitorMsg:
 			lb := p + int(ch.MessageLength-bmp.CommonHeaderLength)
 			if lb > len(b) {
 				lb = len(b)
@@ -122,7 +122,7 @@ func parsingWorker(b []byte) {
 			} else {
 				glog.V(5).Infof("route monitor message does not carry BGP-LS SAFI")
 			}
-		case bmp.StatsReport:
+		case bmp.StatsReportMsg:
 			_, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
@@ -134,10 +134,10 @@ func parsingWorker(b []byte) {
 				return
 			}
 			p += perPerHeaderLen
-		case bmp.PeerDown:
+		case bmp.PeerDownMsg:
 			glog.V(5).Infof("Peer Down message")
 			glog.V(6).Infof("Message: %+v", b[p:len(b)])
-		case bmp.PeerUp:
+		case bmp.PeerUpMsg:
 			if _, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)]); err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
@@ -148,15 +148,15 @@ func parsingWorker(b []byte) {
 				return
 			}
 			p += perPerHeaderLen
-		case bmp.Initiation:
+		case bmp.InitiationMsg:
 			if _, err := bmp.UnmarshalInitiationMessage(b[p : p+(int(ch.MessageLength)-bmp.CommonHeaderLength)]); err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
 			}
-		case bmp.Termination:
+		case bmp.TerminationMsg:
 			glog.V(5).Infof("Termination message")
 			glog.V(6).Infof("Message: %+v", b[p:len(b)])
-		case bmp.RouteMirror:
+		case bmp.RouteMirrorMsg:
 			glog.V(5).Infof("Route Mirroring message")
 			glog.V(6).Infof("Message: %+v", b[p:len(b)])
 		}
