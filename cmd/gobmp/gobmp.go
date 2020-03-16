@@ -39,7 +39,7 @@ func interceptor(client net.Conn, dstPort int) {
 	defer client.Close()
 	server, err := net.Dial("tcp", ":"+fmt.Sprintf("%d", dstPort))
 	if err != nil {
-		glog.Errorf("fail to connect to destination with error: %+v", err)
+		glog.Errorf("failed to connect to destination with error: %+v", err)
 		return
 	}
 	defer server.Close()
@@ -53,20 +53,19 @@ func interceptor(client net.Conn, dstPort int) {
 		close(pstop)
 	}()
 	for {
-		headerMsg := make([]byte, 6)
-		if _, err := io.ReadAtLeast(client, headerMsg, 6); err != nil {
+		headerMsg := make([]byte, bmp.CommonHeaderLength)
+		if _, err := io.ReadAtLeast(client, headerMsg, bmp.CommonHeaderLength); err != nil {
 			glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
 			return
 		}
 		// Recovering common header first
-		header, err := bmp.UnmarshalCommonHeader(headerMsg[:6])
+		header, err := bmp.UnmarshalCommonHeader(headerMsg[:bmp.CommonHeaderLength])
 		if err != nil {
 			glog.Errorf("fail to recover BMP message Common Header with error: %+v", err)
 			continue
 		}
 		// Allocating space for the message body
-		msg := make([]byte, int(header.MessageLength)-6)
-		// glog.V(5).Infof("Expected message lngth from client %+v is %d bytes", client.RemoteAddr(), int(header.MessageLength)-6)
+		msg := make([]byte, int(header.MessageLength)-bmp.CommonHeaderLength)
 		if _, err := io.ReadFull(client, msg); err != nil {
 			glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
 			return
@@ -74,7 +73,7 @@ func interceptor(client net.Conn, dstPort int) {
 
 		fullMsg := make([]byte, int(header.MessageLength))
 		copy(fullMsg, headerMsg)
-		copy(fullMsg[6:], msg)
+		copy(fullMsg[bmp.CommonHeaderLength:], msg)
 		if _, err := server.Write(fullMsg); err != nil {
 			glog.Errorf("fail to write to server %+v with error: %+v", server.RemoteAddr(), err)
 			return
@@ -100,97 +99,69 @@ func parsingWorker(b []byte) {
 	// Loop through all found Common Headers in the slice and process them
 	for p := 0; p < len(b); {
 		// Recovering common header first
-		ch, err := bmp.UnmarshalCommonHeader(b[p : p+6])
+		ch, err := bmp.UnmarshalCommonHeader(b[p : p+bmp.CommonHeaderLength])
 		if err != nil {
 			glog.Errorf("fail to recover BMP message Common Header with error: %+v", err)
 			return
 		}
-		p += 6
+		p += bmp.CommonHeaderLength
 		// glog.V(5).Infof("recovered common header, version: %d message length: %d message type: %d", ch.Version, ch.MessageLength, ch.MessageType)
 		switch ch.MessageType {
-		case 0:
-			// *  Type = 0: Route Monitoring
-			lb := p + int(ch.MessageLength-6)
+		case bmp.RouteMonitor:
+			lb := p + int(ch.MessageLength-bmp.CommonHeaderLength)
 			if lb > len(b) {
 				lb = len(b)
 			}
-			// glog.V(6).Infof("found Route Monitoring message: %s, length: %d", messageHex(b), len(b))
 			rm, err := bmp.UnmarshalBMPRouteMonitorMessage(b[p:lb])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Route Monitoring with error: %+v", err)
 				return
 			}
 			if rm.CheckSAFI(71) {
-				// glog.V(5).Infof("route monitor message carries BGP-LS SAFI")
-				// glog.V(6).Infof("raw route monitor of length: %d raw data: %s", len(b), messageHex(b))
 				glog.V(6).Infof("parsed route monitor: \n%s", rm.String())
 			} else {
 				glog.V(5).Infof("route monitor message does not carry BGP-LS SAFI")
 			}
-			// glog.V(6).Infof("parsed route monitor: \n%s", rm.String())
-		case 1:
-			// *  Type = 1: Statistics Report
-			//glog.V(5).Infof("found Stats Report")
-
-			/*pph*/
-			_, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
+		case bmp.StatsReport:
+			_, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}
-			//glog.V(5).Infof("recovered per peer header %+v", *pph)
-			// Move buffer pointer for the length of Per-Peer header
-			perPerHeaderLen = 42
-
-			/*sr*/
-			_, err = bmp.UnmarshalBMPStatsReportMessage(b[p+perPerHeaderLen : len(b)])
-			if err != nil {
+			perPerHeaderLen = bmp.PerPeerHeaderLength
+			if _, err = bmp.UnmarshalBMPStatsReportMessage(b[p+perPerHeaderLen : len(b)]); err != nil {
 				glog.Errorf("fail to recover BMP Stats Reports message with error: %+v", err)
 				return
 			}
 			p += perPerHeaderLen
-			// glog.V(6).Infof("recovered per stats reports message %+v", *sr)
-		case 2:
-			// *  Type = 2: Peer Down Notification
+		case bmp.PeerDown:
 			glog.V(5).Infof("Peer Down message")
-			// glog.V(6).Infof("Message: %+v", b[p:len(b)])
-		case 3:
-			// *  Type = 3: Peer Up Notification
-			glog.V(5).Infof("Peer Up message")
-			/*pph*/ _, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-6)])
-			if err != nil {
+			glog.V(6).Infof("Message: %+v", b[p:len(b)])
+		case bmp.PeerUp:
+			if _, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)]); err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}
-			// glog.V(5).Infof("recovered per peer header %+v", *pph)
-			// Move buffer pointer for the length of Per-Peer header
-			perPerHeaderLen = 42
-			/*pu*/ _, err = bmp.UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-6])
-			if err != nil {
+			perPerHeaderLen = bmp.PerPeerHeaderLength
+			if _, err = bmp.UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-bmp.CommonHeaderLength]); err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
 			}
 			p += perPerHeaderLen
-			// glog.V(5).Infof("recovered per peer up message %+v", *pu)
-			// glog.V(6).Infof("Sent Open %+v", *pu.SentOpen)
-			// glog.V(6).Infof("Received Open %+v", *pu.ReceivedOpen)
-		case 4:
-			// *  Type = 4: Initiation Message
-			glog.V(5).Infof("Initiation message")
-			_, err := bmp.UnmarshalInitiationMessage(b[p : p+(int(ch.MessageLength)-6)])
-			if err != nil {
+		case bmp.Initiation:
+			if _, err := bmp.UnmarshalInitiationMessage(b[p : p+(int(ch.MessageLength)-bmp.CommonHeaderLength)]); err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
 			}
-		case 5:
-			// *  Type = 5: Termination Message
+		case bmp.Termination:
 			glog.V(5).Infof("Termination message")
-		case 6:
-			// *  Type = 6: Route Mirroring Message
+			glog.V(6).Infof("Message: %+v", b[p:len(b)])
+		case bmp.RouteMirror:
 			glog.V(5).Infof("Route Mirroring message")
+			glog.V(6).Infof("Message: %+v", b[p:len(b)])
 		}
 		perPerHeaderLen = 0
-		p += (int(ch.MessageLength) - 6)
+		p += (int(ch.MessageLength) - bmp.CommonHeaderLength)
 	}
 }
 
