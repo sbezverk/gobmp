@@ -3,6 +3,7 @@ package bgp
 import (
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -24,4 +25,14 @@ func (wr *WithdrawnRoute) String() string {
 // WithdrawnRoutes defines collection of BGP Withdrawn prefixes
 type WithdrawnRoutes struct {
 	WithdrawnRoutes []WithdrawnRoute
+}
+
+// UnmarshalBGPWithdrawnRoutes builds BGP Withdrawn routes object
+func UnmarshalBGPWithdrawnRoutes(b []byte) (*WithdrawnRoutes, error) {
+	glog.V(6).Infof("BGPWithdrawnRoutes Raw: %s", internal.MessageHex(b))
+	w := WithdrawnRoutes{
+		WithdrawnRoutes: make([]WithdrawnRoute, 0),
+	}
+
+	return &w, nil
 }

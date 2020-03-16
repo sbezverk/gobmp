@@ -4,7 +4,9 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
+	"github.com/sbezverk/gobmp/pkg/internal"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 )
 
@@ -66,6 +68,7 @@ func (ls *NLRI71) String() string {
 
 // UnmarshalLSNLRI71 builds Link State NLRI object ofor SAFI 71
 func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
+	glog.V(6).Infof("LSNLRI71 Raw: %s", internal.MessageHex(b))
 	ls := NLRI71{}
 	p := 0
 	ls.Type = binary.BigEndian.Uint16(b[p : p+2])

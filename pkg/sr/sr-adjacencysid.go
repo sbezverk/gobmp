@@ -3,6 +3,7 @@ package sr
 import (
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -26,6 +27,7 @@ func (asid *AdjacencySIDTLV) String() string {
 
 // UnmarshalAdjacencySIDTLV builds Adjacency SID TLV Object
 func UnmarshalAdjacencySIDTLV(b []byte) (*AdjacencySIDTLV, error) {
+	glog.V(6).Infof("Adjacency SID Raw: %s", internal.MessageHex(b))
 	asid := AdjacencySIDTLV{}
 	p := 0
 	asid.Flags = b[p]

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -49,6 +50,7 @@ func (x *EndXSIDTLV) String(level ...int) string {
 
 // UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object
 func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
+	glog.V(6).Infof("SRv6 End.XS ID TLV Raw: %s", internal.MessageHex(b))
 	endx := EndXSIDTLV{
 		SID: make([]byte, 16),
 	}

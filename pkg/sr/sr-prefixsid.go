@@ -3,6 +3,7 @@ package sr
 import (
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -26,6 +27,7 @@ func (psid *PrefixSIDTLV) String() string {
 
 // UnmarshalPrefixSIDTLV builds Prefix SID TLV Object
 func UnmarshalPrefixSIDTLV(b []byte) (*PrefixSIDTLV, error) {
+	glog.V(6).Infof("Prefix SID TLV Raw: %s", internal.MessageHex(b))
 	psid := PrefixSIDTLV{}
 	p := 0
 	psid.Flags = b[p]

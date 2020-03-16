@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/internal"
 	"github.com/sbezverk/gobmp/pkg/sr"
@@ -181,6 +182,7 @@ func (ls *TLV) String() string {
 
 // UnmarshalBGPLSTLV builds Collection of BGP-LS TLVs
 func UnmarshalBGPLSTLV(b []byte) ([]TLV, error) {
+	glog.V(6).Infof("BGPLSTLV Raw: %s", internal.MessageHex(b))
 	lstlvs := make([]TLV, 0)
 	for p := 0; p < len(b); {
 		lstlv := TLV{}

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -30,6 +31,7 @@ func (cap *CapabilityTLV) String(level ...int) string {
 
 // UnmarshalSRv6CapabilityTLV builds SRv6 Capability TLV object
 func UnmarshalSRv6CapabilityTLV(b []byte) (*CapabilityTLV, error) {
+	glog.V(6).Infof("SRv6 Capability TLV Raw: %s", internal.MessageHex(b))
 	cap := CapabilityTLV{}
 	p := 0
 	cap.Flag = binary.BigEndian.Uint16(b[p : p+2])

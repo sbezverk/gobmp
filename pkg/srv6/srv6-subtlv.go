@@ -1,6 +1,7 @@
 package srv6
 
 import (
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -25,6 +26,7 @@ func (stlv *SubTLV) String(level ...int) string {
 
 // UnmarshalSRv6SubTLV builds a collection of SRv6 Sub TLV
 func UnmarshalSRv6SubTLV(b []byte) ([]SubTLV, error) {
+	glog.V(6).Infof("SRv6 Sub TLV Raw: %s", internal.MessageHex(b))
 	stlvs := make([]SubTLV, 0)
 
 	return stlvs, nil

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -31,6 +32,7 @@ func (l *LinkNLRI) String() string {
 
 // UnmarshalLinkNLRI builds Link NLRI object
 func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
+	glog.V(6).Infof("LinkNLRI Raw: %s", internal.MessageHex(b))
 	l := LinkNLRI{}
 	p := 0
 	l.ProtocolID = b[p]

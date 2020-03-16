@@ -1,5 +1,10 @@
 package base
 
+import (
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/internal"
+)
+
 // LinkDescriptor defines Link Descriptor object
 // https://tools.ietf.org/html/rfc7752#section-3.2.2
 type LinkDescriptor struct {
@@ -18,6 +23,7 @@ func (ld *LinkDescriptor) String() string {
 
 // UnmarshalLinkDescriptor build Link Descriptor object
 func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
+	glog.V(6).Infof("LinkDescriptor Raw: %s", internal.MessageHex(b))
 	ld := LinkDescriptor{}
 	p := 0
 	ltlv, err := UnmarshalLinkDescriptorTLV(b[p : p+len(b)])

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
@@ -54,8 +55,9 @@ func (pa *PathAttribute) String() string {
 	return s
 }
 
-// UnmarshalPathAttributes builds BGP Path attributes slice
-func UnmarshalPathAttributes(b []byte) ([]PathAttribute, error) {
+// UnmarshalBGPPathAttributes builds BGP Path attributes slice
+func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, error) {
+	glog.V(6).Infof("BGPPathAttributes Raw: %s", internal.MessageHex(b))
 	attrs := make([]PathAttribute, 0)
 
 	for p := 0; p < len(b); {

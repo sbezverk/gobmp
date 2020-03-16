@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
@@ -29,6 +30,7 @@ func (sr *SIDNLRI) String() string {
 
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object
 func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
+	glog.V(6).Infof("SRv6 SID NLRI Raw: %s", internal.MessageHex(b))
 	sr := SIDNLRI{
 		SRv6SID: &SIDDescriptor{},
 	}

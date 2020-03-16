@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -43,6 +44,7 @@ func (stlv *NodeDescriptorSubTLV) String() string {
 
 // UnmarshalNodeDescriptorSubTLV builds Node Descriptor Sub TLVs object
 func UnmarshalNodeDescriptorSubTLV(b []byte) ([]NodeDescriptorSubTLV, error) {
+	glog.V(6).Infof("NodeDescriptorSubTLV Raw: %s", internal.MessageHex(b))
 	stlvs := make([]NodeDescriptorSubTLV, 0)
 	for p := 0; p < len(b); {
 		stlv := NodeDescriptorSubTLV{}

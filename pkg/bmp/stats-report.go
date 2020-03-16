@@ -3,6 +3,9 @@ package bmp
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
 // StatsReport defines BMP Stats message structure
@@ -13,6 +16,7 @@ type StatsReport struct {
 
 // UnmarshalBMPStatsReportMessage builds BMP Stats Reports object
 func UnmarshalBMPStatsReportMessage(b []byte) (*StatsReport, error) {
+	glog.V(6).Infof("BMP Stats Report Message Raw: %s", internal.MessageHex(b))
 	sr := StatsReport{}
 	p := 0
 	l := int32(binary.BigEndian.Uint32(b[p : p+4]))

@@ -4,7 +4,9 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
+	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
 // SIDDescriptor defines SRv6 SID Descriptor Object
@@ -28,6 +30,7 @@ func (srd *SIDDescriptor) String() string {
 
 // UnmarshalSRv6SIDDescriptor build SRv6 Descriptor Object
 func UnmarshalSRv6SIDDescriptor(b []byte) (*SIDDescriptor, error) {
+	glog.V(6).Infof("SRv6 SID Descriptor Raw: %s", internal.MessageHex(b))
 	srd := SIDDescriptor{}
 	for p := 0; p < len(b); {
 		t := binary.BigEndian.Uint16(b[p : p+2])

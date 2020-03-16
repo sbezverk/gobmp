@@ -1,5 +1,10 @@
 package bgpls
 
+import (
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/internal"
+)
+
 // NLRI defines BGP-LS NLRI object as collection of BGP-LS TLVs
 // https://tools.ietf.org/html/rfc7752#section-3.3
 type NLRI struct {
@@ -19,6 +24,7 @@ func (ls *NLRI) String() string {
 
 // UnmarshalBGPLSNLRI builds Prefix NLRI object
 func UnmarshalBGPLSNLRI(b []byte) (*NLRI, error) {
+	glog.V(6).Infof("BGPLSNLRI Raw: %s", internal.MessageHex(b))
 	bgpls := NLRI{}
 	ls, err := UnmarshalBGPLSTLV(b)
 	if err != nil {

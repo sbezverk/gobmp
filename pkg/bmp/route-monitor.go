@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
+	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
 // RouteMonitor defines a structure of BMP Route Monitoring message
@@ -44,6 +45,7 @@ func (rm *RouteMonitor) CheckSAFI(safi int) bool {
 
 // UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
 func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
+	glog.V(6).Infof("BMP Route Monitor Message Raw: %s", internal.MessageHex(b))
 	rm := RouteMonitor{
 		Updates: make([]bgp.Update, 0),
 	}

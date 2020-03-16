@@ -3,6 +3,9 @@ package bgp
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
 // OpenMessage defines BGP Open Message structure
@@ -19,6 +22,7 @@ type OpenMessage struct {
 
 // UnmarshalBGPOpenMessage validate information passed in byte slice and returns BGPOpenMessage object
 func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
+	glog.V(6).Infof("BGPOpenMessage Raw: %s", internal.MessageHex(b))
 	var err error
 	p := 0
 	m := OpenMessage{

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -47,6 +48,7 @@ func (stlv *PrefixDescriptorTLV) String() string {
 
 // UnmarshalPrefixDescriptorTLV builds Prefix Descriptor Sub TLVs object
 func UnmarshalPrefixDescriptorTLV(b []byte) ([]PrefixDescriptorTLV, error) {
+	glog.V(6).Infof("PrefixDescriptorTLV Raw: %s", internal.MessageHex(b))
 	ptlvs := make([]PrefixDescriptorTLV, 0)
 	for p := 0; p < len(b); {
 		ptlv := PrefixDescriptorTLV{}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 	"github.com/sbezverk/gobmp/pkg/ls"
 )
@@ -41,6 +42,7 @@ func (mp *MPReachNLRI) String() string {
 
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPReachNLRI(b []byte) (*MPReachNLRI, error) {
+	glog.V(6).Infof("MPReachNLRI Raw: %s", internal.MessageHex(b))
 	mp := MPReachNLRI{}
 	p := 0
 	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])

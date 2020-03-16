@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -28,6 +29,7 @@ func (p *PrefixNLRI) String() string {
 
 // UnmarshalPrefixNLRI builds Prefix NLRI object
 func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
+	glog.V(6).Infof("PrefixNLRI Raw: %s", internal.MessageHex(b))
 	pr := PrefixNLRI{}
 	p := 0
 	pr.ProtocolID = b[p]

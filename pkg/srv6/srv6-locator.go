@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -42,6 +43,7 @@ func (loc *LocatorTLV) String(level ...int) string {
 
 // UnmarshalSRv6LocatorTLV builds SRv6 Locator TLV object
 func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
+	glog.V(6).Infof("SRv6 Locator TLV Raw: %s", internal.MessageHex(b))
 	loc := LocatorTLV{}
 	p := 0
 	loc.Flag = b[p]

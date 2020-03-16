@@ -4,6 +4,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"time"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
 // PerPeerHeader defines BMP Per-Peer Header per rfc7854
@@ -21,6 +24,7 @@ type PerPeerHeader struct {
 
 // UnmarshalPerPeerHeader processes Per-Peer header
 func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
+	glog.V(6).Infof("BMP Per Peer Header Raw: %s", internal.MessageHex(b))
 	pph := &PerPeerHeader{
 		PeerDistinguisher: make([]byte, 8),
 		PeerAddress:       make([]byte, 14),

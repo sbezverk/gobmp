@@ -3,6 +3,9 @@ package bmp
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
 // InformationalTLV defines Informational TLV per rfc7854
@@ -14,6 +17,7 @@ type InformationalTLV struct {
 
 // UnmarshalTLV builds a slice of Informational TLVs
 func UnmarshalTLV(b []byte) ([]InformationalTLV, error) {
+	glog.V(6).Infof("BMP Informational TLV Raw: %s", internal.MessageHex(b))
 	tlvs := make([]InformationalTLV, 0)
 	for i := 0; i < len(b); {
 		// Extracting TLV type 2 bytes

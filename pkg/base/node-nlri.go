@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -26,6 +27,7 @@ func (n *NodeNLRI) String() string {
 
 // UnmarshalNodeNLRI builds Node NLRI object
 func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
+	glog.V(6).Infof("NodeNLRI Raw: %s", internal.MessageHex(b))
 	n := NodeNLRI{}
 	p := 0
 	n.ProtocolID = b[p]

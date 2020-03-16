@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -56,6 +57,7 @@ func (ltlv *LinkDescriptorTLV) String() string {
 
 // UnmarshalLinkDescriptorTLV builds Link Descriptor TLVs object
 func UnmarshalLinkDescriptorTLV(b []byte) ([]LinkDescriptorTLV, error) {
+	glog.V(6).Infof("LinkDescriptorTLV Raw: %s", internal.MessageHex(b))
 	ltlvs := make([]LinkDescriptorTLV, 0)
 	for p := 0; p < len(b); {
 		ltlv := LinkDescriptorTLV{}

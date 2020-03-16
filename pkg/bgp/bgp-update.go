@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -39,6 +40,7 @@ func (up *Update) String() string {
 
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
 func UnmarshalBGPUpdate(b []byte) (*Update, error) {
+	glog.V(6).Infof("BGPUpdate Raw: %s", internal.MessageHex(b))
 	p := 0
 	u := Update{}
 	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
@@ -47,7 +49,7 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	p += int(u.WithdrawnRoutesLength)
 	u.TotalPathAttributeLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	attrs, err := UnmarshalPathAttributes(b[p : p+int(u.TotalPathAttributeLength)])
+	attrs, err := UnmarshalBGPPathAttributes(b[p : p+int(u.TotalPathAttributeLength)])
 	if err != nil {
 		return nil, err
 	}

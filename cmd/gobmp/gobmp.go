@@ -118,7 +118,7 @@ func parsingWorker(b []byte) {
 				return
 			}
 			if rm.CheckSAFI(71) {
-				glog.V(6).Infof("parsed route monitor: \n%s", rm.String())
+				glog.V(5).Infof("parsed route monitor: \n%s", rm.String())
 			} else {
 				glog.V(5).Infof("route monitor message does not carry BGP-LS SAFI")
 			}

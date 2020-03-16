@@ -3,6 +3,9 @@ package base
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
 // NodeDescriptor defines Node Descriptor object
@@ -35,6 +38,7 @@ func (nd *NodeDescriptor) String() string {
 
 // UnmarshalNodeDescriptor build Node Descriptor object
 func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {
+	glog.V(6).Infof("NodeDescriptor Raw: %s", internal.MessageHex(b))
 	nd := NodeDescriptor{}
 	p := 0
 	nd.Type = binary.BigEndian.Uint16(b[p : p+2])

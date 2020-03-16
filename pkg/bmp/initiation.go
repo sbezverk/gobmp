@@ -3,6 +3,9 @@ package bmp
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
 // InitiationMessage defines BMP Initiation Message per rfc7854
@@ -12,6 +15,7 @@ type InitiationMessage struct {
 
 // UnmarshalInitiationMessage processes Initiation Message and returns BMPInitiationMessage object
 func UnmarshalInitiationMessage(b []byte) (*InitiationMessage, error) {
+	glog.V(6).Infof("BMP Initiation Message Raw: %s", internal.MessageHex(b))
 	im := &InitiationMessage{
 		TLV: make([]InformationalTLV, 0),
 	}

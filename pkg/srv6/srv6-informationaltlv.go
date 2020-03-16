@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
@@ -24,6 +25,7 @@ func (srtlv *SIDInformationTLV) String() string {
 
 // UnmarshalSRv6SIDInformationTLV builds SRv6 SID Information TLV
 func UnmarshalSRv6SIDInformationTLV(b []byte) (*SIDInformationTLV, error) {
+	glog.V(6).Infof("SRv6 SIDI nformation TLV Raw: %s", internal.MessageHex(b))
 	srtlv := SIDInformationTLV{}
 	p := 0
 	srtlv.Type = binary.BigEndian.Uint16(b[p : p+2])
