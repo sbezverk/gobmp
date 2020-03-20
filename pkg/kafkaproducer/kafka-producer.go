@@ -1,6 +1,7 @@
 package kafkaproducer
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net"
@@ -8,6 +9,10 @@ import (
 
 	"github.com/golang/glog"
 	kafka "github.com/segmentio/kafka-go"
+)
+
+const (
+	gobmpTopic = "gobmp.feed"
 )
 
 // KafkaProducer defines methods to act as a Kafka producer
@@ -26,29 +31,57 @@ func NewKafkaProducerClient(kafkaSrv string) (KafkaProducer, error) {
 		glog.Errorf("Failed to validate Kafka server address %s with error: %+v", kafkaSrv, err)
 		return nil, err
 	}
-	kafkaConn, err := kafka.Dial("tcp", kafkaSrv)
+
+	conn, err := kafka.Dial("tcp", kafkaSrv)
 	if err != nil {
 		glog.Errorf("Failed to dial to Kafka with error: %+v", err)
 		return nil, err
 	}
-	glog.V(5).Infof("Connected to Kafka server at: %s", kafkaConn.RemoteAddr().String())
+	glog.V(5).Infof("Connected to Kafka server at: %s", conn.RemoteAddr().String())
 	t := kafka.TopicConfig{
-		Topic:             "blahblah",
+		Topic:             gobmpTopic,
 		NumPartitions:     1,
 		ReplicationFactor: 1,
 	}
-	if err := kafkaConn.CreateTopics(t); err != nil {
-		glog.Errorf("Failed to create Kafka topic with error: %+v", err)
-		return nil, err
-	}
-	glog.V(5).Infof("Create Kafka topic %s succeeded", t.Topic)
-
-	p, err := kafkaConn.ReadPartitions(t.Topic)
+	// Getting Topic from Kafka
+	p, err := conn.ReadPartitions(t.Topic)
 	if err != nil {
-		glog.Errorf("Failed to read particions for Kafka topic with error: %+v", err)
+		// Topic is not found, attempting to Create it
+		if err := conn.CreateTopics(t); err != nil {
+			glog.Errorf("Failed to create Kafka topic with error: %+v", err)
+			return nil, err
+		}
+		glog.V(5).Infof("Create Kafka topic %s succeeded", t.Topic)
+		// Getting Topic from Kafka again, if failing again, then give up and return an error.
+		p, err = conn.ReadPartitions(t.Topic)
+		if err != nil {
+			glog.Errorf("Failed to read particions for Kafka topic with error: %+v", err)
+			return nil, err
+		}
+	}
+	glog.V(5).Infof("Getting partitions for Kafka topic %s succeeded, partitions: %+v", t.Topic, p)
+
+	leaderAddr := fmt.Sprintf("%s:%d", p[0].Leader.Host, p[0].Leader.Port)
+	kafkaConn, err := kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, p[0].Topic, p[0].Leader.ID)
+	if err != nil {
+		glog.Errorf("Failed to connect to the particion's leader with error: %+v", err)
 		return nil, err
 	}
-	glog.V(5).Infof("Getting partitions for Kafka topic %s succeeded", t.Topic)
+	n, err := kafkaConn.WriteMessages(kafka.Message{
+		Key:   []byte("test message key"),
+		Value: []byte("test message value"),
+		Headers: []kafka.Header{
+			{
+				Key:   "Header key",
+				Value: []byte("Header value"),
+			},
+		},
+	})
+	if err != nil {
+		glog.Errorf("Failed to write test message to the topic %s with error: %+v", t.Topic, err)
+		return nil, err
+	}
+	glog.V(5).Infof("Successfully wrote %d bytes to Kafka topic %s", n, t.Topic)
 
 	return &kafkaProducer{
 		kafkaConn:  kafkaConn,
