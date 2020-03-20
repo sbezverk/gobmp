@@ -26,14 +26,10 @@ func (ls *TLV) String() string {
 
 	// List of TLV to skip processing
 
-	case 266:
-		fallthrough
-	case 267: // expires 2020-11-02
-		fallthrough
 	case 1173:
 		break
 
-		// List of TLV requireing additional processing
+	// List of TLV requireing additional processing
 
 	case 258:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Link Local/Remote Identifiers)\n", ls.Type)
@@ -49,6 +45,22 @@ func (ls *TLV) String() string {
 			break
 		}
 		s += mit.String()
+	case 266:
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Node MSD)\n", ls.Type)
+		msd, err := base.UnmarshalNodeMSD(ls.Value)
+		if err != nil {
+			s += err.Error() + "\n"
+			break
+		}
+		s += msd.String()
+	case 267:
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Link MSD)\n", ls.Type)
+		msd, err := base.UnmarshalLinkMSD(ls.Value)
+		if err != nil {
+			s += err.Error() + "\n"
+			break
+		}
+		s += msd.String()
 	case 1026:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Node Name)\n", ls.Type)
 		s += fmt.Sprintf("      Node Name: %s\n", string(ls.Value))
