@@ -46,3 +46,18 @@ func AddLevel(level ...int) string {
 	}
 	return s
 }
+
+// RawBytesToJSON converts a slice of bytes into a comma separated JSON representation
+func RawBytesToJSON(rb []byte) []byte {
+	b := []byte{}
+	b = append(b, '[')
+	for i := 0; i < len(rb); i++ {
+		b = append(b, fmt.Sprintf("\"%#x\"", rb[i])...)
+		if i < len(rb)-1 {
+			b = append(b, ',')
+		}
+	}
+	b = append(b, ']')
+
+	return b
+}

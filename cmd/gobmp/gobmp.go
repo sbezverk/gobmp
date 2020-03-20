@@ -9,16 +9,19 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	kafka "github.com/sbezverk/gobmp/pkg/kafkaproducer"
 )
 
 var (
-	dstPort int
-	srcPort int
+	dstPort  int
+	srcPort  int
+	kafkaSrv string
 )
 
 func init() {
 	flag.IntVar(&srcPort, "source-port", 5000, "port exposed to outside")
 	flag.IntVar(&dstPort, "destination-port", 5050, "port openBMP is listening")
+	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
 }
 
 func server(incoming net.Listener, dstPort int) {
@@ -119,6 +122,11 @@ func parsingWorker(b []byte) {
 			}
 			if rm.CheckSAFI(71) {
 				glog.V(5).Infof("parsed route monitor: \n%s", rm.String())
+				//				j, err := json.Marshal(&rm)
+				//				if err != nil {
+				//					glog.Errorf("fail to Marshal into JSON BMP Route Monitoring with error: %+v", err)
+				//				}
+				//				glog.V(5).Infof("JSON parsed route monitor: \n%s", string(j))
 			}
 		case bmp.StatsReportMsg:
 			_, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)])
@@ -170,6 +178,13 @@ func main() {
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", srcPort, err)
 		os.Exit(1)
+	}
+	// Initializing Kafka producer
+	kc, err := kafka.NewKafkaProducerClient(kafkaSrv)
+	if err != nil {
+		glog.Warningf("Kafka producer is disabled, no Kafka server URL is provided.")
+	} else {
+		glog.V(6).Infof("Kafka producer was initialized: %+v", kc)
 	}
 
 	// Starting Interceptor server

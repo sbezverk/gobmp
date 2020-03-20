@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/sbezverk/gobmp/pkg/bgp"
+	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
 func TestMain(m *testing.M) {
@@ -16,13 +19,13 @@ func TestCommonHeader(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []byte
-		expect *BMPCommonHeader
+		expect *bmp.CommonHeader
 		fail   bool
 	}{
 		{
 			name:  "valid",
 			input: []byte{3, 0, 0, 0, 32, 4},
-			expect: &BMPCommonHeader{
+			expect: &bmp.CommonHeader{
 				Version:       3,
 				MessageLength: 32,
 				MessageType:   4,
@@ -44,7 +47,7 @@ func TestCommonHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			message, err := UnmarshalCommonHeader(tt.input)
+			message, err := bmp.UnmarshalCommonHeader(tt.input)
 			if err != nil {
 				if !tt.fail {
 					t.Fatal("expected to succeed but failed")
@@ -66,14 +69,14 @@ func TestInitiationMessage(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []byte
-		expect *BMPInitiationMessage
+		expect *bmp.InitiationMessage
 		fail   bool
 	}{
 		{
 			name:  "valid 2 TLVs",
 			input: []byte{0, 1, 0, 10, 32, 55, 46, 50, 46, 49, 46, 50, 51, 73, 0, 2, 0, 8, 120, 114, 118, 57, 107, 45, 114, 49},
-			expect: &BMPInitiationMessage{
-				TLV: []InformationalTLV{
+			expect: &bmp.InitiationMessage{
+				TLV: []bmp.InformationalTLV{
 					{
 						InformationType:   1,
 						InformationLength: 10,
@@ -103,7 +106,7 @@ func TestInitiationMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			message, err := UnmarshalInitiationMessage(tt.input)
+			message, err := bmp.UnmarshalInitiationMessage(tt.input)
 			if err != nil {
 				if !tt.fail {
 					t.Fatal("expected to succeed but failed")
@@ -125,20 +128,20 @@ func TestUnmarshalBGPOpenMessage(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []byte
-		expect *BGPOpenMessage
+		expect *bgp.OpenMessage
 		fail   bool
 	}{
 		{
 			name:  "valid",
 			input: []byte{0, 91, 1, 4, 19, 206, 0, 90, 192, 168, 8, 8, 62, 2, 6, 1, 4, 0, 1, 0, 1, 2, 6, 1, 4, 0, 1, 0, 4, 2, 6, 1, 4, 0, 1, 0, 128, 2, 2, 128, 0, 2, 2, 2, 0, 2, 6, 65, 4, 0, 0, 19, 206, 2, 20, 5, 18, 0, 1, 0, 1, 0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 0, 128, 0, 2},
-			expect: &BGPOpenMessage{
+			expect: &bgp.OpenMessage{
 				Length:  91,
 				Type:    1,
 				Version: 4,
 				MyAS:    5070, HoldTime: 90,
 				BGPID:       []byte{192, 168, 8, 8},
 				OptParamLen: 62,
-				OptionalParameters: []BGPInformationalTLV{
+				OptionalParameters: []bgp.InformationalTLV{
 					{
 						Type:   2,
 						Length: 6,
@@ -181,7 +184,7 @@ func TestUnmarshalBGPOpenMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			message, err := UnmarshalBGPOpenMessage(tt.input)
+			message, err := bgp.UnmarshalBGPOpenMessage(tt.input)
 			if err != nil {
 				if !tt.fail {
 					t.Fatal("expected to succeed but failed")
@@ -223,21 +226,21 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []byte
-		expect *BMPRouteMonitor
+		expect *bmp.RouteMonitor
 		fail   bool
 	}{
 		{
 			name:  "update 1",
 			input: []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0xa8, 0x08, 0x08, 0x00, 0x00, 0x13, 0xce, 0xc0, 0xa8, 0x08, 0x08, 0x5e, 0x68, 0x0a, 0xe9, 0x00, 0x0b, 0x90, 0x14, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x4f, 0x02, 0x00, 0x00, 0x00, 0x38, 0x90, 0x0e, 0x00, 0x12, 0x00, 0x01, 0x01, 0x04, 0xc0, 0xa8, 0x08, 0x08, 0x00, 0x00, 0x00, 0x00, 0x01, 0x20, 0xc0, 0xa8, 0x08, 0x08, 0x40, 0x01, 0x01, 0x00, 0x40, 0x02, 0x00, 0x80, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x40, 0x05, 0x04, 0x00, 0x00, 0x00, 0x64, 0xc0, 0x28, 0x0a, 0x01, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
-			expect: &BMPRouteMonitor{
-				Updates: []BGPUpdate{
+			expect: &bmp.RouteMonitor{
+				Updates: []bgp.Update{
 					{
 						WithdrawnRoutesLength: 0,
-						WithdrawnRoutes: BGPWithdrawnRoutes{
+						WithdrawnRoutes: bgp.WithdrawnRoutes{
 							WithdrawnRoutes: nil,
 						},
 						TotalPathAttributeLength: 56,
-						PathAttributes: []BGPPathAttribute{
+						PathAttributes: []bgp.PathAttribute{
 							{
 								AttributeTypeFlags: 144,
 								AttributeType:      14,
@@ -284,7 +287,7 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ru, err := UnmarshalBMPRouteMonitorMessage(tt.input)
+			ru, err := bmp.UnmarshalBMPRouteMonitorMessage(tt.input)
 			if err != nil {
 				if !tt.fail {
 					t.Fatal("expected to succeed but failed")

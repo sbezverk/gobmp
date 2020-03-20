@@ -66,6 +66,65 @@ func (ls *NLRI71) String() string {
 	return s
 }
 
+// MarshalJSON defines a method to Marshal NLRI71 object into JSON format
+func (ls *NLRI71) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+	var t string
+
+	jsonData = append(jsonData, '[')
+	jsonData = append(jsonData, '{')
+	jsonData = append(jsonData, []byte("{\"nlriType\":")...)
+
+	switch ls.Type {
+	case 1:
+		t = "Node"
+		//		if n, err := base.UnmarshalNodeNLRI(ls.LS); err == nil {
+		//			nlri = n.String()
+		//		} else {
+		//			return nil, err
+		//		}
+	case 2:
+		t = "Link"
+		//		if n, err := base.UnmarshalLinkNLRI(ls.LS); err == nil {
+		//			nlri = n.String()
+		//		} else {
+		//			nlri = err.Error() + "\n"
+		//		}
+	case 3:
+		t = "IPv4 Topology Prefix"
+		//		if n, err := base.UnmarshalPrefixNLRI(ls.LS); err == nil {
+		//			nlri = n.String()
+		//		} else {
+		//			nlri = err.Error() + "\n"
+		//		}
+	case 4:
+		t = "IPv6 Topology Prefix"
+		//		if n, err := base.UnmarshalPrefixNLRI(ls.LS); err == nil {
+		//			nlri = n.String()
+		//		} else {
+		//			nlri = err.Error() + "\n"
+		//		}
+	case 6:
+		t = "SRv6 SID"
+		//		if n, err := srv6.UnmarshalSRv6SIDNLRI(ls.LS); err == nil {
+		//			nlri = n.String()
+		//		} else {
+		//			nlri = err.Error() + "\n"
+		//		}
+	default:
+		t = "Unknown"
+	}
+
+	jsonData = append(jsonData, []byte(fmt.Sprintf("\"%s\"", t))...)
+	// TODO, Add MarshalJSON to all other object
+	jsonData = append(jsonData, []byte(",\"rawLS\":")...)
+	jsonData = append(jsonData, internal.RawBytesToJSON(ls.LS)...)
+	jsonData = append(jsonData, '}')
+	jsonData = append(jsonData, ']')
+
+	return jsonData, nil
+}
+
 // UnmarshalLSNLRI71 builds Link State NLRI object ofor SAFI 71
 func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 	glog.V(6).Infof("LSNLRI71 Raw: %s", internal.MessageHex(b))
