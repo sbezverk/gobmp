@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+data:
+  gobmp.yaml: |
+metadata:
+  name: gobmp-config
+  namespace: default
+---
+apiVersion: v1
+kind: Service
+spec:
+  ports:
+   - name: 5000-tcp
+     nodePort: 30555
+     port: 5000
+     protocol: TCP
+     targetPort: 5000
+  selector:
+    app: gobmp
+  type: NodePort
+metadata:
+  name: gobmp
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gobmp
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: gobmp
+  template:
+    metadata:
+      labels:
+        app: gobmp
+    spec:
+      containers:
+        - args:
+          - --v
+          - "5"
+          - --kafka-server
+          - broker.jalapeno:9092
+          image: 192.168.80.240:4000/jalapeno/gobmp:0.0.0
+          imagePullPolicy: Always
+          name: gobmp
+          ports:
+          - containerPort: 5000
+            protocol: TCP
+            name: 5000-tcp
+      volumes:
+        - name: config-volume
+          configMap:
+            name: gobmp-config
+metadata:
+  name: gobmp
+  namespace: default
+

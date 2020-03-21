@@ -7,7 +7,10 @@ func MessageHex(b []byte) string {
 	var s string
 	s += "[ "
 	for i := 0; i < len(b); i++ {
-		s += fmt.Sprintf("%02x ", b[i])
+		s += fmt.Sprintf("%02x", b[i])
+		if i < len(b)-1 {
+			s += " "
+		}
 	}
 	s += " ]"
 

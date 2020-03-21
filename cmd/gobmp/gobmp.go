@@ -28,7 +28,6 @@ func init() {
 func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
-
 	// Initializing Kafka producer
 	kp, err := kafka.NewKafkaProducerClient(kafkaSrv)
 	if err != nil {
