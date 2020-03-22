@@ -2,6 +2,7 @@ package bgp
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net"
 
@@ -31,13 +32,50 @@ func (mp *MPReachNLRI) String() string {
 	}
 	switch mp.SubAddressFamilyID {
 	case 71:
-		nlri, _ := ls.UnmarshalLSNLRI71(mp.NLRI)
-		s += nlri.String()
+		nlri, err := ls.UnmarshalLSNLRI71(mp.NLRI)
+		if err != nil {
+			s += err.Error()
+		} else {
+			s += nlri.String()
+		}
 	default:
 		s += fmt.Sprintf("NLRI: %s\n", internal.MessageHex(mp.NLRI))
 	}
 
 	return s
+}
+
+// MarshalJSON defines a custom method to convert MP REACH NLRI object into JSON object
+func (mp *MPReachNLRI) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+
+	jsonData = append(jsonData, []byte("{\"AddressFamilyID\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", mp.AddressFamilyID))...)
+	jsonData = append(jsonData, []byte("\"SubAddressFamilyID\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", mp.SubAddressFamilyID))...)
+	jsonData = append(jsonData, []byte("\"NextHopAddressLength\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", mp.NextHopAddressLength))...)
+	jsonData = append(jsonData, []byte("\"NextHopAddress\":")...)
+	jsonData = append(jsonData, internal.RawBytesToJSON(mp.NextHopAddress)...)
+	jsonData = append(jsonData, ',')
+	jsonData = append(jsonData, []byte("\"NLRI\":")...)
+	switch mp.SubAddressFamilyID {
+	case 71:
+		nlri, err := ls.UnmarshalLSNLRI71(mp.NLRI)
+		if err != nil {
+			return nil, err
+		}
+		b, err := json.Marshal(&nlri)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	default:
+		jsonData = append(jsonData, internal.RawBytesToJSON(mp.NLRI)...)
+	}
+	jsonData = append(jsonData, '}')
+
+	return jsonData, nil
 }
 
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes

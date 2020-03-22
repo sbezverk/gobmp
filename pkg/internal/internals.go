@@ -55,7 +55,7 @@ func RawBytesToJSON(rb []byte) []byte {
 	b := []byte{}
 	b = append(b, '[')
 	for i := 0; i < len(rb); i++ {
-		b = append(b, fmt.Sprintf("\"%#x\"", rb[i])...)
+		b = append(b, fmt.Sprintf("%d", rb[i])...)
 		if i < len(rb)-1 {
 			b = append(b, ',')
 		}

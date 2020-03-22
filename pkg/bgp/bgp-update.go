@@ -2,6 +2,7 @@ package bgp
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -36,6 +37,50 @@ func (up *Update) String() string {
 	s += "\n"
 
 	return s
+}
+
+// MarshalJSON defines a custom method to convert BGP Update object into JSON object
+func (up *Update) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+
+	jsonData = append(jsonData, []byte("{\"WithdrawnRoutesLength\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", up.WithdrawnRoutesLength))...)
+	jsonData = append(jsonData, []byte("\"WithdrawnRoutes\":")...)
+	jsonData = append(jsonData, []byte("{\"WithdrawnRoutes\":")...)
+	jsonData = append(jsonData, '[')
+	for i, wr := range up.WithdrawnRoutes.WithdrawnRoutes {
+		b, err := json.Marshal(&wr)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+		if i < len(up.WithdrawnRoutes.WithdrawnRoutes)-1 {
+			jsonData = append(jsonData, ',')
+		}
+	}
+	jsonData = append(jsonData, []byte("]},")...)
+
+	jsonData = append(jsonData, []byte("\"TotalPathAttributeLength\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", up.TotalPathAttributeLength))...)
+
+	jsonData = append(jsonData, []byte("\"PathAttributes\":")...)
+	jsonData = append(jsonData, '[')
+	for i, pa := range up.PathAttributes {
+		b, err := json.Marshal(&pa)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+		if i < len(up.PathAttributes)-1 {
+			jsonData = append(jsonData, ',')
+		}
+	}
+	jsonData = append(jsonData, []byte("],")...)
+	jsonData = append(jsonData, []byte("\"NLRI\":")...)
+	jsonData = append(jsonData, internal.RawBytesToJSON(up.NLRI)...)
+	jsonData = append(jsonData, '}')
+
+	return jsonData, nil
 }
 
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided

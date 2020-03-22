@@ -2,6 +2,7 @@ package bmp
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -41,6 +42,28 @@ func (rm *RouteMonitor) CheckSAFI(safi int) bool {
 	}
 
 	return false
+}
+
+// MarshalJSON defines a custom method to convert Route Monitor object into JSON object
+func (rm *RouteMonitor) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+
+	jsonData = append(jsonData, []byte("{\"Updates\":")...)
+	for i, u := range rm.Updates {
+		jsonData = append(jsonData, '[')
+		b, err := json.Marshal(&u)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+		jsonData = append(jsonData, ']')
+		if i < len(rm.Updates)-1 {
+			jsonData = append(jsonData, ',')
+		}
+	}
+	jsonData = append(jsonData, '}')
+
+	return jsonData, nil
 }
 
 // UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object

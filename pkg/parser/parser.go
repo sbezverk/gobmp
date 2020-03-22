@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"encoding/json"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -42,12 +44,12 @@ func parsingWorker(b []byte) {
 				return
 			}
 			if rm.CheckSAFI(71) {
-				glog.V(5).Infof("parsed route monitor: \n%s", rm.String())
-				//				j, err := json.Marshal(&rm)
-				//				if err != nil {
-				//					glog.Errorf("fail to Marshal into JSON BMP Route Monitoring with error: %+v", err)
-				//				}
-				//				glog.V(5).Infof("JSON parsed route monitor: \n%s", string(j))
+				// glog.V(5).Infof("parsed route monitor: \n%s", rm.String())
+				j, err := json.Marshal(&rm)
+				if err != nil {
+					glog.Errorf("fail to Marshal into JSON BMP Route Monitoring with error: %+v", err)
+				}
+				glog.V(5).Infof("JSON parsed route monitor: \n%s", string(j))
 			}
 		case bmp.StatsReportMsg:
 			_, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)])
