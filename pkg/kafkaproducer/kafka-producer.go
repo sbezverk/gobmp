@@ -17,11 +17,30 @@ const (
 
 // KafkaProducer defines methods to act as a Kafka producer
 type KafkaProducer interface {
+	Producer(queue chan []byte, stop chan struct{})
 }
 
 type kafkaProducer struct {
 	kafkaConn  *kafka.Conn
 	partitions []kafka.Partition
+}
+
+// Producer dispatches kafka workers upon request received from the channel
+func (k *kafkaProducer) Producer(queue chan []byte, stop chan struct{}) {
+	for {
+		select {
+		case msg := <-queue:
+			go k.producingWorker(msg)
+		case <-stop:
+			glog.Infof("received interrupt, stopping.")
+			return
+		default:
+		}
+	}
+}
+
+func (k *kafkaProducer) producingWorker(j []byte) {
+	glog.Infof("get JSON message to push to kafka")
 }
 
 // NewKafkaProducerClient instantiates a new instance of a Kafka producer client

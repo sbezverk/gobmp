@@ -63,13 +63,23 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		defer server.Close()
 		glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
 	}
-	queue := make(chan []byte)
+	var producerQueue chan []byte
+	kstop := make(chan struct{})
+	if srv.kafkaProducer != nil {
+		// For the case when Kafka is not initialized, no reason to send any messages,
+		// as a result allocating a channel only when kafka producer's interface is not nil.
+		producerQueue = make(chan []byte)
+		// Starting kafka producer per client with dedicated work queue
+		go srv.kafkaProducer.Producer(producerQueue, kstop)
+	}
+	parserQueue := make(chan []byte)
 	pstop := make(chan struct{})
 	// Starting parser per client with dedicated work queue
-	go parser.Parser(queue, pstop)
+	go parser.Parser(parserQueue, producerQueue, pstop)
 	defer func() {
 		glog.V(5).Infof("all done with client %+v", client.RemoteAddr())
 		close(pstop)
+		close(kstop)
 	}()
 	for {
 		headerMsg := make([]byte, bmp.CommonHeaderLength)
@@ -100,7 +110,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 				return
 			}
 		}
-		queue <- fullMsg
+		parserQueue <- fullMsg
 	}
 }
 

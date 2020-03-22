@@ -8,11 +8,11 @@ import (
 )
 
 // Parser dispatches workers upon request received from the channel
-func Parser(queue chan []byte, stop chan struct{}) {
+func Parser(queue chan []byte, producerQueue chan []byte, stop chan struct{}) {
 	for {
 		select {
 		case msg := <-queue:
-			go parsingWorker(msg)
+			go parsingWorker(msg, producerQueue)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
@@ -21,8 +21,9 @@ func Parser(queue chan []byte, stop chan struct{}) {
 	}
 }
 
-func parsingWorker(b []byte) {
+func parsingWorker(b []byte, producerQueue chan []byte) {
 	perPerHeaderLen := 0
+	var jsonMsg []byte
 	// Loop through all found Common Headers in the slice and process them
 	for p := 0; p < len(b); {
 		// Recovering common header first
@@ -45,11 +46,11 @@ func parsingWorker(b []byte) {
 			}
 			if rm.CheckSAFI(71) {
 				// glog.V(5).Infof("parsed route monitor: \n%s", rm.String())
-				j, err := json.Marshal(&rm)
+				jsonMsg, err = json.Marshal(&rm)
 				if err != nil {
 					glog.Errorf("fail to Marshal into JSON BMP Route Monitoring with error: %+v", err)
 				}
-				glog.V(5).Infof("JSON parsed route monitor: \n%s", string(j))
+				glog.V(5).Infof("JSON parsed route monitor: \n%s", string(jsonMsg))
 			}
 		case bmp.StatsReportMsg:
 			_, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)])
@@ -91,5 +92,8 @@ func parsingWorker(b []byte) {
 		}
 		perPerHeaderLen = 0
 		p += (int(ch.MessageLength) - bmp.CommonHeaderLength)
+		if len(jsonMsg) != 0 && producerQueue != nil {
+			producerQueue <- jsonMsg
+		}
 	}
 }
