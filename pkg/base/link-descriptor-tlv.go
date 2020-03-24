@@ -105,7 +105,7 @@ func (ltlv *LinkDescriptorTLV) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		b, err = json.Marshal(&mit)
+		b, err = json.Marshal(mit)
 		if err != nil {
 			return nil, err
 		}
