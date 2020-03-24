@@ -77,7 +77,7 @@ func (ltlv *LinkDescriptorTLV) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		b, err = json.Marshal(&lri)
+		b, err = json.Marshal(lri)
 		if err != nil {
 			return nil, err
 		}
@@ -100,6 +100,7 @@ func (ltlv *LinkDescriptorTLV) MarshalJSON() ([]byte, error) {
 		jsonData = append(jsonData, internal.RawBytesToJSON(ltlv.Value)...)
 	case 263:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Multi-Topology Identifier\","))...)
+		jsonData = append(jsonData, []byte("\"multiTopologyIdentifier\":")...)
 		mit, err := UnmarshalMultiTopologyIdentifierTLV(ltlv.Value)
 		if err != nil {
 			return nil, err
@@ -115,7 +116,6 @@ func (ltlv *LinkDescriptorTLV) MarshalJSON() ([]byte, error) {
 		jsonData = append(jsonData, internal.RawBytesToJSON(ltlv.Value)...)
 	}
 	jsonData = append(jsonData, '}')
-	glog.Infof("><SB> Link Descriptor TLV: %s", string(jsonData))
 
 	return jsonData, nil
 }

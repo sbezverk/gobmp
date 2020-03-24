@@ -62,6 +62,7 @@ func (l *LinkNLRI) MarshalJSON() ([]byte, error) {
 	} else {
 		jsonData = append(jsonData, "{},"...)
 	}
+	jsonData = append(jsonData, []byte("\"link\":")...)
 	if l.Link != nil {
 		b, err := json.Marshal(l.Link)
 		if err != nil {
@@ -72,8 +73,6 @@ func (l *LinkNLRI) MarshalJSON() ([]byte, error) {
 		jsonData = append(jsonData, "{}"...)
 	}
 	jsonData = append(jsonData, '}')
-
-	glog.Infof("><SB> Link NLRI: %s", string(jsonData))
 
 	return jsonData, nil
 }

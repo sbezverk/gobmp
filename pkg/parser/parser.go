@@ -45,7 +45,7 @@ func parsingWorker(b []byte, producerQueue chan []byte) {
 				return
 			}
 			if rm.CheckSAFI(71) {
-				// glog.V(5).Infof("parsed route monitor: \n%s", rm.String())
+				glog.V(5).Infof("String parsed route monitor: \n%s", rm.String())
 				jsonMsg, err = json.Marshal(&rm)
 				if err != nil {
 					glog.Errorf("fail to Marshal into JSON BMP Route Monitoring with error: %+v", err)

@@ -45,8 +45,6 @@ func (ld *LinkDescriptor) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, ']')
 	jsonData = append(jsonData, '}')
 
-	glog.Infof("><SB> Link Descriptor: %s", string(jsonData))
-
 	return jsonData, nil
 }
 
