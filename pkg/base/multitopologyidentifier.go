@@ -26,6 +26,23 @@ func (mti *MultiTopologyIdentifierTLV) String() string {
 	return s
 }
 
+// MarshalJSON defines a method to Marshal slice of Multi Topology Identifier TLVs into JSON format
+func (mti *MultiTopologyIdentifierTLV) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+
+	jsonData = append(jsonData, '[')
+	for i, mid := range mti.MTI {
+		jsonData = append(jsonData, []byte(fmt.Sprintf("%d", mid))...)
+		if i < len(mti.MTI)-1 {
+			jsonData = append(jsonData, ',')
+		}
+	}
+
+	jsonData = append(jsonData, ']')
+
+	return jsonData, nil
+}
+
 // UnmarshalMultiTopologyIdentifierTLV builds Multi Topology Identifier TLV object
 func UnmarshalMultiTopologyIdentifierTLV(b []byte) (*MultiTopologyIdentifierTLV, error) {
 	glog.V(6).Infof("MultiTopologyIdentifierTLV Raw: %s", internal.MessageHex(b))

@@ -2,6 +2,7 @@ package base
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net"
 
@@ -22,8 +23,12 @@ func (ltlv *LinkDescriptorTLV) String() string {
 	switch ltlv.Type {
 	case 258:
 		s += fmt.Sprintf("   Link Descriptor TLV Type: %d (Link Local/Remote Identifiers)\n", ltlv.Type)
-		s += fmt.Sprintf("      Link Local Identifier: %d\n", binary.BigEndian.Uint16(ltlv.Value[:4]))
-		s += fmt.Sprintf("      Link Remote Identifier: %d\n", binary.BigEndian.Uint16(ltlv.Value[4:]))
+		lri, err := UnmarshalLocalRemoteIdentifierTLV(ltlv.Value)
+		if err != nil {
+			s += err.Error() + "\n"
+			break
+		}
+		s += lri.String()
 	case 259:
 		s += fmt.Sprintf("   Link Descriptor TLV Type: %d (IPv4 interface address)\n", ltlv.Type)
 		s += fmt.Sprintf("      IPv4 interface address: %s\n", net.IP(ltlv.Value).To4().String())
@@ -53,6 +58,66 @@ func (ltlv *LinkDescriptorTLV) String() string {
 	}
 
 	return s
+}
+
+// MarshalJSON defines a method to Marshal Link Descriptor TLV object into JSON format
+func (ltlv *LinkDescriptorTLV) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+	var b []byte
+
+	jsonData = append(jsonData, '{')
+	jsonData = append(jsonData, []byte("\"Type\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", ltlv.Type))...)
+	jsonData = append(jsonData, []byte("\"Description\":")...)
+	switch ltlv.Type {
+	case 258:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Local/Remote Identifiers\","))...)
+		jsonData = append(jsonData, []byte("\"identifiersLocalRemote\":")...)
+		lri, err := UnmarshalLocalRemoteIdentifierTLV(ltlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err = json.Marshal(&lri)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	case 259:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv4 interface address\","))...)
+		jsonData = append(jsonData, []byte("\"ipv4InterfaceAddress\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(ltlv.Value)...)
+	case 260:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv4 neighbor address\","))...)
+		jsonData = append(jsonData, []byte("\"ipv4NeighborAddress\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(ltlv.Value)...)
+	case 261:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv6 interface address\","))...)
+		jsonData = append(jsonData, []byte("\"ipv6InterfaceAddress\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(ltlv.Value)...)
+	case 262:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv6 neighbor address\","))...)
+		jsonData = append(jsonData, []byte("\"ipv6NeighborAddress\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(ltlv.Value)...)
+	case 263:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Multi-Topology Identifier\","))...)
+		mit, err := UnmarshalMultiTopologyIdentifierTLV(ltlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err = json.Marshal(&mit)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	default:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown Link TLV\","))...)
+		jsonData = append(jsonData, []byte("\"Value\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(ltlv.Value)...)
+	}
+	jsonData = append(jsonData, '}')
+	glog.Infof("><SB> Link Descriptor TLV: %s", string(jsonData))
+
+	return jsonData, nil
 }
 
 // UnmarshalLinkDescriptorTLV builds Link Descriptor TLVs object

@@ -2,6 +2,7 @@ package base
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -28,6 +29,53 @@ func (l *LinkNLRI) String() string {
 	s += l.Link.String()
 
 	return s
+}
+
+// MarshalJSON defines a method to Marshal Link NLRI object into JSON format
+func (l *LinkNLRI) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+
+	jsonData = append(jsonData, '{')
+	jsonData = append(jsonData, []byte("\"protocolID\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", l.ProtocolID))...)
+	jsonData = append(jsonData, []byte("\"identifier\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", l.Identifier))...)
+	jsonData = append(jsonData, []byte("\"localNode\":")...)
+	if l.LocalNode != nil {
+		b, err := json.Marshal(l.LocalNode)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+		jsonData = append(jsonData, ',')
+	} else {
+		jsonData = append(jsonData, "{},"...)
+	}
+	jsonData = append(jsonData, []byte("\"remoteNode\":")...)
+	if l.RemoteNode != nil {
+		b, err := json.Marshal(l.RemoteNode)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+		jsonData = append(jsonData, ',')
+	} else {
+		jsonData = append(jsonData, "{},"...)
+	}
+	if l.Link != nil {
+		b, err := json.Marshal(l.Link)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	} else {
+		jsonData = append(jsonData, "{}"...)
+	}
+	jsonData = append(jsonData, '}')
+
+	glog.Infof("><SB> Link NLRI: %s", string(jsonData))
+
+	return jsonData, nil
 }
 
 // UnmarshalLinkNLRI builds Link NLRI object

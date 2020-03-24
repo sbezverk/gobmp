@@ -137,8 +137,6 @@ func (ls *NLRI71) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, b...)
 	jsonData = append(jsonData, '}')
 
-	glog.Infof("><SB> %s", string(jsonData))
-
 	return jsonData, nil
 }
 
