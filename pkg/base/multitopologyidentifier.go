@@ -45,7 +45,7 @@ func (mti *MultiTopologyIdentifierTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalMultiTopologyIdentifierTLV builds Multi Topology Identifier TLV object
 func UnmarshalMultiTopologyIdentifierTLV(b []byte) (*MultiTopologyIdentifierTLV, error) {
-	glog.V(5).Infof("MultiTopologyIdentifierTLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("MultiTopologyIdentifierTLV Raw: %s", internal.MessageHex(b))
 	mti := MultiTopologyIdentifierTLV{
 		MTI: make([]MultiTopologyIdentifier, 0),
 	}

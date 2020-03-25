@@ -295,6 +295,42 @@ func (tlv *TLV) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 		jsonData = append(jsonData, b...)
+	case 267:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Link MSD\","))...)
+		jsonData = append(jsonData, []byte("\"linkMSD\":")...)
+		msd, err := base.UnmarshalLinkMSD(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err = json.Marshal(msd)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	case 1026:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Node Name\","))...)
+		jsonData = append(jsonData, []byte("\"nodeName\":")...)
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"%s\"", string(tlv.Value)))...)
+	case 1027:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IS-IS Area Identifier\","))...)
+		jsonData = append(jsonData, []byte("\"isisAreaID\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+	case 1028:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv4 Router-ID of Local Node\","))...)
+		jsonData = append(jsonData, []byte("\"localNodeIPv4RID\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+	case 1029:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv6 Router-ID of Local Node\","))...)
+		jsonData = append(jsonData, []byte("\"localNodeIPv6RID\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+	case 1030:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv4 Router-ID of Remote Node\","))...)
+		jsonData = append(jsonData, []byte("\"remoteNodeIPv4RID\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+	case 1031:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv6 Router-ID of Remote Node\","))...)
+		jsonData = append(jsonData, []byte("\"remoteNodeIPv6RID\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
 	default:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown BGP-LS TLV\","))...)
 		jsonData = append(jsonData, []byte("\"Value\":")...)
