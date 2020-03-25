@@ -20,13 +20,21 @@ evpn
 
 ### BMP peer message:
 1: (action): up/down
+
 5: (name): 
+
 6: (remote_bgp_id): 
+
 7: (router_ip): 
+
 8: (timestamp): 
+
 9: (remote_asn): 
+
 10: (remote_ip): 
+
 11: (peer_rd): 
+
 13: (local_asn): 
 14: (local_ip): 
 16: (local_bgp_id):
