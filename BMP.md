@@ -27,83 +27,83 @@ https://www.snas.io/docs/
 
 #### BMP peer message:
 ```
-1: (action): up/down
+1: (action): string (up/down)
 5: (name): 
 6: (remote_bgp_id): 
 7: (router_ip): 
 8: (timestamp): 
-9: (remote_asn): 
+9: (remote_asn): int
 10: (remote_ip): 
 11: (peer_rd): 
-13: (local_asn): 
+13: (local_asn): int
 14: (local_ip): 
 16: (local_bgp_id):
 18: (adv_cap): MPBGP (1) : afi=2 safi=1 : Unicast IPv6, Route Refresh Old (128), Route Refresh (2), 4 Octet ASN (65), 5
 19: (recv_cap): MPBGP (1) : afi=2 safi=1 : Unicast IPv6, Route Refresh Old (128), Route Refresh (2), Route Refresh Enhanced (70), 4 Octet ASN (65) 
-26: (is_l3vpn): 
-27: (isprepolicy): 
-28: (is_ipv4): 
-29: (is_locrib): 
-30: (is_locrib_filtered): 
+26: (is_l3vpn): bool
+27: (isprepolicy): bool
+28: (is_ipv4): bool
+29: (is_locrib): bool
+30: (is_locrib_filtered): bool
 31: (table_name): 
 ```
 
 #### BMP unicast_prefix message:
 ```
-1: (action): add/del
+1: (action): string (add/del)
 5: (router_ip): 
 8: (peer_ip): 
-9: (peer_asn): 
-10: (timestamp): 
+9: (peer_asn): int
+10: (timestamp): 2020-03-19 16:04:33.296556
 11: (prefix):
-12: (prefix_len): 
-13: (is_ipv4): 0
-14: (origin): igp
-15: (as_path): 
-16: (as_path_count): 0
-17: (origin_as): 0
+12: (prefix_len): int
+13: (is_ipv4): bool
+14: (origin): 
+15: (as_path): list of integers
+16: (as_path_count): int
+17: (origin_as): int
 18: (nexthop): 
-19: (med): 0
-20: (local_pref): 100
+19: (med): int
+20: (local_pref): int
 22: (community_list): 
 23: (ext_community_list): 
 24: (cluster_list): 
-25: (isatomicagg): 0
-26: (is_nexthop_ipv4): 0
+25: (isatomicagg): bool
+26: (is_nexthop_ipv4): bool
 27: (originator_id): 
-28: (path_id): 1
+28: (path_id): int
 29: (labels): 
-30: (isprepolicy): 1
-31: (is_adj_rib_in): 1
+30: (isprepolicy): int
+31: (is_adj_rib_in): int
 ```
 
 #### BMP ls_node message:
 ```
-1: (action): add/del
+1: (action): string (add/del)
 6: (router_ip): 
 8: (peer_ip): 
-9: (peer_asn):
+9: (peer_asn): int
 10: (timestamp): 
 11: (igp_router_id): 
 12: (router_id): 
-14: (ls_id): 
+14: (ls_id): int
 15: (mt_id): 
 17: (isis_area_id): 
 18: (protocol): 
 19: (flags): 
 20: (as_path): 
-21: (local_pref): 
-22: (med): 
+21: (local_pref): int
+22: (med): int
 23: (nexthop): 
 24: (name): 
-25: (isprepolicy): 
-26: (is_adj_rib_in): 
+25: (isprepolicy): bool
+26: (is_adj_rib_in): bool
 27: (ls_sr_capabilities):
 
 Additional segment routing and SRv6 items not accounted for by OpenBMP:
 
-BGP-LS TLV Type: 1035 (SR Algorithm)
-BGP-LS TLV Type: 1036 (SR Local Block)
+BGP-LS TLV Type: 1035 (SR Algorithm) - int (i think)
+BGP-LS TLV Type: 1036 (SR Local Block) - 
 BGP-LS TLV Type: 1038 (SRv6 Capabilities TLV)
 
 ```
