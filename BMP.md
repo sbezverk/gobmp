@@ -2,14 +2,17 @@
 
 https://tools.ietf.org/html/rfc7854
 
-## BMP message types and GoBMP:
+### BMP message types and GoBMP:
 GoBMP will not need to collect and parse the following BMP message types:
-collector - not used
-router - not currently used
-bmp_stat - not used
-base attribute - not used
+```
+collector
+router
+bmp_stat
+base attribute
+```
 
-GoBMP will not need to collect and parse the following BMP message types (details below):
+GoBMP will collect and parse the following BMP message types (details below):
+```
 peer
 unicast_prefix 
 ls_node
@@ -17,6 +20,7 @@ ls_link
 ls_prefix
 l3vpn
 evpn
+```
 
 #### BMP peer message:
 ```
@@ -39,6 +43,35 @@ evpn
 29: (is_locrib): 
 30: (is_locrib_filtered): 
 31: (table_name): 
+```
+
+#### BMP unicast_prefix message:
+```
+1: (action): add/del
+5: (router_ip): 
+8: (peer_ip): 
+9: (peer_asn): 
+10: (timestamp): 
+11: (prefix):
+12: (prefix_len): 
+13: (is_ipv4): 0
+14: (origin): igp
+15: (as_path): 
+16: (as_path_count): 0
+17: (origin_as): 0
+18: (nexthop): 
+19: (med): 0
+20: (local_pref): 100
+22: (community_list): 
+23: (ext_community_list): 
+24: (cluster_list): 
+25: (isatomicagg): 0
+26: (is_nexthop_ipv4): 0
+27: (originator_id): 
+28: (path_id): 1
+29: (labels): 
+30: (isprepolicy): 1
+31: (is_adj_rib_in): 1
 ```
 
 #### BMP ls_node message:
@@ -64,6 +97,135 @@ evpn
 26: (is_adj_rib_in): 
 27: (ls_sr_capabilities):
 ```
+#### BMP ls_link message:
+```
+1: (action): add/del
+2: (sequence): 115
+6: (router_ip):
+8: (peer_ip): 
+9: (peer_asn): 
+10: (timestamp):
+11: (igp_router_id):
+12: (router_id):
+14: (ls_id): 
+16: (isis_area_id): 
+17: (protocol):
+18: (as_path): 
+19: (local_pref): 
+20: (med): 
+21: (nexthop):
+22: (mt_id): 
+23: (local_link_id): 
+24: (remote_link_id): 
+25: (intf_ip): 
+26: (nei_ip): 
+27: (igp_metric): 
+28: (admin_group): 
+29: (max_link_bw): 
+30: (max_resv_bw):
+31: (unresv_bw): 
+32: (te_default_metric): 
+33: (link_protection): 
+34: (mpls_proto_mask): 
+35: (srlg): 
+36: (link_name): 
+39: (remote_igp_router_id): 
+40: (remote_router_id): 
+41: (local_node_asn): 
+42: (remote_node_asn): 
+43: (peer_node_sid): 
+44: (isprepolicy): 
+45: (is_adj_rib_in): 
+46: (ls_adjacency_sid): 
+
+Additional ls_link TLV attributes not tracked by OpenBMP:
 
 
+```
+#### BMP ls_prefix message:
 
+```
+1: (action): add/del
+6: (router_ip): 
+8: (peer_ip): 
+9: (peer_asn): 
+10: (timestamp): 
+11: (igp_router_id): 
+12: (router_id): 
+14: (ls_id): 
+16: (isis_area_id): 
+17: (protocol): 
+18: (as_path): 
+19: (local_pref): 
+20: (med): 
+21: (nexthop):
+23: (mt_id): 
+25: (igp_flags): 
+26: (route_tag): 
+27: (ext_route_tag): 
+29: (igp_metric): 
+30: (prefix): 
+31: (prefix_len): 
+32: (isprepolicy): 
+33: (is_adj_rib_in): 
+34: (ls_prefix_sid): 
+```
+#### BMP l3vpn message:
+```
+1: (action): add/del
+5: (router_ip): 
+8: (peer_ip): 
+9: (peer_asn): 
+10: (timestamp): 
+11: (prefix): 
+12: (prefix_len): 
+13: (is_ipv4): 
+14: (origin):
+15: (as_path): 
+16: (as_path_count): 
+17: (origin_as): 
+18: (nexthop): 
+19: (med): 
+20: (local_pref): 
+21: (aggregator): 
+22: (community_list): 
+23: (ext_community_list)
+24: (cluster_list): 
+25: (isatomicagg): 
+26: (is_nexthop_ipv4): 
+27: (originator_id): 
+28: (path_id): 
+29: (labels): 
+30: (isprepolicy): 
+31: (is_adj_rib_in): 
+32: (vpn_rd): 
+33: (vpn_rd_type): 
+```
+
+#### BMP evpn message:
+```
+1: (action): add/del
+5: (router_ip): 
+8: (peer_ip): 
+9: (peer_asn): 
+10: (timestamp): 
+11: (origin):
+12: (as_path): 
+13: (as_path_count): 
+14: (origin_as): 
+15: (nexthop): 
+16: (med): 
+17: (local_pref): 
+18: (aggregator): 
+19: (community_list): 
+20: (ext_community_list)
+21: (cluster_list): 
+22: (isatomicagg): 
+23: (is_nexthop_ipv4): 
+24: (originator_id): 
+25: (path_id): 
+26: (isprepolicy): 
+27: (is_adj_rib_in): 
+32: (vpn_rd): 
+33: (vpn_rd_type): 
+```
