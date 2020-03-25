@@ -2,6 +2,7 @@ package srv6
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -31,12 +32,27 @@ func (stlv *SubTLV) String(level ...int) string {
 func (stlv *SubTLV) MarshalJSON() ([]byte, error) {
 	var jsonData []byte
 	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"type\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", stlv.Type))...)
-	jsonData = append(jsonData, []byte("\"length\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", stlv.Length))...)
-	jsonData = append(jsonData, []byte("\"value\":")...)
-	jsonData = append(jsonData, internal.RawBytesToJSON(stlv.Value)...)
+	switch stlv.Type {
+	case 1252:
+		jsonData = append(jsonData, []byte("\"srv6SIDStructure\":")...)
+		st, err := UnmarshalSRv6SIDStructureTLV(stlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err := json.Marshal(st)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	default:
+		jsonData = append(jsonData, []byte("\"type\":")...)
+		jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", stlv.Type))...)
+		jsonData = append(jsonData, []byte("\"length\":")...)
+		jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", stlv.Length))...)
+		jsonData = append(jsonData, []byte("\"value\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(stlv.Value)...)
+	}
+
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
