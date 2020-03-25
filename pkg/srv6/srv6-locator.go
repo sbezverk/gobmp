@@ -2,6 +2,7 @@ package srv6
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -39,6 +40,36 @@ func (loc *LocatorTLV) String(level ...int) string {
 	}
 
 	return s
+}
+
+// MarshalJSON defines a method to Marshal SRv6 Locator TLV object into JSON format
+func (loc *LocatorTLV) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+	jsonData = append(jsonData, '{')
+	jsonData = append(jsonData, []byte("\"flag\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", loc.Flag))...)
+	jsonData = append(jsonData, []byte("\"algorithm\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", loc.Algorithm))...)
+	jsonData = append(jsonData, []byte("\"metric\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", loc.Metric))...)
+	jsonData = append(jsonData, []byte("\"SubTLV\":")...)
+	jsonData = append(jsonData, '[')
+	if loc.SubTLV != nil {
+		for i, stlv := range loc.SubTLV {
+			b, err := json.Marshal(&stlv)
+			if err != nil {
+				return nil, err
+			}
+			jsonData = append(jsonData, b...)
+			if i < len(loc.SubTLV)-1 {
+				jsonData = append(jsonData, ',')
+			}
+		}
+	}
+	jsonData = append(jsonData, ']')
+	jsonData = append(jsonData, '}')
+
+	return jsonData, nil
 }
 
 // UnmarshalSRv6LocatorTLV builds SRv6 Locator TLV object

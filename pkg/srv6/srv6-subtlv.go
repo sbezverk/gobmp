@@ -1,6 +1,9 @@
 package srv6
 
 import (
+	"encoding/binary"
+	"fmt"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
@@ -24,10 +27,36 @@ func (stlv *SubTLV) String(level ...int) string {
 	return s
 }
 
+// MarshalJSON defines a method to Marshal SRv6 Sub TLV object into JSON format
+func (stlv *SubTLV) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+	jsonData = append(jsonData, '{')
+	jsonData = append(jsonData, []byte("\"type\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", stlv.Type))...)
+	jsonData = append(jsonData, []byte("\"length\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", stlv.Length))...)
+	jsonData = append(jsonData, []byte("\"value\":")...)
+	jsonData = append(jsonData, internal.RawBytesToJSON(stlv.Value)...)
+	jsonData = append(jsonData, '}')
+
+	return jsonData, nil
+}
+
 // UnmarshalSRv6SubTLV builds a collection of SRv6 Sub TLV
 func UnmarshalSRv6SubTLV(b []byte) ([]SubTLV, error) {
 	glog.V(6).Infof("SRv6 Sub TLV Raw: %s", internal.MessageHex(b))
 	stlvs := make([]SubTLV, 0)
+	for p := 0; p < len(b); {
+		stlv := SubTLV{}
+		stlv.Type = binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		stlv.Length = binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		stlv.Value = make([]byte, stlv.Length)
+		copy(stlv.Value, b[p:p+int(stlv.Length)])
+		p += int(stlv.Length)
+		stlvs = append(stlvs, stlv)
+	}
 
 	return stlvs, nil
 }

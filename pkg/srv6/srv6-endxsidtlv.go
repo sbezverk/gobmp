@@ -2,6 +2,7 @@ package srv6
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -48,9 +49,44 @@ func (x *EndXSIDTLV) String(level ...int) string {
 	return s
 }
 
+// MarshalJSON defines a method to Marshal SRv6 End.X SID TLV object into JSON format
+func (x *EndXSIDTLV) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+	jsonData = append(jsonData, '{')
+	jsonData = append(jsonData, []byte("\"endpointBehavior\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", x.EndpointBehavior))...)
+	jsonData = append(jsonData, []byte("\"flag\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", x.Flag))...)
+	jsonData = append(jsonData, []byte("\"algorithm\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", x.Algorithm))...)
+	jsonData = append(jsonData, []byte("\"weight\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", x.Weight))...)
+	jsonData = append(jsonData, []byte("\"sid\":")...)
+	jsonData = append(jsonData, internal.RawBytesToJSON(x.SID)...)
+	jsonData = append(jsonData, ',')
+	jsonData = append(jsonData, []byte("\"SubTLV\":")...)
+	jsonData = append(jsonData, '[')
+	if x.SubTLV != nil {
+		for i, stlv := range x.SubTLV {
+			b, err := json.Marshal(&stlv)
+			if err != nil {
+				return nil, err
+			}
+			jsonData = append(jsonData, b...)
+			if i < len(x.SubTLV)-1 {
+				jsonData = append(jsonData, ',')
+			}
+		}
+	}
+	jsonData = append(jsonData, ']')
+	jsonData = append(jsonData, '}')
+
+	return jsonData, nil
+}
+
 // UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object
 func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
-	glog.V(6).Infof("SRv6 End.XS ID TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SRv6 End.X SID TLV Raw: %s", internal.MessageHex(b))
 	endx := EndXSIDTLV{
 		SID: make([]byte, 16),
 	}

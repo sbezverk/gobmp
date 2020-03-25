@@ -407,6 +407,78 @@ func (tlv *TLV) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 		jsonData = append(jsonData, b...)
+
+	case 1106:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"SRv6 End.X SID\","))...)
+		jsonData = append(jsonData, []byte("\"srv6EndXSID\":")...)
+		endx, err := srv6.UnmarshalSRv6EndXSIDTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err = json.Marshal(endx)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	case 1155:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Prefix Metric\","))...)
+		jsonData = append(jsonData, []byte("\"prefixMetric\":")...)
+		jsonData = append(jsonData, []byte(fmt.Sprintf("%d", binary.BigEndian.Uint32(tlv.Value)))...)
+	case 1158:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Prefix SID\","))...)
+		jsonData = append(jsonData, []byte("\"prefixSID\":")...)
+		psid, err := sr.UnmarshalPrefixSIDTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err = json.Marshal(psid)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	case 1162:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"SRv6 Locator\","))...)
+		jsonData = append(jsonData, []byte("\"srv6Locator\":")...)
+		l, err := srv6.UnmarshalSRv6LocatorTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err = json.Marshal(l)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	// case 1170:
+	// 	s += fmt.Sprintf("   BGP-LS TLV Type: %d (Prefix Attributes Flags)\n", tlv.Type)
+	// 	s += fmt.Sprintf("      Flag: %s\n", internal.MessageHex(tlv.Value))
+	// case 1171:
+	// 	s += fmt.Sprintf("   BGP-LS TLV Type: %d (Source Router-ID)\n", tlv.Type)
+	// 	if tlv.Length == 4 {
+	// 		s += fmt.Sprintf("   Source Router-ID: %s\n", net.IP(tlv.Value).To4().String())
+	// 	} else if tlv.Length == 16 {
+	// 		s += fmt.Sprintf("   Source Router-ID: %s\n", net.IP(tlv.Value).To16().String())
+	// 	}
+	// case 1173:
+	// 	s += fmt.Sprintf("   BGP-LS TLV Type: %d (Extended Administrative Group)\n", tlv.Type)
+	// 	s += fmt.Sprintf("      Color: %s\n", internal.MessageHex(tlv.Value))
+	// case 1250:
+	// 	s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 Endpoint Function)\n", tlv.Type)
+	// 	s += fmt.Sprintf("      Endpoint Behavior: %s\n", internal.MessageHex(tlv.Value[:2]))
+	// 	s += fmt.Sprintf("      Flag: %02x\n", tlv.Value[2])
+	// 	s += fmt.Sprintf("      Algorithm: %d\n", tlv.Value[3])
+	// case 1251:
+	// 	s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 Endpoint Function)\n", tlv.Type)
+	// 	s += fmt.Sprintf("      Flag: %02x\n", tlv.Value[0])
+	// 	s += fmt.Sprintf("      Weight: %d\n", tlv.Value[1])
+	// 	s += fmt.Sprintf("      Peer AS Number: %d\n", binary.BigEndian.Uint32(tlv.Value[4:8]))
+	// 	s += fmt.Sprintf("      Peer BGP Identifier: %s\n", internal.MessageHex(tlv.Value[8:12]))
+	// case 1252:
+	// 	s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 SID Structure)\n", tlv.Type)
+	// 	s += fmt.Sprintf("      LB Length: %d\n", tlv.Value[0])
+	// 	s += fmt.Sprintf("      LN Length: %d\n", tlv.Value[1])
+	// 	s += fmt.Sprintf("      Function Length: %d\n", tlv.Value[2])
+	// 	s += fmt.Sprintf("      Argument Length: %d\n", tlv.Value[3])
+
 	default:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown BGP-LS TLV\","))...)
 		jsonData = append(jsonData, []byte("\"Value\":")...)
