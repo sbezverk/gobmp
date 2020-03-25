@@ -100,7 +100,7 @@ https://www.snas.io/docs/
 26: (is_adj_rib_in): 
 27: (ls_sr_capabilities):
 
-Additional items not accounted for by OpenBMP:
+Additional segment routing and SRv6 items not accounted for by OpenBMP:
 
 BGP-LS TLV Type: 1035 (SR Algorithm)
 BGP-LS TLV Type: 1036 (SR Local Block)
@@ -148,7 +148,7 @@ BGP-LS TLV Type: 1038 (SRv6 Capabilities TLV)
 45: (is_adj_rib_in): 
 46: (ls_adjacency_sid): 
 
-Additional ls_link TLV attributes not tracked by OpenBMP:
+Additional segment routing and SRv6 items not accounted for by OpenBMP:
 
 
 ```
@@ -179,6 +179,9 @@ Additional ls_link TLV attributes not tracked by OpenBMP:
 32: (isprepolicy): 
 33: (is_adj_rib_in): 
 34: (ls_prefix_sid): 
+
+Additional segment routing and SRv6 items not accounted for by OpenBMP:
+
 ```
 #### BMP l3vpn message:
 ```
