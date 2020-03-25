@@ -470,18 +470,61 @@ BGP-LS TLVs:
       LN Length: 24
       Function Length: 16
       Argument Length: 0
-
+```
 #### BMP l3vpn message:
 ```
-1: (action): add/del
-5: (router_ip): 
-8: (peer_ip): 
-9: (peer_asn): 
-10: (timestamp): 
-11: (prefix): 
-12: (prefix_len): 
-13: (is_ipv4): 
-14: (origin):
+// add l3vpn (prefix) message
+
+1: (action): add
+2: (sequence): 35
+3: (hash): 332047c6ca64451ed6f5ddb92710a29a
+4: (router_hash): fb5d34c594dff80c59019b6d132185f7
+5: (router_ip): 10.1.34.1
+6: (base_attr_hash): 22155edb81a03c848f36193dfd3e48f3
+7: (peer_hash): d67b274c33ea1ff0ffe9dd781938b0de
+8: (peer_ip): 10.0.0.7
+9: (peer_asn): 100000
+10: (timestamp): 2020-03-25 22:39:04.023783
+11: (prefix): 100.100.100.0
+12: (prefix_len): 24
+13: (is_ipv4): 1
+14: (origin): incomplete
+15: (as_path): 
+16: (as_path_count): 0
+17: (origin_as): 0
+18: (nexthop): 10.0.0.7
+19: (med): 0
+20: (local_pref): 100
+21: (aggregator): 
+22: (community_list): 
+23: (ext_community_list): rt=100:100
+24: (cluster_list): 
+25: (isatomicagg): 0
+26: (is_nexthop_ipv4): 1
+27: (originator_id): 
+28: (path_id): 0
+29: (labels): 24000
+30: (isprepolicy): 1
+31: (is_adj_rib_in): 1
+32: (vpn_rd): 100100:100
+33: (vpn_rd_type): 0
+
+// delete l3vpn (prefix) message
+
+1: (action): del
+2: (sequence): 34
+3: (hash): 332047c6ca64451ed6f5ddb92710a29a
+4: (router_hash): fb5d34c594dff80c59019b6d132185f7
+5: (router_ip): 10.1.34.1
+6: (base_attr_hash): 
+7: (peer_hash): d67b274c33ea1ff0ffe9dd781938b0de
+8: (peer_ip): 10.0.0.7
+9: (peer_asn): 100000
+10: (timestamp): 2020-03-25 22:37:53.516968
+11: (prefix): 100.100.100.0
+12: (prefix_len): 24
+13: (is_ipv4): 1
+14: (origin): 
 15: (as_path): 
 16: (as_path_count): 
 17: (origin_as): 
@@ -490,17 +533,18 @@ BGP-LS TLVs:
 20: (local_pref): 
 21: (aggregator): 
 22: (community_list): 
-23: (ext_community_list)
+23: (ext_community_list): 
 24: (cluster_list): 
 25: (isatomicagg): 
 26: (is_nexthop_ipv4): 
 27: (originator_id): 
-28: (path_id): 
-29: (labels): 
-30: (isprepolicy): 
-31: (is_adj_rib_in): 
-32: (vpn_rd): 
-33: (vpn_rd_type): 
+28: (path_id): 0
+29: (labels): 524288
+30: (isprepolicy): 1
+31: (is_adj_rib_in): 1
+32: (vpn_rd): 100100:100
+33: (vpn_rd_type): 0
+
 ```
 
 #### BMP evpn message:
@@ -540,4 +584,136 @@ BGP-LS TLVs:
 38: (label): 
 39: (label): 
 ```
+### SRv6 L3VPN Message (v4 overlay, SRv6 underlay)
+
 ```
+// add (l3vpn (prefix) message - it appears openbmp is not sure what to do with much of this message.  See bgp show command output below
+
+1: (action): add
+2: (sequence): 38
+3: (hash): b44a84e415927f20ff3e6edf7103875c
+4: (router_hash): fb5d34c594dff80c59019b6d132185f7
+5: (router_ip): 10.1.34.1
+6: (base_attr_hash): e0895cf0bc3391438d43cdc7e43aae36
+7: (peer_hash): 0146fce99cbd730d787487de31452f88
+8: (peer_ip): 2001:1:1:f003::1                        // this is ok
+9: (peer_asn): 100000                                 // this is ok
+10: (timestamp): 2020-03-25 22:41:32.861004
+11: (prefix): 0.0.0.0                                 // should be 3.30.30.0/24
+12: (prefix_len): 0
+13: (is_ipv4): 1
+14: (origin): incomplete
+15: (as_path): 
+16: (as_path_count): 0
+17: (origin_as): 0
+18: (nexthop): 32.1.0.1                               // wrong
+19: (med): 0
+20: (local_pref): 100
+21: (aggregator): 
+22: (community_list): 
+23: (ext_community_list): rt=300:10                   // this is ok
+24: (cluster_list): 
+25: (isatomicagg): 0
+26: (is_nexthop_ipv4): 1
+27: (originator_id): 
+28: (path_id): 0
+29: (labels): 1072,0                                  // VPN label should be replaced with SRv6-VPN SID: 2001:1:1:f003:43::/128        
+30: (isprepolicy): 1
+31: (is_adj_rib_in): 1
+32: (vpn_rd): 1679764780:167976478                    // ? should be 300:10
+33: (vpn_rd_type): 0
+
+// show BGP command output for the above SRv6 l3vpn message:
+
+RP/0/RP0/CPU0:R04#sho bgp vrf alpha 3.30.30.0/24 det
+Wed Mar 25 22:50:24.005 UTC
+BGP routing table entry for 3.30.30.0/24, Route Distinguisher: 300:10
+Versions:
+  Process           bRIB/RIB  SendTblVer
+  Speaker                 73          73
+    Flags: 0x00041001+0x00000000; 
+Last Modified: Mar 25 22:41:21.141 for 00:09:05
+Paths: (1 available, best #1)
+  Not advertised to any peer
+  Path #1: Received by speaker 0
+  Flags: 0x4000000085060005, import: 0x9f
+  Not advertised to any peer
+  Local
+    2001:1:1:f003::1 (metric 1) from 2001:1:1:f010::1 (10.0.0.3), if-handle 0x00000000
+      Received Label 17152 
+      Origin incomplete, metric 0, localpref 100, valid, internal, best, group-best, import-candidate, imported
+      Received Path ID 0, Local Path ID 1, version 73
+      Extended community: RT:300:10 
+      Originator: 10.0.0.3, Cluster list: 10.0.0.10
+      PSID-Type:L3, SubTLV Count:1, R:0x00,
+       SubTLV:
+        T:1(Sid information), Sid:2001:1:1:f003::, F:0x00, R2:0x00, Behavior:65535, R3:0x00, SS-TLV Count:1
+         SubSubTLV:
+          T:1(Sid structure):
+           Length [Loc-blk,Loc-node,Func,Arg]:[40,24,16,0], Tpose-len:16, Tpose-offset:64
+      Source AFI: VPNv4 Unicast, Source VRF: alpha, Source Route Distinguisher: 300:10
+
+// show cef command output for the above entry:
+
+RP/0/RP0/CPU0:R04#sho cef vrf alpha 3.30.30.0/24 det
+Wed Mar 25 22:52:03.008 UTC
+3.30.30.0/24, version 29, SRv6 Transit, internal 0x5000001 0x0 (ptr 0xdf182a4) [1], 0x0 (0xe0e81a8), 0x0 (0xf17f228)
+ Updated Mar 25 22:41:20.806
+ Prefix Len 24, traffic index 0, precedence n/a, priority 3
+  gateway array (0xf4aa0a8) reference count 2, flags 0x10, source rib (7), 0 backups
+                [3 type 3 flags 0x8441 (0xe001728) ext 0x0 (0x0)]
+  LW-LDI[type=3, refc=1, ptr=0xe0e81a8, sh-ldi=0xe001728]
+  gateway array update type-time 1 Mar 18 14:37:27.144
+ LDI Update time Mar 18 14:37:27.187
+ LW-LDI-TS Mar 25 22:41:20.813
+
+  Level 1 - Load distribution: 0
+  [0] via 2001:1:1:f003::/128, recursive
+
+   via 2001:1:1:f003::/128, 3 dependencies, recursive [flags 0x6000]
+    path-idx 0 NHID 0x0 [0xe247894 0x0]
+    next hop VRF - 'default', table - 0xe0800000
+    next hop 2001:1:1:f003::/128 via 2001:1:1:f003::/64
+    SRv6 T.Encaps.Red SID-list {2001:1:1:f003:43::}
+
+    Load distribution: 0 (refcount 3)
+
+    Hash  OK  Interface                 Address
+    0     Y   GigabitEthernet0/0/0/0    remote
+
+
+// delete l3vpn (prefix) message
+
+1: (action): del
+2: (sequence): 37
+3: (hash): 2f358ba42cb0a8a00c210b0accbf1af4
+4: (router_hash): fb5d34c594dff80c59019b6d132185f7
+5: (router_ip): 10.1.34.1
+6: (base_attr_hash): 
+7: (peer_hash): 0146fce99cbd730d787487de31452f88
+8: (peer_ip): 2001:1:1:f003::1
+9: (peer_asn): 100000
+10: (timestamp): 2020-03-25 22:41:03.602687
+11: (prefix): 3.30.30.0
+12: (prefix_len): 24
+13: (is_ipv4): 1
+14: (origin): 
+15: (as_path): 
+16: (as_path_count): 
+17: (origin_as): 
+18: (nexthop): 
+19: (med): 
+20: (local_pref): 
+21: (aggregator): 
+22: (community_list): 
+23: (ext_community_list): 
+24: (cluster_list): 
+25: (isatomicagg): 
+26: (is_nexthop_ipv4): 
+27: (originator_id): 
+28: (path_id): 0
+29: (labels): 524288
+30: (isprepolicy): 1
+31: (is_adj_rib_in): 1
+32: (vpn_rd): 10300:10
+33: (vpn_rd_type): 0
