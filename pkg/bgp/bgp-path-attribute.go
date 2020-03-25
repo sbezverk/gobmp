@@ -89,11 +89,18 @@ func (pa *PathAttribute) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 		jsonData = append(jsonData, b...)
-		//		jsonData = append(jsonData, internal.RawBytesToJSON(pa.Attribute)...)
 	case 0x1d:
 		jsonData = append(jsonData, []byte("\"BGP-LS\",")...)
 		jsonData = append(jsonData, []byte("\"Attribute\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(pa.Attribute)...)
+		mp, err := bgpls.UnmarshalBGPLSNLRI(pa.Attribute)
+		if err != nil {
+			return nil, err
+		}
+		b, err := json.Marshal(&mp)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
 	case 0xf:
 		// Found MP_UNREACH_NLRI attribute
 		jsonData = append(jsonData, []byte("\"MP_UNREACH_NLRI\",")...)

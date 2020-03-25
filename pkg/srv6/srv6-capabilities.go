@@ -29,6 +29,17 @@ func (cap *CapabilityTLV) String(level ...int) string {
 	return s
 }
 
+// MarshalJSON defines a method to Marshal SRv6 Capability object into JSON format
+func (cap *CapabilityTLV) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+	jsonData = append(jsonData, '{')
+	jsonData = append(jsonData, []byte("\"flag\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d", cap.Flag))...)
+	jsonData = append(jsonData, '}')
+
+	return jsonData, nil
+}
+
 // UnmarshalSRv6CapabilityTLV builds SRv6 Capability TLV object
 func UnmarshalSRv6CapabilityTLV(b []byte) (*CapabilityTLV, error) {
 	glog.V(6).Infof("SRv6 Capability TLV Raw: %s", internal.MessageHex(b))
