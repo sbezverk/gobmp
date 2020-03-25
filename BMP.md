@@ -21,6 +21,8 @@ ls_prefix
 l3vpn
 evpn
 ```
+With much gratitude we are using OpenBMP's message parsing as a template:
+https://www.snas.io/docs/
 
 #### BMP peer message:
 ```
@@ -226,6 +228,17 @@ Additional ls_link TLV attributes not tracked by OpenBMP:
 25: (path_id): 
 26: (isprepolicy): 
 27: (is_adj_rib_in): 
-32: (vpn_rd): 
-33: (vpn_rd_type): 
+28: (rd): 
+29: (rd_type): 
+30: (rd_type): 
+31: (orig_router_ip_len): 
+32: (eth_tag): 
+33: (eth_segment_id): 
+34: (mac_len): 
+35: (mac): 
+36: (ip_len): 
+37: (ip): 
+38: (label): 
+39: (label): 
+```
 ```
