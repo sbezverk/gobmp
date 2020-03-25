@@ -99,6 +99,13 @@ https://www.snas.io/docs/
 25: (isprepolicy): 
 26: (is_adj_rib_in): 
 27: (ls_sr_capabilities):
+
+Additional items not accounted for by OpenBMP:
+
+BGP-LS TLV Type: 1035 (SR Algorithm)
+BGP-LS TLV Type: 1036 (SR Local Block)
+BGP-LS TLV Type: 1038 (SRv6 Capabilities TLV)
+
 ```
 #### BMP ls_link message:
 ```
