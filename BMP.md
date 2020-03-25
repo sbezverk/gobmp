@@ -18,23 +18,16 @@ ls_prefix
 l3vpn
 evpn
 
-### BMP peer message:
+#### BMP peer message:
+```
 1: (action): up/down
-
 5: (name): 
-
 6: (remote_bgp_id): 
-
 7: (router_ip): 
-
 8: (timestamp): 
-
 9: (remote_asn): 
-
 10: (remote_ip): 
-
 11: (peer_rd): 
-
 13: (local_asn): 
 14: (local_ip): 
 16: (local_bgp_id):
@@ -46,8 +39,10 @@ evpn
 29: (is_locrib): 
 30: (is_locrib_filtered): 
 31: (table_name): 
+```
 
-### BMP ls_node message:
+#### BMP ls_node message:
+```
 1: (action): add/del
 6: (router_ip): 
 8: (peer_ip): 
@@ -68,5 +63,7 @@ evpn
 25: (isprepolicy): 
 26: (is_adj_rib_in): 
 27: (ls_sr_capabilities):
+```
+
 
 
