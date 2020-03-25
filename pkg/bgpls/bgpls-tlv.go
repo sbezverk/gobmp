@@ -371,6 +371,42 @@ func (tlv *TLV) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 		jsonData = append(jsonData, b...)
+	case 1088:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Administrative group (color)\","))...)
+		jsonData = append(jsonData, []byte("\"adminGroupColor\":")...)
+		jsonData = append(jsonData, []byte(fmt.Sprintf("%d", binary.BigEndian.Uint32(tlv.Value)))...)
+	case 1089:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Maximum link bandwidth\","))...)
+		jsonData = append(jsonData, []byte("\"maxLinkBandwidth\":")...)
+		jsonData = append(jsonData, []byte(fmt.Sprintf("%d", binary.BigEndian.Uint32(tlv.Value)))...)
+	case 1090:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Max. reservable link bandwidth\","))...)
+		jsonData = append(jsonData, []byte("\"maxReservableBandwidth\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+	case 1091:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unreserved bandwidth\","))...)
+		jsonData = append(jsonData, []byte("\"unReservedBandwidth\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+	case 1092:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IGP Metric\","))...)
+		jsonData = append(jsonData, []byte("\"igpMetric\":")...)
+		jsonData = append(jsonData, []byte(fmt.Sprintf("%d", binary.BigEndian.Uint32(tlv.Value)))...)
+	case 1095:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"TE Default Metric\","))...)
+		jsonData = append(jsonData, []byte("\"teDefaultMetric\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+	case 1099:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Adjacency SID\","))...)
+		jsonData = append(jsonData, []byte("\"adjacencySID\":")...)
+		adj, err := sr.UnmarshalAdjacencySIDTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err = json.Marshal(adj)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
 	default:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown BGP-LS TLV\","))...)
 		jsonData = append(jsonData, []byte("\"Value\":")...)

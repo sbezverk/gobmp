@@ -25,6 +25,21 @@ func (asid *AdjacencySIDTLV) String() string {
 	return s
 }
 
+// MarshalJSON defines a method to Marshal SR Adjacency SID TLV object into JSON format
+func (asid *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+	jsonData = append(jsonData, '{')
+	jsonData = append(jsonData, []byte("\"flags\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", asid.Flags))...)
+	jsonData = append(jsonData, []byte("\"weight\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", asid.Weight))...)
+	jsonData = append(jsonData, []byte("\"sid\":")...)
+	jsonData = append(jsonData, internal.RawBytesToJSON(asid.SID)...)
+	jsonData = append(jsonData, '}')
+
+	return jsonData, nil
+}
+
 // UnmarshalAdjacencySIDTLV builds Adjacency SID TLV Object
 func UnmarshalAdjacencySIDTLV(b []byte) (*AdjacencySIDTLV, error) {
 	glog.V(6).Infof("Adjacency SID Raw: %s", internal.MessageHex(b))
