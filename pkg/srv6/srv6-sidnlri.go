@@ -2,6 +2,7 @@ package srv6
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -9,7 +10,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
-// SIDNLRI defines Prefix NLRI onject
+// SIDNLRI defines SRv6 SID NLRI onject
 // Mp RFC yet
 type SIDNLRI struct {
 	ProtocolID uint8
@@ -26,6 +27,41 @@ func (sr *SIDNLRI) String() string {
 	s += sr.SRv6SID.String()
 
 	return s
+}
+
+// MarshalJSON defines a method to Marshal SRv6 SID NLRI object into JSON format
+func (sr *SIDNLRI) MarshalJSON() ([]byte, error) {
+	var jsonData []byte
+
+	jsonData = append(jsonData, '{')
+	jsonData = append(jsonData, []byte("\"protocolID\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", sr.ProtocolID))...)
+	jsonData = append(jsonData, []byte("\"identifier\":")...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", sr.Identifier))...)
+	jsonData = append(jsonData, []byte("\"localNode\":")...)
+	if sr.LocalNode != nil {
+		b, err := json.Marshal(sr.LocalNode)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+		jsonData = append(jsonData, ',')
+	} else {
+		jsonData = append(jsonData, "{},"...)
+	}
+	jsonData = append(jsonData, []byte("\"SRv6SID\":")...)
+	if sr.SRv6SID != nil {
+		b, err := json.Marshal(sr.SRv6SID)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	} else {
+		jsonData = append(jsonData, "{}"...)
+	}
+	jsonData = append(jsonData, '}')
+
+	return jsonData, nil
 }
 
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object
