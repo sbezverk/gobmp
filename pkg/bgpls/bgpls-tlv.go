@@ -331,6 +331,46 @@ func (tlv *TLV) MarshalJSON() ([]byte, error) {
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv6 Router-ID of Remote Node\","))...)
 		jsonData = append(jsonData, []byte("\"remoteNodeIPv6RID\":")...)
 		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+	case 1034:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"SR Capabilities\","))...)
+		jsonData = append(jsonData, []byte("\"srCapabilities\":")...)
+		cap, err := sr.UnmarshalSRCapabilityTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err = json.Marshal(cap)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	case 1035:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"SR Algorithm\","))...)
+		jsonData = append(jsonData, []byte("\"srAlgorithm\":")...)
+		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+	case 1036:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"SR Local Block\","))...)
+		jsonData = append(jsonData, []byte("\"srLocalBlock\":")...)
+		lb, err := sr.UnmarshalSRLocalBlockTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err = json.Marshal(lb)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
+	case 1038:
+		jsonData = append(jsonData, []byte(fmt.Sprintf("\"SRv6 Capabilities\","))...)
+		jsonData = append(jsonData, []byte("\"srv6Capabilities\":")...)
+		cap, err := srv6.UnmarshalSRv6CapabilityTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		b, err = json.Marshal(cap)
+		if err != nil {
+			return nil, err
+		}
+		jsonData = append(jsonData, b...)
 	default:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown BGP-LS TLV\","))...)
 		jsonData = append(jsonData, []byte("\"Value\":")...)
