@@ -61,21 +61,27 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 		glog.Errorf("Kafka PeerUPMessage: got invalid Payload type in bmp.Message")
 		return
 	}
-	glog.Infof("Kafka PeerUPMessage: PeerUpMessage: %+v", peerUpMsg)
+	glog.Infof("Kafka PeerUpMessage: perPeerHeader: %+v", *msg.PeerHeader)
+	glog.Infof("Kafka PeerUpMessage: PeerUp: %+v", peerUpMsg)
 
 	m := PeerStateChange{
-		Action:      "up",
-		RemoteBGPID: string(msg.PeerHeader.PeerBGPID),
-		RemoteASN:   int16(msg.PeerHeader.PeerAS),
-		PeerRD:      string(msg.PeerHeader.PeerDistinguisher),
-		Timestamp:   msg.PeerHeader.PeerTimestamp,
+		Action:     "up",
+		RemoteASN:  int16(msg.PeerHeader.PeerAS),
+		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
+		Timestamp:  msg.PeerHeader.PeerTimestamp,
+		RemotePort: int(peerUpMsg.RemotePort),
+		LocalPort:  int(peerUpMsg.LocalPort),
 	}
 	if msg.PeerHeader.FlagV {
 		m.IsIPv4 = false
 		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To16().String()
+		m.LocalIP = net.IP(peerUpMsg.LocalAddress).To16().String()
+		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To16().String()
 	} else {
 		m.IsIPv4 = true
-		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To4().String()
+		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress[12:]).To4().String()
+		m.LocalIP = net.IP(peerUpMsg.LocalAddress[12:]).To4().String()
+		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
 	}
 
 	b, err := json.Marshal(&m)
@@ -83,7 +89,7 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 		glog.Errorf("Kafka PeerUPMessage: failed to Marshal PeerStateChange struct with error: %+v", err)
 		return
 	}
-	glog.Infof("Kafka PeerUPMessage: PeerStateChange %s", string(b))
+	glog.Infof("Kafka PeerUPMessage: PeerStateChange raw: %+v json: %s", m, string(b))
 }
 
 // NewKafkaProducerClient instantiates a new instance of a Kafka producer client
