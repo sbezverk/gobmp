@@ -14,7 +14,7 @@ type InformationalTLV struct {
 
 // UnmarshalBGPTLV builds a slice of Informational TLVs
 func UnmarshalBGPTLV(b []byte) ([]InformationalTLV, error) {
-	glog.V(5).Infof("BGPTLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("BGPTLV Raw: %s", internal.MessageHex(b))
 	tlvs := make([]InformationalTLV, 0)
 	for p := 0; p < len(b); {
 		t := b[p]
@@ -30,8 +30,6 @@ func UnmarshalBGPTLV(b []byte) ([]InformationalTLV, error) {
 		})
 		p += int(l)
 	}
-
-	glog.V(5).Infof("><SB> TLVs: %+v", tlvs)
 
 	return tlvs, nil
 }

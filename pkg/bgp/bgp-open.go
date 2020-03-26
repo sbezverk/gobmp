@@ -31,12 +31,7 @@ func (o *OpenMessage) GetCapabilities() []Capability {
 		if err != nil {
 			continue
 		}
-		cap = append(cap, c)
-	}
-
-	glog.Infof("><SB>Capabilities:")
-	for _, c := range cap {
-		glog.Infof("- %+v", c)
+		cap = append(cap, c...)
 	}
 
 	return cap

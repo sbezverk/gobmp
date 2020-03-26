@@ -61,9 +61,9 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 		glog.Errorf("got invalid Payload type in bmp.Message")
 		return
 	}
-	glog.Infof("PeerUp: %+v", peerUpMsg)
-	glog.Infof("SentOpen: %+v", *peerUpMsg.SentOpen)
-	glog.Infof("ReceivedOpen: %+v", *peerUpMsg.ReceivedOpen)
+	//	glog.Infof("PeerUp: %+v", peerUpMsg)
+	//	glog.Infof("SentOpen: %+v", *peerUpMsg.SentOpen)
+	//	glog.Infof("ReceivedOpen: %+v", *peerUpMsg.ReceivedOpen)
 
 	m := PeerStateChange{
 		Action:         "up",
@@ -90,24 +90,28 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
 	}
 
-	peerUpMsg.SentOpen.GetCapabilities()
-	peerUpMsg.ReceivedOpen.GetCapabilities()
+	sCaps := peerUpMsg.SentOpen.GetCapabilities()
+	rCaps := peerUpMsg.ReceivedOpen.GetCapabilities()
 
-	// glog.Infof("><SB> Sent Capabilities:")
-	// for _, c := range sCaps {
-	// 	glog.Infof("- %+v", c)
-	// }
-	// glog.Infof("><SB> Received Capabilities:")
-	// for _, c := range rCaps {
-	// 	glog.Infof("- %+v", c)
-	// }
-
-	_, err := json.Marshal(&m)
+	for i, cap := range sCaps {
+		m.AdvCapabilities += cap.Description
+		if i < len(sCaps)-1 {
+			m.AdvCapabilities += ", "
+		}
+	}
+	for i, cap := range rCaps {
+		m.AdvCapabilities += cap.Description
+		if i < len(rCaps)-1 {
+			m.AdvCapabilities += ", "
+		}
+	}
+	j, err := json.Marshal(&m)
 	if err != nil {
-		glog.Errorf("Kafka PeerUPMessage: failed to Marshal PeerStateChange struct with error: %+v", err)
+		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
 		return
 	}
-	glog.Infof("Kafka PeerUPMessage: PeerStateChange raw: %+v", m)
+	//	glog.Infof("Kafka PeerUPMessage: PeerStateChange raw: %+v", m)
+	glog.Infof("PeerStateChange JSON: %s", string(j))
 }
 
 // NewKafkaProducerClient instantiates a new instance of a Kafka producer client
