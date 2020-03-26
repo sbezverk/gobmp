@@ -95,7 +95,7 @@ https://www.snas.io/docs/
 30: (is_locrib_filtered): 0
 31: (table_name): 
 
-// Peer initialization - any peer message that comes in with action: first is not needed and should be dropped
+// Peer initialization - any peer message that comes in with action "first" is not needed and should be dropped
 
 1: (action): first
 
