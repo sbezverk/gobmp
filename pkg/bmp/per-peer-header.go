@@ -19,7 +19,7 @@ type PerPeerHeader struct {
 	PeerAddress       []byte
 	PeerAS            int32
 	PeerBGPID         []byte
-	PeerTimestamp     time.Duration
+	PeerTimestamp     string
 }
 
 // UnmarshalPerPeerHeader processes Per-Peer header
@@ -51,7 +51,12 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	copy(pph.PeerAddress, b[12:26])
 	pph.PeerAS = int32(binary.BigEndian.Uint32(b[26:30]))
 	copy(pph.PeerBGPID, b[30:34])
-	pph.PeerTimestamp = time.Duration(binary.BigEndian.Uint64(b[34:42]))
+	t := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
+	ts := time.Second * time.Duration(binary.BigEndian.Uint32(b[34:38]))
+	tms := time.Duration(int(binary.BigEndian.Uint32(b[38:42])))
+	t = t.Add(ts)
+	t = t.Add(tms)
+	pph.PeerTimestamp = t.Format(time.StampMicro)
 
 	return pph, nil
 }

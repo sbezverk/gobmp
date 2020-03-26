@@ -1,14 +1,12 @@
 package parser
 
 import (
-	"encoding/json"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
 // Parser dispatches workers upon request received from the channel
-func Parser(queue chan []byte, producerQueue chan []byte, stop chan struct{}) {
+func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}) {
 	for {
 		select {
 		case msg := <-queue:
@@ -21,11 +19,14 @@ func Parser(queue chan []byte, producerQueue chan []byte, stop chan struct{}) {
 	}
 }
 
-func parsingWorker(b []byte, producerQueue chan []byte) {
+func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 	perPerHeaderLen := 0
-	var jsonMsg []byte
+	// var jsonMsg []byte
+	var bmpMsg bmp.Message
 	// Loop through all found Common Headers in the slice and process them
 	for p := 0; p < len(b); {
+		bmpMsg.PeerHeader = nil
+		bmpMsg.Payload = nil
 		// Recovering common header first
 		ch, err := bmp.UnmarshalCommonHeader(b[p : p+bmp.CommonHeaderLength])
 		if err != nil {
@@ -45,12 +46,12 @@ func parsingWorker(b []byte, producerQueue chan []byte) {
 				return
 			}
 			if rm.CheckSAFI(71) {
-				glog.V(5).Infof("String parsed route monitor: \n%s", rm.String())
-				jsonMsg, err = json.Marshal(&rm)
-				if err != nil {
-					glog.Errorf("fail to Marshal into JSON BMP Route Monitoring with error: %+v", err)
-				}
-				glog.V(5).Infof("JSON parsed route monitor: \n%s", string(jsonMsg))
+				// glog.V(5).Infof("String parsed route monitor: \n%s", rm.String())
+				//				jsonMsg, err = json.Marshal(&rm)
+				//				if err != nil {
+				//					glog.Errorf("fail to Marshal into JSON BMP Route Monitoring with error: %+v", err)
+				//				}
+				// glog.V(5).Infof("JSON parsed route monitor: \n%s", string(jsonMsg))
 			}
 		case bmp.StatsReportMsg:
 			_, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)])
@@ -68,12 +69,12 @@ func parsingWorker(b []byte, producerQueue chan []byte) {
 			glog.V(5).Infof("Peer Down message")
 			glog.V(6).Infof("Message: %+v", b)
 		case bmp.PeerUpMsg:
-			if _, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)]); err != nil {
+			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)]); err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}
 			perPerHeaderLen = bmp.PerPeerHeaderLength
-			if _, err = bmp.UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-bmp.CommonHeaderLength]); err != nil {
+			if bmpMsg.Payload, err = bmp.UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-bmp.CommonHeaderLength]); err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
 			}
@@ -92,8 +93,8 @@ func parsingWorker(b []byte, producerQueue chan []byte) {
 		}
 		perPerHeaderLen = 0
 		p += (int(ch.MessageLength) - bmp.CommonHeaderLength)
-		if len(jsonMsg) != 0 && producerQueue != nil {
-			producerQueue <- jsonMsg
+		if producerQueue != nil && bmpMsg.Payload != nil {
+			producerQueue <- bmpMsg
 		}
 	}
 }

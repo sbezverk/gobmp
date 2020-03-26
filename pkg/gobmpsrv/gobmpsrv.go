@@ -63,12 +63,12 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		defer server.Close()
 		glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
 	}
-	var producerQueue chan []byte
+	var producerQueue chan bmp.Message
 	kstop := make(chan struct{})
 	if srv.kafkaProducer != nil {
 		// For the case when Kafka is not initialized, no reason to send any messages,
 		// as a result allocating a channel only when kafka producer's interface is not nil.
-		producerQueue = make(chan []byte)
+		producerQueue = make(chan bmp.Message)
 		// Starting kafka producer per client with dedicated work queue
 		go srv.kafkaProducer.Producer(producerQueue, kstop)
 	}

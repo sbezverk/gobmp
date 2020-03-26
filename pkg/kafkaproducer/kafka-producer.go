@@ -2,12 +2,14 @@ package kafkaproducer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net"
 	"strconv"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/bmp"
 	kafka "github.com/segmentio/kafka-go"
 )
 
@@ -17,7 +19,7 @@ const (
 
 // KafkaProducer defines methods to act as a Kafka producer
 type KafkaProducer interface {
-	Producer(queue chan []byte, stop chan struct{})
+	Producer(queue chan bmp.Message, stop chan struct{})
 }
 
 type kafkaProducer struct {
@@ -26,7 +28,7 @@ type kafkaProducer struct {
 }
 
 // Producer dispatches kafka workers upon request received from the channel
-func (k *kafkaProducer) Producer(queue chan []byte, stop chan struct{}) {
+func (k *kafkaProducer) Producer(queue chan bmp.Message, stop chan struct{}) {
 	for {
 		select {
 		case msg := <-queue:
@@ -39,8 +41,49 @@ func (k *kafkaProducer) Producer(queue chan []byte, stop chan struct{}) {
 	}
 }
 
-func (k *kafkaProducer) producingWorker(j []byte) {
-	glog.Infof("get JSON message to push to kafka")
+func (k *kafkaProducer) producingWorker(msg bmp.Message) {
+	switch obj := msg.Payload.(type) {
+	case *bmp.PeerUpMessage:
+		k.producePeerUpMessage(msg)
+	default:
+		glog.Warningf("got Unknown message %T to push to kafka, ignoring it...", obj)
+	}
+
+}
+
+func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
+	if msg.PeerHeader == nil {
+		glog.Errorf("Kafka PeerUPMessage: per PeerHeader is missing, cannot construct PeerStateChange message")
+		return
+	}
+	peerUpMsg, ok := msg.Payload.(*bmp.PeerUpMessage)
+	if !ok {
+		glog.Errorf("Kafka PeerUPMessage: got invalid Payload type in bmp.Message")
+		return
+	}
+	glog.Infof("Kafka PeerUPMessage: PeerUpMessage: %+v", peerUpMsg)
+
+	m := PeerStateChange{
+		Action:      "up",
+		RemoteBGPID: string(msg.PeerHeader.PeerBGPID),
+		RemoteASN:   int16(msg.PeerHeader.PeerAS),
+		PeerRD:      string(msg.PeerHeader.PeerDistinguisher),
+		Timestamp:   msg.PeerHeader.PeerTimestamp,
+	}
+	if msg.PeerHeader.FlagV {
+		m.IsIPv4 = false
+		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To16().String()
+	} else {
+		m.IsIPv4 = true
+		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To4().String()
+	}
+
+	b, err := json.Marshal(&m)
+	if err != nil {
+		glog.Errorf("Kafka PeerUPMessage: failed to Marshal PeerStateChange struct with error: %+v", err)
+		return
+	}
+	glog.Infof("Kafka PeerUPMessage: PeerStateChange %s", string(b))
 }
 
 // NewKafkaProducerClient instantiates a new instance of a Kafka producer client
