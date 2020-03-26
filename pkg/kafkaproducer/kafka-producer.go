@@ -100,7 +100,7 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 		}
 	}
 	for i, cap := range rCaps {
-		m.AdvCapabilities += cap.Description
+		m.RcvCapabilities += cap.Description
 		if i < len(rCaps)-1 {
 			m.AdvCapabilities += ", "
 		}
