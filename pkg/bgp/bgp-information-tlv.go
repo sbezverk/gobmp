@@ -18,14 +18,17 @@ func UnmarshalBGPTLV(b []byte) ([]InformationalTLV, error) {
 	tlvs := make([]InformationalTLV, 0)
 	for p := 0; p < len(b); {
 		t := b[p]
-		l := b[p+1]
-		v := b[p+2 : p+2+int(l)]
+		p++
+		l := b[p]
+		p++
+		v := make([]byte, l)
+		copy(v, b[p:p+int(l)])
 		tlvs = append(tlvs, InformationalTLV{
 			Type:   t,
 			Length: l,
 			Value:  v,
 		})
-		p += 2 + int(l)
+		p += int(l)
 	}
 
 	return tlvs, nil

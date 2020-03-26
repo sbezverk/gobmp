@@ -20,6 +20,23 @@ type OpenMessage struct {
 	OptionalParameters []InformationalTLV
 }
 
+// GetCapabilities returns a slice of Capabilities attributes found in Informational TLV slice
+func (o *OpenMessage) GetCapabilities() []Capability {
+	cap := make([]Capability, 0)
+	for _, t := range o.OptionalParameters {
+		if t.Type != 2 {
+			continue
+		}
+		c, err := UnmarshalBGPInformationalTLVCapability(t.Value)
+		if err != nil {
+			continue
+		}
+		cap = append(cap, c...)
+	}
+
+	return cap
+}
+
 // UnmarshalBGPOpenMessage validate information passed in byte slice and returns BGPOpenMessage object
 func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 	glog.V(6).Infof("BGPOpenMessage Raw: %s", internal.MessageHex(b))
