@@ -61,9 +61,6 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 		glog.Errorf("got invalid Payload type in bmp.Message")
 		return
 	}
-	//	glog.Infof("PeerUp: %+v", peerUpMsg)
-	//	glog.Infof("SentOpen: %+v", *peerUpMsg.SentOpen)
-	//	glog.Infof("ReceivedOpen: %+v", *peerUpMsg.ReceivedOpen)
 
 	m := PeerStateChange{
 		Action:         "up",
@@ -92,7 +89,6 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 
 	sCaps := peerUpMsg.SentOpen.GetCapabilities()
 	rCaps := peerUpMsg.ReceivedOpen.GetCapabilities()
-
 	for i, cap := range sCaps {
 		m.AdvCapabilities += cap.Description
 		if i < len(sCaps)-1 {
@@ -102,7 +98,7 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 	for i, cap := range rCaps {
 		m.RcvCapabilities += cap.Description
 		if i < len(rCaps)-1 {
-			m.AdvCapabilities += ", "
+			m.RcvCapabilities += ", "
 		}
 	}
 	j, err := json.Marshal(&m)
