@@ -53,43 +53,61 @@ func (k *kafkaProducer) producingWorker(msg bmp.Message) {
 
 func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 	if msg.PeerHeader == nil {
-		glog.Errorf("Kafka PeerUPMessage: per PeerHeader is missing, cannot construct PeerStateChange message")
+		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return
 	}
 	peerUpMsg, ok := msg.Payload.(*bmp.PeerUpMessage)
 	if !ok {
-		glog.Errorf("Kafka PeerUPMessage: got invalid Payload type in bmp.Message")
+		glog.Errorf("got invalid Payload type in bmp.Message")
 		return
 	}
-	glog.Infof("Kafka PeerUpMessage: perPeerHeader: %+v", *msg.PeerHeader)
-	glog.Infof("Kafka PeerUpMessage: PeerUp: %+v", peerUpMsg)
+	glog.Infof("PeerUp: %+v", peerUpMsg)
+	glog.Infof("SentOpen: %+v", *peerUpMsg.SentOpen)
+	glog.Infof("ReceivedOpen: %+v", *peerUpMsg.ReceivedOpen)
 
 	m := PeerStateChange{
-		Action:     "up",
-		RemoteASN:  int16(msg.PeerHeader.PeerAS),
-		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
-		Timestamp:  msg.PeerHeader.PeerTimestamp,
-		RemotePort: int(peerUpMsg.RemotePort),
-		LocalPort:  int(peerUpMsg.LocalPort),
+		Action:         "up",
+		RemoteASN:      int16(msg.PeerHeader.PeerAS),
+		PeerRD:         msg.PeerHeader.PeerDistinguisher.String(),
+		RemotePort:     int(peerUpMsg.RemotePort),
+		Timestamp:      msg.PeerHeader.PeerTimestamp,
+		LocalASN:       int(peerUpMsg.SentOpen.MyAS),
+		LocalPort:      int(peerUpMsg.LocalPort),
+		AdvHolddown:    int(peerUpMsg.SentOpen.HoldTime),
+		RemoteHolddown: int(peerUpMsg.ReceivedOpen.HoldTime),
 	}
 	if msg.PeerHeader.FlagV {
 		m.IsIPv4 = false
 		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To16().String()
 		m.LocalIP = net.IP(peerUpMsg.LocalAddress).To16().String()
 		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To16().String()
+		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To16().String()
 	} else {
 		m.IsIPv4 = true
 		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress[12:]).To4().String()
 		m.LocalIP = net.IP(peerUpMsg.LocalAddress[12:]).To4().String()
 		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
+		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
 	}
 
-	b, err := json.Marshal(&m)
+	peerUpMsg.SentOpen.GetCapabilities()
+	peerUpMsg.ReceivedOpen.GetCapabilities()
+
+	// glog.Infof("><SB> Sent Capabilities:")
+	// for _, c := range sCaps {
+	// 	glog.Infof("- %+v", c)
+	// }
+	// glog.Infof("><SB> Received Capabilities:")
+	// for _, c := range rCaps {
+	// 	glog.Infof("- %+v", c)
+	// }
+
+	_, err := json.Marshal(&m)
 	if err != nil {
 		glog.Errorf("Kafka PeerUPMessage: failed to Marshal PeerStateChange struct with error: %+v", err)
 		return
 	}
-	glog.Infof("Kafka PeerUPMessage: PeerStateChange raw: %+v json: %s", m, string(b))
+	glog.Infof("Kafka PeerUPMessage: PeerStateChange raw: %+v", m)
 }
 
 // NewKafkaProducerClient instantiates a new instance of a Kafka producer client
