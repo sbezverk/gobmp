@@ -296,6 +296,15 @@ BGP-LS TLV Type: 266 (Node MSD)
 Additional segment routing and SRv6 items not accounted for by OpenBMP:
 
 BGP-LS TLV Type: 267 (Link MSD)
+per https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-16#section-2.3.2:
+BGP-LS TLV:
+   |     1114    | Unidirectional link delay         
+   |     1115    | Min/Max Unidirectional link delay  
+   |     1116    | Unidirectional Delay Variation    
+   |     1117    | Unidirectional packet loss        
+   |     1118    | Unidirectional residual bandwidth  
+   |     1119    | Unidirectional available bandwidth 
+   |     1120    | Unidirectional bandwidth utilization           
 
 // delete ls_link
 
