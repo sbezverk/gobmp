@@ -2,6 +2,7 @@ package kafkaproducer
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 
 	"github.com/golang/glog"
@@ -70,4 +71,46 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 		return
 	}
 	glog.V(5).Infof("succeeded to push PeerUp message to kafka's topic %s", peerTopic)
+}
+
+func (k *kafkaProducer) producePeerDownMessage(msg bmp.Message) {
+	if msg.PeerHeader == nil {
+		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
+		return
+	}
+	peerDownMsg, ok := msg.Payload.(*bmp.PeerDownMessage)
+	if !ok {
+		glog.Errorf("got invalid Payload type in bmp.Message")
+		return
+	}
+	m := PeerStateChange{
+		Action:     "down",
+		BMPReason:  int(peerDownMsg.Reason),
+		RouterHash: msg.PeerHeader.GetPeerHash(),
+		RemoteASN:  int16(msg.PeerHeader.PeerAS),
+		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
+		Timestamp:  msg.PeerHeader.PeerTimestamp,
+	}
+	if msg.PeerHeader.FlagV {
+		m.IsIPv4 = false
+		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To16().String()
+		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To16().String()
+	} else {
+		m.IsIPv4 = true
+		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress[12:]).To4().String()
+		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
+	}
+	m.InfoData = fmt.Sprintf("%s", peerDownMsg.Data)
+
+	j, err := json.Marshal(&m)
+	if err != nil {
+		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
+		return
+	}
+	if err := k.produceMessage(peerTopic, m.RouterHash, j); err != nil {
+		glog.Errorf("failed to push PeerDown message to kafka with error: %+v", err)
+		return
+	}
+
+	glog.V(5).Infof("succeeded to push PeerDown message to kafka's topic %s", peerTopic)
 }
