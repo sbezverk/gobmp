@@ -2,19 +2,27 @@ package kafkaproducer
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"net"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	kafka "github.com/segmentio/kafka-go"
 )
 
+// Define constants for each topic name
 const (
-	gobmpTopic = "gobmp.feed"
+	peerTopic = "gobmp.parsed.peer"
+)
+
+var (
+	// topics defines a list of topic to initialize and connect,
+	// initialization is done as a part of NewKafkaProducerClient func.
+	topicNames = []string{peerTopic}
 )
 
 // KafkaProducer defines methods to act as a Kafka producer
@@ -22,9 +30,16 @@ type KafkaProducer interface {
 	Producer(queue chan bmp.Message, stop chan struct{})
 }
 
-type kafkaProducer struct {
+// topicConnection defines per topic connection and connection related information
+type topicConnection struct {
 	kafkaConn  *kafka.Conn
 	partitions []kafka.Partition
+}
+
+type kafkaProducer struct {
+	sync.Mutex
+	// topics is map of topics' connections, keyed by the topic name
+	topics map[string]*topicConnection
 }
 
 // Producer dispatches kafka workers upon request received from the channel
@@ -48,66 +63,33 @@ func (k *kafkaProducer) producingWorker(msg bmp.Message) {
 	default:
 		glog.Warningf("got Unknown message %T to push to kafka, ignoring it...", obj)
 	}
-
 }
 
-func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
-	if msg.PeerHeader == nil {
-		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
-		return
-	}
-	peerUpMsg, ok := msg.Payload.(*bmp.PeerUpMessage)
+func (k *kafkaProducer) produceMessage(topic string, key string, msg []byte) error {
+	k.Lock()
+	defer k.Unlock()
+	t, ok := k.topics[topic]
 	if !ok {
-		glog.Errorf("got invalid Payload type in bmp.Message")
-		return
+		return fmt.Errorf("topic %s in not initialized", topic)
 	}
-
-	m := PeerStateChange{
-		Action:         "up",
-		RemoteASN:      int16(msg.PeerHeader.PeerAS),
-		PeerRD:         msg.PeerHeader.PeerDistinguisher.String(),
-		RemotePort:     int(peerUpMsg.RemotePort),
-		Timestamp:      msg.PeerHeader.PeerTimestamp,
-		LocalASN:       int(peerUpMsg.SentOpen.MyAS),
-		LocalPort:      int(peerUpMsg.LocalPort),
-		AdvHolddown:    int(peerUpMsg.SentOpen.HoldTime),
-		RemoteHolddown: int(peerUpMsg.ReceivedOpen.HoldTime),
-	}
-	if msg.PeerHeader.FlagV {
-		m.IsIPv4 = false
-		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To16().String()
-		m.LocalIP = net.IP(peerUpMsg.LocalAddress).To16().String()
-		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To16().String()
-		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To16().String()
-	} else {
-		m.IsIPv4 = true
-		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress[12:]).To4().String()
-		m.LocalIP = net.IP(peerUpMsg.LocalAddress[12:]).To4().String()
-		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
-		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
-	}
-
-	sCaps := peerUpMsg.SentOpen.GetCapabilities()
-	rCaps := peerUpMsg.ReceivedOpen.GetCapabilities()
-	for i, cap := range sCaps {
-		m.AdvCapabilities += cap.Description
-		if i < len(sCaps)-1 {
-			m.AdvCapabilities += ", "
-		}
-	}
-	for i, cap := range rCaps {
-		m.RcvCapabilities += cap.Description
-		if i < len(rCaps)-1 {
-			m.RcvCapabilities += ", "
-		}
-	}
-	j, err := json.Marshal(&m)
+	leaderAddr := fmt.Sprintf("%s:%d", t.partitions[0].Leader.Host, t.partitions[0].Leader.Port)
+	kafkaConn, err := kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, t.partitions[0].Topic, t.partitions[0].Leader.ID)
 	if err != nil {
-		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
-		return
+		glog.Errorf("Failed to connect to the topic %s's partition leader with error: %+v", topic, err)
+		return err
 	}
-	//	glog.Infof("Kafka PeerUPMessage: PeerStateChange raw: %+v", m)
-	glog.Infof("PeerStateChange JSON: %s", string(j))
+	n, err := kafkaConn.WriteMessages(kafka.Message{
+		Key:   []byte(key),
+		Value: msg,
+		Time:  time.Now(),
+	})
+	if err != nil {
+		glog.Errorf("Failed to write test message to the topic %s with error: %+v", topic, err)
+		return err
+	}
+	glog.V(5).Infof("Successfully wrote %d bytes to Kafka topic %s", n, topic)
+
+	return nil
 }
 
 // NewKafkaProducerClient instantiates a new instance of a Kafka producer client
@@ -124,55 +106,69 @@ func NewKafkaProducerClient(kafkaSrv string) (KafkaProducer, error) {
 		return nil, err
 	}
 	glog.V(5).Infof("Connected to Kafka server at: %s", conn.RemoteAddr().String())
-	t := kafka.TopicConfig{
-		Topic:             gobmpTopic,
-		NumPartitions:     1,
-		ReplicationFactor: 1,
-	}
-	// Getting Topic from Kafka
-	p, err := conn.ReadPartitions(t.Topic)
-	if err != nil {
-		// Topic is not found, attempting to Create it
-		if err := conn.CreateTopics(t); err != nil {
-			glog.Errorf("Failed to create Kafka topic with error: %+v", err)
-			return nil, err
-		}
-		glog.V(5).Infof("Create Kafka topic %s succeeded", t.Topic)
-		// Getting Topic from Kafka again, if failing again, then give up and return an error.
-		p, err = conn.ReadPartitions(t.Topic)
-		if err != nil {
-			glog.Errorf("Failed to read particions for Kafka topic with error: %+v", err)
-			return nil, err
-		}
-	}
-	glog.V(5).Infof("Getting partitions for Kafka topic %s succeeded, partitions: %+v", t.Topic, p)
 
-	leaderAddr := fmt.Sprintf("%s:%d", p[0].Leader.Host, p[0].Leader.Port)
-	kafkaConn, err := kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, p[0].Topic, p[0].Leader.ID)
+	topics, err := initTopic(conn)
 	if err != nil {
-		glog.Errorf("Failed to connect to the particion's leader with error: %+v", err)
+		glog.Errorf("Failed to initialize topics with error: %+v", err)
 		return nil, err
 	}
-	n, err := kafkaConn.WriteMessages(kafka.Message{
-		Key:   []byte("test message key"),
-		Value: []byte("test message value"),
-		Headers: []kafka.Header{
-			{
-				Key:   "Header key",
-				Value: []byte("Header value"),
-			},
-		},
-	})
-	if err != nil {
-		glog.Errorf("Failed to write test message to the topic %s with error: %+v", t.Topic, err)
-		return nil, err
-	}
-	glog.V(5).Infof("Successfully wrote %d bytes to Kafka topic %s", n, t.Topic)
 
 	return &kafkaProducer{
-		kafkaConn:  kafkaConn,
-		partitions: p,
+		topics: topics,
 	}, nil
+}
+
+func initTopic(conn *kafka.Conn) (map[string]*topicConnection, error) {
+	topics := make(map[string]*topicConnection)
+	for _, tn := range topicNames {
+		t := kafka.TopicConfig{
+			Topic:             tn,
+			NumPartitions:     1,
+			ReplicationFactor: 1,
+		}
+		// Getting Topic from Kafka
+		p, err := conn.ReadPartitions(t.Topic)
+		if err != nil {
+			// Topic is not found, attempting to Create it
+			if err := conn.CreateTopics(t); err != nil {
+				glog.Errorf("Failed to create Kafka topic with error: %+v", err)
+				return nil, err
+			}
+			glog.V(5).Infof("Create Kafka topic %s succeeded", t.Topic)
+			// Getting Topic from Kafka again, if failing again, then give up and return an error.
+			// TODO, after the topic gets created, there is a leader election which might take some time, during which
+			// ReadPartitions will return error: [5] Leader Not Available. Need to add more sophisticated retry logic.
+			for retry := 1; ; {
+				p, err = conn.ReadPartitions(t.Topic)
+				if err == nil {
+					break
+				}
+				if err != nil && retry >= 5 {
+					glog.Errorf("Failed to read particions for Kafka topic with error: %+v", err)
+					return nil, err
+				}
+				glog.Warningf("Failed to read particions for Kafka topic %s with error: %+v, retry: %d", t.Topic, err, retry)
+				retry++
+				time.Sleep(6 * time.Second)
+			}
+		} else {
+			glog.V(5).Infof("Kafka topic %s already exists", t.Topic)
+		}
+
+		glog.V(5).Infof("Getting partitions for Kafka topic %s succeeded, partitions: %+v", t.Topic, p)
+
+		leaderAddr := fmt.Sprintf("%s:%d", p[0].Leader.Host, p[0].Leader.Port)
+		kafkaConn, err := kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, p[0].Topic, p[0].Leader.ID)
+		// Adding topic and its connection properties into the map
+		topics[tn] = &topicConnection{
+			// TODO kafkaConn represents connection to the topic leader at the time of initialization
+			// what if leader changes later? COnsider adding leader connection refresh logic.
+			kafkaConn:  kafkaConn,
+			partitions: p,
+		}
+	}
+
+	return topics, nil
 }
 
 func validator(addr string) error {

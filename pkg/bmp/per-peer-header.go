@@ -1,6 +1,7 @@
 package bmp
 
 import (
+	"crypto/md5"
 	"encoding/binary"
 	"fmt"
 	"time"
@@ -88,4 +89,14 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	pph.PeerTimestamp = t.Format(time.StampMicro)
 
 	return pph, nil
+}
+
+// GetPeerHash calculates Peer Hash and returns as a hex string
+func (p *PerPeerHeader) GetPeerHash() string {
+	data := []byte{}
+	data = append(data, p.PeerAddress...)
+	data = append(data, []byte(fmt.Sprintf("%d", p.PeerAS))...)
+	data = append(data, p.PeerBGPID...)
+
+	return fmt.Sprintf("%x", md5.Sum(data))
 }
