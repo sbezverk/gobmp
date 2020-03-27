@@ -66,8 +66,16 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 			}
 			p += perPerHeaderLen
 		case bmp.PeerDownMsg:
-			glog.V(5).Infof("Peer Down message")
-			glog.V(6).Infof("Message: %+v", b)
+			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)]); err != nil {
+				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
+				return
+			}
+			perPerHeaderLen = bmp.PerPeerHeaderLength
+			if bmpMsg.Payload, err = bmp.UnmarshalPeerDownMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-bmp.CommonHeaderLength]); err != nil {
+				glog.Errorf("fail to recover BMP Peer Down message with error: %+v", err)
+				return
+			}
+			p += perPerHeaderLen
 		case bmp.PeerUpMsg:
 			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)]); err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
@@ -75,7 +83,7 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 			}
 			perPerHeaderLen = bmp.PerPeerHeaderLength
 			if bmpMsg.Payload, err = bmp.UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-bmp.CommonHeaderLength]); err != nil {
-				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
+				glog.Errorf("fail to recover BMP Peer Up message with error: %+v", err)
 				return
 			}
 			p += perPerHeaderLen

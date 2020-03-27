@@ -2,6 +2,7 @@ package kafkaproducer
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 
 	"github.com/golang/glog"
@@ -77,8 +78,14 @@ func (k *kafkaProducer) producePeerDownMessage(msg bmp.Message) {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return
 	}
+	peerDownMsg, ok := msg.Payload.(*bmp.PeerDownMessage)
+	if !ok {
+		glog.Errorf("got invalid Payload type in bmp.Message")
+		return
+	}
 	m := PeerStateChange{
 		Action:     "down",
+		BMPReason:  int(peerDownMsg.Reason),
 		RouterHash: msg.PeerHeader.GetPeerHash(),
 		RemoteASN:  int16(msg.PeerHeader.PeerAS),
 		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
@@ -93,6 +100,8 @@ func (k *kafkaProducer) producePeerDownMessage(msg bmp.Message) {
 		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress[12:]).To4().String()
 		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
 	}
+	m.InfoData = fmt.Sprintf("%s", peerDownMsg.Data)
+
 	j, err := json.Marshal(&m)
 	if err != nil {
 		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)

@@ -60,6 +60,8 @@ func (k *kafkaProducer) producingWorker(msg bmp.Message) {
 	switch obj := msg.Payload.(type) {
 	case *bmp.PeerUpMessage:
 		k.producePeerUpMessage(msg)
+	case *bmp.PeerDownMessage:
+		k.producePeerDownMessage(msg)
 	default:
 		glog.Warningf("got Unknown message %T to push to kafka, ignoring it...", obj)
 	}
@@ -155,7 +157,7 @@ func initTopic(conn *kafka.Conn) (map[string]*topicConnection, error) {
 			glog.V(5).Infof("Kafka topic %s already exists", t.Topic)
 		}
 
-		glog.V(5).Infof("Getting partitions for Kafka topic %s succeeded, partitions: %+v", t.Topic, p)
+		glog.V(5).Infof("Getting partitions for Kafka topic %s succeeded", t.Topic)
 
 		leaderAddr := fmt.Sprintf("%s:%d", p[0].Leader.Host, p[0].Leader.Port)
 		kafkaConn, err := kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, p[0].Topic, p[0].Leader.ID)
