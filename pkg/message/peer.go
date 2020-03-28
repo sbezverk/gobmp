@@ -21,13 +21,13 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 	}
 
 	m := PeerStateChange{
-		Action:         "up",
-		RouterHash:     msg.PeerHeader.GetPeerHash(),
-		RemoteASN:      int16(msg.PeerHeader.PeerAS),
-		PeerRD:         msg.PeerHeader.PeerDistinguisher.String(),
-		RemotePort:     int(peerUpMsg.RemotePort),
-		Timestamp:      msg.PeerHeader.PeerTimestamp,
-		LocalASN:       int(peerUpMsg.SentOpen.MyAS),
+		Action:     "up",
+		RouterHash: msg.PeerHeader.GetPeerHash(),
+		RemoteASN:  msg.PeerHeader.PeerAS,
+		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
+		RemotePort: int(peerUpMsg.RemotePort),
+		Timestamp:  msg.PeerHeader.PeerTimestamp,
+		//		LocalASN:       int(peerUpMsg.SentOpen.MyAS),
 		LocalPort:      int(peerUpMsg.LocalPort),
 		AdvHolddown:    int(peerUpMsg.SentOpen.HoldTime),
 		RemoteHolddown: int(peerUpMsg.ReceivedOpen.HoldTime),
@@ -46,6 +46,11 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
 	}
 
+	m.LocalASN = int32(peerUpMsg.SentOpen.MyAS)
+	if lasn, ok := peerUpMsg.SentOpen.Is4BytesASCapable(); ok {
+		// Local BGP speaker is 4 bytes AS capable
+		m.LocalASN = lasn
+	}
 	sCaps := peerUpMsg.SentOpen.GetCapabilities()
 	rCaps := peerUpMsg.ReceivedOpen.GetCapabilities()
 	for i, cap := range sCaps {
@@ -87,7 +92,7 @@ func (p *producer) producePeerDownMessage(msg bmp.Message) {
 		Action:     "down",
 		BMPReason:  int(peerDownMsg.Reason),
 		RouterHash: msg.PeerHeader.GetPeerHash(),
-		RemoteASN:  int16(msg.PeerHeader.PeerAS),
+		RemoteASN:  msg.PeerHeader.PeerAS,
 		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
 		Timestamp:  msg.PeerHeader.PeerTimestamp,
 	}

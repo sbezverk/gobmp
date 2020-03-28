@@ -40,6 +40,12 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		case 15:
 			// MP_UNREACH_NLRI
 			// https://tools.ietf.org/html/rfc7752
+			mp, err := bgp.UnmarshalMPUnReachNLRI(pa.Attribute)
+			if err != nil {
+				glog.Errorf("failed to unmarshal MP_UNREACH_NLRI (15)")
+				return
+			}
+			s += fmt.Sprintf(" : afi %d safi %d :", mp.AddressFamilyID, mp.SubAddressFamilyID)
 		case 29:
 			// BGP-LS NLRI
 			// https://tools.ietf.org/html/rfc7752

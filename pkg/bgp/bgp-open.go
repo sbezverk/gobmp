@@ -37,6 +37,29 @@ func (o *OpenMessage) GetCapabilities() []Capability {
 	return cap
 }
 
+// Is4BytesASCapable returns true or false if Open message originated by 4 bytes AS capable speaker
+// in case of true, it also returns 4 bytes Autonomous System Number.
+func (o *OpenMessage) Is4BytesASCapable() (int32, bool) {
+	for _, t := range o.OptionalParameters {
+		if t.Type != 2 {
+			continue
+		}
+		caps, err := UnmarshalBGPInformationalTLVCapability(t.Value)
+		if err != nil {
+			continue
+		}
+		for _, cap := range caps {
+			// 65 is 4 Bytes AS Capability code
+			if cap.Code != 65 {
+				continue
+			}
+			return int32(binary.BigEndian.Uint32(cap.Value)), true
+		}
+	}
+
+	return 0, false
+}
+
 // UnmarshalBGPOpenMessage validate information passed in byte slice and returns BGPOpenMessage object
 func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 	glog.V(6).Infof("BGPOpenMessage Raw: %s", internal.MessageHex(b))

@@ -17,7 +17,6 @@ type MPReachNLRI struct {
 	SubAddressFamilyID   uint8
 	NextHopAddressLength uint8
 	NextHopAddress       []byte
-	Reserved             uint8
 	NLRI                 []byte
 }
 
@@ -93,15 +92,8 @@ func UnmarshalMPReachNLRI(b []byte) (*MPReachNLRI, error) {
 	p += int(mp.NextHopAddressLength)
 	// Skip reserved byte
 	p++
-	switch mp.SubAddressFamilyID {
-	// TODO Define constants
-	case 71:
-		_, err := ls.UnmarshalLSNLRI71(b[p:len(b)])
-		if err != nil {
-			return nil, err
-		}
-	}
-	mp.NLRI = b[p:len(b)]
+	mp.NLRI = make([]byte, len(b)-p)
+	copy(mp.NLRI, b[p:len(b)])
 
 	return &mp, nil
 }

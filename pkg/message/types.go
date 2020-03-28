@@ -10,11 +10,11 @@ type PeerStateChange struct {
 	RemoteBGPID      string `json:"remote_bgp_id,omitempty"`
 	RouterIP         string `json:"router_ip,omitempty"`
 	Timestamp        string `json:"timestamp,omitempty"`
-	RemoteASN        int16  `json:"remote_asn,omitempty"`
+	RemoteASN        int32  `json:"remote_asn,omitempty"`
 	RemoteIP         string `json:"remote_ip,omitempty"`
 	PeerRD           string `json:"peer_rd,omitempty"`
 	RemotePort       int    `json:"remote_port,omitempty"`
-	LocalASN         int    `json:"local_asn,omitempty"`
+	LocalASN         int32  `json:"local_asn,omitempty"`
 	LocalIP          string `json:"local_ip,omitempty"`
 	LocalPort        int    `json:"local_port,omitempty"`
 	LocalBGPID       string `json:"local_bgp_id,omitempty"`
