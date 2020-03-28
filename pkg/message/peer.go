@@ -1,4 +1,4 @@
-package producer
+package message
 
 import (
 	"encoding/json"
@@ -60,7 +60,7 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 			m.RcvCapabilities += ", "
 		}
 	}
-	j, err := json.Marshal(&m)
+	_, err := json.Marshal(&m)
 	if err != nil {
 		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
 		return
@@ -102,7 +102,7 @@ func (p *producer) producePeerDownMessage(msg bmp.Message) {
 	}
 	m.InfoData = fmt.Sprintf("%s", peerDownMsg.Data)
 
-	j, err := json.Marshal(&m)
+	_, err := json.Marshal(&m)
 	if err != nil {
 		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
 		return

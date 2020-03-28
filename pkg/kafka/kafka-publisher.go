@@ -1,4 +1,4 @@
-package kafkaproducer
+package kafka
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/pub"
 	kafka "github.com/segmentio/kafka-go"
 )
 
@@ -25,10 +25,10 @@ var (
 	topicNames = []string{peerTopic}
 )
 
-// KafkaProducer defines methods to act as a Kafka producer
-type KafkaProducer interface {
-	Producer(queue chan bmp.Message, stop chan struct{})
-}
+// // KafkaProducer defines methods to act as a Kafka producer
+// type KafkaProducer interface {
+// 	Producer(queue chan bmp.Message, stop chan struct{})
+// }
 
 // topicConnection defines per topic connection and connection related information
 type topicConnection struct {
@@ -36,43 +36,20 @@ type topicConnection struct {
 	partitions []kafka.Partition
 }
 
-type kafkaProducer struct {
+type publisher struct {
 	sync.Mutex
 	// topics is map of topics' connections, keyed by the topic name
 	topics map[string]*topicConnection
 }
 
-// Producer dispatches kafka workers upon request received from the channel
-func (k *kafkaProducer) Producer(queue chan bmp.Message, stop chan struct{}) {
-	for {
-		select {
-		case msg := <-queue:
-			go k.producingWorker(msg)
-		case <-stop:
-			glog.Infof("received interrupt, stopping.")
-			return
-		default:
-		}
-	}
+func (p *publisher) PublishMessage(t int, msg []byte) error {
+	return nil
 }
 
-func (k *kafkaProducer) producingWorker(msg bmp.Message) {
-	switch obj := msg.Payload.(type) {
-	case *bmp.PeerUpMessage:
-		k.producePeerUpMessage(msg)
-	case *bmp.PeerDownMessage:
-		k.producePeerDownMessage(msg)
-	case *bmp.RouteMonitor:
-		k.produceRouteMonitorMessage(msg)
-	default:
-		glog.Warningf("got Unknown message %T to push to kafka, ignoring it...", obj)
-	}
-}
-
-func (k *kafkaProducer) produceMessage(topic string, key string, msg []byte) error {
-	k.Lock()
-	defer k.Unlock()
-	t, ok := k.topics[topic]
+func (p *publisher) produceMessage(topic string, key string, msg []byte) error {
+	p.Lock()
+	defer p.Unlock()
+	t, ok := p.topics[topic]
 	if !ok {
 		return fmt.Errorf("topic %s in not initialized", topic)
 	}
@@ -96,8 +73,8 @@ func (k *kafkaProducer) produceMessage(topic string, key string, msg []byte) err
 	return nil
 }
 
-// NewKafkaProducerClient instantiates a new instance of a Kafka producer client
-func NewKafkaProducerClient(kafkaSrv string) (KafkaProducer, error) {
+// NewKafkaPublisher instantiates a new instance of a Kafka publisher
+func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 	glog.Infof("Initializing Kafka producer client")
 	if err := validator(kafkaSrv); err != nil {
 		glog.Errorf("Failed to validate Kafka server address %s with error: %+v", kafkaSrv, err)
@@ -117,7 +94,7 @@ func NewKafkaProducerClient(kafkaSrv string) (KafkaProducer, error) {
 		return nil, err
 	}
 
-	return &kafkaProducer{
+	return &publisher{
 		topics: topics,
 	}, nil
 }

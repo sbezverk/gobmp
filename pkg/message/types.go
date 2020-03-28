@@ -1,4 +1,4 @@
-package producer
+package message
 
 // PeerStateChange defines a message format sent to Kafka as a result of BMP Peer Up or Peer Down message
 type PeerStateChange struct {

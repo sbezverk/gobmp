@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/gobmpsrv"
-	kafka "github.com/sbezverk/gobmp/pkg/kafkaproducer"
+	"github.com/sbezverk/gobmp/pkg/kafka"
 )
 
 var (
@@ -48,15 +48,16 @@ func setupSignalHandler() (stopCh <-chan struct{}) {
 func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
-	// Initializing Kafka producer
-	kp, err := kafka.NewKafkaProducerClient(kafkaSrv)
+	// Initializing Kafka publisher
+	// other publishers sutisfying pub.Publisher interface can be used.
+	publisher, err := kafka.NewKafkaPublisher(kafkaSrv)
 	if err != nil {
-		glog.Warningf("Kafka producer is disabled, no Kafka server URL is provided.")
+		glog.Warningf("Kafka publisher is disabled, no Kafka server URL is provided.")
 	} else {
-		glog.V(6).Infof("Kafka producer was initialized: %+v", kp)
+		glog.V(6).Infof("Kafka publisher has been successfully initialized.")
 	}
 	// Initializing bmp server
-	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, intercept, kp)
+	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, intercept, publisher)
 	if err != nil {
 		glog.Errorf("fail to setup new bmp server with error: %+v", err)
 		os.Exit(1)

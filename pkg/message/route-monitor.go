@@ -1,4 +1,4 @@
-package producer
+package message
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (k *kafkaProducer) produceRouteMonitorMessage(msg bmp.Message) {
+func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	if msg.PeerHeader == nil {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return

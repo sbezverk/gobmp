@@ -1,30 +1,18 @@
-package producer
+package message
 
 import (
-	"context"
-	"fmt"
-	"math"
-	"net"
-	"strconv"
-	"sync"
-	"time"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/pub"
 )
 
-// Producer defines methods to act as a Kafka producer
+// Producer defines methods to act as a message producer
 type Producer interface {
 	Producer(queue chan bmp.Message, stop chan struct{})
 }
 
-// topicConnection defines per topic connection and connection related information
-type topicConnection struct {
-	kafkaConn  *kafka.Conn
-	partitions []kafka.Partition
-}
-
 type producer struct {
+	publisher pub.Publisher
 }
 
 // Producer dispatches kafka workers upon request received from the channel
@@ -51,5 +39,12 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		p.produceRouteMonitorMessage(msg)
 	default:
 		glog.Warningf("got Unknown message %T to push to kafka, ignoring it...", obj)
+	}
+}
+
+// NewProducer instantiates a new instance of a producer with Publisher interface
+func NewProducer(publisher pub.Publisher) Producer {
+	return &producer{
+		publisher: publisher,
 	}
 }
