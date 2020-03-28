@@ -136,7 +136,7 @@ func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, error) {
 		t := b[p+1]
 		p += 2
 		var l uint16
-		// Chcking for Extened
+		// Checking for Extened
 		if f&0x10 == 0x10 {
 			l = binary.BigEndian.Uint16(b[p : p+2])
 			p += 2

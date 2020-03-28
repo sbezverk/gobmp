@@ -62,6 +62,8 @@ func (k *kafkaProducer) producingWorker(msg bmp.Message) {
 		k.producePeerUpMessage(msg)
 	case *bmp.PeerDownMessage:
 		k.producePeerDownMessage(msg)
+	case *bmp.RouteMonitor:
+		k.produceRouteMonitorMessage(msg)
 	default:
 		glog.Warningf("got Unknown message %T to push to kafka, ignoring it...", obj)
 	}

@@ -48,14 +48,6 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 			}
 			bmpMsg.Payload = rm
 			p += perPerHeaderLen
-			if rm.CheckSAFI(71) {
-				// glog.V(5).Infof("String parsed route monitor: \n%s", rm.String())
-				//				jsonMsg, err = json.Marshal(&rm)
-				//				if err != nil {
-				//					glog.Errorf("fail to Marshal into JSON BMP Route Monitoring with error: %+v", err)
-				//				}
-				// glog.V(5).Infof("JSON parsed route monitor: \n%s", string(jsonMsg))
-			}
 		case bmp.StatsReportMsg:
 			_, err := bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)])
 			if err != nil {
