@@ -60,17 +60,17 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 			m.RcvCapabilities += ", "
 		}
 	}
-	_, err := json.Marshal(&m)
+	j, err := json.Marshal(&m)
 	if err != nil {
 		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
 		return
 	}
-	// glog.Infof("PeerStateChange JSON: %s", string(j))
-	//if err := p.produceMessage(peerTopic, m.RouterHash, j); err != nil {
-	//	glog.Errorf("failed to push PeerUp message to kafka with error: %+v", err)
-	//	return
-	//}
-	//glog.V(5).Infof("succeeded to push PeerUp message to kafka's topic %s", peerTopic)
+	if err := p.publisher.PublishMessage(bmp.PeerUpMsg, []byte(m.RouterHash), j); err != nil {
+		glog.Errorf("failed to push PeerUp message to kafka with error: %+v", err)
+		return
+	}
+
+	glog.V(5).Infof("succeeded to push PeerUp message to kafka")
 }
 
 func (p *producer) producePeerDownMessage(msg bmp.Message) {
@@ -102,15 +102,15 @@ func (p *producer) producePeerDownMessage(msg bmp.Message) {
 	}
 	m.InfoData = fmt.Sprintf("%s", peerDownMsg.Data)
 
-	_, err := json.Marshal(&m)
+	j, err := json.Marshal(&m)
 	if err != nil {
 		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
 		return
 	}
-	//if err := k.produceMessage(peerTopic, m.RouterHash, j); err != nil {
-	//	glog.Errorf("failed to push PeerDown message to kafka with error: %+v", err)
-	//	return
-	//}
+	if err := p.publisher.PublishMessage(bmp.PeerDownMsg, []byte(m.RouterHash), j); err != nil {
+		glog.Errorf("failed to push PeerDown message to kafka with error: %+v", err)
+		return
+	}
 
-	//glog.V(5).Infof("succeeded to push PeerDown message to kafka's topic %s", peerTopic)
+	glog.V(5).Infof("succeeded to push PeerDown message to kafka")
 }

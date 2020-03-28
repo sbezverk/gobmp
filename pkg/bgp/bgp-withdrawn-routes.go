@@ -34,17 +34,18 @@ func (wr *WithdrawnRoute) MarshalJSON() ([]byte, error) {
 	return jsonData, nil
 }
 
-// WithdrawnRoutes defines collection of BGP Withdrawn prefixes
-type WithdrawnRoutes struct {
-	WithdrawnRoutes []WithdrawnRoute
-}
-
 // UnmarshalBGPWithdrawnRoutes builds BGP Withdrawn routes object
-func UnmarshalBGPWithdrawnRoutes(b []byte) (*WithdrawnRoutes, error) {
+func UnmarshalBGPWithdrawnRoutes(b []byte) ([]WithdrawnRoute, error) {
 	glog.V(6).Infof("BGPWithdrawnRoutes Raw: %s", internal.MessageHex(b))
-	w := WithdrawnRoutes{
-		WithdrawnRoutes: make([]WithdrawnRoute, 0),
+	routes := make([]WithdrawnRoute, 0)
+	for p := 0; p < len(b); {
+		route := WithdrawnRoute{}
+		route.Length = b[p]
+		p++
+		route.Prefix = make([]byte, route.Length)
+		copy(route.Prefix, b[p:p+int(route.Length)])
+		p += int(route.Length)
 	}
 
-	return &w, nil
+	return routes, nil
 }

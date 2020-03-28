@@ -11,8 +11,9 @@ import (
 
 // Update defines a structure of BGP Update message
 type Update struct {
-	WithdrawnRoutesLength    uint16
-	WithdrawnRoutes          WithdrawnRoutes
+	WithdrawnRoutesLength uint16
+	//	WithdrawnRoutes          WithdrawnRoutes
+	WithdrawnRoutes          []WithdrawnRoute
 	TotalPathAttributeLength uint16
 	PathAttributes           []PathAttribute
 	NLRI                     []byte
@@ -22,7 +23,7 @@ func (up *Update) String() string {
 	var s string
 	s += fmt.Sprintf("Withdrawn Routes Length: %d\n", up.WithdrawnRoutesLength)
 	if up.WithdrawnRoutesLength != 0 {
-		for _, wr := range up.WithdrawnRoutes.WithdrawnRoutes {
+		for _, wr := range up.WithdrawnRoutes {
 			s += wr.String()
 		}
 	}
@@ -46,19 +47,19 @@ func (up *Update) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, []byte("{\"WithdrawnRoutesLength\":")...)
 	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", up.WithdrawnRoutesLength))...)
 	jsonData = append(jsonData, []byte("\"WithdrawnRoutes\":")...)
-	jsonData = append(jsonData, []byte("{\"WithdrawnRoutes\":")...)
+	//	jsonData = append(jsonData, []byte("{\"WithdrawnRoutes\":")...)
 	jsonData = append(jsonData, '[')
-	for i, wr := range up.WithdrawnRoutes.WithdrawnRoutes {
+	for i, wr := range up.WithdrawnRoutes {
 		b, err := json.Marshal(&wr)
 		if err != nil {
 			return nil, err
 		}
 		jsonData = append(jsonData, b...)
-		if i < len(up.WithdrawnRoutes.WithdrawnRoutes)-1 {
+		if i < len(up.WithdrawnRoutes)-1 {
 			jsonData = append(jsonData, ',')
 		}
 	}
-	jsonData = append(jsonData, []byte("]},")...)
+	jsonData = append(jsonData, []byte("],")...)
 
 	jsonData = append(jsonData, []byte("\"TotalPathAttributeLength\":")...)
 	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", up.TotalPathAttributeLength))...)
@@ -86,11 +87,16 @@ func (up *Update) MarshalJSON() ([]byte, error) {
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
 func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	glog.V(6).Infof("BGPUpdate Raw: %s", internal.MessageHex(b))
+
 	p := 0
 	u := Update{}
 	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	// Skip Withdrawn Routes
+	wdr, err := UnmarshalBGPWithdrawnRoutes(b[p : p+int(u.WithdrawnRoutesLength)])
+	if err != nil {
+		return nil, err
+	}
+	u.WithdrawnRoutes = wdr
 	p += int(u.WithdrawnRoutesLength)
 	u.TotalPathAttributeLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2

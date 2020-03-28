@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/pub"
 	kafka "github.com/segmentio/kafka-go"
 )
@@ -21,14 +22,9 @@ const (
 
 var (
 	// topics defines a list of topic to initialize and connect,
-	// initialization is done as a part of NewKafkaProducerClient func.
+	// initialization is done as a part of NewKafkaPublisher func.
 	topicNames = []string{peerTopic}
 )
-
-// // KafkaProducer defines methods to act as a Kafka producer
-// type KafkaProducer interface {
-// 	Producer(queue chan bmp.Message, stop chan struct{})
-// }
 
 // topicConnection defines per topic connection and connection related information
 type topicConnection struct {
@@ -42,11 +38,18 @@ type publisher struct {
 	topics map[string]*topicConnection
 }
 
-func (p *publisher) PublishMessage(t int, msg []byte) error {
-	return nil
+func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
+	switch t {
+	case bmp.PeerUpMsg:
+		fallthrough
+	case bmp.PeerDownMsg:
+		return p.produceMessage(peerTopic, key, msg)
+	}
+
+	return fmt.Errorf("not implemented")
 }
 
-func (p *publisher) produceMessage(topic string, key string, msg []byte) error {
+func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 	p.Lock()
 	defer p.Unlock()
 	t, ok := p.topics[topic]
@@ -60,7 +63,7 @@ func (p *publisher) produceMessage(topic string, key string, msg []byte) error {
 		return err
 	}
 	n, err := kafkaConn.WriteMessages(kafka.Message{
-		Key:   []byte(key),
+		Key:   key,
 		Value: msg,
 		Time:  time.Now(),
 	})
