@@ -258,7 +258,7 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 							Attribute:          []byte{1, 0, 7, 0, 0, 0, 0, 0, 0, 1},
 						},
 					},
-					NLRI: []byte{},
+					NLRI: []bgp.Route{},
 				},
 			},
 			fail: false,
