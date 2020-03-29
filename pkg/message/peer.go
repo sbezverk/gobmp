@@ -21,13 +21,12 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 	}
 
 	m := PeerStateChange{
-		Action:     "up",
-		RouterHash: msg.PeerHeader.GetPeerHash(),
-		RemoteASN:  msg.PeerHeader.PeerAS,
-		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
-		RemotePort: int(peerUpMsg.RemotePort),
-		Timestamp:  msg.PeerHeader.PeerTimestamp,
-		//		LocalASN:       int(peerUpMsg.SentOpen.MyAS),
+		Action:         "up",
+		RouterHash:     msg.PeerHeader.GetPeerHash(),
+		RemoteASN:      msg.PeerHeader.PeerAS,
+		PeerRD:         msg.PeerHeader.PeerDistinguisher.String(),
+		RemotePort:     int(peerUpMsg.RemotePort),
+		Timestamp:      msg.PeerHeader.PeerTimestamp,
 		LocalPort:      int(peerUpMsg.LocalPort),
 		AdvHolddown:    int(peerUpMsg.SentOpen.HoldTime),
 		RemoteHolddown: int(peerUpMsg.ReceivedOpen.HoldTime),

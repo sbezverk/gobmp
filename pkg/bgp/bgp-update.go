@@ -11,8 +11,7 @@ import (
 
 // Update defines a structure of BGP Update message
 type Update struct {
-	WithdrawnRoutesLength uint16
-	//	WithdrawnRoutes          WithdrawnRoutes
+	WithdrawnRoutesLength    uint16
 	WithdrawnRoutes          []Route
 	TotalPathAttributeLength uint16
 	PathAttributes           []PathAttribute

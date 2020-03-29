@@ -2,6 +2,7 @@ package message
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -27,7 +28,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	case 14:
 		// MP_REACH_NLRI
 		// https://tools.ietf.org/html/rfc7752
-		_, err := nlri14(routeMonitorMsg.Update)
+		_, err := nlri14(msg.PeerHeader, routeMonitorMsg.Update)
 		if err != nil {
 			glog.Errorf("failed to produce MP_REACH_NLRI (14) message with error: %+v", err)
 			return
@@ -35,34 +36,103 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	case 15:
 		// MP_UNREACH_NLRI
 		// https://tools.ietf.org/html/rfc7752
-		_, err := nlri15(routeMonitorMsg.Update)
+		_, err := nlri15(msg.PeerHeader, routeMonitorMsg.Update)
 		if err != nil {
 			glog.Errorf("failed to produce MP_UNREACH_NLRI (15) message with error: %+v", err)
 			return
 		}
 	default:
 		// Original BGP's NLRI messages processing
+		msgs := make([]UnicastPrefix, 0)
 		if routeMonitorMsg.Update.WithdrawnRoutesLength != 0 {
-			msg, err := nlriWd(routeMonitorMsg.Update)
+			msg, err := nlriWd(msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
 				return
 			}
-			if msg != nil {
-				glog.Infof("Publish original NLRI Withdraw message %s", string(msg))
-			}
+			msgs = append(msgs, msg...)
 		}
-		msg, err := nlriAdv(routeMonitorMsg.Update)
+		msg, err := nlriAdv(msg.PeerHeader, routeMonitorMsg.Update)
 		if err != nil {
 			glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
 			return
 		}
-		if msg != nil {
-			glog.Infof("Publish original NLRI Withdraw message %s", string(msg))
+		msgs = append(msgs, msg...)
+		// Loop through and publish all collected messages
+		// for _, m := range msgs {
+		//	if err := p.publisher.PublishMessage(bmp.PeerDownMsg, []byte(m.RouterHash), j); err != nil {
+		//	glog.Errorf("failed to push PeerDown message to kafka with error: %+v", err)
+		//	return
+		//}
+		// }
+	}
+	// Remove after debugging
+	logPathAttrType(routeMonitorMsg)
+}
+
+func nlri14(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
+	// case 29:
+	// 	// BGP-LS NLRI
+	// 	// https://tools.ietf.org/html/rfc7752
+	// 	_, err := bgpls.UnmarshalBGPLSNLRI(pa.Attribute)
+	// 	if err != nil {
+	// 		glog.Errorf("failed to unmarshal BGP-LS NLRI (29)")
+	// 		return
+	// 	}
+	// case 40:
+	// 	// BGP Prefix-SID
+	// 	// https://tools.ietf.org/html/rfc8669
+	glog.Infof("nlri14 processing requested..")
+	return nil, nil
+}
+
+func nlri15(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
+	glog.Infof("nlri15 processing requested..")
+	return nil, nil
+}
+
+func nlriAdv(ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
+	glog.Infof("original nlri processing requested..")
+	prfxs := make([]UnicastPrefix, 0)
+	for _, p := range update.NLRI {
+		glog.Infof("prefix: %+v length in bits: %d", p.Prefix, p.Length)
+
+		prfx := UnicastPrefix{
+			Action:    "add",
+			PeerHash:  ph.GetPeerHash(),
+			PeerASN:   ph.PeerAS,
+			Timestamp: ph.PeerTimestamp,
 		}
+		if ph.FlagV {
+			prfx.IsIPv4 = false
+			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
+		} else {
+			prfx.IsIPv4 = true
+			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
+		}
+		prfxs = append(prfxs, prfx)
 	}
 
-	glog.Info("><SB> route monitor message carries attribute types:")
+	return prfxs, nil
+}
+
+func nlriWd(ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
+	glog.Infof("original nlri withdraw processing requested..")
+	prfxs := make([]UnicastPrefix, 0)
+	for _, p := range update.NLRI {
+		glog.Infof("prefix: %+v length in bits: %d", p.Prefix, p.Length)
+		prfx := UnicastPrefix{
+			Action: "del",
+		}
+
+		prfxs = append(prfxs, prfx)
+	}
+
+	return nil, nil
+}
+
+func logPathAttrType(routeMonitorMsg *bmp.RouteMonitor) {
+	glog.Info("route monitor message carries attribute types:")
 	var s string
 	for i, pa := range routeMonitorMsg.Update.PathAttributes {
 		s += fmt.Sprintf("type: %d", pa.AttributeType)
@@ -91,44 +161,4 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		}
 	}
 	glog.Infof("- %s", s)
-
-}
-
-func nlri14(update *bgp.Update) ([]byte, error) {
-	// case 29:
-	// 	// BGP-LS NLRI
-	// 	// https://tools.ietf.org/html/rfc7752
-	// 	_, err := bgpls.UnmarshalBGPLSNLRI(pa.Attribute)
-	// 	if err != nil {
-	// 		glog.Errorf("failed to unmarshal BGP-LS NLRI (29)")
-	// 		return
-	// 	}
-	// case 40:
-	// 	// BGP Prefix-SID
-	// 	// https://tools.ietf.org/html/rfc8669
-	glog.Infof("nlri14 processing requested..")
-	return nil, nil
-}
-
-func nlri15(update *bgp.Update) ([]byte, error) {
-	glog.Infof("nlri15 processing requested..")
-	return nil, nil
-}
-
-func nlriAdv(update *bgp.Update) ([]byte, error) {
-	glog.Infof("original nlri processing requested..")
-	for _, p := range update.NLRI {
-		glog.Infof("prefix: %+v length in bits: %d", p.Prefix, p.Length)
-	}
-
-	return nil, nil
-}
-
-func nlriWd(update *bgp.Update) ([]byte, error) {
-	glog.Infof("original nlri withdraw processing requested..")
-	for _, p := range update.WithdrawnRoutes {
-		glog.Infof("prefix: %+v length in bits: %d", p.Prefix, p.Length)
-	}
-
-	return nil, nil
 }
