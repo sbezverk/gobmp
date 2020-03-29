@@ -5,8 +5,8 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
-	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
 func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
@@ -23,6 +23,28 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		glog.Errorf("route monitor message is nil")
 		return
 	}
+	//	for _, pa := range routeMonitorMsg.Update.PathAttributes {
+	switch routeMonitorMsg.Update.PathAttributes[0].AttributeType {
+	case 14:
+		// MP_REACH_NLRI
+		// https://tools.ietf.org/html/rfc7752
+		_, err := nlri14(routeMonitorMsg.Update)
+		if err != nil {
+			glog.Errorf("failed to produce MP_REACH_NLRI (14) route monitor message with error: %+v", err)
+			return
+		}
+	case 15:
+		// MP_UNREACH_NLRI
+		// https://tools.ietf.org/html/rfc7752
+		_, err := nlri15(routeMonitorMsg.Update)
+		if err != nil {
+			glog.Errorf("failed to produce MP_UNREACH_NLRI (15) route monitor message with error: %+v", err)
+			return
+		}
+	default:
+		glog.Warningf("Original NLRI: %+v", internal.MessageHex(routeMonitorMsg.Update.NLRI))
+	}
+
 	glog.Info("><SB> route monitor message carries attribute types:")
 	var s string
 	for i, pa := range routeMonitorMsg.Update.PathAttributes {
@@ -46,36 +68,32 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				return
 			}
 			s += fmt.Sprintf(" : afi %d safi %d :", mp.AddressFamilyID, mp.SubAddressFamilyID)
-		case 29:
-			// BGP-LS NLRI
-			// https://tools.ietf.org/html/rfc7752
-			_, err := bgpls.UnmarshalBGPLSNLRI(pa.Attribute)
-			if err != nil {
-				glog.Errorf("failed to unmarshal BGP-LS NLRI (29)")
-				return
-			}
-		case 40:
-			// BGP Prefix-SID
-			// https://tools.ietf.org/html/rfc8669
 		}
 		if i < len(routeMonitorMsg.Update.PathAttributes)-1 {
 			s += ", "
 		}
 	}
 	glog.Infof("- %s", s)
+
 }
 
 func nlri14(update *bgp.Update) ([]byte, error) {
+	// case 29:
+	// 	// BGP-LS NLRI
+	// 	// https://tools.ietf.org/html/rfc7752
+	// 	_, err := bgpls.UnmarshalBGPLSNLRI(pa.Attribute)
+	// 	if err != nil {
+	// 		glog.Errorf("failed to unmarshal BGP-LS NLRI (29)")
+	// 		return
+	// 	}
+	// case 40:
+	// 	// BGP Prefix-SID
+	// 	// https://tools.ietf.org/html/rfc8669
+	glog.Infof("nlri14 processing requested..")
 	return nil, nil
 }
 
 func nlri15(update *bgp.Update) ([]byte, error) {
-	return nil, nil
-}
-
-func nlriAdv(update *bgp.Update) ([]byte, error) {
-	return nil, nil
-}
-func nlriWd(update *bgp.Update) ([]byte, error) {
+	glog.Infof("nlri15 processing requested..")
 	return nil, nil
 }

@@ -41,6 +41,7 @@ func UnmarshalBGPWithdrawnRoutes(b []byte) ([]WithdrawnRoute, error) {
 	for p := 0; p < len(b); {
 		route := WithdrawnRoute{}
 		route.Length = b[p]
+		route.Length = route.Length / 8
 		p++
 		route.Prefix = make([]byte, route.Length)
 		copy(route.Prefix, b[p:p+int(route.Length)])
