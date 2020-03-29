@@ -20,8 +20,6 @@ type PathAttribute struct {
 
 func (pa *PathAttribute) String() string {
 	var s string
-	// s += fmt.Sprintf("Attribute Type Flags: 0x%02X\n", pa.AttributeTypeFlags)
-	// s += fmt.Sprintf("Attribute Length: %d\n", pa.AttributeLength)
 	switch pa.AttributeType {
 	case 0xe:
 		// Found MP_REACH_NLRI attribute
@@ -138,7 +136,7 @@ func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, error) {
 		t := b[p+1]
 		p += 2
 		var l uint16
-		// Chcking for Extened
+		// Checking for Extened
 		if f&0x10 == 0x10 {
 			l = binary.BigEndian.Uint16(b[p : p+2])
 			p += 2

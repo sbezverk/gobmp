@@ -1,4 +1,4 @@
-package kafkaproducer
+package message
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
+func (p *producer) producePeerUpMessage(msg bmp.Message) {
 	if msg.PeerHeader == nil {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return
@@ -23,11 +23,10 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 	m := PeerStateChange{
 		Action:         "up",
 		RouterHash:     msg.PeerHeader.GetPeerHash(),
-		RemoteASN:      int16(msg.PeerHeader.PeerAS),
+		RemoteASN:      msg.PeerHeader.PeerAS,
 		PeerRD:         msg.PeerHeader.PeerDistinguisher.String(),
 		RemotePort:     int(peerUpMsg.RemotePort),
 		Timestamp:      msg.PeerHeader.PeerTimestamp,
-		LocalASN:       int(peerUpMsg.SentOpen.MyAS),
 		LocalPort:      int(peerUpMsg.LocalPort),
 		AdvHolddown:    int(peerUpMsg.SentOpen.HoldTime),
 		RemoteHolddown: int(peerUpMsg.ReceivedOpen.HoldTime),
@@ -46,6 +45,11 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
 	}
 
+	m.LocalASN = int32(peerUpMsg.SentOpen.MyAS)
+	if lasn, ok := peerUpMsg.SentOpen.Is4BytesASCapable(); ok {
+		// Local BGP speaker is 4 bytes AS capable
+		m.LocalASN = lasn
+	}
 	sCaps := peerUpMsg.SentOpen.GetCapabilities()
 	rCaps := peerUpMsg.ReceivedOpen.GetCapabilities()
 	for i, cap := range sCaps {
@@ -65,15 +69,15 @@ func (k *kafkaProducer) producePeerUpMessage(msg bmp.Message) {
 		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
 		return
 	}
-	// glog.Infof("PeerStateChange JSON: %s", string(j))
-	if err := k.produceMessage(peerTopic, m.RouterHash, j); err != nil {
+	if err := p.publisher.PublishMessage(bmp.PeerUpMsg, []byte(m.RouterHash), j); err != nil {
 		glog.Errorf("failed to push PeerUp message to kafka with error: %+v", err)
 		return
 	}
-	glog.V(5).Infof("succeeded to push PeerUp message to kafka's topic %s", peerTopic)
+
+	glog.V(5).Infof("succeeded to push PeerUp message to kafka")
 }
 
-func (k *kafkaProducer) producePeerDownMessage(msg bmp.Message) {
+func (p *producer) producePeerDownMessage(msg bmp.Message) {
 	if msg.PeerHeader == nil {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return
@@ -87,7 +91,7 @@ func (k *kafkaProducer) producePeerDownMessage(msg bmp.Message) {
 		Action:     "down",
 		BMPReason:  int(peerDownMsg.Reason),
 		RouterHash: msg.PeerHeader.GetPeerHash(),
-		RemoteASN:  int16(msg.PeerHeader.PeerAS),
+		RemoteASN:  msg.PeerHeader.PeerAS,
 		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
 		Timestamp:  msg.PeerHeader.PeerTimestamp,
 	}
@@ -107,10 +111,10 @@ func (k *kafkaProducer) producePeerDownMessage(msg bmp.Message) {
 		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
 		return
 	}
-	if err := k.produceMessage(peerTopic, m.RouterHash, j); err != nil {
+	if err := p.publisher.PublishMessage(bmp.PeerDownMsg, []byte(m.RouterHash), j); err != nil {
 		glog.Errorf("failed to push PeerDown message to kafka with error: %+v", err)
 		return
 	}
 
-	glog.V(5).Infof("succeeded to push PeerDown message to kafka's topic %s", peerTopic)
+	glog.V(5).Infof("succeeded to push PeerDown message to kafka")
 }

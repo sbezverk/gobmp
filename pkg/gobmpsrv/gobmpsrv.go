@@ -7,8 +7,9 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
-	kafka "github.com/sbezverk/gobmp/pkg/kafkaproducer"
+	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/parser"
+	"github.com/sbezverk/gobmp/pkg/pub"
 )
 
 // BMPServer defines methods to manage BMP Server
@@ -19,7 +20,8 @@ type BMPServer interface {
 
 type bmpServer struct {
 	intercept       bool
-	kafkaProducer   kafka.KafkaProducer
+	publisher       pub.Publisher
+	producer        message.Producer
 	sourcePort      int
 	destinationPort int
 	incoming        net.Listener
@@ -64,22 +66,20 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
 	}
 	var producerQueue chan bmp.Message
-	kstop := make(chan struct{})
-	if srv.kafkaProducer != nil {
-		// For the case when Kafka is not initialized, no reason to send any messages,
-		// as a result allocating a channel only when kafka producer's interface is not nil.
-		producerQueue = make(chan bmp.Message)
-		// Starting kafka producer per client with dedicated work queue
-		go srv.kafkaProducer.Producer(producerQueue, kstop)
-	}
+	prod := message.NewProducer(srv.publisher)
+	prodStop := make(chan struct{})
+	producerQueue = make(chan bmp.Message)
+	// Starting messages producer per client with dedicated work queue
+	go prod.Producer(producerQueue, prodStop)
+
 	parserQueue := make(chan []byte)
-	pstop := make(chan struct{})
+	parsStop := make(chan struct{})
 	// Starting parser per client with dedicated work queue
-	go parser.Parser(parserQueue, producerQueue, pstop)
+	go parser.Parser(parserQueue, producerQueue, parsStop)
 	defer func() {
 		glog.V(5).Infof("all done with client %+v", client.RemoteAddr())
-		close(pstop)
-		close(kstop)
+		close(parsStop)
+		close(prodStop)
 	}()
 	for {
 		headerMsg := make([]byte, bmp.CommonHeaderLength)
@@ -115,7 +115,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 }
 
 // NewBMPServer instantiates a new instance of BMP Server
-func NewBMPServer(sPort, dPort int, intercept bool, kp kafka.KafkaProducer) (BMPServer, error) {
+func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher) (BMPServer, error) {
 	incoming, err := net.Listen("tcp", fmt.Sprintf(":%d", sPort))
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", sPort, err)
@@ -126,7 +126,7 @@ func NewBMPServer(sPort, dPort int, intercept bool, kp kafka.KafkaProducer) (BMP
 		sourcePort:      sPort,
 		destinationPort: dPort,
 		intercept:       intercept,
-		kafkaProducer:   kp,
+		publisher:       p,
 		incoming:        incoming,
 	}
 

@@ -216,53 +216,49 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 			name:  "update 1",
 			input: []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0xa8, 0x08, 0x08, 0x00, 0x00, 0x13, 0xce, 0xc0, 0xa8, 0x08, 0x08, 0x5e, 0x68, 0x0a, 0xe9, 0x00, 0x0b, 0x90, 0x14, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x4f, 0x02, 0x00, 0x00, 0x00, 0x38, 0x90, 0x0e, 0x00, 0x12, 0x00, 0x01, 0x01, 0x04, 0xc0, 0xa8, 0x08, 0x08, 0x00, 0x00, 0x00, 0x00, 0x01, 0x20, 0xc0, 0xa8, 0x08, 0x08, 0x40, 0x01, 0x01, 0x00, 0x40, 0x02, 0x00, 0x80, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x40, 0x05, 0x04, 0x00, 0x00, 0x00, 0x64, 0xc0, 0x28, 0x0a, 0x01, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
 			expect: &bmp.RouteMonitor{
-				Updates: []bgp.Update{
-					{
-						WithdrawnRoutesLength: 0,
-						WithdrawnRoutes: bgp.WithdrawnRoutes{
-							WithdrawnRoutes: nil,
+				Update: &bgp.Update{
+					WithdrawnRoutesLength:    0,
+					WithdrawnRoutes:          nil,
+					TotalPathAttributeLength: 56,
+					PathAttributes: []bgp.PathAttribute{
+						{
+							AttributeTypeFlags: 144,
+							AttributeType:      14,
+							AttributeLength:    18,
+							Attribute:          []byte{0, 1, 1, 4, 192, 168, 8, 8, 0, 0, 0, 0, 1, 32, 192, 168, 8, 8},
 						},
-						TotalPathAttributeLength: 56,
-						PathAttributes: []bgp.PathAttribute{
-							{
-								AttributeTypeFlags: 144,
-								AttributeType:      14,
-								AttributeLength:    18,
-								Attribute:          []byte{0, 1, 1, 4, 192, 168, 8, 8, 0, 0, 0, 0, 1, 32, 192, 168, 8, 8},
-							},
-							{
-								AttributeTypeFlags: 64,
-								AttributeType:      1,
-								AttributeLength:    1,
-								Attribute:          []byte{0},
-							},
-							{
-								AttributeTypeFlags: 64,
-								AttributeType:      2,
-								AttributeLength:    0,
-								Attribute:          []byte{},
-							},
-							{
-								AttributeTypeFlags: 128,
-								AttributeType:      4,
-								AttributeLength:    4,
-								Attribute:          []byte{0, 0, 0, 0},
-							},
-							{
-								AttributeTypeFlags: 64,
-								AttributeType:      5,
-								AttributeLength:    4,
-								Attribute:          []byte{0, 0, 0, 100},
-							},
-							{
-								AttributeTypeFlags: 192,
-								AttributeType:      40,
-								AttributeLength:    10,
-								Attribute:          []byte{1, 0, 7, 0, 0, 0, 0, 0, 0, 1},
-							},
+						{
+							AttributeTypeFlags: 64,
+							AttributeType:      1,
+							AttributeLength:    1,
+							Attribute:          []byte{0},
 						},
-						NLRI: []byte{},
+						{
+							AttributeTypeFlags: 64,
+							AttributeType:      2,
+							AttributeLength:    0,
+							Attribute:          []byte{},
+						},
+						{
+							AttributeTypeFlags: 128,
+							AttributeType:      4,
+							AttributeLength:    4,
+							Attribute:          []byte{0, 0, 0, 0},
+						},
+						{
+							AttributeTypeFlags: 64,
+							AttributeType:      5,
+							AttributeLength:    4,
+							Attribute:          []byte{0, 0, 0, 100},
+						},
+						{
+							AttributeTypeFlags: 192,
+							AttributeType:      40,
+							AttributeLength:    10,
+							Attribute:          []byte{1, 0, 7, 0, 0, 0, 0, 0, 0, 1},
+						},
 					},
+					NLRI: []bgp.Route{},
 				},
 			},
 			fail: false,
