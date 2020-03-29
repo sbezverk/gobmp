@@ -13,10 +13,10 @@ import (
 type Update struct {
 	WithdrawnRoutesLength uint16
 	//	WithdrawnRoutes          WithdrawnRoutes
-	WithdrawnRoutes          []WithdrawnRoute
+	WithdrawnRoutes          []Route
 	TotalPathAttributeLength uint16
 	PathAttributes           []PathAttribute
-	NLRI                     []byte
+	NLRI                     []Route
 }
 
 func (up *Update) String() string {
@@ -34,7 +34,8 @@ func (up *Update) String() string {
 		}
 	}
 	s += "NLRI: "
-	s += internal.MessageHex(up.NLRI)
+	// TODO fix it
+	//	s += internal.MessageHex(up.NLRI)
 	s += "\n"
 
 	return s
@@ -77,8 +78,10 @@ func (up *Update) MarshalJSON() ([]byte, error) {
 		}
 	}
 	jsonData = append(jsonData, []byte("],")...)
-	jsonData = append(jsonData, []byte("\"NLRI\":")...)
-	jsonData = append(jsonData, internal.RawBytesToJSON(up.NLRI)...)
+	// TODO Fix it
+	jsonData = append(jsonData, []byte("\"NLRI\":{}")...)
+	// TODO Fix it
+	//	jsonData = append(jsonData, internal.RawBytesToJSON(up.NLRI)...)
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
@@ -92,7 +95,7 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	u := Update{}
 	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	wdr, err := UnmarshalBGPWithdrawnRoutes(b[p : p+int(u.WithdrawnRoutesLength)])
+	wdr, err := UnmarshalBGPRoutes(b[p : p+int(u.WithdrawnRoutesLength)])
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +109,11 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	}
 	u.PathAttributes = attrs
 	p += int(u.TotalPathAttributeLength)
-	u.NLRI = b[p:len(b)]
+	routes, err := UnmarshalBGPRoutes(b[p:len(b)])
+	if err != nil {
+		return nil, err
+	}
+	u.NLRI = routes
 
 	return &u, nil
 }

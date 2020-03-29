@@ -6,7 +6,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
-	"github.com/sbezverk/gobmp/pkg/internal"
 )
 
 func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
@@ -30,7 +29,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// https://tools.ietf.org/html/rfc7752
 		_, err := nlri14(routeMonitorMsg.Update)
 		if err != nil {
-			glog.Errorf("failed to produce MP_REACH_NLRI (14) route monitor message with error: %+v", err)
+			glog.Errorf("failed to produce MP_REACH_NLRI (14) message with error: %+v", err)
 			return
 		}
 	case 15:
@@ -38,11 +37,29 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// https://tools.ietf.org/html/rfc7752
 		_, err := nlri15(routeMonitorMsg.Update)
 		if err != nil {
-			glog.Errorf("failed to produce MP_UNREACH_NLRI (15) route monitor message with error: %+v", err)
+			glog.Errorf("failed to produce MP_UNREACH_NLRI (15) message with error: %+v", err)
 			return
 		}
 	default:
-		glog.Warningf("Original NLRI: %+v", internal.MessageHex(routeMonitorMsg.Update.NLRI))
+		// Original BGP's NLRI messages processing
+		if routeMonitorMsg.Update.WithdrawnRoutesLength != 0 {
+			msg, err := nlriWd(routeMonitorMsg.Update)
+			if err != nil {
+				glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
+				return
+			}
+			if msg != nil {
+				glog.Infof("Publish original NLRI Withdraw message %s", string(msg))
+			}
+		}
+		msg, err := nlriAdv(routeMonitorMsg.Update)
+		if err != nil {
+			glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
+			return
+		}
+		if msg != nil {
+			glog.Infof("Publish original NLRI Withdraw message %s", string(msg))
+		}
 	}
 
 	glog.Info("><SB> route monitor message carries attribute types:")
@@ -95,5 +112,23 @@ func nlri14(update *bgp.Update) ([]byte, error) {
 
 func nlri15(update *bgp.Update) ([]byte, error) {
 	glog.Infof("nlri15 processing requested..")
+	return nil, nil
+}
+
+func nlriAdv(update *bgp.Update) ([]byte, error) {
+	glog.Infof("original nlri processing requested..")
+	for _, p := range update.NLRI {
+		glog.Infof("prefix: %+v length in bits: %d", p.Prefix, p.Length)
+	}
+
+	return nil, nil
+}
+
+func nlriWd(update *bgp.Update) ([]byte, error) {
+	glog.Infof("original nlri withdraw processing requested..")
+	for _, p := range update.WithdrawnRoutes {
+		glog.Infof("prefix: %+v length in bits: %d", p.Prefix, p.Length)
+	}
+
 	return nil, nil
 }

@@ -12,7 +12,7 @@ import (
 type MPUnReachNLRI struct {
 	AddressFamilyID    uint16
 	SubAddressFamilyID uint8
-	WithdrawnRoutes    []WithdrawnRoute
+	WithdrawnRoutes    []Route
 }
 
 func (mp *MPUnReachNLRI) String() string {
@@ -45,7 +45,9 @@ func UnmarshalMPUnReachNLRI(b []byte) (*MPUnReachNLRI, error) {
 	p += 2
 	mp.SubAddressFamilyID = uint8(b[p])
 	p++
-	wdr, err := UnmarshalBGPWithdrawnRoutes(b)
+	// NLRI encoding depends on afi/safi combintation
+	// TODO, test with differnt combinations of afi/safi
+	wdr, err := UnmarshalBGPRoutes(b)
 	if err != nil {
 		return nil, err
 	}
