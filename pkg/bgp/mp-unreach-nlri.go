@@ -45,13 +45,18 @@ func UnmarshalMPUnReachNLRI(b []byte) (*MPUnReachNLRI, error) {
 	p += 2
 	mp.SubAddressFamilyID = uint8(b[p])
 	p++
-	// NLRI encoding depends on afi/safi combintation
-	// TODO, test with differnt combinations of afi/safi
-	wdr, err := UnmarshalBGPRoutes(b)
-	if err != nil {
-		return nil, err
+	// Only SAFI 1 and 2 NLRI's carries []Route, other SAFI
+	// may carry different type in NLRI, hence will require different decoding.
+	switch mp.SubAddressFamilyID {
+	case 1:
+		fallthrough
+	case 2:
+		wdr, err := UnmarshalBGPRoutes(b)
+		if err != nil {
+			return nil, err
+		}
+		mp.WithdrawnRoutes = wdr
 	}
-	mp.WithdrawnRoutes = wdr
 
 	return &mp, nil
 }

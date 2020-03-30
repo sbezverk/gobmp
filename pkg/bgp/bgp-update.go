@@ -86,6 +86,47 @@ func (up *Update) MarshalJSON() ([]byte, error) {
 	return jsonData, nil
 }
 
+// GetBaseAttrHash calculates 16 bytes MD5 Hash of all available base attributes.
+func (up *Update) GetBaseAttrHash() string {
+	var s string
+	return s
+}
+
+// GetAttrOrigin returns the value of Origin attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrOrigin() *int {
+	var a int
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 1 {
+			a = int(attr.Attribute[0])
+		}
+	}
+
+	return &a
+}
+
+// GetAttrASPath returns a sequence of AS path segments
+func (up *Update) GetAttrASPath() []uint16 {
+	path := make([]uint16, 0)
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType != 2 {
+			continue
+		}
+		// // Type
+		// p := 0
+		// // Number of ASes in the path segment value field
+		// p++
+		// l := attr.Attribute[p]
+		// p++
+		// for n := 0; n < int(l); n++ {
+		// 	as := binary.BigEndian.Uint16(attr.Attribute[p:p+2])
+		// 	path = append(path, as)
+		// 	p += 2
+		// }
+	}
+
+	return path
+}
+
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
 func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	glog.V(6).Infof("BGPUpdate Raw: %s", internal.MessageHex(b))

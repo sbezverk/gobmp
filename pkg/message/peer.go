@@ -1,6 +1,7 @@
 package message
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -22,7 +23,8 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 
 	m := PeerStateChange{
 		Action:         "up",
-		RouterHash:     msg.PeerHeader.GetPeerHash(),
+		RouterIP:       p.speaker,
+		RouterHash:     fmt.Sprintf("%s", md5.Sum([]byte(p.speaker))),
 		RemoteASN:      msg.PeerHeader.PeerAS,
 		PeerRD:         msg.PeerHeader.PeerDistinguisher.String(),
 		RemotePort:     int(peerUpMsg.RemotePort),
@@ -89,8 +91,9 @@ func (p *producer) producePeerDownMessage(msg bmp.Message) {
 	}
 	m := PeerStateChange{
 		Action:     "down",
+		RouterIP:   p.speaker,
+		RouterHash: fmt.Sprintf("%s", md5.Sum([]byte(p.speaker))),
 		BMPReason:  int(peerDownMsg.Reason),
-		RouterHash: msg.PeerHeader.GetPeerHash(),
 		RemoteASN:  msg.PeerHeader.PeerAS,
 		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
 		Timestamp:  msg.PeerHeader.PeerTimestamp,

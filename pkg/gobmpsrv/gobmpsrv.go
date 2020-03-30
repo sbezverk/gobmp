@@ -66,7 +66,9 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
 	}
 	var producerQueue chan bmp.Message
-	prod := message.NewProducer(srv.publisher)
+	// TODO client.RemoteAddr().String() returns translated source address, figure out a way
+	// to get actual speaker's IP.
+	prod := message.NewProducer(srv.publisher, client.RemoteAddr().String())
 	prodStop := make(chan struct{})
 	producerQueue = make(chan bmp.Message)
 	// Starting messages producer per client with dedicated work queue

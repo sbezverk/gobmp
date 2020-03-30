@@ -1,6 +1,7 @@
 package message
 
 import (
+	"crypto/md5"
 	"fmt"
 	"net"
 
@@ -23,12 +24,15 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		glog.Errorf("route monitor message is nil")
 		return
 	}
-	//	for _, pa := range routeMonitorMsg.Update.PathAttributes {
+	if len(routeMonitorMsg.Update.PathAttributes) == 0 {
+		// There is no Path Attributes, just return
+		return
+	}
 	switch routeMonitorMsg.Update.PathAttributes[0].AttributeType {
 	case 14:
 		// MP_REACH_NLRI
 		// https://tools.ietf.org/html/rfc7752
-		_, err := nlri14(msg.PeerHeader, routeMonitorMsg.Update)
+		_, err := nlri14(p.speaker, msg.PeerHeader, routeMonitorMsg.Update)
 		if err != nil {
 			glog.Errorf("failed to produce MP_REACH_NLRI (14) message with error: %+v", err)
 			return
@@ -36,7 +40,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	case 15:
 		// MP_UNREACH_NLRI
 		// https://tools.ietf.org/html/rfc7752
-		_, err := nlri15(msg.PeerHeader, routeMonitorMsg.Update)
+		_, err := nlri15(p.speaker, msg.PeerHeader, routeMonitorMsg.Update)
 		if err != nil {
 			glog.Errorf("failed to produce MP_UNREACH_NLRI (15) message with error: %+v", err)
 			return
@@ -45,14 +49,14 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// Original BGP's NLRI messages processing
 		msgs := make([]UnicastPrefix, 0)
 		if routeMonitorMsg.Update.WithdrawnRoutesLength != 0 {
-			msg, err := nlriWd(msg.PeerHeader, routeMonitorMsg.Update)
+			msg, err := nlriWd(p.speaker, msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
 				return
 			}
 			msgs = append(msgs, msg...)
 		}
-		msg, err := nlriAdv(msg.PeerHeader, routeMonitorMsg.Update)
+		msg, err := nlriAdv(p.speaker, msg.PeerHeader, routeMonitorMsg.Update)
 		if err != nil {
 			glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
 			return
@@ -70,7 +74,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	logPathAttrType(routeMonitorMsg)
 }
 
-func nlri14(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
+func nlri14(speaker string, ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
 	// case 29:
 	// 	// BGP-LS NLRI
 	// 	// https://tools.ietf.org/html/rfc7752
@@ -86,22 +90,25 @@ func nlri14(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
 	return nil, nil
 }
 
-func nlri15(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
+func nlri15(speaker string, ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
 	glog.Infof("nlri15 processing requested..")
 	return nil, nil
 }
 
-func nlriAdv(ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
+func nlriAdv(speaker string, ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
 	glog.Infof("original nlri processing requested..")
 	prfxs := make([]UnicastPrefix, 0)
 	for _, p := range update.NLRI {
 		glog.Infof("prefix: %+v length in bits: %d", p.Prefix, p.Length)
 
 		prfx := UnicastPrefix{
-			Action:    "add",
-			PeerHash:  ph.GetPeerHash(),
-			PeerASN:   ph.PeerAS,
-			Timestamp: ph.PeerTimestamp,
+			Action:       "add",
+			RouterHash:   fmt.Sprintf("%s", md5.Sum([]byte(speaker))),
+			RouterIP:     speaker,
+			BaseAttrHash: update.GetBaseAttrHash(),
+			PeerHash:     ph.GetPeerHash(),
+			PeerASN:      ph.PeerAS,
+			Timestamp:    ph.PeerTimestamp,
 		}
 		if ph.FlagV {
 			prfx.IsIPv4 = false
@@ -116,7 +123,7 @@ func nlriAdv(ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error)
 	return prfxs, nil
 }
 
-func nlriWd(ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
+func nlriWd(speaker string, ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
 	glog.Infof("original nlri withdraw processing requested..")
 	prfxs := make([]UnicastPrefix, 0)
 	for _, p := range update.NLRI {
