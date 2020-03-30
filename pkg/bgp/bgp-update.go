@@ -1,6 +1,7 @@
 package bgp
 
 import (
+	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -88,20 +89,26 @@ func (up *Update) MarshalJSON() ([]byte, error) {
 
 // GetBaseAttrHash calculates 16 bytes MD5 Hash of all available base attributes.
 func (up *Update) GetBaseAttrHash() string {
-	var s string
+	data, err := json.Marshal(&up.PathAttributes)
+	if err != nil {
+		data = []byte{0, 1, 0, 1, 0, 1, 0, 1}
+	}
+	s := fmt.Sprintf("%x", md5.Sum(data))
+
 	return s
 }
 
 // GetAttrOrigin returns the value of Origin attribute if it is defined, otherwise it returns nil
-func (up *Update) GetAttrOrigin() *int {
-	var a int
+func (up *Update) GetAttrOrigin() *uint8 {
+	var o uint8
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType == 1 {
-			a = int(attr.Attribute[0])
+			o = attr.Attribute[0]
+			return &o
 		}
 	}
 
-	return &a
+	return nil
 }
 
 // GetAttrASPath returns a sequence of AS path segments
@@ -111,20 +118,86 @@ func (up *Update) GetAttrASPath() []uint16 {
 		if attr.AttributeType != 2 {
 			continue
 		}
-		// // Type
-		// p := 0
-		// // Number of ASes in the path segment value field
-		// p++
-		// l := attr.Attribute[p]
-		// p++
-		// for n := 0; n < int(l); n++ {
-		// 	as := binary.BigEndian.Uint16(attr.Attribute[p:p+2])
-		// 	path = append(path, as)
-		// 	p += 2
-		// }
+		for p := 0; p < len(attr.Attribute); {
+			// Skipping type
+			p++
+			// Length of path segment in 2 bytes
+			l := attr.Attribute[p]
+			p++
+			for n := 0; n < int(l); n++ {
+				as := binary.BigEndian.Uint16(attr.Attribute[p : p+2])
+				p += 2
+				path = append(path, as)
+			}
+		}
 	}
 
 	return path
+}
+
+// GetAttrNextHop returns the value of Next Hop attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrNextHop() []byte {
+	var nh []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 3 {
+			nh = make([]byte, attr.AttributeLength)
+			copy(nh, attr.Attribute)
+			return nh
+		}
+	}
+
+	return nh
+}
+
+// GetAttrMED returns the value of MED attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrMED() *uint32 {
+	var med uint32
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 4 {
+			med = binary.BigEndian.Uint32(attr.Attribute)
+			return &med
+		}
+	}
+
+	return nil
+}
+
+// GetAttrLocalPref returns the value of LOCAL_PREF attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrLocalPref() *uint32 {
+	var lp uint32
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 5 {
+			lp = binary.BigEndian.Uint32(attr.Attribute)
+			return &lp
+		}
+	}
+
+	return nil
+}
+
+// GetAttrAtomicAggregate returns 1 if ATOMIC_AGGREGATE exists, 0 if does not
+func (up *Update) GetAttrAtomicAggregate() uint8 {
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 6 {
+			return 1
+		}
+	}
+
+	return 0
+}
+
+// GetAttrAggregator returns the value of AGGREGATOR attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrAggregator() []byte {
+	var agg []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 7 {
+			agg = make([]byte, attr.AttributeLength)
+			copy(agg, attr.Attribute)
+			return agg
+		}
+	}
+
+	return agg
 }
 
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
