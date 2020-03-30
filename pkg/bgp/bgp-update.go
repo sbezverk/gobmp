@@ -200,6 +200,103 @@ func (up *Update) GetAttrAggregator() []byte {
 	return agg
 }
 
+// GetAttrCommunity returns a slice of communities
+func (up *Update) GetAttrCommunity() []uint32 {
+	comm := make([]uint32, 0)
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType != 8 {
+			continue
+		}
+		for p := 0; p < len(attr.Attribute); {
+			c := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
+			p += 4
+			comm = append(comm, c)
+		}
+	}
+
+	return comm
+}
+
+// GetAttrOriginatorID returns the value of ORIGINATOR_ID attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrOriginatorID() []byte {
+	var id []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 9 {
+			id = make([]byte, attr.AttributeLength)
+			copy(id, attr.Attribute)
+			return id
+		}
+	}
+
+	return id
+}
+
+// GetAttrClusterListID returns the value of CLUSTER_LIST attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrClusterListID() []byte {
+	var l []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 10 {
+			l = make([]byte, attr.AttributeLength)
+			copy(l, attr.Attribute)
+			return l
+		}
+	}
+
+	return l
+}
+
+// GetAttrExtendedCommunity returns the value of EXTENDED_COMMUNITY attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrExtendedCommunity() []byte {
+	var l []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 16 {
+			l = make([]byte, attr.AttributeLength)
+			copy(l, attr.Attribute)
+			return l
+		}
+	}
+
+	return l
+}
+
+// GetAttrAS4Path returns a sequence of AS4 path segments
+func (up *Update) GetAttrAS4Path() []uint32 {
+	path := make([]uint32, 0)
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType != 17 {
+			continue
+		}
+		for p := 0; p < len(attr.Attribute); {
+			// Skipping type
+			p++
+			// Length of path segment in 4 bytes
+			l := attr.Attribute[p]
+			p++
+			for n := 0; n < int(l); n++ {
+				as := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
+				p += 4
+				path = append(path, as)
+			}
+		}
+	}
+
+	return path
+}
+
+// GetAttrAS4Aggregator returns the value of AS4 AGGREGATOR attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrAS4Aggregator() []byte {
+	var agg []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 18 {
+			agg = make([]byte, attr.AttributeLength)
+			copy(agg, attr.Attribute)
+			return agg
+		}
+	}
+
+	return agg
+}
+
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
 func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	glog.V(6).Infof("BGPUpdate Raw: %s", tools.MessageHex(b))
