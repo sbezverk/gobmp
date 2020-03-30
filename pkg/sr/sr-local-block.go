@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // LocalBlockTLV defines SR Local Block TLV object
@@ -22,9 +22,9 @@ func (lb *LocalBlockTLV) String(level ...int) string {
 	if level != nil {
 		l = level[0]
 	}
-	s += internal.AddLevel(l)
+	s += tools.AddLevel(l)
 	s += "SR Local Block TLV:" + "\n"
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", lb.Flag)
 
 	return s
@@ -39,7 +39,7 @@ func (lb *LocalBlockTLV) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, []byte("\"range\":")...)
 	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", lb.Range))...)
 	jsonData = append(jsonData, []byte("\"sid\":")...)
-	jsonData = append(jsonData, internal.RawBytesToJSON(lb.SID)...)
+	jsonData = append(jsonData, tools.RawBytesToJSON(lb.SID)...)
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
@@ -47,7 +47,7 @@ func (lb *LocalBlockTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRLocalBlockTLV builds SR Local Block TLV object
 func UnmarshalSRLocalBlockTLV(b []byte) (*LocalBlockTLV, error) {
-	glog.V(6).Infof("SR Local BLock TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SR Local BLock TLV Raw: %s", tools.MessageHex(b))
 	lb := LocalBlockTLV{}
 	p := 0
 	lb.Flag = b[0]

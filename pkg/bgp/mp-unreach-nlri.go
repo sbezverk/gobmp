@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // MPUnReachNLRI defines an MP UnReach NLRI object
@@ -38,7 +38,7 @@ func (mp *MPUnReachNLRI) MarshalJSON() ([]byte, error) {
 
 // UnmarshalMPUnReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPUnReachNLRI(b []byte) (*MPUnReachNLRI, error) {
-	glog.V(6).Infof("MPUnReachNLRI Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
 	mp := MPUnReachNLRI{}
 	p := 0
 	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])

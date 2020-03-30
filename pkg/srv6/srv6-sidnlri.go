@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // SIDNLRI defines SRv6 SID NLRI onject
@@ -21,7 +21,7 @@ type SIDNLRI struct {
 
 func (sr *SIDNLRI) String() string {
 	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", internal.ProtocolIDString(sr.ProtocolID))
+	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(sr.ProtocolID))
 	s += fmt.Sprintf("Identifier: %d\n", sr.Identifier)
 	s += sr.LocalNode.String()
 	s += sr.SRv6SID.String()
@@ -66,7 +66,7 @@ func (sr *SIDNLRI) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object
 func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
-	glog.V(6).Infof("SRv6 SID NLRI Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SRv6 SID NLRI Raw: %s", tools.MessageHex(b))
 	sr := SIDNLRI{
 		SRv6SID: &SIDDescriptor{},
 	}

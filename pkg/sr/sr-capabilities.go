@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // CapabilityTLV defines SR Capability TLV object
@@ -22,9 +22,9 @@ func (cap *CapabilityTLV) String(level ...int) string {
 	if level != nil {
 		l = level[0]
 	}
-	s += internal.AddLevel(l)
+	s += tools.AddLevel(l)
 	s += "SR Capability TLV:" + "\n"
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", cap.Flag)
 
 	return s
@@ -39,7 +39,7 @@ func (cap *CapabilityTLV) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, []byte("\"range\":")...)
 	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", cap.Range))...)
 	jsonData = append(jsonData, []byte("\"sid\":")...)
-	jsonData = append(jsonData, internal.RawBytesToJSON(cap.SID)...)
+	jsonData = append(jsonData, tools.RawBytesToJSON(cap.SID)...)
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
@@ -47,7 +47,7 @@ func (cap *CapabilityTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRCapabilityTLV builds SR Capability TLV object
 func UnmarshalSRCapabilityTLV(b []byte) (*CapabilityTLV, error) {
-	glog.V(6).Infof("SR Capability TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SR Capability TLV Raw: %s", tools.MessageHex(b))
 	cap := CapabilityTLV{}
 	p := 0
 	cap.Flag = b[0]

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // LinkDescriptor defines Link Descriptor object
@@ -50,7 +50,7 @@ func (ld *LinkDescriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalLinkDescriptor build Link Descriptor object
 func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
-	glog.V(6).Infof("LinkDescriptor Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("LinkDescriptor Raw: %s", tools.MessageHex(b))
 	ld := LinkDescriptor{}
 	p := 0
 	ltlv, err := UnmarshalLinkDescriptorTLV(b[p : p+len(b)])

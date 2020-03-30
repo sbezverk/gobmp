@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // Update defines a structure of BGP Update message
@@ -34,7 +34,7 @@ func (up *Update) String() string {
 	}
 	s += "NLRI: "
 	// TODO fix it
-	//	s += internal.MessageHex(up.NLRI)
+	//	s += tools.MessageHex(up.NLRI)
 	s += "\n"
 
 	return s
@@ -80,7 +80,7 @@ func (up *Update) MarshalJSON() ([]byte, error) {
 	// TODO Fix it
 	jsonData = append(jsonData, []byte("\"NLRI\":{}")...)
 	// TODO Fix it
-	//	jsonData = append(jsonData, internal.RawBytesToJSON(up.NLRI)...)
+	//	jsonData = append(jsonData, tools.RawBytesToJSON(up.NLRI)...)
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
@@ -129,7 +129,7 @@ func (up *Update) GetAttrASPath() []uint16 {
 
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
 func UnmarshalBGPUpdate(b []byte) (*Update, error) {
-	glog.V(6).Infof("BGPUpdate Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("BGPUpdate Raw: %s", tools.MessageHex(b))
 
 	p := 0
 	u := Update{}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // MSDTV defines MSD Type Value tuple
@@ -36,7 +36,7 @@ func (tv *MSDTV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalMSDTV builds slice of MSD Type Value tuples
 func UnmarshalMSDTV(b []byte) ([]MSDTV, error) {
-	glog.V(6).Infof("UnmarshalMSDTV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("UnmarshalMSDTV Raw: %s", tools.MessageHex(b))
 	tvs := make([]MSDTV, 0)
 	for p := 0; p < len(b); {
 		tv := MSDTV{}

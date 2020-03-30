@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // PrefixNLRI defines Prefix NLRI onject
@@ -20,7 +20,7 @@ type PrefixNLRI struct {
 
 func (p *PrefixNLRI) String() string {
 	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", internal.ProtocolIDString(p.ProtocolID))
+	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(p.ProtocolID))
 	s += fmt.Sprintf("Identifier: %d\n", p.Identifier)
 	s += p.LocalNode.String()
 	s += p.Prefix.String()
@@ -65,7 +65,7 @@ func (p *PrefixNLRI) MarshalJSON() ([]byte, error) {
 
 // UnmarshalPrefixNLRI builds Prefix NLRI object
 func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
-	glog.V(6).Infof("PrefixNLRI Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("PrefixNLRI Raw: %s", tools.MessageHex(b))
 	pr := PrefixNLRI{}
 	p := 0
 	pr.ProtocolID = b[p]

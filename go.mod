@@ -21,7 +21,7 @@ replace (
 	github.com/sbezverk/gobmp/pkg/bgpls => ./pkg/bgpls
 	github.com/sbezverk/gobmp/pkg/bmp => ./pkg/bmp
 	github.com/sbezverk/gobmp/pkg/gobmpsrv => ./pkg/gobmpsrv
-	github.com/sbezverk/gobmp/pkg/internal => ./pkg/internal
+	github.com/sbezverk/gobmp/pkg/tools => ./pkg/tools
 	github.com/sbezverk/gobmp/pkg/kafka => ./pkg/kafka
 	github.com/sbezverk/gobmp/pkg/ls => ./pkg/ls
 	github.com/sbezverk/gobmp/pkg/message => ./pkg/message

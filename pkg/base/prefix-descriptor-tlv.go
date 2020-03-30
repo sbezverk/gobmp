@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // PrefixDescriptorTLV defines Prefix Descriptor Sub TLVs object
@@ -43,7 +43,7 @@ func (tlv *PrefixDescriptorTLV) String() string {
 		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d\n", tlv.Type)
 		s += fmt.Sprintf("   Prefix Descriptor TLV Length: %d\n", tlv.Length)
 		s += "      Value: "
-		s += internal.MessageHex(tlv.Value)
+		s += tools.MessageHex(tlv.Value)
 		s += "\n"
 	}
 
@@ -91,7 +91,7 @@ func (tlv *PrefixDescriptorTLV) MarshalJSON() ([]byte, error) {
 	default:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown Prefix TLV\","))...)
 		jsonData = append(jsonData, []byte("\"Value\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(tlv.Value)...)
 	}
 	jsonData = append(jsonData, '}')
 
@@ -100,7 +100,7 @@ func (tlv *PrefixDescriptorTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalPrefixDescriptorTLV builds Prefix Descriptor Sub TLVs object
 func UnmarshalPrefixDescriptorTLV(b []byte) ([]PrefixDescriptorTLV, error) {
-	glog.V(6).Infof("PrefixDescriptorTLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("PrefixDescriptorTLV Raw: %s", tools.MessageHex(b))
 	ptlvs := make([]PrefixDescriptorTLV, 0)
 	for p := 0; p < len(b); {
 		ptlv := PrefixDescriptorTLV{}

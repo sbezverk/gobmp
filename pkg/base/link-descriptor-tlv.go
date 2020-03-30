@@ -7,7 +7,7 @@ import (
 	"net"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // LinkDescriptorTLV defines Link Descriptor TLVs object
@@ -53,7 +53,7 @@ func (tlv *LinkDescriptorTLV) String() string {
 		s += fmt.Sprintf("   Link Descriptor TLV Type: %d\n", tlv.Type)
 		s += fmt.Sprintf("   Link Descriptor TLV Length: %d\n", tlv.Length)
 		s += "      Value: "
-		s += internal.MessageHex(tlv.Value)
+		s += tools.MessageHex(tlv.Value)
 		s += "\n"
 	}
 
@@ -85,19 +85,19 @@ func (tlv *LinkDescriptorTLV) MarshalJSON() ([]byte, error) {
 	case 259:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv4 interface address\","))...)
 		jsonData = append(jsonData, []byte("\"ipv4InterfaceAddress\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(tlv.Value)...)
 	case 260:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv4 neighbor address\","))...)
 		jsonData = append(jsonData, []byte("\"ipv4NeighborAddress\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(tlv.Value)...)
 	case 261:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv6 interface address\","))...)
 		jsonData = append(jsonData, []byte("\"ipv6InterfaceAddress\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(tlv.Value)...)
 	case 262:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IPv6 neighbor address\","))...)
 		jsonData = append(jsonData, []byte("\"ipv6NeighborAddress\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(tlv.Value)...)
 	case 263:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Multi-Topology Identifier\","))...)
 		jsonData = append(jsonData, []byte("\"multiTopologyIdentifier\":")...)
@@ -113,7 +113,7 @@ func (tlv *LinkDescriptorTLV) MarshalJSON() ([]byte, error) {
 	default:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown Link TLV\","))...)
 		jsonData = append(jsonData, []byte("\"Value\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(tlv.Value)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(tlv.Value)...)
 	}
 	jsonData = append(jsonData, '}')
 
@@ -122,7 +122,7 @@ func (tlv *LinkDescriptorTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalLinkDescriptorTLV builds Link Descriptor TLVs object
 func UnmarshalLinkDescriptorTLV(b []byte) ([]LinkDescriptorTLV, error) {
-	glog.V(6).Infof("LinkDescriptorTLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("LinkDescriptorTLV Raw: %s", tools.MessageHex(b))
 	ltlvs := make([]LinkDescriptorTLV, 0)
 	for p := 0; p < len(b); {
 		ltlv := LinkDescriptorTLV{}

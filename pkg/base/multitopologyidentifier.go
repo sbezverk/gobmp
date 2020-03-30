@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // MultiTopologyIdentifier defines Multi Topology Identifier whcih is alias of uint16
@@ -45,7 +45,7 @@ func (mti *MultiTopologyIdentifierTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalMultiTopologyIdentifierTLV builds Multi Topology Identifier TLV object
 func UnmarshalMultiTopologyIdentifierTLV(b []byte) (*MultiTopologyIdentifierTLV, error) {
-	glog.V(6).Infof("MultiTopologyIdentifierTLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("MultiTopologyIdentifierTLV Raw: %s", tools.MessageHex(b))
 	mti := MultiTopologyIdentifierTLV{
 		MTI: make([]MultiTopologyIdentifier, 0),
 	}

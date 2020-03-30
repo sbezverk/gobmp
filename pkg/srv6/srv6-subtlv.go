@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // SubTLV defines SRv6 Sub TLV object
@@ -23,7 +23,7 @@ func (stlv *SubTLV) String(level ...int) string {
 	if level != nil {
 		l = level[0]
 	}
-	s += internal.AddLevel(l)
+	s += tools.AddLevel(l)
 
 	return s
 }
@@ -50,7 +50,7 @@ func (stlv *SubTLV) MarshalJSON() ([]byte, error) {
 		jsonData = append(jsonData, []byte("\"length\":")...)
 		jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", stlv.Length))...)
 		jsonData = append(jsonData, []byte("\"value\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(stlv.Value)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(stlv.Value)...)
 	}
 
 	jsonData = append(jsonData, '}')
@@ -60,7 +60,7 @@ func (stlv *SubTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRv6SubTLV builds a collection of SRv6 Sub TLV
 func UnmarshalSRv6SubTLV(b []byte) ([]SubTLV, error) {
-	glog.V(6).Infof("SRv6 Sub TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SRv6 Sub TLV Raw: %s", tools.MessageHex(b))
 	stlvs := make([]SubTLV, 0)
 	for p := 0; p < len(b); {
 		stlv := SubTLV{}

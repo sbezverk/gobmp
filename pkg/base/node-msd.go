@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // NodeMSD defines Node MSD object
@@ -47,7 +47,7 @@ func (msd *NodeMSD) MarshalJSON() ([]byte, error) {
 
 // UnmarshalNodeMSD build Link MSD object
 func UnmarshalNodeMSD(b []byte) (*NodeMSD, error) {
-	glog.V(6).Infof("Link MSD Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("Link MSD Raw: %s", tools.MessageHex(b))
 	msd := NodeMSD{}
 	p := 0
 	tvsv, err := UnmarshalMSDTV(b[p : p+len(b)])

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // CommonHeader defines BMP message Common Header per rfc7854
@@ -17,7 +17,7 @@ type CommonHeader struct {
 
 // UnmarshalCommonHeader processes Common Header and returns BMPCommonHeader object
 func UnmarshalCommonHeader(b []byte) (*CommonHeader, error) {
-	glog.V(6).Infof("BMP CommonHeader Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("BMP CommonHeader Raw: %s", tools.MessageHex(b))
 	ch := &CommonHeader{}
 	if b[0] != 3 {
 		return nil, fmt.Errorf("invalid version in common header, expected 3 found %d", b[0])

@@ -6,7 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // RouteMonitor defines a structure of BMP Route Monitoring message
@@ -56,7 +56,7 @@ func (rm *RouteMonitor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
 func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
-	glog.V(6).Infof("BMP Route Monitor Message Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("BMP Route Monitor Message Raw: %s", tools.MessageHex(b))
 	rm := RouteMonitor{}
 	p := 0
 	// Skip 16 bytes of a marker
