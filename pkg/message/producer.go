@@ -12,8 +12,9 @@ type Producer interface {
 }
 
 type producer struct {
-	publisher pub.Publisher
-	speaker   string
+	publisher   pub.Publisher
+	speakerIP   string
+	speakerHash string
 }
 
 // Producer dispatches kafka workers upon request received from the channel
@@ -44,9 +45,8 @@ func (p *producer) producingWorker(msg bmp.Message) {
 }
 
 // NewProducer instantiates a new instance of a producer with Publisher interface
-func NewProducer(publisher pub.Publisher, speaker string) Producer {
+func NewProducer(publisher pub.Publisher) Producer {
 	return &producer{
 		publisher: publisher,
-		speaker:   speaker,
 	}
 }

@@ -23,8 +23,6 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 
 	m := PeerStateChange{
 		Action:         "up",
-		RouterIP:       p.speaker,
-		RouterHash:     fmt.Sprintf("%s", md5.Sum([]byte(p.speaker))),
 		RemoteASN:      msg.PeerHeader.PeerAS,
 		PeerRD:         msg.PeerHeader.PeerDistinguisher.String(),
 		RemotePort:     int(peerUpMsg.RemotePort),
@@ -46,6 +44,11 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
 		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
 	}
+	// Saving local bgp speaker identities.
+	p.speakerIP = m.LocalIP
+	p.speakerHash = fmt.Sprintf("%s", md5.Sum([]byte(p.speakerIP)))
+	m.RouterIP = p.speakerIP
+	m.RouterHash = p.speakerHash
 
 	m.LocalASN = int32(peerUpMsg.SentOpen.MyAS)
 	if lasn, ok := peerUpMsg.SentOpen.Is4BytesASCapable(); ok {
@@ -91,8 +94,8 @@ func (p *producer) producePeerDownMessage(msg bmp.Message) {
 	}
 	m := PeerStateChange{
 		Action:     "down",
-		RouterIP:   p.speaker,
-		RouterHash: fmt.Sprintf("%s", md5.Sum([]byte(p.speaker))),
+		RouterIP:   p.speakerIP,
+		RouterHash: p.speakerHash,
 		BMPReason:  int(peerDownMsg.Reason),
 		RemoteASN:  msg.PeerHeader.PeerAS,
 		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
