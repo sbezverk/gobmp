@@ -56,14 +56,14 @@ type UnicastPrefix struct {
 	ASPathCount      int32  `json:"as_path_count,omitempty"`
 	OriginAS         string `json:"origin_as,omitempty"`
 	Nexthop          string `json:"nexthop,omitempty"`
-	MED              int32  `json:"med,omitempty"`
-	LocalPref        int32  `json:"local_pref,omitempty"`
+	MED              uint32 `json:"med,omitempty"`
+	LocalPref        uint32 `json:"local_pref,omitempty"`
 	Aggregator       string `json:"aggregator,omitempty"`
 	CommunityList    string `json:"community_list,omitempty"`
 	ExtCommunityList string `json:"ext_community_list,omitempty"`
 	IsAtomicAgg      bool   `json:"is_atomic_agg,omitempty"`
 	IsNexthopIPv4    bool   `json:"is_nexthop_ipv4,omitempty"`
-	OriginatorID     int32  `json:"originator_id,omitempty"`
+	OriginatorID     string `json:"originator_id,omitempty"`
 	PathID           int32  `json:"path_id,omitempty"`
 	Labels           string `json:"labels,omitempty"`
 	IsPrepolicy      bool   `json:"isprepolicy,omitempty"`

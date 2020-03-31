@@ -204,14 +204,14 @@ func (up *Update) GetAttrLocalPref() *uint32 {
 }
 
 // GetAttrAtomicAggregate returns 1 if ATOMIC_AGGREGATE exists, 0 if does not
-func (up *Update) GetAttrAtomicAggregate() uint8 {
+func (up *Update) GetAttrAtomicAggregate() bool {
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType == 6 {
-			return 1
+			return true
 		}
 	}
 
-	return 0
+	return false
 }
 
 // GetAttrAggregator returns the value of AGGREGATOR attribute if it is defined, otherwise it returns nil
