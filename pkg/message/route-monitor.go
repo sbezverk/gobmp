@@ -70,7 +70,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// }
 	}
 	// Remove after debugging
-	logPathAttrType(routeMonitorMsg)
+	// logPathAttrType(routeMonitorMsg)
 }
 
 func (p *producer) nlri14(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
@@ -85,21 +85,19 @@ func (p *producer) nlri14(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, er
 	// case 40:
 	// 	// BGP Prefix-SID
 	// 	// https://tools.ietf.org/html/rfc8669
-	glog.Infof("nlri14 processing requested..")
+	// glog.Infof("nlri14 processing requested..")
 	return nil, nil
 }
 
 func (p *producer) nlri15(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
-	glog.Infof("nlri15 processing requested..")
+	// glog.Infof("nlri15 processing requested..")
 	return nil, nil
 }
 
 func (p *producer) nlriAdv(ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
-	glog.Infof("original nlri processing requested..")
+	// glog.Infof("original nlri processing requested..")
 	prfxs := make([]UnicastPrefix, 0)
 	for _, pr := range update.NLRI {
-		glog.Infof("prefix: %+v length in bits: %d", pr.Prefix, pr.Length)
-
 		prfx := UnicastPrefix{
 			Action:       "add",
 			RouterHash:   p.speakerHash,
@@ -108,22 +106,37 @@ func (p *producer) nlriAdv(ph *bmp.PerPeerHeader, update *bgp.Update) ([]Unicast
 			PeerHash:     ph.GetPeerHash(),
 			PeerASN:      ph.PeerAS,
 			Timestamp:    ph.PeerTimestamp,
+			PrefixLen:    int32(pr.Length),
+		}
+		if o := update.GetAttrOrigin(); o != nil {
+			prfx.Origin = *o
+		}
+		if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {
+			prfx.ASPath = path
+			prfx.ASPathCount = count
 		}
 		if ph.FlagV {
 			prfx.IsIPv4 = false
 			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
+			a := make([]byte, 16)
+			copy(a, pr.Prefix)
+			prfx.Prefix = net.IP(a).To16().String()
 		} else {
 			prfx.IsIPv4 = true
 			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
+			a := make([]byte, 4)
+			copy(a, pr.Prefix)
+			prfx.Prefix = net.IP(a).To4().String()
 		}
 		prfxs = append(prfxs, prfx)
+		glog.Infof("><SB> Unicast message: %+v", prfx)
 	}
 
 	return prfxs, nil
 }
 
 func (p *producer) nlriWd(ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
-	glog.Infof("original nlri withdraw processing requested..")
+	// glog.Infof("original nlri withdraw processing requested..")
 	prfxs := make([]UnicastPrefix, 0)
 	for _, p := range update.NLRI {
 		glog.Infof("prefix: %+v length in bits: %d", p.Prefix, p.Length)

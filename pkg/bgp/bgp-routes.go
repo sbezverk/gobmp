@@ -36,7 +36,7 @@ func (r *Route) MarshalJSON() ([]byte, error) {
 
 // UnmarshalBGPRoutes builds BGP Withdrawn routes object
 func UnmarshalBGPRoutes(b []byte) ([]Route, error) {
-	glog.V(5).Infof("BGPRoutes Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("BGPRoutes Raw: %s", tools.MessageHex(b))
 	routes := make([]Route, 0)
 	for p := 0; p < len(b); {
 		route := Route{}
@@ -45,7 +45,6 @@ func UnmarshalBGPRoutes(b []byte) ([]Route, error) {
 		if route.Length%8 != 0 {
 			l++
 		}
-		glog.Infof("><SB> route.length: %d calculated l: %d", route.Length, l)
 		p++
 		route.Prefix = make([]byte, l)
 		copy(route.Prefix, b[p:p+int(l)])

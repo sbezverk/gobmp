@@ -99,11 +99,18 @@ func (up *Update) GetBaseAttrHash() string {
 }
 
 // GetAttrOrigin returns the value of Origin attribute if it is defined, otherwise it returns nil
-func (up *Update) GetAttrOrigin() *uint8 {
-	var o uint8
+func (up *Update) GetAttrOrigin() *string {
+	var o string
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType == 1 {
-			o = attr.Attribute[0]
+			switch attr.Attribute[0] {
+			case 0:
+				o = "igp"
+			case 1:
+				o = "egp"
+			case 2:
+				o = "incomplete"
+			}
 			return &o
 		}
 	}
@@ -112,8 +119,8 @@ func (up *Update) GetAttrOrigin() *uint8 {
 }
 
 // GetAttrASPath returns a sequence of AS path segments
-func (up *Update) GetAttrASPath() []uint16 {
-	path := make([]uint16, 0)
+func (up *Update) GetAttrASPath(as4Capable bool) []uint32 {
+	path := make([]uint32, 0)
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType != 2 {
 			continue
@@ -125,14 +132,35 @@ func (up *Update) GetAttrASPath() []uint16 {
 			l := attr.Attribute[p]
 			p++
 			for n := 0; n < int(l); n++ {
-				as := binary.BigEndian.Uint16(attr.Attribute[p : p+2])
-				p += 2
-				path = append(path, as)
+				if as4Capable {
+					as := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
+					p += 4
+					path = append(path, as)
+				} else {
+					as := binary.BigEndian.Uint16(attr.Attribute[p : p+2])
+					p += 2
+					path = append(path, uint32(as))
+				}
+
 			}
 		}
 	}
 
 	return path
+}
+
+// GetAttrASPathString returns the number of ASes and a string with comma separated AS numbers.
+func (up *Update) GetAttrASPathString(as4Capable bool) (int32, string) {
+	var path string
+	ases := up.GetAttrASPath(as4Capable)
+	for i, as := range ases {
+		path += fmt.Sprintf("%d", as)
+		if i < len(ases)-1 {
+			path += ", "
+		}
+	}
+
+	return int32(len(ases)), path
 }
 
 // GetAttrNextHop returns the value of Next Hop attribute if it is defined, otherwise it returns nil
