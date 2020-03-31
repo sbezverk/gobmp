@@ -9,6 +9,13 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
+const (
+	// AddPrefix defines a const for Add Prefix operation
+	AddPrefix = iota
+	// DelPrefix defines a const for Delete Prefix operation
+	DelPrefix
+)
+
 func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	if msg.PeerHeader == nil {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
@@ -48,14 +55,14 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// Original BGP's NLRI messages processing
 		msgs := make([]UnicastPrefix, 0)
 		if routeMonitorMsg.Update.WithdrawnRoutesLength != 0 {
-			msg, err := p.nlriWd(msg.PeerHeader, routeMonitorMsg.Update)
+			msg, err := p.nlri(DelPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
 				return
 			}
 			msgs = append(msgs, msg...)
 		}
-		msg, err := p.nlriAdv(msg.PeerHeader, routeMonitorMsg.Update)
+		msg, err := p.nlri(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 		if err != nil {
 			glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
 			return
@@ -94,12 +101,20 @@ func (p *producer) nlri15(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, er
 	return nil, nil
 }
 
-func (p *producer) nlriAdv(ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
-	// glog.Infof("original nlri processing requested..")
+func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
+	var operation string
+	switch op {
+	case 0:
+		operation = "add"
+	case 1:
+		operation = "del"
+	default:
+		return nil, fmt.Errorf("unknown operation %d", op)
+	}
 	prfxs := make([]UnicastPrefix, 0)
 	for _, pr := range update.NLRI {
 		prfx := UnicastPrefix{
-			Action:       "add",
+			Action:       operation,
 			RouterHash:   p.speakerHash,
 			RouterIP:     p.speakerIP,
 			BaseAttrHash: update.GetBaseAttrHash(),
@@ -110,6 +125,12 @@ func (p *producer) nlriAdv(ph *bmp.PerPeerHeader, update *bgp.Update) ([]Unicast
 			IsAtomicAgg:  update.GetAttrAtomicAggregate(),
 			Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
 			OriginatorID: net.IP(update.GetAttrOriginatorID()).To4().String(),
+			// TODO Missing attributes for Unicast message, need to figure out where corresponding values are stored
+			// ExtCommunityList
+			// PathID
+			// Labels
+			// IsPrepolicy
+			// IsAdjRIBIn
 		}
 		if o := update.GetAttrOrigin(); o != nil {
 			prfx.Origin = *o
@@ -152,21 +173,6 @@ func (p *producer) nlriAdv(ph *bmp.PerPeerHeader, update *bgp.Update) ([]Unicast
 	}
 
 	return prfxs, nil
-}
-
-func (p *producer) nlriWd(ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
-	// glog.Infof("original nlri withdraw processing requested..")
-	prfxs := make([]UnicastPrefix, 0)
-	for _, p := range update.NLRI {
-		glog.Infof("prefix: %+v length in bits: %d", p.Prefix, p.Length)
-		prfx := UnicastPrefix{
-			Action: "del",
-		}
-
-		prfxs = append(prfxs, prfx)
-	}
-
-	return nil, nil
 }
 
 func logPathAttrType(routeMonitorMsg *bmp.RouteMonitor) {
