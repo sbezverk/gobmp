@@ -245,6 +245,20 @@ func (up *Update) GetAttrCommunity() []uint32 {
 	return comm
 }
 
+// GetAttrCommunityString returns the string with comma separated communities.
+func (up *Update) GetAttrCommunityString() string {
+	var communities string
+	cs := up.GetAttrCommunity()
+	for i, c := range cs {
+		communities += fmt.Sprintf("%d:%d", (0xffff0000&c)>>16, 0xffff&c)
+		if i < len(cs)-1 {
+			communities += ", "
+		}
+	}
+
+	return communities
+}
+
 // GetAttrOriginatorID returns the value of ORIGINATOR_ID attribute if it is defined, otherwise it returns nil
 func (up *Update) GetAttrOriginatorID() []byte {
 	var id []byte

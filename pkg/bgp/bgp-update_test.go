@@ -150,3 +150,61 @@ func TestGetAttrAS4Path(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAttrCommunityString(t *testing.T) {
+	tests := []struct {
+		name   string
+		update *Update
+		expect string
+	}{
+		{
+			name:   "Empty, no attribute Community",
+			update: &Update{},
+			expect: "",
+		},
+		{
+			name: "1 Standard community 0:0",
+			update: &Update{
+				PathAttributes: []PathAttribute{
+					{
+						AttributeType: 8,
+						Attribute:     []byte{0, 0, 0, 0},
+					},
+				},
+			},
+			expect: "0:0",
+		},
+		{
+			name: "1 Standard community 10:10",
+			update: &Update{
+				PathAttributes: []PathAttribute{
+					{
+						AttributeType: 8,
+						Attribute:     []byte{0, 10, 0, 10},
+					},
+				},
+			},
+			expect: "10:10",
+		},
+		{
+			name: "2 Standard communities 10:10, 20:20",
+			update: &Update{
+				PathAttributes: []PathAttribute{
+					{
+						AttributeType: 8,
+						Attribute:     []byte{0, 10, 0, 10, 0, 20, 0, 20},
+					},
+				},
+			},
+			expect: "10:10, 20:20",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.update.GetAttrCommunityString()
+			if !reflect.DeepEqual(tt.expect, got) {
+				t.Errorf("Expect list of Standard Communities %s does not match received list %s", tt.expect, got)
+			}
+		})
+	}
+}
