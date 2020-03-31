@@ -3,7 +3,6 @@ package message
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -35,15 +34,24 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// There is no Path Attributes, just return
 		return
 	}
+	// Using first attribute type to select which nlri processor to call
 	switch routeMonitorMsg.Update.PathAttributes[0].AttributeType {
 	case 14:
 		// MP_REACH_NLRI
 		// https://tools.ietf.org/html/rfc7752
-		_, err := p.nlri14(msg.PeerHeader, routeMonitorMsg.Update)
+		t, err := getNLRIMessageType(routeMonitorMsg.Update.PathAttributes)
 		if err != nil {
-			glog.Errorf("failed to produce MP_REACH_NLRI (14) message with error: %+v", err)
+			glog.Errorf("failed to identify exact NLRI type with error: %+v", err)
 			return
 		}
+		switch t {
+		default:
+		}
+		// _, err := p.nlri14(msg.PeerHeader, routeMonitorMsg.Update)
+		// if err != nil {
+		// 	glog.Errorf("failed to produce MP_REACH_NLRI (14) message with error: %+v", err)
+		// 	return
+		// }
 	case 15:
 		// MP_UNREACH_NLRI
 		// https://tools.ietf.org/html/rfc7752
@@ -82,104 +90,39 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			}
 		}
 	}
-	// Remove after debugging
-	// logPathAttrType(routeMonitorMsg)
 }
 
 func (p *producer) nlri14(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
-	// case 29:
-	// 	// BGP-LS NLRI
-	// 	// https://tools.ietf.org/html/rfc7752
-	// 	_, err := bgpls.UnmarshalBGPLSNLRI(pa.Attribute)
-	// 	if err != nil {
-	// 		glog.Errorf("failed to unmarshal BGP-LS NLRI (29)")
-	// 		return
-	// 	}
-	// case 40:
-	// 	// BGP Prefix-SID
-	// 	// https://tools.ietf.org/html/rfc8669
-	// glog.Infof("nlri14 processing requested..")
+
 	return nil, nil
 }
+
+// case 29:
+// 	// BGP-LS NLRI
+// 	// https://tools.ietf.org/html/rfc7752
+// 	_, err := bgpls.UnmarshalBGPLSNLRI(pa.Attribute)
+// 	if err != nil {
+// 		glog.Errorf("failed to unmarshal BGP-LS NLRI (29)")
+// 		return
+// 	}
+// case 40:
+// 	// BGP Prefix-SID
+// 	// https://tools.ietf.org/html/rfc8669
+// glog.Infof("nlri14 processing requested..")
 
 func (p *producer) nlri15(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
 	// glog.Infof("nlri15 processing requested..")
 	return nil, nil
 }
 
-func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
-	var operation string
-	switch op {
-	case 0:
-		operation = "add"
-	case 1:
-		operation = "del"
-	default:
-		return nil, fmt.Errorf("unknown operation %d", op)
+func getNLRIMessageType(pattrs []bgp.PathAttribute) (int, error) {
+	nlri, err := bgp.UnmarshalMPReachNLRI(pattrs[0].Attribute)
+	if err != nil {
+		return 0, err
 	}
-	prfxs := make([]UnicastPrefix, 0)
-	for _, pr := range update.NLRI {
-		prfx := UnicastPrefix{
-			Action:       operation,
-			RouterHash:   p.speakerHash,
-			RouterIP:     p.speakerIP,
-			BaseAttrHash: update.GetBaseAttrHash(),
-			PeerHash:     ph.GetPeerHash(),
-			PeerASN:      ph.PeerAS,
-			Timestamp:    ph.PeerTimestamp,
-			PrefixLen:    int32(pr.Length),
-			IsAtomicAgg:  update.GetAttrAtomicAggregate(),
-			Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
-			OriginatorID: net.IP(update.GetAttrOriginatorID()).To4().String(),
-			// TODO Missing attributes for Unicast message, need to figure out where corresponding values are stored
-			// ExtCommunityList
-			// PathID
-			// Labels
-			// IsPrepolicy
-			// IsAdjRIBIn
-		}
-		if o := update.GetAttrOrigin(); o != nil {
-			prfx.Origin = *o
-		}
-		if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {
-			prfx.ASPath = path
-			prfx.ASPathCount = count
-		}
-		if ases := update.GetAttrASPath(p.as4Capable); len(ases) != 0 {
-			// Last element in AS_PATH would be the AS of the origin
-			prfx.OriginAS = fmt.Sprintf("%d", ases[len(ases)-1])
-		}
-		if med := update.GetAttrMED(); med != nil {
-			prfx.MED = *med
-		}
-		if lp := update.GetAttrLocalPref(); lp != nil {
-			prfx.LocalPref = *lp
-		}
-		if ph.FlagV {
-			// IPv6 specific conversions
-			prfx.IsIPv4 = false
-			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-			prfx.Nexthop = net.IP(update.GetAttrNextHop()).To16().String()
-			prfx.IsNexthopIPv4 = false
-			a := make([]byte, 16)
-			copy(a, pr.Prefix)
-			prfx.Prefix = net.IP(a).To16().String()
-		} else {
-			// IPv4 specific conversions
-			prfx.IsIPv4 = true
-			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-			prfx.Nexthop = net.IP(update.GetAttrNextHop()).To4().String()
-			prfx.IsNexthopIPv4 = true
-			a := make([]byte, 4)
-			copy(a, pr.Prefix)
-			prfx.Prefix = net.IP(a).To4().String()
-		}
-		prfxs = append(prfxs, prfx)
+	glog.Infof("><SB> : afi %d safi %d :", nlri.AddressFamilyID, nlri.SubAddressFamilyID)
 
-		glog.V(6).Infof("Unicast message: %+v", prfx)
-	}
-
-	return prfxs, nil
+	return 0, nil
 }
 
 func logPathAttrType(routeMonitorMsg *bmp.RouteMonitor) {
