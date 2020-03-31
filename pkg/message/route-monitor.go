@@ -1,6 +1,7 @@
 package message
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 
@@ -69,12 +70,17 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		}
 		msgs = append(msgs, msg...)
 		// Loop through and publish all collected messages
-		// for _, m := range msgs {
-		//	if err := p.publisher.PublishMessage(bmp.PeerDownMsg, []byte(m.RouterHash), j); err != nil {
-		//	glog.Errorf("failed to push PeerDown message to kafka with error: %+v", err)
-		//	return
-		//}
-		// }
+		for _, m := range msgs {
+			j, err := json.Marshal(&m)
+			if err != nil {
+				glog.Errorf("failed to marshal Unicast Prefix message with error: %+v", err)
+				return
+			}
+			if err := p.publisher.PublishMessage(bmp.UnicastPrefixMsg, []byte(m.RouterHash), j); err != nil {
+				glog.Errorf("failed to push Unicast Prefix message to kafka with error: %+v", err)
+				return
+			}
+		}
 	}
 	// Remove after debugging
 	// logPathAttrType(routeMonitorMsg)
@@ -169,7 +175,8 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			prfx.Prefix = net.IP(a).To4().String()
 		}
 		prfxs = append(prfxs, prfx)
-		glog.Infof("><SB> Unicast message: %+v", prfx)
+
+		glog.V(6).Infof("Unicast message: %+v", prfx)
 	}
 
 	return prfxs, nil
