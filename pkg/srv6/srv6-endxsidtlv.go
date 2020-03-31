@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // EndXSIDTLV defines SRv6 End.X SID TLV object
@@ -27,19 +27,19 @@ func (x *EndXSIDTLV) String(level ...int) string {
 	if level != nil {
 		l = level[0]
 	}
-	s += internal.AddLevel(l)
+	s += tools.AddLevel(l)
 	s += "SRv6 End.X SID TLV:" + "\n"
 
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Endpoint Behavior: %d\n", x.EndpointBehavior)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", x.Flag)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Algorithm: %d\n", x.Algorithm)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Weight: %d\n", x.Weight)
-	s += internal.AddLevel(l + 1)
-	s += fmt.Sprintf("SID: %s\n", internal.MessageHex(x.SID))
+	s += tools.AddLevel(l + 1)
+	s += fmt.Sprintf("SID: %s\n", tools.MessageHex(x.SID))
 	if x.SubTLV != nil {
 		for _, stlv := range x.SubTLV {
 			s += stlv.String(l + 2)
@@ -62,7 +62,7 @@ func (x *EndXSIDTLV) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, []byte("\"weight\":")...)
 	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", x.Weight))...)
 	jsonData = append(jsonData, []byte("\"sid\":")...)
-	jsonData = append(jsonData, internal.RawBytesToJSON(x.SID)...)
+	jsonData = append(jsonData, tools.RawBytesToJSON(x.SID)...)
 	jsonData = append(jsonData, ',')
 	jsonData = append(jsonData, []byte("\"SubTLV\":")...)
 	jsonData = append(jsonData, '[')
@@ -86,7 +86,7 @@ func (x *EndXSIDTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object
 func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
-	glog.V(6).Infof("SRv6 End.X SID TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
 	endx := EndXSIDTLV{
 		SID: make([]byte, 16),
 	}

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // NLRI defines BGP-LS NLRI object as collection of BGP-LS TLVs
@@ -51,7 +51,7 @@ func (ls *NLRI) MarshalJSON() ([]byte, error) {
 
 // UnmarshalBGPLSNLRI builds Prefix NLRI object
 func UnmarshalBGPLSNLRI(b []byte) (*NLRI, error) {
-	glog.V(6).Infof("BGPLSNLRI Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("BGPLSNLRI Raw: %s", tools.MessageHex(b))
 	bgpls := NLRI{}
 	ls, err := UnmarshalBGPLSTLV(b)
 	if err != nil {

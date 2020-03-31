@@ -20,4 +20,6 @@ const (
 	TerminationMsg = 5
 	// RouteMirrorMsg defines BMP Route Mirror message type
 	RouteMirrorMsg = 6
+	// UnicastPrefixMsg defines a subtype of BMP Route Monitoring message
+	UnicastPrefixMsg = 7
 )

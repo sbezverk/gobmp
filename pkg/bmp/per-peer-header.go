@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // PeerDistinguisher defines an object for Peer's Distinguisher manipulations
@@ -54,7 +54,7 @@ type PerPeerHeader struct {
 
 // UnmarshalPerPeerHeader processes Per-Peer header
 func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
-	glog.V(6).Infof("BMP Per Peer Header Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("BMP Per Peer Header Raw: %s", tools.MessageHex(b))
 	pph := &PerPeerHeader{
 		PeerDistinguisher: newPeerDistinguisher(),
 		PeerAddress:       make([]byte, 16),

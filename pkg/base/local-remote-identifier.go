@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // LocalRemoteIdentifierTLV defines Link Descriptor Local/Remote Identifiers TLV object
@@ -39,7 +39,7 @@ func (lri *LocalRemoteIdentifierTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalLocalRemoteIdentifierTLV builds Link Descriptor Local/Remote Identifiers TLV object
 func UnmarshalLocalRemoteIdentifierTLV(b []byte) (*LocalRemoteIdentifierTLV, error) {
-	glog.V(6).Infof("LocalRemoteIdentifierTLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("LocalRemoteIdentifierTLV Raw: %s", tools.MessageHex(b))
 	lri := LocalRemoteIdentifierTLV{
 		Local:  binary.BigEndian.Uint32(b[:4]),
 		Remote: binary.BigEndian.Uint32(b[4:]),

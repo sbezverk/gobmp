@@ -7,7 +7,7 @@ import (
 	"net"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 	"github.com/sbezverk/gobmp/pkg/ls"
 )
 
@@ -38,7 +38,7 @@ func (mp *MPReachNLRI) String() string {
 			s += nlri.String()
 		}
 	default:
-		s += fmt.Sprintf("NLRI: %s\n", internal.MessageHex(mp.NLRI))
+		s += fmt.Sprintf("NLRI: %s\n", tools.MessageHex(mp.NLRI))
 	}
 
 	return s
@@ -55,7 +55,7 @@ func (mp *MPReachNLRI) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, []byte("\"NextHopAddressLength\":")...)
 	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", mp.NextHopAddressLength))...)
 	jsonData = append(jsonData, []byte("\"NextHopAddress\":")...)
-	jsonData = append(jsonData, internal.RawBytesToJSON(mp.NextHopAddress)...)
+	jsonData = append(jsonData, tools.RawBytesToJSON(mp.NextHopAddress)...)
 	jsonData = append(jsonData, ',')
 	jsonData = append(jsonData, []byte("\"NLRI\":")...)
 	switch mp.SubAddressFamilyID {
@@ -70,7 +70,7 @@ func (mp *MPReachNLRI) MarshalJSON() ([]byte, error) {
 		}
 		jsonData = append(jsonData, b...)
 	default:
-		jsonData = append(jsonData, internal.RawBytesToJSON(mp.NLRI)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(mp.NLRI)...)
 	}
 	jsonData = append(jsonData, '}')
 
@@ -79,7 +79,7 @@ func (mp *MPReachNLRI) MarshalJSON() ([]byte, error) {
 
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPReachNLRI(b []byte) (*MPReachNLRI, error) {
-	glog.V(6).Infof("MPReachNLRI Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("MPReachNLRI Raw: %s", tools.MessageHex(b))
 	mp := MPReachNLRI{}
 	p := 0
 	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])

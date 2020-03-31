@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // PeerDownMessage defines BMPPeerDownMessage per rfc7854
@@ -15,7 +15,7 @@ type PeerDownMessage struct {
 
 // UnmarshalPeerDownMessage processes Peer Down message and returns BMPPeerDownMessage object
 func UnmarshalPeerDownMessage(b []byte) (*PeerDownMessage, error) {
-	glog.V(6).Infof("BMP Peer Down Message Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("BMP Peer Down Message Raw: %s", tools.MessageHex(b))
 	pdw := &PeerDownMessage{
 		Data: make([]byte, len(b)-1),
 	}

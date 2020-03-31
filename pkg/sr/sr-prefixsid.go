@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // PrefixSIDTLV defines Prefix SID TLV Object
@@ -20,7 +20,7 @@ func (psid *PrefixSIDTLV) String() string {
 	var s string
 	s += fmt.Sprintf("   Flags: %02x\n", psid.Flags)
 	s += fmt.Sprintf("   Algorithm: %d\n", psid.Algorithm)
-	s += fmt.Sprintf("   SID: %s\n", internal.MessageHex(psid.SID))
+	s += fmt.Sprintf("   SID: %s\n", tools.MessageHex(psid.SID))
 
 	return s
 }
@@ -34,7 +34,7 @@ func (psid *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, []byte("\"Algorithm\":")...)
 	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", psid.Algorithm))...)
 	jsonData = append(jsonData, []byte("\"sid\":")...)
-	jsonData = append(jsonData, internal.RawBytesToJSON(psid.SID)...)
+	jsonData = append(jsonData, tools.RawBytesToJSON(psid.SID)...)
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
@@ -42,7 +42,7 @@ func (psid *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalPrefixSIDTLV builds Prefix SID TLV Object
 func UnmarshalPrefixSIDTLV(b []byte) (*PrefixSIDTLV, error) {
-	glog.V(6).Infof("Prefix SID TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("Prefix SID TLV Raw: %s", tools.MessageHex(b))
 	psid := PrefixSIDTLV{}
 	p := 0
 	psid.Flags = b[p]

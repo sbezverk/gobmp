@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // BGPPeerNodeSID defines SRv6 BGP Peer Node SID TLV object
@@ -23,17 +23,17 @@ func (b *BGPPeerNodeSID) String(level ...int) string {
 	if level != nil {
 		l = level[0]
 	}
-	s += internal.AddLevel(l)
+	s += tools.AddLevel(l)
 	s += "SRv6 BGP Peer Node SID TLV:" + "\n"
 
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", b.Flag)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Weight: %d\n", b.Weight)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Peer ASN: %d\n", b.PeerASN)
-	s += internal.AddLevel(l + 1)
-	s += fmt.Sprintf("Peer ID: %s\n", internal.MessageHex(b.PeerID))
+	s += tools.AddLevel(l + 1)
+	s += fmt.Sprintf("Peer ID: %s\n", tools.MessageHex(b.PeerID))
 
 	return s
 }
@@ -49,7 +49,7 @@ func (b *BGPPeerNodeSID) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, []byte("\"peerASN\":")...)
 	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", b.PeerASN))...)
 	jsonData = append(jsonData, []byte("\"peerID\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%s", internal.RawBytesToJSON(b.PeerID)))...)
+	jsonData = append(jsonData, []byte(fmt.Sprintf("%s", tools.RawBytesToJSON(b.PeerID)))...)
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
@@ -57,7 +57,7 @@ func (b *BGPPeerNodeSID) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRv6BGPPeerNodeSIDTLV builds SRv6 BGP Peer Node SID TLV object
 func UnmarshalSRv6BGPPeerNodeSIDTLV(b []byte) (*BGPPeerNodeSID, error) {
-	glog.V(6).Infof("SRv6 BGP Peer Node SID TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SRv6 BGP Peer Node SID TLV Raw: %s", tools.MessageHex(b))
 	bgp := BGPPeerNodeSID{}
 	p := 0
 	bgp.Flag = b[p]

@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // PathAttribute defines a structure of an attribute
@@ -41,7 +41,7 @@ func (pa *PathAttribute) String() string {
 	case 0xf:
 		// Found MP_UNREACH_NLRI attribute
 		s += fmt.Sprintf("Attribute Type: %d (MP_UNREACH_NLRI)\n", pa.AttributeType)
-		s += internal.MessageHex(pa.Attribute)
+		s += tools.MessageHex(pa.Attribute)
 		s += "\n"
 
 	case 1:
@@ -49,13 +49,13 @@ func (pa *PathAttribute) String() string {
 		s += fmt.Sprintf("   Origin: %d\n", pa.Attribute)
 	case 2:
 		s += fmt.Sprintf("Attribute Type: %d (AS_PATH)\n", pa.AttributeType)
-		s += fmt.Sprintf("   AS PATH: %s\n", internal.MessageHex(pa.Attribute))
+		s += fmt.Sprintf("   AS PATH: %s\n", tools.MessageHex(pa.Attribute))
 	case 5:
 		s += fmt.Sprintf("Attribute Type: %d (LOCAL_PREF)\n", pa.AttributeType)
 		s += fmt.Sprintf("   Local Pref: %d\n", binary.BigEndian.Uint32(pa.Attribute))
 	default:
 		s += fmt.Sprintf("Attribute Type: %d\n", pa.AttributeType)
-		s += internal.MessageHex(pa.Attribute)
+		s += tools.MessageHex(pa.Attribute)
 		s += "\n"
 	}
 
@@ -103,7 +103,7 @@ func (pa *PathAttribute) MarshalJSON() ([]byte, error) {
 		// Found MP_UNREACH_NLRI attribute
 		jsonData = append(jsonData, []byte("\"MP_UNREACH_NLRI\",")...)
 		jsonData = append(jsonData, []byte("\"Attribute\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(pa.Attribute)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(pa.Attribute)...)
 	case 1:
 		jsonData = append(jsonData, []byte("\"ORIGIN\",")...)
 		jsonData = append(jsonData, []byte("\"Attribute\":")...)
@@ -111,7 +111,7 @@ func (pa *PathAttribute) MarshalJSON() ([]byte, error) {
 	case 2:
 		jsonData = append(jsonData, []byte("\"AS_PATH\",")...)
 		jsonData = append(jsonData, []byte("\"Attribute\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(pa.Attribute)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(pa.Attribute)...)
 	case 5:
 		jsonData = append(jsonData, []byte("\"LOCAL_PREF\",")...)
 		jsonData = append(jsonData, []byte("\"Attribute\":")...)
@@ -119,7 +119,7 @@ func (pa *PathAttribute) MarshalJSON() ([]byte, error) {
 	default:
 		jsonData = append(jsonData, []byte("\"Unknown\",")...)
 		jsonData = append(jsonData, []byte("\"Attribute\":")...)
-		jsonData = append(jsonData, internal.RawBytesToJSON(pa.Attribute)...)
+		jsonData = append(jsonData, tools.RawBytesToJSON(pa.Attribute)...)
 	}
 	jsonData = append(jsonData, '}')
 
@@ -128,7 +128,7 @@ func (pa *PathAttribute) MarshalJSON() ([]byte, error) {
 
 // UnmarshalBGPPathAttributes builds BGP Path attributes slice
 func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, error) {
-	glog.V(6).Infof("BGPPathAttributes Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("BGPPathAttributes Raw: %s", tools.MessageHex(b))
 	attrs := make([]PathAttribute, 0)
 
 	for p := 0; p < len(b); {

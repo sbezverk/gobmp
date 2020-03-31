@@ -12,7 +12,10 @@ type Producer interface {
 }
 
 type producer struct {
-	publisher pub.Publisher
+	publisher   pub.Publisher
+	speakerIP   string
+	speakerHash string
+	as4Capable  bool
 }
 
 // Producer dispatches kafka workers upon request received from the channel

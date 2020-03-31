@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // PrefixDescriptor defines Prefix Descriptor object
@@ -50,7 +50,7 @@ func (pd *PrefixDescriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalPrefixDescriptor build Prefix Descriptor object
 func UnmarshalPrefixDescriptor(b []byte) (*PrefixDescriptor, error) {
-	glog.V(6).Infof("PrefixDescriptor Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("PrefixDescriptor Raw: %s", tools.MessageHex(b))
 	pd := PrefixDescriptor{}
 	p := 0
 	ptlv, err := UnmarshalPrefixDescriptorTLV(b[p : p+len(b)])

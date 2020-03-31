@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // LocatorTLV defines SRv6 Locator TLV object
@@ -25,13 +25,13 @@ func (loc *LocatorTLV) String(level ...int) string {
 	if level != nil {
 		l = level[0]
 	}
-	s += internal.AddLevel(l)
+	s += tools.AddLevel(l)
 	s += "SRv6 Locator TLV:" + "\n"
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", loc.Flag)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Algorithm: %d\n", loc.Algorithm)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Metric: %d\n", loc.Metric)
 	if loc.SubTLV != nil {
 		for _, stlv := range loc.SubTLV {
@@ -74,7 +74,7 @@ func (loc *LocatorTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRv6LocatorTLV builds SRv6 Locator TLV object
 func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
-	glog.V(6).Infof("SRv6 Locator TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SRv6 Locator TLV Raw: %s", tools.MessageHex(b))
 	loc := LocatorTLV{}
 	p := 0
 	loc.Flag = b[p]

@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // NodeDescriptor defines Node Descriptor object
@@ -75,7 +75,7 @@ func (nd *NodeDescriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalNodeDescriptor build Node Descriptor object
 func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {
-	glog.V(6).Infof("NodeDescriptor Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("NodeDescriptor Raw: %s", tools.MessageHex(b))
 	nd := NodeDescriptor{}
 	p := 0
 	nd.Type = binary.BigEndian.Uint16(b[p : p+2])

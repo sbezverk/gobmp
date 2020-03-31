@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // LinkNLRI defines Node NLRI onject
@@ -22,7 +22,7 @@ type LinkNLRI struct {
 
 func (l *LinkNLRI) String() string {
 	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", internal.ProtocolIDString(l.ProtocolID))
+	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(l.ProtocolID))
 	s += fmt.Sprintf("Identifier: %d\n", l.Identifier)
 	s += l.LocalNode.String()
 	s += l.RemoteNode.String()
@@ -79,7 +79,7 @@ func (l *LinkNLRI) MarshalJSON() ([]byte, error) {
 
 // UnmarshalLinkNLRI builds Link NLRI object
 func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
-	glog.V(6).Infof("LinkNLRI Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("LinkNLRI Raw: %s", tools.MessageHex(b))
 	l := LinkNLRI{}
 	p := 0
 	l.ProtocolID = b[p]

@@ -17,13 +17,14 @@ import (
 
 // Define constants for each topic name
 const (
-	peerTopic = "gobmp.parsed.peer"
+	peerTopic           = "gobmp.parsed.peer"
+	unicastMessageTopic = "gobmp.parsed.unicast_prefix"
 )
 
 var (
 	// topics defines a list of topic to initialize and connect,
 	// initialization is done as a part of NewKafkaPublisher func.
-	topicNames = []string{peerTopic}
+	topicNames = []string{peerTopic, unicastMessageTopic}
 )
 
 // topicConnection defines per topic connection and connection related information
@@ -44,6 +45,8 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 		fallthrough
 	case bmp.PeerDownMsg:
 		return p.produceMessage(peerTopic, key, msg)
+	case bmp.UnicastPrefixMsg:
+		return p.produceMessage(unicastMessageTopic, key, msg)
 	}
 
 	return fmt.Errorf("not implemented")

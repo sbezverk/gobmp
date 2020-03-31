@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // CapabilityTLV defines SRv6 Capability TLV object
@@ -21,9 +21,9 @@ func (cap *CapabilityTLV) String(level ...int) string {
 	if level != nil {
 		l = level[0]
 	}
-	s += internal.AddLevel(l)
+	s += tools.AddLevel(l)
 	s += "SRv6 Capability TLV:" + "\n"
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", cap.Flag)
 
 	return s
@@ -42,7 +42,7 @@ func (cap *CapabilityTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRv6CapabilityTLV builds SRv6 Capability TLV object
 func UnmarshalSRv6CapabilityTLV(b []byte) (*CapabilityTLV, error) {
-	glog.V(6).Infof("SRv6 Capability TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SRv6 Capability TLV Raw: %s", tools.MessageHex(b))
 	cap := CapabilityTLV{}
 	p := 0
 	cap.Flag = binary.BigEndian.Uint16(b[p : p+2])

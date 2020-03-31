@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // NodeDescriptorSubTLV defines Node Descriptor Sub TLVs object
@@ -24,18 +24,18 @@ func (stlv *NodeDescriptorSubTLV) String() string {
 		s += fmt.Sprintf("         Autonomous System: %d\n", binary.BigEndian.Uint32(stlv.Value))
 	case 513:
 		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (BGP-LS Identifier)\n", stlv.Type)
-		s += fmt.Sprintf("         BGP-LS Identifier: %s\n", internal.MessageHex(stlv.Value))
+		s += fmt.Sprintf("         BGP-LS Identifier: %s\n", tools.MessageHex(stlv.Value))
 	case 514:
 		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (OSPF Area-ID)\n", stlv.Type)
-		s += fmt.Sprintf("         OSPF Area-ID: %s\n", internal.MessageHex(stlv.Value))
+		s += fmt.Sprintf("         OSPF Area-ID: %s\n", tools.MessageHex(stlv.Value))
 	case 515:
 		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (IGP Router-ID)\n", stlv.Type)
-		s += fmt.Sprintf("         IGP Router-ID: %s\n", internal.MessageHex(stlv.Value))
+		s += fmt.Sprintf("         IGP Router-ID: %s\n", tools.MessageHex(stlv.Value))
 	default:
 		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d\n", stlv.Type)
 		s += fmt.Sprintf("      Node Descriptor Sub TLV Length: %d\n", stlv.Length)
 		s += "         Value: "
-		s += internal.MessageHex(stlv.Value)
+		s += tools.MessageHex(stlv.Value)
 		s += "\n"
 	}
 
@@ -57,13 +57,13 @@ func (stlv *NodeDescriptorSubTLV) MarshalJSON() ([]byte, error) {
 		b = append(b, []byte(fmt.Sprintf("%d", binary.BigEndian.Uint32(stlv.Value)))...)
 	case 513:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"BGP-LS Identifier\","))...)
-		b = append(b, internal.RawBytesToJSON(stlv.Value)...)
+		b = append(b, tools.RawBytesToJSON(stlv.Value)...)
 	case 514:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"OSPF Area-ID\","))...)
-		b = append(b, internal.RawBytesToJSON(stlv.Value)...)
+		b = append(b, tools.RawBytesToJSON(stlv.Value)...)
 	case 515:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IGP Router-ID\","))...)
-		b = append(b, internal.RawBytesToJSON(stlv.Value)...)
+		b = append(b, tools.RawBytesToJSON(stlv.Value)...)
 	default:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown Node\","))...)
 		b = append(b, []byte("[]")...)
@@ -77,7 +77,7 @@ func (stlv *NodeDescriptorSubTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalNodeDescriptorSubTLV builds Node Descriptor Sub TLVs object
 func UnmarshalNodeDescriptorSubTLV(b []byte) ([]NodeDescriptorSubTLV, error) {
-	glog.V(6).Infof("NodeDescriptorSubTLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("NodeDescriptorSubTLV Raw: %s", tools.MessageHex(b))
 	stlvs := make([]NodeDescriptorSubTLV, 0)
 	for p := 0; p < len(b); {
 		stlv := NodeDescriptorSubTLV{}

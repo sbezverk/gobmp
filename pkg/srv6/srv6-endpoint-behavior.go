@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // EndpointBehavior defines SRv6 Endpoint Behavior TLV object
@@ -22,14 +22,14 @@ func (e *EndpointBehavior) String(level ...int) string {
 	if level != nil {
 		l = level[0]
 	}
-	s += internal.AddLevel(l)
+	s += tools.AddLevel(l)
 	s += "SRv6 End.X SID TLV:" + "\n"
 
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Endpoint Behavior: %d\n", e.EndpointBehavior)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", e.Flag)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Algorithm: %d\n", e.Algorithm)
 
 	return s
@@ -52,7 +52,7 @@ func (e *EndpointBehavior) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRv6EndpointBehaviorTLV builds SRv6 Endpoint Behavior TLV object
 func UnmarshalSRv6EndpointBehaviorTLV(b []byte) (*EndpointBehavior, error) {
-	glog.V(6).Infof("SRv6 End.X SID TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
 	e := EndpointBehavior{}
 	p := 0
 	e.EndpointBehavior = binary.BigEndian.Uint16(b[p : p+2])

@@ -1,12 +1,13 @@
 package bgp
 
 import (
+	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // Update defines a structure of BGP Update message
@@ -34,7 +35,7 @@ func (up *Update) String() string {
 	}
 	s += "NLRI: "
 	// TODO fix it
-	//	s += internal.MessageHex(up.NLRI)
+	//	s += tools.MessageHex(up.NLRI)
 	s += "\n"
 
 	return s
@@ -80,15 +81,267 @@ func (up *Update) MarshalJSON() ([]byte, error) {
 	// TODO Fix it
 	jsonData = append(jsonData, []byte("\"NLRI\":{}")...)
 	// TODO Fix it
-	//	jsonData = append(jsonData, internal.RawBytesToJSON(up.NLRI)...)
+	//	jsonData = append(jsonData, tools.RawBytesToJSON(up.NLRI)...)
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
 }
 
+// GetBaseAttrHash calculates 16 bytes MD5 Hash of all available base attributes.
+func (up *Update) GetBaseAttrHash() string {
+	data, err := json.Marshal(&up.PathAttributes)
+	if err != nil {
+		data = []byte{0, 1, 0, 1, 0, 1, 0, 1}
+	}
+	s := fmt.Sprintf("%x", md5.Sum(data))
+
+	return s
+}
+
+// GetAttrOrigin returns the value of Origin attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrOrigin() *string {
+	var o string
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 1 {
+			switch attr.Attribute[0] {
+			case 0:
+				o = "igp"
+			case 1:
+				o = "egp"
+			case 2:
+				o = "incomplete"
+			}
+			return &o
+		}
+	}
+
+	return nil
+}
+
+// GetAttrASPath returns a sequence of AS path segments
+func (up *Update) GetAttrASPath(as4Capable bool) []uint32 {
+	path := make([]uint32, 0)
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType != 2 {
+			continue
+		}
+		for p := 0; p < len(attr.Attribute); {
+			// Skipping type
+			p++
+			// Length of path segment in 2 bytes
+			l := attr.Attribute[p]
+			p++
+			for n := 0; n < int(l); n++ {
+				if as4Capable {
+					as := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
+					p += 4
+					path = append(path, as)
+				} else {
+					as := binary.BigEndian.Uint16(attr.Attribute[p : p+2])
+					p += 2
+					path = append(path, uint32(as))
+				}
+
+			}
+		}
+	}
+
+	return path
+}
+
+// GetAttrASPathString returns the number of ASes and a string with comma separated AS numbers.
+func (up *Update) GetAttrASPathString(as4Capable bool) (int32, string) {
+	var path string
+	ases := up.GetAttrASPath(as4Capable)
+	for i, as := range ases {
+		path += fmt.Sprintf("%d", as)
+		if i < len(ases)-1 {
+			path += ", "
+		}
+	}
+
+	return int32(len(ases)), path
+}
+
+// GetAttrNextHop returns the value of Next Hop attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrNextHop() []byte {
+	var nh []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 3 {
+			nh = make([]byte, attr.AttributeLength)
+			copy(nh, attr.Attribute)
+			return nh
+		}
+	}
+
+	return nh
+}
+
+// GetAttrMED returns the value of MED attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrMED() *uint32 {
+	var med uint32
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 4 {
+			med = binary.BigEndian.Uint32(attr.Attribute)
+			return &med
+		}
+	}
+
+	return nil
+}
+
+// GetAttrLocalPref returns the value of LOCAL_PREF attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrLocalPref() *uint32 {
+	var lp uint32
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 5 {
+			lp = binary.BigEndian.Uint32(attr.Attribute)
+			return &lp
+		}
+	}
+
+	return nil
+}
+
+// GetAttrAtomicAggregate returns 1 if ATOMIC_AGGREGATE exists, 0 if does not
+func (up *Update) GetAttrAtomicAggregate() bool {
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 6 {
+			return true
+		}
+	}
+
+	return false
+}
+
+// GetAttrAggregator returns the value of AGGREGATOR attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrAggregator() []byte {
+	var agg []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 7 {
+			agg = make([]byte, attr.AttributeLength)
+			copy(agg, attr.Attribute)
+			return agg
+		}
+	}
+
+	return agg
+}
+
+// GetAttrCommunity returns a slice of communities
+func (up *Update) GetAttrCommunity() []uint32 {
+	comm := make([]uint32, 0)
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType != 8 {
+			continue
+		}
+		for p := 0; p < len(attr.Attribute); {
+			c := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
+			p += 4
+			comm = append(comm, c)
+		}
+	}
+
+	return comm
+}
+
+// GetAttrCommunityString returns the string with comma separated communities.
+func (up *Update) GetAttrCommunityString() string {
+	var communities string
+	cs := up.GetAttrCommunity()
+	for i, c := range cs {
+		communities += fmt.Sprintf("%d:%d", (0xffff0000&c)>>16, 0xffff&c)
+		if i < len(cs)-1 {
+			communities += ", "
+		}
+	}
+
+	return communities
+}
+
+// GetAttrOriginatorID returns the value of ORIGINATOR_ID attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrOriginatorID() []byte {
+	var id []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 9 {
+			id = make([]byte, attr.AttributeLength)
+			copy(id, attr.Attribute)
+			return id
+		}
+	}
+
+	return id
+}
+
+// GetAttrClusterListID returns the value of CLUSTER_LIST attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrClusterListID() []byte {
+	var l []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 10 {
+			l = make([]byte, attr.AttributeLength)
+			copy(l, attr.Attribute)
+			return l
+		}
+	}
+
+	return l
+}
+
+// GetAttrExtendedCommunity returns the value of EXTENDED_COMMUNITY attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrExtendedCommunity() []byte {
+	var l []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 16 {
+			l = make([]byte, attr.AttributeLength)
+			copy(l, attr.Attribute)
+			return l
+		}
+	}
+
+	return l
+}
+
+// GetAttrAS4Path returns a sequence of AS4 path segments
+func (up *Update) GetAttrAS4Path() []uint32 {
+	path := make([]uint32, 0)
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType != 17 {
+			continue
+		}
+		for p := 0; p < len(attr.Attribute); {
+			// Skipping type
+			p++
+			// Length of path segment in 4 bytes
+			l := attr.Attribute[p]
+			p++
+			for n := 0; n < int(l); n++ {
+				as := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
+				p += 4
+				path = append(path, as)
+			}
+		}
+	}
+
+	return path
+}
+
+// GetAttrAS4Aggregator returns the value of AS4 AGGREGATOR attribute if it is defined, otherwise it returns nil
+func (up *Update) GetAttrAS4Aggregator() []byte {
+	var agg []byte
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 18 {
+			agg = make([]byte, attr.AttributeLength)
+			copy(agg, attr.Attribute)
+			return agg
+		}
+	}
+
+	return agg
+}
+
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
 func UnmarshalBGPUpdate(b []byte) (*Update, error) {
-	glog.V(6).Infof("BGPUpdate Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("BGPUpdate Raw: %s", tools.MessageHex(b))
 
 	p := 0
 	u := Update{}

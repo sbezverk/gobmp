@@ -1,6 +1,7 @@
 package message
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -22,7 +23,6 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 
 	m := PeerStateChange{
 		Action:         "up",
-		RouterHash:     msg.PeerHeader.GetPeerHash(),
 		RemoteASN:      msg.PeerHeader.PeerAS,
 		PeerRD:         msg.PeerHeader.PeerDistinguisher.String(),
 		RemotePort:     int(peerUpMsg.RemotePort),
@@ -44,11 +44,23 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
 		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
 	}
+	// Saving local bgp speaker identities.
+	p.speakerIP = m.LocalIP
+	p.speakerHash = fmt.Sprintf("%x", md5.Sum([]byte(p.speakerIP)))
+	m.RouterIP = p.speakerIP
+	m.RouterHash = p.speakerHash
 
 	m.LocalASN = int32(peerUpMsg.SentOpen.MyAS)
 	if lasn, ok := peerUpMsg.SentOpen.Is4BytesASCapable(); ok {
 		// Local BGP speaker is 4 bytes AS capable
 		m.LocalASN = lasn
+	}
+	p.as4Capable = false
+	_, l4as := peerUpMsg.SentOpen.Is4BytesASCapable()
+	_, r4as := peerUpMsg.ReceivedOpen.Is4BytesASCapable()
+	if l4as && r4as {
+		// Both peers are AS 4 bytes capable
+		p.as4Capable = true
 	}
 	sCaps := peerUpMsg.SentOpen.GetCapabilities()
 	rCaps := peerUpMsg.ReceivedOpen.GetCapabilities()
@@ -73,7 +85,7 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 		glog.Errorf("failed to push PeerUp message to kafka with error: %+v", err)
 		return
 	}
-
+	glog.V(6).Infof("Peer Up: %+v", m)
 	glog.V(5).Infof("succeeded to push PeerUp message to kafka")
 }
 
@@ -89,8 +101,9 @@ func (p *producer) producePeerDownMessage(msg bmp.Message) {
 	}
 	m := PeerStateChange{
 		Action:     "down",
+		RouterIP:   p.speakerIP,
+		RouterHash: p.speakerHash,
 		BMPReason:  int(peerDownMsg.Reason),
-		RouterHash: msg.PeerHeader.GetPeerHash(),
 		RemoteASN:  msg.PeerHeader.PeerAS,
 		PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
 		Timestamp:  msg.PeerHeader.PeerTimestamp,

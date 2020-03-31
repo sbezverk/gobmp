@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // AdjacencySIDTLV defines Prefix SID TLV Object
@@ -20,7 +20,7 @@ func (asid *AdjacencySIDTLV) String() string {
 	var s string
 	s += fmt.Sprintf("   Flags: %02x\n", asid.Flags)
 	s += fmt.Sprintf("   Weight: %d\n", asid.Weight)
-	s += fmt.Sprintf("   SID: %s\n", internal.MessageHex(asid.SID))
+	s += fmt.Sprintf("   SID: %s\n", tools.MessageHex(asid.SID))
 
 	return s
 }
@@ -34,7 +34,7 @@ func (asid *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, []byte("\"weight\":")...)
 	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", asid.Weight))...)
 	jsonData = append(jsonData, []byte("\"sid\":")...)
-	jsonData = append(jsonData, internal.RawBytesToJSON(asid.SID)...)
+	jsonData = append(jsonData, tools.RawBytesToJSON(asid.SID)...)
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
@@ -42,7 +42,7 @@ func (asid *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalAdjacencySIDTLV builds Adjacency SID TLV Object
 func UnmarshalAdjacencySIDTLV(b []byte) (*AdjacencySIDTLV, error) {
-	glog.V(6).Infof("Adjacency SID Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("Adjacency SID Raw: %s", tools.MessageHex(b))
 	asid := AdjacencySIDTLV{}
 	p := 0
 	asid.Flags = b[p]

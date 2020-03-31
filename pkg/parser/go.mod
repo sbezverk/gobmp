@@ -8,7 +8,7 @@ require (
 	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/bgpls v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-00010101000000-000000000000
-	github.com/sbezverk/gobmp/pkg/internal v0.0.0-00010101000000-000000000000 // indirect
+	github.com/sbezverk/gobmp/pkg/tools v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/ls v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/sr v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/srv6 v0.0.0-00010101000000-000000000000 // indirect
@@ -19,7 +19,7 @@ replace (
 	github.com/sbezverk/gobmp/pkg/bgp => ../bgp
 	github.com/sbezverk/gobmp/pkg/bgpls => ../bgpls
 	github.com/sbezverk/gobmp/pkg/bmp => ../bmp
-	github.com/sbezverk/gobmp/pkg/internal => ../internal
+	github.com/sbezverk/gobmp/pkg/tools => ../tools
 	github.com/sbezverk/gobmp/pkg/ls => ../ls
 	github.com/sbezverk/gobmp/pkg/sr => ../sr
 	github.com/sbezverk/gobmp/pkg/srv6 => ../srv6

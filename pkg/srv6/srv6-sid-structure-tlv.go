@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // SIDStructure defines SRv6 SID Structure TLV object
@@ -22,16 +22,16 @@ func (st *SIDStructure) String(level ...int) string {
 	if level != nil {
 		l = level[0]
 	}
-	s += internal.AddLevel(l)
+	s += tools.AddLevel(l)
 	s += "SRv6 SID Structure TLV:" + "\n"
 
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Locator Block length: %d\n", st.LBLength)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Locator Node length: %d\n", st.LNLength)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("SID Function length: %d\n", st.FunLength)
-	s += internal.AddLevel(l + 1)
+	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("SID Argument length: %d\n", st.ArgLength)
 
 	return s
@@ -56,7 +56,7 @@ func (st *SIDStructure) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRv6SIDStructureTLV builds SRv6 SID Structure TLV object
 func UnmarshalSRv6SIDStructureTLV(b []byte) (*SIDStructure, error) {
-	glog.V(6).Infof("SRv6 SID Structure TLV Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("SRv6 SID Structure TLV Raw: %s", tools.MessageHex(b))
 	st := SIDStructure{}
 	p := 0
 	st.LBLength = b[p]

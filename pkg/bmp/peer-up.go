@@ -5,7 +5,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
-	"github.com/sbezverk/gobmp/pkg/internal"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // PeerUpMessage defines BMPPeerUpMessage per rfc7854
@@ -20,7 +20,7 @@ type PeerUpMessage struct {
 
 // UnmarshalPeerUpMessage processes Peer Up message and returns BMPPeerUpMessage object
 func UnmarshalPeerUpMessage(b []byte) (*PeerUpMessage, error) {
-	glog.V(6).Infof("BMP Peer Up Message Raw: %s", internal.MessageHex(b))
+	glog.V(6).Infof("BMP Peer Up Message Raw: %s", tools.MessageHex(b))
 	var err error
 	pu := &PeerUpMessage{
 		LocalAddress: make([]byte, 16),
