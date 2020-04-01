@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -37,11 +38,65 @@ func (nd *NodeDescriptor) String() string {
 	return s
 }
 
+// GetASN returns Autonomous System Number used to uniqely identify BGP-LS domain
+func (nd *NodeDescriptor) GetASN() uint32 {
+	for _, tlv := range nd.SubTLV {
+		if tlv.Type != 512 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+	return 0
+}
+
+// GetLSID returns BGP-LS Identifier found in Node Descriptor sub tlv
 func (nd *NodeDescriptor) GetLSID() uint32 {
 	for _, tlv := range nd.SubTLV {
-		if tlv.Type == 
+		if tlv.Type != 513 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
 	}
+	return 0
 }
+
+// GetOSPFAreaID returns OSPF Area-ID found in Node Descriptor sub tlv
+func (nd *NodeDescriptor) GetOSPFAreaID() uint32 {
+	for _, tlv := range nd.SubTLV {
+		if tlv.Type != 514 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+	return 0
+}
+
+// GetIGPRouterID returns a value of Node Descriptor sub TLV IGP Router ID
+func (nd *NodeDescriptor) GetIGPRouterID() string {
+	var s string
+	i := 0
+	for _, tlv := range nd.SubTLV {
+		if tlv.Type != 515 {
+			continue
+		}
+		if tlv.Length == 4 {
+			return net.IP(tlv.Value).To4().String()
+		}
+		for p := 0; p < len(tlv.Value); p++ {
+			s += fmt.Sprintf("%02d", tlv.Value[p])
+			if i == 1 && p < len(tlv.Value)-1 {
+				s += "."
+				i = 0
+				continue
+			}
+			i++
+		}
+		return s
+	}
+
+	return s
+}
+
 // MarshalJSON defines a method to Marshal Node Descriptor object into JSON format
 func (nd *NodeDescriptor) MarshalJSON() ([]byte, error) {
 	var jsonData []byte

@@ -8,9 +8,9 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
-	"github.com/sbezverk/gobmp/pkg/tools"
 	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/srv6"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // TLV defines BGP-LS TLV object

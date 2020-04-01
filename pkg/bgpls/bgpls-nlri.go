@@ -24,6 +24,17 @@ func (ls *NLRI) String() string {
 	return s
 }
 
+// GetNodeFlags reeturns Flag Bits TLV carries a bit mask describing node attributes.
+func (ls *NLRI) GetNodeFlags() uint8 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1024 {
+			continue
+		}
+		return uint8(tlv.Value[0])
+	}
+	return 0
+}
+
 // MarshalJSON defines a method to  BGP-LS TLV object into JSON format
 func (ls *NLRI) MarshalJSON() ([]byte, error) {
 	var jsonData []byte

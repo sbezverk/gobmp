@@ -85,12 +85,13 @@ type LSNode struct {
 	IGPRouterID         string `json:"igp_router_id,omitempty"`
 	RouterID            string `json:"router_id,omitempty"`
 	RoutingID           string `json:"routing_id,omitempty"`
-	LSID                string `json:"ls_id,omitempty"`
+	ASN                 uint32 `json:"asn,omitempty"`
+	LSID                uint32 `json:"ls_id,omitempty"`
 	MTID                string `json:"mt_id,omitempty"`
 	OSPFAreaID          string `json:"ospf_area_id,omitempty"`
 	ISISAreaID          string `json:"isis_area_id,omitempty"`
 	Protocol            string `json:"protocol,omitempty"`
-	Flags               string `json:"flags,omitempty"`
+	Flags               uint8  `json:"flags,omitempty"`
 	ASPath              string `json:"as_path,omitempty"`
 	Nexthop             string `json:"nexthop,omitempty"`
 	MED                 uint32 `json:"med,omitempty"`

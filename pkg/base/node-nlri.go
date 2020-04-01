@@ -36,20 +36,14 @@ func (n *NodeNLRI) GetLSID() uint32 {
 	return n.LocalNode.GetLSID()
 }
 
-// GetIdentifier returns a string representation of NodeNLRI Identifier field
-func (n *NodeNLRI) GetIdentifier() string {
-	var s string
-	i := 0
-	for p := 0; p < len(n.Identifier); p++ {
-		s += fmt.Sprintf("%02d", n.Identifier[p])
-		if i == 1 && p < len(n.Identifier)-1 {
-			s += "."
-			i = 0
-			continue
-		}
-		i++
-	}
-	return s
+// GetIGPRouterID returns a value of Node Descriptor TLV IGP Router ID
+func (n *NodeNLRI) GetIGPRouterID() string {
+	return n.LocalNode.GetIGPRouterID()
+}
+
+// GetASN returns Autonomous System Number used to uniqely identify BGP-LS domain
+func (n *NodeNLRI) GetASN() uint32 {
+	return n.LocalNode.GetASN()
 }
 
 // MarshalJSON defines a method to Marshal Node NLRI object into JSON format

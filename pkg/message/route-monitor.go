@@ -126,12 +126,14 @@ func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, e
 	node, err := nlri71.GetNodeNLRI()
 	if err == nil {
 		msg.Protocol = node.GetProtocolID()
-		msg.IGPRouterID = node.GetIdentifier()
+		msg.IGPRouterID = node.GetIGPRouterID()
+		msg.LSID = node.GetLSID()
+		msg.ASN = node.GetASN()
 	}
 
 	lsnode, err := update.GetNLRI29()
 	if err == nil {
-		glog.Infof("><SB> LS Node: \n%s", lsnode.String())
+		msg.Flags = lsnode.GetNodeFlags()
 	}
 
 	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {
@@ -140,7 +142,7 @@ func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, e
 	if med := update.GetAttrMED(); med != nil {
 		msg.MED = *med
 	}
-	glog.V(6).Infof("LS Node messages: %+v", msg)
+	glog.V(5).Infof("LS Node messages: %+v", msg)
 
 	return &msg, nil
 }
