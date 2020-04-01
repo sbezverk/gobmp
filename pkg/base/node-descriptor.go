@@ -61,14 +61,14 @@ func (nd *NodeDescriptor) GetLSID() uint32 {
 }
 
 // GetOSPFAreaID returns OSPF Area-ID found in Node Descriptor sub tlv
-func (nd *NodeDescriptor) GetOSPFAreaID() uint32 {
+func (nd *NodeDescriptor) GetOSPFAreaID() string {
 	for _, tlv := range nd.SubTLV {
 		if tlv.Type != 514 {
 			continue
 		}
-		return binary.BigEndian.Uint32(tlv.Value)
+		return net.IP(tlv.Value).To4().String()
 	}
-	return 0
+	return ""
 }
 
 // GetIGPRouterID returns a value of Node Descriptor sub TLV IGP Router ID

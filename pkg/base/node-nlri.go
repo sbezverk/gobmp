@@ -46,6 +46,11 @@ func (n *NodeNLRI) GetASN() uint32 {
 	return n.LocalNode.GetASN()
 }
 
+// GetOSPFAreaID returns OSPF Area-ID found in Node Descriptor sub tlv
+func (n *NodeNLRI) GetOSPFAreaID() string {
+	return n.LocalNode.GetOSPFAreaID()
+}
+
 // MarshalJSON defines a method to Marshal Node NLRI object into JSON format
 func (n *NodeNLRI) MarshalJSON() ([]byte, error) {
 	var jsonData []byte

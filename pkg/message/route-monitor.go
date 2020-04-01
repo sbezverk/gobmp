@@ -3,6 +3,7 @@ package message
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -122,6 +123,13 @@ func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, e
 		Timestamp:    ph.PeerTimestamp,
 	}
 	msg.Nexthop = nlri14.GetNextHop()
+	if ph.FlagV {
+		// IPv6 specific conversions
+		msg.PeerIP = net.IP(ph.PeerAddress).To16().String()
+	} else {
+		// IPv4 specific conversions
+		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
+	}
 	// Processing other nlri and attributes, since they are optional, processing only if they exist
 	node, err := nlri71.GetNodeNLRI()
 	if err == nil {
@@ -129,11 +137,21 @@ func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, e
 		msg.IGPRouterID = node.GetIGPRouterID()
 		msg.LSID = node.GetLSID()
 		msg.ASN = node.GetASN()
+		msg.OSPFAreaID = node.GetOSPFAreaID()
 	}
 
 	lsnode, err := update.GetNLRI29()
 	if err == nil {
 		msg.Flags = lsnode.GetNodeFlags()
+		msg.Name = lsnode.GetNodeName()
+		msg.MTID = lsnode.GetMTID()
+		msg.ISISAreaID = lsnode.GetISISAreaID()
+		if ph.FlagV {
+			msg.RouterID = lsnode.GetNodeIPv6RouterID()
+		} else {
+			msg.RouterID = lsnode.GetNodeIPv4RouterID()
+		}
+
 	}
 
 	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {

@@ -2,8 +2,11 @@ package bgpls
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -24,6 +27,33 @@ func (ls *NLRI) String() string {
 	return s
 }
 
+// GetMTID returns string of MT-ID TLV containing the array of MT-IDs of all
+// topologies where the node is reachable is allowed
+func (ls *NLRI) GetMTID() string {
+	var s string
+	for _, tlv := range ls.LS {
+		if tlv.Type != 263 {
+			continue
+		}
+		if len(tlv.Value) == 0 {
+			return s
+		}
+		mit, err := base.UnmarshalMultiTopologyIdentifierTLV(tlv.Value)
+		if err != nil {
+			return s
+		}
+		if mit == nil {
+			return s
+		}
+		s += fmt.Sprintf("%d", mit.MTI[0])
+		for i := 1; i < len(mit.MTI); i++ {
+			s += fmt.Sprintf(",%d", mit.MTI[i])
+		}
+	}
+
+	return s
+}
+
 // GetNodeFlags reeturns Flag Bits TLV carries a bit mask describing node attributes.
 func (ls *NLRI) GetNodeFlags() uint8 {
 	for _, tlv := range ls.LS {
@@ -33,6 +63,63 @@ func (ls *NLRI) GetNodeFlags() uint8 {
 		return uint8(tlv.Value[0])
 	}
 	return 0
+}
+
+// GetNodeName returns Value field identifies the symbolic name of the router node
+func (ls *NLRI) GetNodeName() string {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1026 {
+			continue
+		}
+		return string(tlv.Value)
+	}
+	return ""
+}
+
+// GetISISAreaID returns a string IS-IS Area Identifier TLVs
+func (ls *NLRI) GetISISAreaID() string {
+	var s string
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1027 {
+			continue
+		}
+		glog.Infof("><SB> length: %d raw: %s", tlv.Length, tools.MessageHex(tlv.Value))
+		for p := 0; p < len(tlv.Value); {
+			s += fmt.Sprintf("%02x.", tlv.Value[p])
+			s += fmt.Sprintf("%02x", tlv.Value[p+1])
+			s += fmt.Sprintf("%02x", tlv.Value[p+2])
+			p += 3
+			if p < len(tlv.Value) {
+				s += ","
+			}
+		}
+		return s
+	}
+	return ""
+}
+
+// GetNodeIPv4RouterID returns string with local Node IPv4 router ID
+func (ls *NLRI) GetNodeIPv4RouterID() string {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1028 {
+			continue
+		}
+		return net.IP(tlv.Value).To4().String()
+	}
+
+	return ""
+}
+
+// GetNodeIPv6RouterID returns string with local Node IPv6 router ID
+func (ls *NLRI) GetNodeIPv6RouterID() string {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1029 {
+			continue
+		}
+		return net.IP(tlv.Value).To16().String()
+	}
+
+	return ""
 }
 
 // MarshalJSON defines a method to  BGP-LS TLV object into JSON format

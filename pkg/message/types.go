@@ -84,7 +84,7 @@ type LSNode struct {
 	Timestamp           string `json:"timestamp,omitempty"`
 	IGPRouterID         string `json:"igp_router_id,omitempty"`
 	RouterID            string `json:"router_id,omitempty"`
-	RoutingID           string `json:"routing_id,omitempty"`
+	RoutingID           string `json:"routing_id,omitempty"` // TODO, find out where this information is stored
 	ASN                 uint32 `json:"asn,omitempty"`
 	LSID                uint32 `json:"ls_id,omitempty"`
 	MTID                string `json:"mt_id,omitempty"`
@@ -92,10 +92,10 @@ type LSNode struct {
 	ISISAreaID          string `json:"isis_area_id,omitempty"`
 	Protocol            string `json:"protocol,omitempty"`
 	Flags               uint8  `json:"flags,omitempty"`
-	ASPath              string `json:"as_path,omitempty"`
+	ASPath              string `json:"as_path,omitempty"` // WHY
 	Nexthop             string `json:"nexthop,omitempty"`
-	MED                 uint32 `json:"med,omitempty"`
-	LocalPref           uint32 `json:"local_pref,omitempty"`
+	MED                 uint32 `json:"med,omitempty"`        // WHY
+	LocalPref           uint32 `json:"local_pref,omitempty"` // WHY
 	Name                string `json:"name,omitempty"`
 	LSSrCapabilities    string `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         int    `json:"sr_algorithm,omitempty"`
