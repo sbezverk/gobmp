@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/ls"
@@ -52,6 +51,12 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			glog.Infof("2 IP6 (IP version 6) : 1 unicast forwarding")
 		case 16:
 			glog.Infof("1 IP (IP version 4) : 4 MPLS Labels")
+		case 17:
+			glog.Infof("2 IP (IP version 6) : 4 MPLS Labels")
+		case 18:
+			glog.Infof("1 IP (IP version 4) : 128 MPLS-labeled VPN address")
+		case 19:
+			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
 		case 32:
 			glog.Infof("Node NLRI")
 			p.lsNode(msg.PeerHeader, routeMonitorMsg.Update)
@@ -99,20 +104,14 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 }
 
 func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, error) {
-	for _, attr := range update.PathAttributes {
-		glog.Infof("><SB> Attribute type: %d", attr.AttributeType)
-	}
-	nlri, err := bgp.UnmarshalMPReachNLRI(update.PathAttributes[0].Attribute)
+	nlri14, err := update.GetNLRI14()
 	if err != nil {
 		return nil, err
 	}
-	nlri71, err := ls.UnmarshalLSNLRI71(nlri.NLRI)
+	nlri71, err := nlri14.GetNLRI71()
 	if err != nil {
 		return nil, err
 	}
-	lsnode, err := base.UnmarshalNodeNLRI(nlri71.LS)
-
-	glog.Infof("><SB> LS Node: \n%s", lsnode.String())
 	msg := LSNode{
 		Action:       "add",
 		RouterHash:   p.speakerHash,
@@ -121,6 +120,17 @@ func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, e
 		PeerHash:     ph.GetPeerHash(),
 		PeerASN:      ph.PeerAS,
 		Timestamp:    ph.PeerTimestamp,
+	}
+	msg.Nexthop = nlri14.GetNextHop()
+	// Processing other nlri and attributes, since they are optional, processing only if they exist
+	node, err := nlri71.GetNodeNLRI()
+	if err == nil {
+		msg.Protocol = node.GetProtocolID()
+	}
+
+	lsnode, err := update.GetNLRI29()
+	if err == nil {
+		glog.Infof("><SB> LS Node: \n%s", lsnode.String())
 	}
 
 	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {
@@ -201,6 +211,15 @@ func getNLRIMessageType(pattrs []bgp.PathAttribute) (int, error) {
 	// 1 IP (IP version 4) : 4 MPLS Labels
 	case nlri.AddressFamilyID == 1 && nlri.SubAddressFamilyID == 4:
 		return 16, nil
+	// 2 IP (IP version 6) : 4 MPLS Labels
+	case nlri.AddressFamilyID == 2 && nlri.SubAddressFamilyID == 4:
+		return 17, nil
+	// 1 IP (IP version 4) : 128 MPLS-labeled VPN address
+	case nlri.AddressFamilyID == 1 && nlri.SubAddressFamilyID == 128:
+		return 18, nil
+	// 2 IP (IP version 6) : 128 MPLS-labeled VPN address
+	case nlri.AddressFamilyID == 2 && nlri.SubAddressFamilyID == 128:
+		return 19, nil
 	}
 
 	return 0, fmt.Errorf("unsupported nlri of type: afi %d safi %d", nlri.AddressFamilyID, nlri.SubAddressFamilyID)

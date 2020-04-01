@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
-	"github.com/sbezverk/gobmp/pkg/tools"
 	"github.com/sbezverk/gobmp/pkg/srv6"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // NLRI71 defines Link State NLRI object for SAFI 71
@@ -65,6 +65,58 @@ func (ls *NLRI71) String() string {
 	s += nlri
 
 	return s
+}
+
+// GetNodeNLRI instantiates Node NLRI object if one exists
+func (ls *NLRI71) GetNodeNLRI() (*base.NodeNLRI, error) {
+	if ls.Type != 1 {
+		return nil, fmt.Errorf("not found")
+	}
+	n, err := base.UnmarshalNodeNLRI(ls.LS)
+	if err != nil {
+		return nil, err
+	}
+
+	return n, nil
+}
+
+// GetLinkNLRI instantiates Link NLRI object if one exists
+func (ls *NLRI71) GetLinkNLRI() (*base.LinkNLRI, error) {
+	if ls.Type != 2 {
+		return nil, fmt.Errorf("not found")
+	}
+	l, err := base.UnmarshalLinkNLRI(ls.LS)
+	if err != nil {
+		return nil, err
+	}
+
+	return l, nil
+}
+
+// GetPrefixNLRI instantiates IPv4 or IPv6 Prefix NLRI object if one exists
+func (ls *NLRI71) GetPrefixNLRI() (*base.PrefixNLRI, error) {
+	if ls.Type != 3 && ls.Type != 4 {
+		return nil, fmt.Errorf("not found")
+	}
+	p, err := base.UnmarshalPrefixNLRI(ls.LS)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+// GetSRv6SIDNLRI instantiates SRv6 SID NLRI object if one exists
+func (ls *NLRI71) GetSRv6SIDNLRI() (*srv6.SIDNLRI, error) {
+	if ls.Type != 6 {
+		return nil, fmt.Errorf("not found")
+	}
+	s, err := srv6.UnmarshalSRv6SIDNLRI(ls.LS)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }
 
 // MarshalJSON defines a method to Marshal NLRI71 object into JSON format

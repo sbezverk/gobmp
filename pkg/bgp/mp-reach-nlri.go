@@ -7,8 +7,8 @@ import (
 	"net"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
 	"github.com/sbezverk/gobmp/pkg/ls"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // MPReachNLRI defines an MP Reach NLRI object
@@ -42,6 +42,30 @@ func (mp *MPReachNLRI) String() string {
 	}
 
 	return s
+}
+
+// GetNextHop return a string representation of the next hop ip address.
+func (mp *MPReachNLRI) GetNextHop() string {
+	if mp.NextHopAddressLength == 4 {
+		return net.IP(mp.NextHopAddress).To4().String()
+	} else if mp.NextHopAddressLength == 16 {
+		return net.IP(mp.NextHopAddress).To16().String()
+	}
+	return "invalid"
+}
+
+// GetNLRI71 check for presense of NLRI 71 in the NLRI 14 NLRI data and if exists, instantiate NLRI71 object
+func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
+	if mp.SubAddressFamilyID == 71 {
+		nlri71, err := ls.UnmarshalLSNLRI71(mp.NLRI)
+		if err != nil {
+			return nil, err
+		}
+		return nlri71, nil
+	}
+
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
 }
 
 // MarshalJSON defines a custom method to convert MP REACH NLRI object into JSON object
