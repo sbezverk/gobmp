@@ -151,7 +151,7 @@ func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, e
 		} else {
 			msg.RouterID = lsnode.GetNodeIPv4RouterID()
 		}
-
+		msg.NodeMSD = lsnode.GetNodeMSD()
 	}
 
 	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {

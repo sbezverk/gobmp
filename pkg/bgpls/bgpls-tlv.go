@@ -16,9 +16,10 @@ import (
 // TLV defines BGP-LS TLV object
 // https://tootlv.ietf.org/html/rfc7752#section-3.3
 type TLV struct {
-	Type   uint16
-	Length uint16
-	Value  []byte
+	Type       uint16
+	Length     uint16
+	Value      []byte
+	Capability *sr.Capability
 }
 
 func (tlv *TLV) String() string {

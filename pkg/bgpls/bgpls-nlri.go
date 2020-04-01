@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
+	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -83,7 +84,6 @@ func (ls *NLRI) GetISISAreaID() string {
 		if tlv.Type != 1027 {
 			continue
 		}
-		glog.Infof("><SB> length: %d raw: %s", tlv.Length, tools.MessageHex(tlv.Value))
 		for p := 0; p < len(tlv.Value); {
 			s += fmt.Sprintf("%02x.", tlv.Value[p])
 			s += fmt.Sprintf("%02x", tlv.Value[p+1])
@@ -120,6 +120,52 @@ func (ls *NLRI) GetNodeIPv6RouterID() string {
 	}
 
 	return ""
+}
+
+// GetNodeMSD returns string with Node's MSD codes
+func (ls *NLRI) GetNodeMSD() string {
+	var s string
+	for _, tlv := range ls.LS {
+		if tlv.Type != 266 {
+			continue
+		}
+		msd, err := base.UnmarshalNodeMSD(tlv.Value)
+		if err != nil {
+			return s
+		}
+		if msd == nil {
+			return s
+		}
+		s += fmt.Sprintf("%d:%d", msd.MSD[0].Type, msd.MSD[0].Value)
+		for i := 1; i < len(msd.MSD); i++ {
+			s += fmt.Sprintf(",%d:%d", msd.MSD[i].Type, msd.MSD[i].Value)
+		}
+	}
+
+	return s
+}
+
+// GetNodeSRCapabilities returns string representation of SR Capabilities
+func (ls *NLRI) GetNodeSRCapabilities() string {
+	var s string
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1034 {
+			continue
+		}
+		caps, err := sr.UnmarshalSRCapabilityTLV(tlv.Value)
+		if err != nil {
+			return s
+		}
+		if caps == nil {
+			return s
+		}
+		//		s += fmt.Sprintf("%d:%d", caps.Flag MSD[0].Type, msd.MSD[0].Value)
+		//		for i := 1; i < len(msd.MSD); i++ {
+		//			s += fmt.Sprintf(",%d:%d", msd.MSD[i].Type, msd.MSD[i].Value)
+		//		}
+	}
+
+	return s
 }
 
 // MarshalJSON defines a method to  BGP-LS TLV object into JSON format

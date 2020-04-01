@@ -11,9 +11,8 @@ import (
 // CapabilityTLV defines SR Capability TLV object
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.1.2
 type CapabilityTLV struct {
-	Flag  uint8
 	Range uint32
-	SID   []byte
+	SID   []SIDTLV
 }
 
 func (cap *CapabilityTLV) String(level ...int) string {
@@ -24,8 +23,6 @@ func (cap *CapabilityTLV) String(level ...int) string {
 	}
 	s += tools.AddLevel(l)
 	s += "SR Capability TLV:" + "\n"
-	s += tools.AddLevel(l + 1)
-	s += fmt.Sprintf("Flag: %02x\n", cap.Flag)
 
 	return s
 }
@@ -46,20 +43,22 @@ func (cap *CapabilityTLV) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalSRCapabilityTLV builds SR Capability TLV object
-func UnmarshalSRCapabilityTLV(b []byte) (*CapabilityTLV, error) {
+func UnmarshalSRCapabilityTLV(b []byte) ([]CapabilityTLV, error) {
 	glog.V(6).Infof("SR Capability TLV Raw: %s", tools.MessageHex(b))
-	cap := CapabilityTLV{}
-	p := 0
-	cap.Flag = b[0]
-	// Ignore reserved byte
-	p++
-	r := make([]byte, 4)
-	// Copy 3 bytes of Range into 4 byte slice to convert it into uint32
-	copy(r[1:], b[p:p+3])
-	cap.Range = binary.BigEndian.Uint32(r)
-	p += 3
-	cap.SID = make([]byte, len(b)-p)
-	copy(cap.SID, b[p:])
+	caps := make([]CapabilityTLV, 0)
+	for p := 0; p < len(b); {
+		cap := CapabilityTLV{}
+		cap.Flag = b[p]
+		// Ignore reserved byte
+		p++
+		r := make([]byte, 4)
+		// Copy 3 bytes of Range into 4 byte slice to convert it into uint32
+		copy(r[1:], b[p:p+3])
+		cap.Range = binary.BigEndian.Uint32(r)
+		p += 3
+		cap.SID = make([]byte, len(b)-p)
+		copy(cap.SID, b[p:])
+	}
 
 	return &cap, nil
 }
