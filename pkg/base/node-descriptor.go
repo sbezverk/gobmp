@@ -37,6 +37,11 @@ func (nd *NodeDescriptor) String() string {
 	return s
 }
 
+func (nd *NodeDescriptor) GetLSID() uint32 {
+	for _, tlv := range nd.SubTLV {
+		if tlv.Type == 
+	}
+}
 // MarshalJSON defines a method to Marshal Node Descriptor object into JSON format
 func (nd *NodeDescriptor) MarshalJSON() ([]byte, error) {
 	var jsonData []byte

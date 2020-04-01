@@ -20,7 +20,7 @@ type NodeNLRI struct {
 func (n *NodeNLRI) String() string {
 	var s string
 	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(n.ProtocolID))
-	s += fmt.Sprintf("Identifier: %d\n", n.Identifier)
+	s += fmt.Sprintf("Identifier: %s\n", tools.MessageHex(n.Identifier))
 	s += n.LocalNode.String()
 
 	return s
@@ -29,6 +29,27 @@ func (n *NodeNLRI) String() string {
 // GetProtocolID returns a string representation of NodeNLRI ProtocolID field
 func (n *NodeNLRI) GetProtocolID() string {
 	return tools.ProtocolIDString(n.ProtocolID)
+}
+
+// GetLSID returns a value of Node Descriptor TLV BGP-LS Identifier
+func (n *NodeNLRI) GetLSID() uint32 {
+	return n.LocalNode.GetLSID()
+}
+
+// GetIdentifier returns a string representation of NodeNLRI Identifier field
+func (n *NodeNLRI) GetIdentifier() string {
+	var s string
+	i := 0
+	for p := 0; p < len(n.Identifier); p++ {
+		s += fmt.Sprintf("%02d", n.Identifier[p])
+		if i == 1 && p < len(n.Identifier)-1 {
+			s += "."
+			i = 0
+			continue
+		}
+		i++
+	}
+	return s
 }
 
 // MarshalJSON defines a method to Marshal Node NLRI object into JSON format

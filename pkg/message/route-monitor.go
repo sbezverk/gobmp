@@ -126,6 +126,7 @@ func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, e
 	node, err := nlri71.GetNodeNLRI()
 	if err == nil {
 		msg.Protocol = node.GetProtocolID()
+		msg.IGPRouterID = node.GetIdentifier()
 	}
 
 	lsnode, err := update.GetNLRI29()
@@ -139,31 +140,7 @@ func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, e
 	if med := update.GetAttrMED(); med != nil {
 		msg.MED = *med
 	}
-	// if lp := update.GetAttrLocalPref(); lp != nil {
-	// 	prfx.LocalPref = *lp
-	// }
-	// if ph.FlagV {
-	// 	// IPv6 specific conversions
-	// 	prfx.IsIPv4 = false
-	// 	prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-	// 	prfx.Nexthop = net.IP(update.GetAttrNextHop()).To16().String()
-	// 	prfx.IsNexthopIPv4 = false
-	// 	a := make([]byte, 16)
-	// 	copy(a, pr.Prefix)
-	// 	prfx.Prefix = net.IP(a).To16().String()
-	// } else {
-	// 	// IPv4 specific conversions
-	// 	prfx.IsIPv4 = true
-	// 	prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-	// 	prfx.Nexthop = net.IP(update.GetAttrNextHop()).To4().String()
-	// 	prfx.IsNexthopIPv4 = true
-	// 	a := make([]byte, 4)
-	// 	copy(a, pr.Prefix)
-	// 	prfx.Prefix = net.IP(a).To4().String()
-	// }
-	// prfxs = append(prfxs, prfx)
-
-	// glog.V(6).Infof("LS Node messages: %+v", msgs)
+	glog.V(6).Infof("LS Node messages: %+v", msg)
 
 	return &msg, nil
 }
