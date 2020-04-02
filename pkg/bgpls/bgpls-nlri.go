@@ -187,6 +187,32 @@ func (ls *NLRI) GetSRAlgorithm() []int {
 	return a
 }
 
+// GetNodeSRLocalBlock returns string representation of SR LocalBlock
+func (ls *NLRI) GetNodeSRLocalBlock() string {
+	var s string
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1036 {
+			continue
+		}
+		lb, err := sr.UnmarshalSRLocalBlock(tlv.Value)
+		if err != nil {
+			return s
+		}
+		if lb == nil {
+			return s
+		}
+		s += fmt.Sprintf("%02x ", lb.Flags)
+		for _, tlv := range lb.TLV {
+			if tlv.SID == nil {
+				continue
+			}
+			s += fmt.Sprintf("%d:%d ", tlv.SubRange, tlv.SID.Value)
+		}
+	}
+
+	return s
+}
+
 // MarshalJSON defines a method to  BGP-LS TLV object into JSON format
 func (ls *NLRI) MarshalJSON() ([]byte, error) {
 	var jsonData []byte

@@ -97,7 +97,7 @@ type LSNode struct {
 	MED                 uint32 `json:"med,omitempty"`        // WHY
 	LocalPref           uint32 `json:"local_pref,omitempty"` // WHY
 	Name                string `json:"name,omitempty"`
-	LSSrCapabilities    string `json:"ls_sr_capabilities,omitempty"`
+	SRCapabilities      string `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         []int  `json:"sr_algorithm,omitempty"`
 	SRLocalBlock        string `json:"sr_local_block,omitempty"`
 	SRv6CapabilitiesTLV string `json:"sr_capabilities_tlv,omitempty"`
