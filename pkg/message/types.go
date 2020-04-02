@@ -84,7 +84,7 @@ type LSNode struct {
 	Timestamp           string `json:"timestamp,omitempty"`
 	IGPRouterID         string `json:"igp_router_id,omitempty"`
 	RouterID            string `json:"router_id,omitempty"`
-	RoutingID           string `json:"routing_id,omitempty"` // TODO, find out where this information is stored
+	RoutingID           string `json:"routing_id,omitempty"`
 	ASN                 uint32 `json:"asn,omitempty"`
 	LSID                uint32 `json:"ls_id,omitempty"`
 	MTID                string `json:"mt_id,omitempty"`
@@ -92,16 +92,74 @@ type LSNode struct {
 	ISISAreaID          string `json:"isis_area_id,omitempty"`
 	Protocol            string `json:"protocol,omitempty"`
 	Flags               uint8  `json:"flags,omitempty"`
-	ASPath              string `json:"as_path,omitempty"` // WHY
+	ASPath              string `json:"as_path,omitempty"`
 	Nexthop             string `json:"nexthop,omitempty"`
-	MED                 uint32 `json:"med,omitempty"`        // WHY
-	LocalPref           uint32 `json:"local_pref,omitempty"` // WHY
+	MED                 uint32 `json:"med,omitempty"`
+	LocalPref           uint32 `json:"local_pref,omitempty"`
 	Name                string `json:"name,omitempty"`
 	SRCapabilities      string `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         []int  `json:"sr_algorithm,omitempty"`
 	SRLocalBlock        string `json:"sr_local_block,omitempty"`
-	SRv6CapabilitiesTLV string `json:"sr_capabilities_tlv,omitempty"`
+	SRv6CapabilitiesTLV string `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             string `json:"node_msd,omitempty"`
 	IsPrepolicy         bool   `json:"isprepolicy,omitempty"`
 	IsAdjRIBIn          bool   `json:"is_adj_rib_in,omitempty"`
+}
+
+// LSLink defines a structure of LS link message
+type LSLink struct {
+	Action                string `json:"action"`
+	Sequence              int    `json:"sequence,omitempty"`
+	Hash                  string `json:"hash,omitempty"`
+	RouterHash            string `json:"router_hash,omitempty"`
+	RouterIP              string `json:"router_ip,omitempty"`
+	BaseAttrHash          string `json:"base_attr_hash,omitempty"`
+	PeerHash              string `json:"peer_hash,omitempty"`
+	PeerIP                string `json:"peer_ip,omitempty"`
+	PeerASN               int32  `json:"peer_asn,omitempty"`
+	Timestamp             string `json:"timestamp,omitempty"`
+	IGPRouterID           string `json:"igp_router_id,omitempty"`
+	RouterID              string `json:"router_id,omitempty"`
+	RoutingID             string `json:"routing_id,omitempty"`
+	LSID                  uint32 `json:"ls_id,omitempty"`
+	OSPFAreaID            string `json:"ospf_area_id,omitempty"`
+	ISISAreaID            string `json:"isis_area_id,omitempty"`
+	Protocol              string `json:"protocol,omitempty"`
+	ASPath                string `json:"as_path,omitempty"`
+	LocalPref             uint32 `json:"local_pref,omitempty"`
+	MED                   uint32 `json:"med,omitempty"`
+	Nexthop               string `json:"nexthop,omitempty"`
+	MTID                  string `json:"mt_id,omitempty"`
+	LocalLinkID           uint32 `json:"local_link_id,omitempty"`
+	RemoteLinkID          uint32 `json:"remote_link_id,omitempty"`
+	InterfaceIP           string `json:"intf_ip,omitempty"`
+	NeighborIP            string `json:"nei_ip,omitempty"`
+	IGPMetric             uint32 `json:"igp_metric,omitempty"`
+	AdminGroup            uint32 `json:"admin_group,omitempty"`
+	MaxLinkBW             uint32 `json:"max_link_bw,omitempty"`
+	MaxResvBW             uint32 `json:"max_resv_bw,omitempty"`
+	UnResvBW              uint64 `json:"unresv_bw,omitempty"`
+	TEDefaultMetric       uint32 `json:"te_default_metric,omitempty"`
+	LinkProtection        string `json:"link_protection,omitempty"`
+	MPLSProtoMask         string `json:"mpls_proto_mask,omitempty"`
+	SRLG                  string `json:"srlg,omitempty"`
+	LinkName              string `json:"link_name,omitempty"`
+	RemoteNodeHash        string `json:"remote_node_hash,omitempty"`
+	LocalNodeHash         string `json:"local_node_hash,omitempty"`
+	RemoteIGPRouterID     string `json:"remote_igp_router_id,omitempty"`
+	RemoteRouterID        string `json:"remote_router_id,omitempty"`
+	LocalNodeASN          uint32 `json:"local_node_asn,omitempty"`
+	RemoteNodeASN         uint32 `json:"remote_node_asn,omitempty"`
+	PeerNodeSID           string `json:"peer_node_sid,omitempty"`
+	IsPrepolicy           bool   `json:"isprepolicy,omitempty"`
+	IsAdjRIBIn            bool   `json:"is_adj_rib_in,omitempty"`
+	LSAdjacencySID        string `json:"ls_adjacency_sid,omitempty"`
+	LinkMSD               string `json:"link_msd,omitempty"`
+	UnidirLinkDelay       uint32 `json:"unidir_link_delay,omitempty"`
+	UnidirLinkDelayMinMax []int  `json:"unidir_link_delay_min_max,omitempty"`
+	UnidirDelayVariation  uint32 `json:"unidir_delay_variation,omitempty"`
+	UnidirPacketLoss      uint64 `json:"unidir_packet_loss,omitempty"`
+	UnidirResidualBW      uint64 `json:"unidir_residual_bw,omitempty"`
+	UnidirAvailableBW     uint64 `json:"unidir_available_bw,omitempty"`
+	UnidirBWUtilization   uint64 `json:"unidir_bw_utilization,omitempty"`
 }
