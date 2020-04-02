@@ -3,7 +3,6 @@ package message
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -19,6 +18,7 @@ const (
 )
 
 func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
+	var j []byte
 	if msg.PeerHeader == nil {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return
@@ -60,7 +60,21 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
 		case 32:
 			glog.Infof("Node NLRI")
-			p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
+			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
+			if err != nil {
+				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				return
+			}
+			j, err = json.Marshal(&msg)
+			if err != nil {
+				glog.Errorf("failed to marshal ls_node message with error: %+v", err)
+				return
+			}
+			if err := p.publisher.PublishMessage(bmp.LSNodeMsg, []byte(msg.RouterHash), j); err != nil {
+				glog.Errorf("failed to push LSNode message to kafka with error: %+v", err)
+				return
+			}
+			glog.V(6).Infof("ls_node message: %s", string(j))
 		case 33:
 			glog.Infof("Link NLRI")
 		case 34:
@@ -102,70 +116,6 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			}
 		}
 	}
-}
-
-func (p *producer) lsNode(operation string, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, error) {
-	nlri14, err := update.GetNLRI14()
-	if err != nil {
-		return nil, err
-	}
-	nlri71, err := nlri14.GetNLRI71()
-	if err != nil {
-		return nil, err
-	}
-	msg := LSNode{
-		Action:       operation,
-		RouterHash:   p.speakerHash,
-		RouterIP:     p.speakerIP,
-		BaseAttrHash: update.GetBaseAttrHash(),
-		PeerHash:     ph.GetPeerHash(),
-		PeerASN:      ph.PeerAS,
-		Timestamp:    ph.PeerTimestamp,
-	}
-	msg.Nexthop = nlri14.GetNextHop()
-	if ph.FlagV {
-		// IPv6 specific conversions
-		msg.PeerIP = net.IP(ph.PeerAddress).To16().String()
-	} else {
-		// IPv4 specific conversions
-		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-	}
-	// Processing other nlri and attributes, since they are optional, processing only if they exist
-	node, err := nlri71.GetNodeNLRI()
-	if err == nil {
-		msg.Protocol = node.GetProtocolID()
-		msg.IGPRouterID = node.GetIGPRouterID()
-		msg.LSID = node.GetLSID()
-		msg.ASN = node.GetASN()
-		msg.OSPFAreaID = node.GetOSPFAreaID()
-	}
-
-	lsnode, err := update.GetNLRI29()
-	if err == nil {
-		msg.Flags = lsnode.GetNodeFlags()
-		msg.Name = lsnode.GetNodeName()
-		msg.MTID = lsnode.GetMTID()
-		msg.ISISAreaID = lsnode.GetISISAreaID()
-		if ph.FlagV {
-			msg.RouterID = lsnode.GetNodeIPv6RouterID()
-		} else {
-			msg.RouterID = lsnode.GetNodeIPv4RouterID()
-		}
-		msg.NodeMSD = lsnode.GetNodeMSD()
-		msg.SRCapabilities = lsnode.GetNodeSRCapabilities()
-		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
-		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
-	}
-
-	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {
-		msg.ASPath = path
-	}
-	if med := update.GetAttrMED(); med != nil {
-		msg.MED = *med
-	}
-	glog.V(5).Infof("LS Node messages: %+v", msg)
-
-	return &msg, nil
 }
 
 func getNLRIMessageType(pattrs []bgp.PathAttribute) (int, error) {

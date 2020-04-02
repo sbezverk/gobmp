@@ -8,6 +8,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/sr"
+	"github.com/sbezverk/gobmp/pkg/srv6"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -208,6 +209,26 @@ func (ls *NLRI) GetNodeSRLocalBlock() string {
 			}
 			s += fmt.Sprintf("%d:%d ", tlv.SubRange, tlv.SID.Value)
 		}
+	}
+
+	return s
+}
+
+// GetNodeSRv6CapabilitiesTLV returns string representation of SRv6 Capabilities TLV
+func (ls *NLRI) GetNodeSRv6CapabilitiesTLV() string {
+	var s string
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1038 {
+			continue
+		}
+		tlv, err := srv6.UnmarshalSRv6CapabilityTLV(tlv.Value)
+		if err != nil {
+			return s
+		}
+		if tlv == nil {
+			return s
+		}
+		s += fmt.Sprintf("%04x", tlv.Flag)
 	}
 
 	return s
