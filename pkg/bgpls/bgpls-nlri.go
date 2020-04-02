@@ -152,17 +152,20 @@ func (ls *NLRI) GetNodeSRCapabilities() string {
 		if tlv.Type != 1034 {
 			continue
 		}
-		caps, err := sr.UnmarshalSRCapabilityTLV(tlv.Value)
+		cap, err := sr.UnmarshalSRCapability(tlv.Value)
 		if err != nil {
 			return s
 		}
-		if caps == nil {
+		if cap == nil {
 			return s
 		}
-		//		s += fmt.Sprintf("%d:%d", caps.Flag MSD[0].Type, msd.MSD[0].Value)
-		//		for i := 1; i < len(msd.MSD); i++ {
-		//			s += fmt.Sprintf(",%d:%d", msd.MSD[i].Type, msd.MSD[i].Value)
-		//		}
+		s += fmt.Sprintf("%02x ", cap.Flags)
+		for _, tlv := range cap.TLV {
+			if tlv.SID == nil {
+				continue
+			}
+			s += fmt.Sprintf("%d:%d ", tlv.Range, tlv.SID.Value)
+		}
 	}
 
 	return s

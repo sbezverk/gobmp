@@ -273,7 +273,7 @@ func (tlv *TLV) MarshalJSON() ([]byte, error) {
 	case 1034:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"SR Capabilities\","))...)
 		jsonData = append(jsonData, []byte("\"srCapabilities\":")...)
-		cap, err := sr.UnmarshalSRCapabilityTLV(tlv.Value)
+		cap, err := sr.UnmarshalSRCapability(tlv.Value)
 		if err != nil {
 			return nil, err
 		}

@@ -1,7 +1,8 @@
 package sr
 
+// SIDTLV defines SID Sub tlv object
 type SIDTLV struct {
 	Type   uint16
 	Length uint16
-	SID    []byte
+	Value  []byte
 }
