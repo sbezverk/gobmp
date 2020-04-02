@@ -209,6 +209,7 @@ func (ls *NLRI) GetNodeSRLocalBlock() string {
 			}
 			s += fmt.Sprintf("%d:%d ", tlv.SubRange, tlv.SID.Value)
 		}
+		break
 	}
 
 	return s

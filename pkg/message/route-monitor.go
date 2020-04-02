@@ -77,6 +77,21 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			glog.V(6).Infof("ls_node message: %s", string(j))
 		case 33:
 			glog.Infof("Link NLRI")
+			msg, err := p.lsLink("add", msg.PeerHeader, routeMonitorMsg.Update)
+			if err != nil {
+				glog.Errorf("failed to produce ls_link message with error: %+v", err)
+				return
+			}
+			j, err = json.Marshal(&msg)
+			if err != nil {
+				glog.Errorf("failed to marshal ls_link message with error: %+v", err)
+				return
+			}
+			if err := p.publisher.PublishMessage(bmp.LSNodeMsg, []byte(msg.RouterHash), j); err != nil {
+				glog.Errorf("failed to push LSLink message to kafka with error: %+v", err)
+				return
+			}
+			glog.V(5).Infof("ls_link message: %s", string(j))
 		case 34:
 			glog.Infof("IPv4 Topology Prefix NLRI")
 		case 35:
