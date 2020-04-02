@@ -8,17 +8,18 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
-	"github.com/sbezverk/gobmp/pkg/tools"
 	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/srv6"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // TLV defines BGP-LS TLV object
 // https://tootlv.ietf.org/html/rfc7752#section-3.3
 type TLV struct {
-	Type   uint16
-	Length uint16
-	Value  []byte
+	Type       uint16
+	Length     uint16
+	Value      []byte
+	Capability *sr.Capability
 }
 
 func (tlv *TLV) String() string {
@@ -272,7 +273,7 @@ func (tlv *TLV) MarshalJSON() ([]byte, error) {
 	case 1034:
 		jsonData = append(jsonData, []byte(fmt.Sprintf("\"SR Capabilities\","))...)
 		jsonData = append(jsonData, []byte("\"srCapabilities\":")...)
-		cap, err := sr.UnmarshalSRCapabilityTLV(tlv.Value)
+		cap, err := sr.UnmarshalSRCapability(tlv.Value)
 		if err != nil {
 			return nil, err
 		}

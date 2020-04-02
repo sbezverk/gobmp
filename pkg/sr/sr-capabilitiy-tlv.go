@@ -11,9 +11,8 @@ import (
 // CapabilityTLV defines SR Capability TLV object
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.1.2
 type CapabilityTLV struct {
-	Flag  uint8
 	Range uint32
-	SID   []byte
+	SID   *SIDTLV
 }
 
 func (cap *CapabilityTLV) String(level ...int) string {
@@ -24,8 +23,6 @@ func (cap *CapabilityTLV) String(level ...int) string {
 	}
 	s += tools.AddLevel(l)
 	s += "SR Capability TLV:" + "\n"
-	s += tools.AddLevel(l + 1)
-	s += fmt.Sprintf("Flag: %02x\n", cap.Flag)
 
 	return s
 }
@@ -34,32 +31,47 @@ func (cap *CapabilityTLV) String(level ...int) string {
 func (cap *CapabilityTLV) MarshalJSON() ([]byte, error) {
 	var jsonData []byte
 	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"flag\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", cap.Flag))...)
 	jsonData = append(jsonData, []byte("\"range\":")...)
 	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", cap.Range))...)
 	jsonData = append(jsonData, []byte("\"sid\":")...)
-	jsonData = append(jsonData, tools.RawBytesToJSON(cap.SID)...)
+	jsonData = append(jsonData, tools.RawBytesToJSON(cap.SID.Value)...)
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
 }
 
 // UnmarshalSRCapabilityTLV builds SR Capability TLV object
-func UnmarshalSRCapabilityTLV(b []byte) (*CapabilityTLV, error) {
+func UnmarshalSRCapabilityTLV(b []byte) ([]CapabilityTLV, error) {
 	glog.V(6).Infof("SR Capability TLV Raw: %s", tools.MessageHex(b))
-	cap := CapabilityTLV{}
-	p := 0
-	cap.Flag = b[0]
-	// Ignore reserved byte
-	p++
-	r := make([]byte, 4)
-	// Copy 3 bytes of Range into 4 byte slice to convert it into uint32
-	copy(r[1:], b[p:p+3])
-	cap.Range = binary.BigEndian.Uint32(r)
-	p += 3
-	cap.SID = make([]byte, len(b)-p)
-	copy(cap.SID, b[p:])
+	caps := make([]CapabilityTLV, 0)
+	for p := 0; p < len(b); {
+		cap := CapabilityTLV{}
+		r := make([]byte, 4)
+		// Copy 3 bytes of Range into 4 byte slice to convert it into uint32
+		copy(r[1:], b[p:p+3])
+		cap.Range = binary.BigEndian.Uint32(r)
+		p += 3
+		// Getting type of sub tlv
+		t := binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		l := binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		v := make([]byte, l)
+		copy(v, b[p:p+int(l)])
+		p += int(l)
+		switch t {
+		case 1161:
+			// SID Subtlv
+			cap.SID = &SIDTLV{
+				Type:   t,
+				Length: l,
+				Value:  v,
+			}
+		default:
+			return nil, fmt.Errorf("unknown SR Capability tlv %d", t)
+		}
+		caps = append(caps, cap)
+	}
 
-	return &cap, nil
+	return caps, nil
 }

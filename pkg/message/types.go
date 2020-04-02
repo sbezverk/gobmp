@@ -69,3 +69,39 @@ type UnicastPrefix struct {
 	IsPrepolicy      bool   `json:"isprepolicy,omitempty"`
 	IsAdjRIBIn       bool   `json:"is_adj_rib_in,omitempty"`
 }
+
+// LSNode defines a structure of LS Node message
+type LSNode struct {
+	Action              string `json:"action"` // Action can be "add" or "del"
+	Sequence            int    `json:"sequence,omitempty"`
+	Hash                string `json:"hash,omitempty"`
+	RouterHash          string `json:"router_hash,omitempty"`
+	RouterIP            string `json:"router_ip,omitempty"`
+	BaseAttrHash        string `json:"base_attr_hash,omitempty"`
+	PeerHash            string `json:"peer_hash,omitempty"`
+	PeerIP              string `json:"peer_ip,omitempty"`
+	PeerASN             int32  `json:"peer_asn,omitempty"`
+	Timestamp           string `json:"timestamp,omitempty"`
+	IGPRouterID         string `json:"igp_router_id,omitempty"`
+	RouterID            string `json:"router_id,omitempty"`
+	RoutingID           string `json:"routing_id,omitempty"` // TODO, find out where this information is stored
+	ASN                 uint32 `json:"asn,omitempty"`
+	LSID                uint32 `json:"ls_id,omitempty"`
+	MTID                string `json:"mt_id,omitempty"`
+	OSPFAreaID          string `json:"ospf_area_id,omitempty"`
+	ISISAreaID          string `json:"isis_area_id,omitempty"`
+	Protocol            string `json:"protocol,omitempty"`
+	Flags               uint8  `json:"flags,omitempty"`
+	ASPath              string `json:"as_path,omitempty"` // WHY
+	Nexthop             string `json:"nexthop,omitempty"`
+	MED                 uint32 `json:"med,omitempty"`        // WHY
+	LocalPref           uint32 `json:"local_pref,omitempty"` // WHY
+	Name                string `json:"name,omitempty"`
+	SRCapabilities      string `json:"ls_sr_capabilities,omitempty"`
+	SRAlgorithm         []int  `json:"sr_algorithm,omitempty"`
+	SRLocalBlock        string `json:"sr_local_block,omitempty"`
+	SRv6CapabilitiesTLV string `json:"sr_capabilities_tlv,omitempty"`
+	NodeMSD             string `json:"node_msd,omitempty"`
+	IsPrepolicy         bool   `json:"isprepolicy,omitempty"`
+	IsAdjRIBIn          bool   `json:"is_adj_rib_in,omitempty"`
+}

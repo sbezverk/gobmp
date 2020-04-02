@@ -3,11 +3,11 @@ package message
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/ls"
 )
 
 const (
@@ -18,6 +18,7 @@ const (
 )
 
 func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
+	var j []byte
 	if msg.PeerHeader == nil {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return
@@ -35,23 +36,56 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// There is no Path Attributes, just return
 		return
 	}
+	// Using first attribute type to select which nlri processor to call
 	switch routeMonitorMsg.Update.PathAttributes[0].AttributeType {
 	case 14:
 		// MP_REACH_NLRI
-		// https://tools.ietf.org/html/rfc7752
-		_, err := p.nlri14(msg.PeerHeader, routeMonitorMsg.Update)
+		t, err := getNLRIMessageType(routeMonitorMsg.Update.PathAttributes)
 		if err != nil {
-			glog.Errorf("failed to produce MP_REACH_NLRI (14) message with error: %+v", err)
+			glog.Errorf("failed to identify exact NLRI type with error: %+v", err)
 			return
+		}
+		switch t {
+		case 1:
+			glog.Infof("1 IP (IP version 4) : 1 unicast forwarding")
+		case 2:
+			glog.Infof("2 IP6 (IP version 6) : 1 unicast forwarding")
+		case 16:
+			glog.Infof("1 IP (IP version 4) : 4 MPLS Labels")
+		case 17:
+			glog.Infof("2 IP (IP version 6) : 4 MPLS Labels")
+		case 18:
+			glog.Infof("1 IP (IP version 4) : 128 MPLS-labeled VPN address")
+		case 19:
+			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
+		case 32:
+			glog.Infof("Node NLRI")
+			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
+			if err != nil {
+				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				return
+			}
+			j, err = json.Marshal(&msg)
+			if err != nil {
+				glog.Errorf("failed to marshal ls_node message with error: %+v", err)
+				return
+			}
+			if err := p.publisher.PublishMessage(bmp.LSNodeMsg, []byte(msg.RouterHash), j); err != nil {
+				glog.Errorf("failed to push LSNode message to kafka with error: %+v", err)
+				return
+			}
+			glog.V(6).Infof("ls_node message: %s", string(j))
+		case 33:
+			glog.Infof("Link NLRI")
+		case 34:
+			glog.Infof("IPv4 Topology Prefix NLRI")
+		case 35:
+			glog.Infof("IPv6 Topology Prefix NLRI")
+		case 36:
+			glog.Infof("SRv6 SID NLRI")
 		}
 	case 15:
 		// MP_UNREACH_NLRI
-		// https://tools.ietf.org/html/rfc7752
-		_, err := p.nlri15(msg.PeerHeader, routeMonitorMsg.Update)
-		if err != nil {
-			glog.Errorf("failed to produce MP_UNREACH_NLRI (15) message with error: %+v", err)
-			return
-		}
 	default:
 		// Original BGP's NLRI messages processing
 		msgs := make([]UnicastPrefix, 0)
@@ -82,134 +116,61 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			}
 		}
 	}
-	// Remove after debugging
-	// logPathAttrType(routeMonitorMsg)
 }
 
-func (p *producer) nlri14(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
-	// case 29:
-	// 	// BGP-LS NLRI
-	// 	// https://tools.ietf.org/html/rfc7752
-	// 	_, err := bgpls.UnmarshalBGPLSNLRI(pa.Attribute)
-	// 	if err != nil {
-	// 		glog.Errorf("failed to unmarshal BGP-LS NLRI (29)")
-	// 		return
-	// 	}
-	// case 40:
-	// 	// BGP Prefix-SID
-	// 	// https://tools.ietf.org/html/rfc8669
-	// glog.Infof("nlri14 processing requested..")
-	return nil, nil
-}
-
-func (p *producer) nlri15(ph *bmp.PerPeerHeader, update *bgp.Update) ([]byte, error) {
-	// glog.Infof("nlri15 processing requested..")
-	return nil, nil
-}
-
-func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
-	var operation string
-	switch op {
-	case 0:
-		operation = "add"
-	case 1:
-		operation = "del"
-	default:
-		return nil, fmt.Errorf("unknown operation %d", op)
-	}
-	prfxs := make([]UnicastPrefix, 0)
-	for _, pr := range update.NLRI {
-		prfx := UnicastPrefix{
-			Action:       operation,
-			RouterHash:   p.speakerHash,
-			RouterIP:     p.speakerIP,
-			BaseAttrHash: update.GetBaseAttrHash(),
-			PeerHash:     ph.GetPeerHash(),
-			PeerASN:      ph.PeerAS,
-			Timestamp:    ph.PeerTimestamp,
-			PrefixLen:    int32(pr.Length),
-			IsAtomicAgg:  update.GetAttrAtomicAggregate(),
-			Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
-			OriginatorID: net.IP(update.GetAttrOriginatorID()).To4().String(),
-			// TODO Missing attributes for Unicast message, need to figure out where corresponding values are stored
-			// ExtCommunityList
-			// PathID
-			// Labels
-			// IsPrepolicy
-			// IsAdjRIBIn
-		}
-		if o := update.GetAttrOrigin(); o != nil {
-			prfx.Origin = *o
-		}
-		if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {
-			prfx.ASPath = path
-			prfx.ASPathCount = count
-		}
-		if ases := update.GetAttrASPath(p.as4Capable); len(ases) != 0 {
-			// Last element in AS_PATH would be the AS of the origin
-			prfx.OriginAS = fmt.Sprintf("%d", ases[len(ases)-1])
-		}
-		if med := update.GetAttrMED(); med != nil {
-			prfx.MED = *med
-		}
-		if lp := update.GetAttrLocalPref(); lp != nil {
-			prfx.LocalPref = *lp
-		}
-		if ph.FlagV {
-			// IPv6 specific conversions
-			prfx.IsIPv4 = false
-			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-			prfx.Nexthop = net.IP(update.GetAttrNextHop()).To16().String()
-			prfx.IsNexthopIPv4 = false
-			a := make([]byte, 16)
-			copy(a, pr.Prefix)
-			prfx.Prefix = net.IP(a).To16().String()
-		} else {
-			// IPv4 specific conversions
-			prfx.IsIPv4 = true
-			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-			prfx.Nexthop = net.IP(update.GetAttrNextHop()).To4().String()
-			prfx.IsNexthopIPv4 = true
-			a := make([]byte, 4)
-			copy(a, pr.Prefix)
-			prfx.Prefix = net.IP(a).To4().String()
-		}
-		prfxs = append(prfxs, prfx)
-
-		glog.V(6).Infof("Unicast message: %+v", prfx)
+func getNLRIMessageType(pattrs []bgp.PathAttribute) (int, error) {
+	nlri, err := bgp.UnmarshalMPReachNLRI(pattrs[0].Attribute)
+	if err != nil {
+		return 0, err
 	}
 
-	return prfxs, nil
-}
+	switch {
+	// 16388 BGP-LS	[RFC7752] : 71	BGP-LS	[RFC7752]
+	case nlri.AddressFamilyID == 16388 && nlri.SubAddressFamilyID == 71:
+		// Looking further down to get type of LS NLRI
+		nlri71, err := ls.UnmarshalLSNLRI71(nlri.NLRI)
+		if err != nil {
+			return 0, err
+		}
+		switch nlri71.Type {
+		case 1:
+			// Node NLRI
+			return 32, nil
+		case 2:
+			// Link NLRI
+			return 33, nil
+		case 3:
+			// IPv4 Topology Prefix NLRI
+			return 34, nil
+		case 4:
+			// IPv6 Topology Prefix NLRI
+			return 35, nil
+		case 6:
+			// SRv6 SID NLRI
+			return 36, nil
+		default:
+			return 0, fmt.Errorf("invalid LS NLRI type %d", nlri71.Type)
 
-func logPathAttrType(routeMonitorMsg *bmp.RouteMonitor) {
-	glog.Info("route monitor message carries attribute types:")
-	var s string
-	for i, pa := range routeMonitorMsg.Update.PathAttributes {
-		s += fmt.Sprintf("type: %d", pa.AttributeType)
-		switch pa.AttributeType {
-		case 14:
-			// MP_REACH_NLRI
-			// https://tools.ietf.org/html/rfc7752
-			mp, err := bgp.UnmarshalMPReachNLRI(pa.Attribute)
-			if err != nil {
-				glog.Errorf("failed to unmarshal MP_REACH_NLRI (14)")
-				return
-			}
-			s += fmt.Sprintf(" : afi %d safi %d :", mp.AddressFamilyID, mp.SubAddressFamilyID)
-		case 15:
-			// MP_UNREACH_NLRI
-			// https://tools.ietf.org/html/rfc7752
-			mp, err := bgp.UnmarshalMPUnReachNLRI(pa.Attribute)
-			if err != nil {
-				glog.Errorf("failed to unmarshal MP_UNREACH_NLRI (15)")
-				return
-			}
-			s += fmt.Sprintf(" : afi %d safi %d :", mp.AddressFamilyID, mp.SubAddressFamilyID)
 		}
-		if i < len(routeMonitorMsg.Update.PathAttributes)-1 {
-			s += ", "
-		}
+	// 1 IP (IP version 4) : 1 unicast forwarding
+	case nlri.AddressFamilyID == 1 && nlri.SubAddressFamilyID == 1:
+		return 1, nil
+	// 2 IP6 (IP version 6) : 1 unicast forwarding
+	case nlri.AddressFamilyID == 2 && nlri.SubAddressFamilyID == 1:
+		return 2, nil
+	// 1 IP (IP version 4) : 4 MPLS Labels
+	case nlri.AddressFamilyID == 1 && nlri.SubAddressFamilyID == 4:
+		return 16, nil
+	// 2 IP (IP version 6) : 4 MPLS Labels
+	case nlri.AddressFamilyID == 2 && nlri.SubAddressFamilyID == 4:
+		return 17, nil
+	// 1 IP (IP version 4) : 128 MPLS-labeled VPN address
+	case nlri.AddressFamilyID == 1 && nlri.SubAddressFamilyID == 128:
+		return 18, nil
+	// 2 IP (IP version 6) : 128 MPLS-labeled VPN address
+	case nlri.AddressFamilyID == 2 && nlri.SubAddressFamilyID == 128:
+		return 19, nil
 	}
-	glog.Infof("- %s", s)
+
+	return 0, fmt.Errorf("unsupported nlri of type: afi %d safi %d", nlri.AddressFamilyID, nlri.SubAddressFamilyID)
 }
