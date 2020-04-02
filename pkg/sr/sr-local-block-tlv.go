@@ -70,6 +70,7 @@ func UnmarshalSRLocalBlockTLV(b []byte) ([]LocalBlockTLV, error) {
 		default:
 			return nil, fmt.Errorf("unknown SR LocalBLock tlv %d", t)
 		}
+		tlvs = append(tlvs, tlv)
 	}
 
 	return tlvs, nil

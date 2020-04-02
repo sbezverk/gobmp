@@ -55,7 +55,7 @@ func (lb *LocalBlock) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRLocalBlock builds SR Local Block object
 func UnmarshalSRLocalBlock(b []byte) (*LocalBlock, error) {
-	glog.V(5).Infof("SR Local BLock Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("SR Local BLock Raw: %s", tools.MessageHex(b))
 	lb := LocalBlock{}
 	p := 0
 	lb.Flags = b[p]

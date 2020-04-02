@@ -70,6 +70,7 @@ func UnmarshalSRCapabilityTLV(b []byte) ([]CapabilityTLV, error) {
 		default:
 			return nil, fmt.Errorf("unknown SR Capability tlv %d", t)
 		}
+		caps = append(caps, cap)
 	}
 
 	return caps, nil

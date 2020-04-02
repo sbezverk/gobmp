@@ -41,7 +41,7 @@ func (cap *Capability) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRCapability builds SR Capability object
 func UnmarshalSRCapability(b []byte) (*Capability, error) {
-	glog.V(5).Infof("SR Capability Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("SR Capability Raw: %s", tools.MessageHex(b))
 	cap := Capability{}
 	p := 0
 	cap.Flags = b[p]

@@ -60,7 +60,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
 		case 32:
 			glog.Infof("Node NLRI")
-			p.lsNode(msg.PeerHeader, routeMonitorMsg.Update)
+			p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
 		case 33:
 			glog.Infof("Link NLRI")
 		case 34:
@@ -104,7 +104,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	}
 }
 
-func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, error) {
+func (p *producer) lsNode(operation string, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, error) {
 	nlri14, err := update.GetNLRI14()
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, e
 		return nil, err
 	}
 	msg := LSNode{
-		Action:       "add",
+		Action:       operation,
 		RouterHash:   p.speakerHash,
 		RouterIP:     p.speakerIP,
 		BaseAttrHash: update.GetBaseAttrHash(),
