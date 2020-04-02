@@ -153,6 +153,7 @@ func (p *producer) lsNode(ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, e
 		}
 		msg.NodeMSD = lsnode.GetNodeMSD()
 		msg.LSSrCapabilities = lsnode.GetNodeSRCapabilities()
+		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
 	}
 
 	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {

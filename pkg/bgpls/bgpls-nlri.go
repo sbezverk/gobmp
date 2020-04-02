@@ -171,6 +171,22 @@ func (ls *NLRI) GetNodeSRCapabilities() string {
 	return s
 }
 
+// GetSRAlgorithm returns a list of SR Algorithms
+func (ls *NLRI) GetSRAlgorithm() []int {
+	a := make([]int, 0)
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1035 {
+			continue
+		}
+		for p := 0; p < len(tlv.Value); p++ {
+			a = append(a, int(tlv.Value[p]))
+		}
+		break
+	}
+
+	return a
+}
+
 // MarshalJSON defines a method to  BGP-LS TLV object into JSON format
 func (ls *NLRI) MarshalJSON() ([]byte, error) {
 	var jsonData []byte
