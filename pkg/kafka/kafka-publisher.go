@@ -20,12 +20,13 @@ const (
 	peerTopic           = "gobmp.parsed.peer"
 	unicastMessageTopic = "gobmp.parsed.unicast_prefix"
 	lsNodeMessageTopic  = "gobmp.parsed.ls_node"
+	lsLinkMessageTopic  = "gobmp.parsed.ls_link"
 )
 
 var (
 	// topics defines a list of topic to initialize and connect,
 	// initialization is done as a part of NewKafkaPublisher func.
-	topicNames = []string{peerTopic, unicastMessageTopic, lsNodeMessageTopic}
+	topicNames = []string{peerTopic, unicastMessageTopic, lsNodeMessageTopic, lsLinkMessageTopic}
 )
 
 // topicConnection defines per topic connection and connection related information
@@ -50,6 +51,8 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 		return p.produceMessage(unicastMessageTopic, key, msg)
 	case bmp.LSNodeMsg:
 		return p.produceMessage(lsNodeMessageTopic, key, msg)
+	case bmp.LSLinkMsg:
+		return p.produceMessage(lsLinkMessageTopic, key, msg)
 	}
 
 	return fmt.Errorf("not implemented")

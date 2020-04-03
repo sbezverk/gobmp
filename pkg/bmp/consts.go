@@ -24,4 +24,6 @@ const (
 	UnicastPrefixMsg = 7
 	// LSNodeMsg defines a subtype of BMP Route Monitoring message
 	LSNodeMsg = 8
+	// LSLinkMsg defines a subtype of BMP Route Monitoring message
+	LSLinkMsg = 9
 )

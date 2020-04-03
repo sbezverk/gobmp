@@ -25,14 +25,14 @@ type TLV struct {
 func (tlv *TLV) String() string {
 	var s string
 	switch tlv.Type {
-	case 258:
-		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Link Local/Remote Identifiers)\n", tlv.Type)
-		lri, err := base.UnmarshalLocalRemoteIdentifierTLV(tlv.Value)
-		if err != nil {
-			s += err.Error() + "\n"
-			break
-		}
-		s += lri.String()
+	//	case 258:
+	//		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Link Local/Remote Identifiers)\n", tlv.Type)
+	//		lri, err := base.UnmarshalLocalRemoteIdentifierTLV(tlv.Value)
+	//		if err != nil {
+	//			s += err.Error() + "\n"
+	//			break
+	//		}
+	//		s += lri.String()
 	case 263:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Multi-Topology Identifier)\n", tlv.Type)
 		mit, err := base.UnmarshalMultiTopologyIdentifierTLV(tlv.Value)
@@ -104,11 +104,11 @@ func (tlv *TLV) String() string {
 	case 1091:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Unreserved bandwidth)\n", tlv.Type)
 		s += fmt.Sprintf("      Unreserved bandwidth: %s\n", tools.MessageHex(tlv.Value))
-	case 1092:
+	case 1095:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (IGP Metric)\n", tlv.Type)
 		m := binary.BigEndian.Uint32(tlv.Value)
 		s += fmt.Sprintf("      IGP Metric: %d\n", m)
-	case 1095:
+	case 1092:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (TE Default Metric)\n", tlv.Type)
 		s += fmt.Sprintf("      TE Default Metric: %s\n", tools.MessageHex(tlv.Value))
 	case 1099:
@@ -166,7 +166,7 @@ func (tlv *TLV) String() string {
 		s += fmt.Sprintf("      Flag: %02x\n", tlv.Value[2])
 		s += fmt.Sprintf("      Algorithm: %d\n", tlv.Value[3])
 	case 1251:
-		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 Endpoint Function)\n", tlv.Type)
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 BGP Peer Node SID)\n", tlv.Type)
 		s += fmt.Sprintf("      Flag: %02x\n", tlv.Value[0])
 		s += fmt.Sprintf("      Weight: %d\n", tlv.Value[1])
 		s += fmt.Sprintf("      Peer AS Number: %d\n", binary.BigEndian.Uint32(tlv.Value[4:8]))

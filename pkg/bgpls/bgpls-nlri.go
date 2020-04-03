@@ -1,6 +1,7 @@
 package bgpls
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -99,8 +100,8 @@ func (ls *NLRI) GetISISAreaID() string {
 	return ""
 }
 
-// GetNodeIPv4RouterID returns string with local Node IPv4 router ID
-func (ls *NLRI) GetNodeIPv4RouterID() string {
+// GetLocalIPv4RouterID returns string with local Node IPv4 router ID
+func (ls *NLRI) GetLocalIPv4RouterID() string {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1028 {
 			continue
@@ -111,10 +112,34 @@ func (ls *NLRI) GetNodeIPv4RouterID() string {
 	return ""
 }
 
-// GetNodeIPv6RouterID returns string with local Node IPv6 router ID
-func (ls *NLRI) GetNodeIPv6RouterID() string {
+// GetLocalIPv6RouterID returns string with local Node IPv6 router ID
+func (ls *NLRI) GetLocalIPv6RouterID() string {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1029 {
+			continue
+		}
+		return net.IP(tlv.Value).To16().String()
+	}
+
+	return ""
+}
+
+// GetRemoteIPv4RouterID returns string with remote Node IPv4 router ID
+func (ls *NLRI) GetRemoteIPv4RouterID() string {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1030 {
+			continue
+		}
+		return net.IP(tlv.Value).To4().String()
+	}
+
+	return ""
+}
+
+// GetRemoteIPv6RouterID returns string with remote Node IPv6 router ID
+func (ls *NLRI) GetRemoteIPv6RouterID() string {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1031 {
 			continue
 		}
 		return net.IP(tlv.Value).To16().String()
@@ -131,6 +156,29 @@ func (ls *NLRI) GetNodeMSD() string {
 			continue
 		}
 		msd, err := base.UnmarshalNodeMSD(tlv.Value)
+		if err != nil {
+			return s
+		}
+		if msd == nil {
+			return s
+		}
+		s += fmt.Sprintf("%d:%d", msd.MSD[0].Type, msd.MSD[0].Value)
+		for i := 1; i < len(msd.MSD); i++ {
+			s += fmt.Sprintf(",%d:%d", msd.MSD[i].Type, msd.MSD[i].Value)
+		}
+	}
+
+	return s
+}
+
+// GetLinkMSD returns string with Node's MSD codes
+func (ls *NLRI) GetLinkMSD() string {
+	var s string
+	for _, tlv := range ls.LS {
+		if tlv.Type != 267 {
+			continue
+		}
+		msd, err := base.UnmarshalLinkMSD(tlv.Value)
 		if err != nil {
 			return s
 		}
@@ -209,6 +257,7 @@ func (ls *NLRI) GetNodeSRLocalBlock() string {
 			}
 			s += fmt.Sprintf("%d:%d ", tlv.SubRange, tlv.SID.Value)
 		}
+		break
 	}
 
 	return s
@@ -232,6 +281,262 @@ func (ls *NLRI) GetNodeSRv6CapabilitiesTLV() string {
 	}
 
 	return s
+}
+
+// GetAdminGroup returns Administrative group (color)
+func (ls *NLRI) GetAdminGroup() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1088 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetTEDefaultMetric returns value of TE Default Metric
+func (ls *NLRI) GetTEDefaultMetric() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1092 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetIGPMetric returns IGP Metric
+func (ls *NLRI) GetIGPMetric() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1095 {
+			continue
+		}
+		m := make([]byte, 4)
+		copy(m[1:], tlv.Value)
+		return binary.BigEndian.Uint32(m)
+	}
+
+	return 0
+}
+
+// GetMaxLinkBandwidth returns value of Maximum Link Bandwidth encoded in 32 bits in IEEE floating point format
+func (ls *NLRI) GetMaxLinkBandwidth() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1089 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetMaxReservableLinkBandwidth returns value of Maximum Reservable Link Bandwidth encoded in 32 bits in IEEE floating point format
+func (ls *NLRI) GetMaxReservableLinkBandwidth() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1090 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnreservedLinkBandwidth returns eight 32-bit IEEE floating point numbers
+func (ls *NLRI) GetUnreservedLinkBandwidth() []uint32 {
+	unResrved := make([]uint32, 8)
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1091 {
+			continue
+		}
+		for p := 0; p < len(tlv.Value); {
+			unResrved = append(unResrved, binary.BigEndian.Uint32(tlv.Value[p:p+4]))
+			p += 4
+		}
+		return unResrved
+	}
+
+	return nil
+}
+
+// GetLinkProtectionType returns value of Link Protection Type
+func (ls *NLRI) GetLinkProtectionType() uint16 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1093 {
+			continue
+		}
+		return binary.BigEndian.Uint16(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetLinkMPLSProtocolMask returns value of MPLS Protocol Mask
+func (ls *NLRI) GetLinkMPLSProtocolMask() uint8 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1094 {
+			continue
+		}
+		return uint8(tlv.Value[0])
+	}
+
+	return 0
+}
+
+// GetSRLG returns slice of uint32 carrying data structure
+// consisting of a (variable) list of SRLG values
+func (ls *NLRI) GetSRLG() []uint32 {
+	srlg := make([]uint32, 0)
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1096 {
+			continue
+		}
+		for p := 0; p < len(tlv.Value); {
+			srlg = append(srlg, binary.BigEndian.Uint32(tlv.Value[p:p+4]))
+			p += 4
+		}
+		return srlg
+	}
+
+	return nil
+}
+
+// GetLinkName returns Link's name
+func (ls *NLRI) GetLinkName() string {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1098 {
+			continue
+		}
+		return string(tlv.Value)
+	}
+
+	return ""
+}
+
+// GetSRv6PeerNodeSID returns Peer Node SID object
+func (ls *NLRI) GetSRv6PeerNodeSID() *srv6.PeerNodeSID {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1251 {
+			continue
+		}
+		sid, err := srv6.UnmarshalSRv6PeerNodeSID(tlv.Value)
+		if err != nil {
+			return nil
+		}
+		return sid
+	}
+
+	return nil
+}
+
+// GetUnidirLinkDelay returns value of Unidirectional Link Delay
+func (ls *NLRI) GetUnidirLinkDelay() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1114 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnidirLinkDelayMinMax returns minimum and maximum delay values between two
+//   directly connected IGP link-state neighbors of MUnidirectional Link Delay
+func (ls *NLRI) GetUnidirLinkDelayMinMax() []uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1115 {
+			continue
+		}
+		return []uint32{binary.BigEndian.Uint32(tlv.Value[:4]), binary.BigEndian.Uint32(tlv.Value[4:])}
+	}
+
+	return nil
+}
+
+// GetUnidirDelayVariation returns a value of the link delay variation between two
+// directly connected IGP link-state neighbor
+func (ls *NLRI) GetUnidirDelayVariation() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1116 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnidirLinkLoss returns a value of the the loss (as a packet percentage) between two
+// directly connected IGP link-state neighbor
+func (ls *NLRI) GetUnidirLinkLoss() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1117 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnidirResidualBandwidth returns a value of the the residual bandwidth between two
+// directly connected IGP link-state neighbor
+func (ls *NLRI) GetUnidirResidualBandwidth() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1118 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnidirAvailableBandwidth returns a value of the the available bandwidth between two
+// directly connected IGP link-state neighbor
+func (ls *NLRI) GetUnidirAvailableBandwidth() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1119 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnidirUtilizedBandwidth returns a value of the the utilized bandwidth between two
+// directly connected IGP link-state neighbor
+func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1120 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetSRAdjacencySID returns SR Adjacency SID object
+func (ls *NLRI) GetSRAdjacencySID() (*sr.AdjacencySIDTLV, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1099 {
+			continue
+		}
+		adj, err := sr.UnmarshalAdjacencySIDTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		return adj, nil
+	}
+
+	return nil, fmt.Errorf("not found")
 }
 
 // MarshalJSON defines a method to  BGP-LS TLV object into JSON format

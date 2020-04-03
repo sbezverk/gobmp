@@ -82,7 +82,7 @@ func TestGetIdentifier(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.node.GetIGPRouterID()
+			got := tt.node.GetNodeIGPRouterID()
 			if strings.Compare(got, tt.expected) != 0 {
 				t.Errorf("failed, expected %s got %s", tt.expected, got)
 			}

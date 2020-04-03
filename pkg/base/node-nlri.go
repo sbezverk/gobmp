@@ -26,28 +26,28 @@ func (n *NodeNLRI) String() string {
 	return s
 }
 
-// GetProtocolID returns a string representation of NodeNLRI ProtocolID field
-func (n *NodeNLRI) GetProtocolID() string {
+// GetNodeProtocolID returns a string representation of NodeNLRI ProtocolID field
+func (n *NodeNLRI) GetNodeProtocolID() string {
 	return tools.ProtocolIDString(n.ProtocolID)
 }
 
-// GetLSID returns a value of Node Descriptor TLV BGP-LS Identifier
-func (n *NodeNLRI) GetLSID() uint32 {
+// GetNodeLSID returns a value of Node Descriptor TLV BGP-LS Identifier
+func (n *NodeNLRI) GetNodeLSID() uint32 {
 	return n.LocalNode.GetLSID()
 }
 
-// GetIGPRouterID returns a value of Node Descriptor TLV IGP Router ID
-func (n *NodeNLRI) GetIGPRouterID() string {
+// GetNodeIGPRouterID returns a value of Node Descriptor TLV IGP Router ID
+func (n *NodeNLRI) GetNodeIGPRouterID() string {
 	return n.LocalNode.GetIGPRouterID()
 }
 
-// GetASN returns Autonomous System Number used to uniqely identify BGP-LS domain
-func (n *NodeNLRI) GetASN() uint32 {
+// GetNodeASN returns Autonomous System Number used to uniqely identify BGP-LS domain
+func (n *NodeNLRI) GetNodeASN() uint32 {
 	return n.LocalNode.GetASN()
 }
 
-// GetOSPFAreaID returns OSPF Area-ID found in Node Descriptor sub tlv
-func (n *NodeNLRI) GetOSPFAreaID() string {
+// GetNodeOSPFAreaID returns OSPF Area-ID found in Node Descriptor sub tlv
+func (n *NodeNLRI) GetNodeOSPFAreaID() string {
 	return n.LocalNode.GetOSPFAreaID()
 }
 
