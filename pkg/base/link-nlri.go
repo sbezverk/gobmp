@@ -1,6 +1,7 @@
 package base
 
 import (
+	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -13,11 +14,14 @@ import (
 // LinkNLRI defines Node NLRI onject
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type LinkNLRI struct {
-	ProtocolID uint8
-	Identifier uint64
-	LocalNode  *NodeDescriptor
-	RemoteNode *NodeDescriptor
-	Link       *LinkDescriptor
+	ProtocolID     uint8
+	Identifier     uint64
+	LocalNode      *NodeDescriptor
+	RemoteNode     *NodeDescriptor
+	Link           *LinkDescriptor
+	LocalNodeHash  string
+	RemoteNodeHash string
+	LinkHash       string
 }
 
 func (l *LinkNLRI) String() string {
@@ -200,6 +204,7 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 		return nil, err
 	}
 	l.LocalNode = ln
+	l.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)]))
 	// Skip Node Type and Length 4 bytes
 	p += 4
 	p += int(ndl)
@@ -211,6 +216,7 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 		return nil, err
 	}
 	l.RemoteNode = rn
+	l.RemoteNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)]))
 	p += int(ndl)
 	// Skip Node Type and Length 4 bytes
 	p += 4
@@ -220,6 +226,6 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 		return nil, err
 	}
 	l.Link = ld
-
+	l.LinkHash = fmt.Sprintf("%x", md5.Sum(b[p:len(b)]))
 	return &l, nil
 }

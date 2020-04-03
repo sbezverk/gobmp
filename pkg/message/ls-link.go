@@ -54,6 +54,8 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 			msg.InterfaceIP = link.GetLinkIPv4InterfaceAddr()
 			msg.NeighborIP = link.GetLinkIPv4NeighborAddr()
 		}
+		msg.LocalNodeHash = link.LocalNodeHash
+		msg.RemoteNodeHash = link.RemoteNodeHash
 	}
 	lslink, err := update.GetNLRI29()
 	if err == nil {
