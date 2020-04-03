@@ -522,6 +522,23 @@ func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
 	return 0
 }
 
+// GetSRAdjacencySID returns SR Adjacency SID object
+func (ls *NLRI) GetSRAdjacencySID() (*sr.AdjacencySIDTLV, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1099 {
+			continue
+		}
+		adj, err := sr.UnmarshalAdjacencySIDTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		return adj, nil
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
 // MarshalJSON defines a method to  BGP-LS TLV object into JSON format
 func (ls *NLRI) MarshalJSON() ([]byte, error) {
 	var jsonData []byte

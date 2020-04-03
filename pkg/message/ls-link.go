@@ -3,7 +3,6 @@ package message
 import (
 	"net"
 
-	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -88,6 +87,9 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 		msg.UnidirLinkDelayMinMax = lslink.GetUnidirLinkDelayMinMax()
 		msg.UnidirPacketLoss = lslink.GetUnidirLinkLoss()
 		msg.UnidirResidualBW = lslink.GetUnidirResidualBandwidth()
+		if adj, err := lslink.GetSRAdjacencySID(); err == nil {
+			msg.LSAdjacencySID = adj
+		}
 	}
 
 	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {
@@ -99,7 +101,6 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 	if lp := update.GetAttrLocalPref(); lp != nil {
 		msg.LocalPref = *lp
 	}
-	glog.V(5).Infof("LS Link messages: %+v", msg)
 
 	return &msg, nil
 }

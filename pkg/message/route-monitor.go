@@ -87,11 +87,11 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to marshal ls_link message with error: %+v", err)
 				return
 			}
-			if err := p.publisher.PublishMessage(bmp.LSNodeMsg, []byte(msg.RouterHash), j); err != nil {
+			if err := p.publisher.PublishMessage(bmp.LSLinkMsg, []byte(msg.RouterHash), j); err != nil {
 				glog.Errorf("failed to push LSLink message to kafka with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("ls_link message: %s", string(j))
+			glog.V(6).Infof("ls_link message: %s", string(j))
 		case 34:
 			glog.Infof("IPv4 Topology Prefix NLRI")
 		case 35:
