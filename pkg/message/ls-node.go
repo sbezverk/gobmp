@@ -37,11 +37,11 @@ func (p *producer) lsNode(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 	// Processing other nlri and attributes, since they are optional, processing only if they exist
 	node, err := nlri71.GetNodeNLRI()
 	if err == nil {
-		msg.Protocol = node.GetProtocolID()
-		msg.IGPRouterID = node.GetIGPRouterID()
-		msg.LSID = node.GetLSID()
-		msg.ASN = node.GetASN()
-		msg.OSPFAreaID = node.GetOSPFAreaID()
+		msg.Protocol = node.GetNodeProtocolID()
+		msg.IGPRouterID = node.GetNodeIGPRouterID()
+		msg.LSID = node.GetNodeLSID()
+		msg.ASN = node.GetNodeASN()
+		msg.OSPFAreaID = node.GetNodeOSPFAreaID()
 	}
 
 	lsnode, err := update.GetNLRI29()
@@ -68,6 +68,10 @@ func (p *producer) lsNode(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 	if med := update.GetAttrMED(); med != nil {
 		msg.MED = *med
 	}
+	if lp := update.GetAttrLocalPref(); lp != nil {
+		msg.LocalPref = *lp
+	}
+
 	glog.V(6).Infof("LS Node messages: %+v", msg)
 
 	return &msg, nil

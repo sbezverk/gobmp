@@ -39,38 +39,37 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 	}
 	// Processing other nlri and attributes, since they are optional, processing only if they exist
 	nlri71.GetLinkNLRI()
-	//	 link, err := nlri71.GetLinkNLRI()
-	//	 if err == nil {
-	//	 	msg.Protocol = n.GetProtocolID()
-	//	 	msg.IGPRouterID = node.GetIGPRouterID()
-	//	 	msg.LSID = node.GetLSID()
-	// 	//		msg.ASN = node.GetASN()
-	// 	msg.OSPFAreaID = node.GetOSPFAreaID()
-	// }
-
-	// lsnode, err := update.GetNLRI29()
-	// if err == nil {
-	// 	//		msg.Flags = lsnode.GetNodeFlags()
-	// 	//		msg.Name = lsnode.GetNodeName()
-	// 	msg.MTID = lsnode.GetMTID()
-	// 	msg.ISISAreaID = lsnode.GetISISAreaID()
-	// 	if ph.FlagV {
-	// 		msg.RouterID = lsnode.GetNodeIPv6RouterID()
-	// 	} else {
-	// 		msg.RouterID = lsnode.GetNodeIPv4RouterID()
-	// 	}
-	// 	//		msg.NodeMSD = lsnode.GetNodeMSD()
-	// 	//		msg.SRCapabilities = lsnode.GetNodeSRCapabilities()
-	// 	//		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
-	// 	//		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
-	// 	//		msg.SRv6CapabilitiesTLV = lsnode.GetNodeSRv6CapabilitiesTLV()
-	// }
+	link, err := nlri71.GetLinkNLRI()
+	if err == nil {
+		msg.Protocol = link.GetLinkProtocolID()
+		msg.IGPRouterID = link.GetLinkIGPRouterID(true)
+		msg.LSID = link.GetLinkLSID(true)
+		msg.OSPFAreaID = link.GetLinkOSPFAreaID(true)
+	}
+	lslink, err := update.GetNLRI29()
+	if err == nil {
+		if ph.FlagV {
+			msg.RouterID = lslink.GetNodeIPv6RouterID()
+		} else {
+			msg.RouterID = lslink.GetNodeIPv4RouterID()
+		}
+		msg.MTID = lslink.GetMTID()
+		msg.ISISAreaID = lslink.GetISISAreaID()
+		msg.LinkMSD = lslink.GetLinkMSD()
+		// 	//		msg.SRCapabilities = lsnode.GetNodeSRCapabilities()
+		// 	//		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
+		// 	//		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
+		// 	//		msg.SRv6CapabilitiesTLV = lsnode.GetNodeSRv6CapabilitiesTLV()
+	}
 
 	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {
 		msg.ASPath = path
 	}
 	if med := update.GetAttrMED(); med != nil {
 		msg.MED = *med
+	}
+	if lp := update.GetAttrLocalPref(); lp != nil {
+		msg.LocalPref = *lp
 	}
 	glog.V(5).Infof("LS Link messages: %+v", msg)
 

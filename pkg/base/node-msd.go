@@ -47,7 +47,7 @@ func (msd *NodeMSD) MarshalJSON() ([]byte, error) {
 
 // UnmarshalNodeMSD build Link MSD object
 func UnmarshalNodeMSD(b []byte) (*NodeMSD, error) {
-	glog.V(6).Infof("Link MSD Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("Node MSD Raw: %s", tools.MessageHex(b))
 	msd := NodeMSD{}
 	p := 0
 	tvsv, err := UnmarshalMSDTV(b[p : p+len(b)])

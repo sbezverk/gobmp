@@ -146,6 +146,29 @@ func (ls *NLRI) GetNodeMSD() string {
 	return s
 }
 
+// GetLinkMSD returns string with Node's MSD codes
+func (ls *NLRI) GetLinkMSD() string {
+	var s string
+	for _, tlv := range ls.LS {
+		if tlv.Type != 267 {
+			continue
+		}
+		msd, err := base.UnmarshalLinkMSD(tlv.Value)
+		if err != nil {
+			return s
+		}
+		if msd == nil {
+			return s
+		}
+		s += fmt.Sprintf("%d:%d", msd.MSD[0].Type, msd.MSD[0].Value)
+		for i := 1; i < len(msd.MSD); i++ {
+			s += fmt.Sprintf(",%d:%d", msd.MSD[i].Type, msd.MSD[i].Value)
+		}
+	}
+
+	return s
+}
+
 // GetNodeSRCapabilities returns string representation of SR Capabilities
 func (ls *NLRI) GetNodeSRCapabilities() string {
 	var s string

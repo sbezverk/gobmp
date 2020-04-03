@@ -13,7 +13,6 @@ import (
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type LinkNLRI struct {
 	ProtocolID uint8
-	//	Reserved   [3]byte
 	Identifier uint64
 	LocalNode  *NodeDescriptor
 	RemoteNode *NodeDescriptor
@@ -29,6 +28,43 @@ func (l *LinkNLRI) String() string {
 	s += l.Link.String()
 
 	return s
+}
+
+// GetLinkProtocolID returns a string representation of LinkNLRI ProtocolID field
+func (l *LinkNLRI) GetLinkProtocolID() string {
+	return tools.ProtocolIDString(l.ProtocolID)
+}
+
+// GetLinkLSID returns a value of Link Descriptor TLV BGP-LS Identifier
+func (l *LinkNLRI) GetLinkLSID(local bool) uint32 {
+	if local {
+		return l.LocalNode.GetLSID()
+	}
+	return l.RemoteNode.GetLSID()
+}
+
+// GetLinkIGPRouterID returns a value of Link Descriptor TLV IGP Router ID
+func (l *LinkNLRI) GetLinkIGPRouterID(local bool) string {
+	if local {
+		return l.LocalNode.GetIGPRouterID()
+	}
+	return l.RemoteNode.GetIGPRouterID()
+}
+
+// GetLinkASN returns Autonomous System Number used to uniquely identify BGP-LS domain
+func (l *LinkNLRI) GetLinkASN(local bool) uint32 {
+	if local {
+		return l.LocalNode.GetASN()
+	}
+	return l.RemoteNode.GetASN()
+}
+
+// GetLinkOSPFAreaID returns OSPF Area-ID found in Link Descriptor sub tlv
+func (l *LinkNLRI) GetLinkOSPFAreaID(local bool) string {
+	if local {
+		return l.LocalNode.GetOSPFAreaID()
+	}
+	return l.RemoteNode.GetOSPFAreaID()
 }
 
 // MarshalJSON defines a method to Marshal Link NLRI object into JSON format
