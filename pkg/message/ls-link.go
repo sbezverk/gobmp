@@ -42,7 +42,6 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 	link, err := nlri71.GetLinkNLRI()
 	if err == nil {
 		msg.Protocol = link.GetLinkProtocolID()
-		msg.IGPRouterID = link.GetLinkIGPRouterID(true)
 		msg.LSID = link.GetLinkLSID(true)
 		msg.OSPFAreaID = link.GetLinkOSPFAreaID(true)
 		msg.LocalLinkID = link.GetLinkID(true)
@@ -56,13 +55,19 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 		}
 		msg.LocalNodeHash = link.LocalNodeHash
 		msg.RemoteNodeHash = link.RemoteNodeHash
+		msg.LocalNodeASN = link.GetLocalASN()
+		msg.RemoteNodeASN = link.GetRemoteASN()
+		msg.RemoteIGPRouterID = link.GetRemoteIGPRouterID()
+		msg.IGPRouterID = link.GetLocalIGPRouterID()
 	}
 	lslink, err := update.GetNLRI29()
 	if err == nil {
 		if ph.FlagV {
-			msg.RouterID = lslink.GetNodeIPv6RouterID()
+			msg.RouterID = lslink.GetLocalIPv6RouterID()
+			msg.RemoteRouterID = lslink.GetRemoteIPv6RouterID()
 		} else {
-			msg.RouterID = lslink.GetNodeIPv4RouterID()
+			msg.RouterID = lslink.GetLocalIPv4RouterID()
+			msg.RemoteRouterID = lslink.GetRemoteIPv4RouterID()
 		}
 		msg.MTID = lslink.GetMTID()
 		msg.ISISAreaID = lslink.GetISISAreaID()
@@ -78,6 +83,7 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 		msg.MPLSProtoMask = lslink.GetLinkMPLSProtocolMask()
 		msg.SRLG = lslink.GetSRLG()
 		msg.LinkName = lslink.GetLinkName()
+		msg.PeerNodeSID = lslink.GetSRv6PeerNodeSID()
 	}
 
 	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {

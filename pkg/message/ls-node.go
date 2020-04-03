@@ -51,9 +51,9 @@ func (p *producer) lsNode(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 		msg.MTID = lsnode.GetMTID()
 		msg.ISISAreaID = lsnode.GetISISAreaID()
 		if ph.FlagV {
-			msg.RouterID = lsnode.GetNodeIPv6RouterID()
+			msg.RouterID = lsnode.GetLocalIPv6RouterID()
 		} else {
-			msg.RouterID = lsnode.GetNodeIPv4RouterID()
+			msg.RouterID = lsnode.GetLocalIPv4RouterID()
 		}
 		msg.NodeMSD = lsnode.GetNodeMSD()
 		msg.SRCapabilities = lsnode.GetNodeSRCapabilities()

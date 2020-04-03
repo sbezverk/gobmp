@@ -48,14 +48,6 @@ func (l *LinkNLRI) GetLinkLSID(local bool) uint32 {
 	return l.RemoteNode.GetLSID()
 }
 
-// GetLinkIGPRouterID returns a value of Link Descriptor TLV IGP Router ID
-func (l *LinkNLRI) GetLinkIGPRouterID(local bool) string {
-	if local {
-		return l.LocalNode.GetIGPRouterID()
-	}
-	return l.RemoteNode.GetIGPRouterID()
-}
-
 // GetLinkASN returns Autonomous System Number used to uniquely identify BGP-LS domain
 func (l *LinkNLRI) GetLinkASN(local bool) uint32 {
 	if local {
@@ -137,6 +129,26 @@ func (l *LinkNLRI) GetLinkIPv6NeighborAddr() string {
 	}
 
 	return ""
+}
+
+// GetLocalASN returns value of Local Node's ASN
+func (l *LinkNLRI) GetLocalASN() uint32 {
+	return l.LocalNode.GetASN()
+}
+
+// GetRemoteASN returns value of Remote Node's ASN
+func (l *LinkNLRI) GetRemoteASN() uint32 {
+	return l.RemoteNode.GetASN()
+}
+
+// GetLocalIGPRouterID returns value of Local node IGP router id
+func (l *LinkNLRI) GetLocalIGPRouterID() string {
+	return l.LocalNode.GetIGPRouterID()
+}
+
+// GetRemoteIGPRouterID returns value of Remote node IGP router id
+func (l *LinkNLRI) GetRemoteIGPRouterID() string {
+	return l.RemoteNode.GetIGPRouterID()
 }
 
 // MarshalJSON defines a method to Marshal Link NLRI object into JSON format

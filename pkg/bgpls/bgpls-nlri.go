@@ -100,8 +100,8 @@ func (ls *NLRI) GetISISAreaID() string {
 	return ""
 }
 
-// GetNodeIPv4RouterID returns string with local Node IPv4 router ID
-func (ls *NLRI) GetNodeIPv4RouterID() string {
+// GetLocalIPv4RouterID returns string with local Node IPv4 router ID
+func (ls *NLRI) GetLocalIPv4RouterID() string {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1028 {
 			continue
@@ -112,10 +112,34 @@ func (ls *NLRI) GetNodeIPv4RouterID() string {
 	return ""
 }
 
-// GetNodeIPv6RouterID returns string with local Node IPv6 router ID
-func (ls *NLRI) GetNodeIPv6RouterID() string {
+// GetLocalIPv6RouterID returns string with local Node IPv6 router ID
+func (ls *NLRI) GetLocalIPv6RouterID() string {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1029 {
+			continue
+		}
+		return net.IP(tlv.Value).To16().String()
+	}
+
+	return ""
+}
+
+// GetRemoteIPv4RouterID returns string with remote Node IPv4 router ID
+func (ls *NLRI) GetRemoteIPv4RouterID() string {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1030 {
+			continue
+		}
+		return net.IP(tlv.Value).To4().String()
+	}
+
+	return ""
+}
+
+// GetRemoteIPv6RouterID returns string with remote Node IPv6 router ID
+func (ls *NLRI) GetRemoteIPv6RouterID() string {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1031 {
 			continue
 		}
 		return net.IP(tlv.Value).To16().String()
@@ -325,7 +349,7 @@ func (ls *NLRI) GetMaxReservableLinkBandwidth() uint32 {
 func (ls *NLRI) GetUnreservedLinkBandwidth() []uint32 {
 	unResrved := make([]uint32, 8)
 	for _, tlv := range ls.LS {
-		if tlv.Type != 1090 {
+		if tlv.Type != 1091 {
 			continue
 		}
 		for p := 0; p < len(tlv.Value); {
@@ -390,6 +414,22 @@ func (ls *NLRI) GetLinkName() string {
 	}
 
 	return ""
+}
+
+// GetSRv6PeerNodeSID returns Peer Node SID object
+func (ls *NLRI) GetSRv6PeerNodeSID() *srv6.PeerNodeSID {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1251 {
+			continue
+		}
+		sid, err := srv6.UnmarshalSRv6PeerNodeSID(tlv.Value)
+		if err != nil {
+			return nil
+		}
+		return sid
+	}
+
+	return nil
 }
 
 // MarshalJSON defines a method to  BGP-LS TLV object into JSON format

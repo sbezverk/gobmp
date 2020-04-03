@@ -166,7 +166,7 @@ func (tlv *TLV) String() string {
 		s += fmt.Sprintf("      Flag: %02x\n", tlv.Value[2])
 		s += fmt.Sprintf("      Algorithm: %d\n", tlv.Value[3])
 	case 1251:
-		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 Endpoint Function)\n", tlv.Type)
+		s += fmt.Sprintf("   BGP-LS TLV Type: %d (SRv6 BGP Peer Node SID)\n", tlv.Type)
 		s += fmt.Sprintf("      Flag: %02x\n", tlv.Value[0])
 		s += fmt.Sprintf("      Weight: %d\n", tlv.Value[1])
 		s += fmt.Sprintf("      Peer AS Number: %d\n", binary.BigEndian.Uint32(tlv.Value[4:8]))
