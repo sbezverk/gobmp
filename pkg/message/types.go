@@ -158,10 +158,10 @@ type LSLink struct {
 	LSAdjacencySID        string            `json:"ls_adjacency_sid,omitempty"`
 	LinkMSD               string            `json:"link_msd,omitempty"`
 	UnidirLinkDelay       uint32            `json:"unidir_link_delay,omitempty"`
-	UnidirLinkDelayMinMax []int             `json:"unidir_link_delay_min_max,omitempty"`
+	UnidirLinkDelayMinMax []uint32          `json:"unidir_link_delay_min_max,omitempty"`
 	UnidirDelayVariation  uint32            `json:"unidir_delay_variation,omitempty"`
-	UnidirPacketLoss      uint64            `json:"unidir_packet_loss,omitempty"`
-	UnidirResidualBW      uint64            `json:"unidir_residual_bw,omitempty"`
-	UnidirAvailableBW     uint64            `json:"unidir_available_bw,omitempty"`
-	UnidirBWUtilization   uint64            `json:"unidir_bw_utilization,omitempty"`
+	UnidirPacketLoss      uint32            `json:"unidir_packet_loss,omitempty"`
+	UnidirResidualBW      uint32            `json:"unidir_residual_bw,omitempty"`
+	UnidirAvailableBW     uint32            `json:"unidir_available_bw,omitempty"`
+	UnidirBWUtilization   uint32            `json:"unidir_bw_utilization,omitempty"`
 }

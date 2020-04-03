@@ -9,9 +9,6 @@ import (
 )
 
 func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSLink, error) {
-	for _, a := range update.PathAttributes {
-		glog.Infof("><SB> - %d", a.AttributeType)
-	}
 	nlri14, err := update.GetNLRI14()
 	if err != nil {
 		return nil, err
@@ -84,6 +81,13 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 		msg.SRLG = lslink.GetSRLG()
 		msg.LinkName = lslink.GetLinkName()
 		msg.PeerNodeSID = lslink.GetSRv6PeerNodeSID()
+		msg.UnidirAvailableBW = lslink.GetUnidirAvailableBandwidth()
+		msg.UnidirBWUtilization = lslink.GetUnidirUtilizedBandwidth()
+		msg.UnidirDelayVariation = lslink.GetUnidirDelayVariation()
+		msg.UnidirLinkDelay = lslink.GetUnidirLinkDelay()
+		msg.UnidirLinkDelayMinMax = lslink.GetUnidirLinkDelayMinMax()
+		msg.UnidirPacketLoss = lslink.GetUnidirLinkLoss()
+		msg.UnidirResidualBW = lslink.GetUnidirResidualBandwidth()
 	}
 
 	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {

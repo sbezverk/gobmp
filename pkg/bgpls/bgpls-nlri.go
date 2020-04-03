@@ -432,6 +432,96 @@ func (ls *NLRI) GetSRv6PeerNodeSID() *srv6.PeerNodeSID {
 	return nil
 }
 
+// GetUnidirLinkDelay returns value of Unidirectional Link Delay
+func (ls *NLRI) GetUnidirLinkDelay() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1114 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnidirLinkDelayMinMax returns minimum and maximum delay values between two
+//   directly connected IGP link-state neighbors of MUnidirectional Link Delay
+func (ls *NLRI) GetUnidirLinkDelayMinMax() []uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1115 {
+			continue
+		}
+		return []uint32{binary.BigEndian.Uint32(tlv.Value[:4]), binary.BigEndian.Uint32(tlv.Value[4:])}
+	}
+
+	return nil
+}
+
+// GetUnidirDelayVariation returns a value of the link delay variation between two
+// directly connected IGP link-state neighbor
+func (ls *NLRI) GetUnidirDelayVariation() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1116 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnidirLinkLoss returns a value of the the loss (as a packet percentage) between two
+// directly connected IGP link-state neighbor
+func (ls *NLRI) GetUnidirLinkLoss() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1117 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnidirResidualBandwidth returns a value of the the residual bandwidth between two
+// directly connected IGP link-state neighbor
+func (ls *NLRI) GetUnidirResidualBandwidth() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1118 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnidirAvailableBandwidth returns a value of the the available bandwidth between two
+// directly connected IGP link-state neighbor
+func (ls *NLRI) GetUnidirAvailableBandwidth() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1119 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnidirUtilizedBandwidth returns a value of the the utilized bandwidth between two
+// directly connected IGP link-state neighbor
+func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1120 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
 // MarshalJSON defines a method to  BGP-LS TLV object into JSON format
 func (ls *NLRI) MarshalJSON() ([]byte, error) {
 	var jsonData []byte
