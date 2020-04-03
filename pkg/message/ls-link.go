@@ -45,6 +45,15 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 		msg.IGPRouterID = link.GetLinkIGPRouterID(true)
 		msg.LSID = link.GetLinkLSID(true)
 		msg.OSPFAreaID = link.GetLinkOSPFAreaID(true)
+		msg.LocalLinkID = link.GetLinkID(true)
+		msg.RemoteLinkID = link.GetLinkID(false)
+		if ph.FlagV {
+			msg.InterfaceIP = link.GetLinkIPv6InterfaceAddr()
+			msg.NeighborIP = link.GetLinkIPv6NeighborAddr()
+		} else {
+			msg.InterfaceIP = link.GetLinkIPv4InterfaceAddr()
+			msg.NeighborIP = link.GetLinkIPv4NeighborAddr()
+		}
 	}
 	lslink, err := update.GetNLRI29()
 	if err == nil {
@@ -56,10 +65,17 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 		msg.MTID = lslink.GetMTID()
 		msg.ISISAreaID = lslink.GetISISAreaID()
 		msg.LinkMSD = lslink.GetLinkMSD()
-		// 	//		msg.SRCapabilities = lsnode.GetNodeSRCapabilities()
-		// 	//		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
-		// 	//		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
-		// 	//		msg.SRv6CapabilitiesTLV = lsnode.GetNodeSRv6CapabilitiesTLV()
+		msg.IGPMetric = lslink.GetIGPMetric()
+		msg.TEDefaultMetric = lslink.GetTEDefaultMetric()
+		msg.AdminGroup = lslink.GetAdminGroup()
+		msg.MaxLinkBW = lslink.GetMaxLinkBandwidth()
+		msg.MaxResvBW = lslink.GetMaxReservableLinkBandwidth()
+		msg.UnResvBW = lslink.GetUnreservedLinkBandwidth()
+		msg.TEDefaultMetric = lslink.GetTEDefaultMetric()
+		msg.LinkProtection = lslink.GetLinkProtectionType()
+		msg.MPLSProtoMask = lslink.GetLinkMPLSProtocolMask()
+		msg.SRLG = lslink.GetSRLG()
+		msg.LinkName = lslink.GetLinkName()
 	}
 
 	if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {

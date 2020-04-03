@@ -1,6 +1,7 @@
 package bgpls
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -256,6 +257,139 @@ func (ls *NLRI) GetNodeSRv6CapabilitiesTLV() string {
 	}
 
 	return s
+}
+
+// GetAdminGroup returns Administrative group (color)
+func (ls *NLRI) GetAdminGroup() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1088 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetTEDefaultMetric returns value of TE Default Metric
+func (ls *NLRI) GetTEDefaultMetric() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1092 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetIGPMetric returns IGP Metric
+func (ls *NLRI) GetIGPMetric() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1095 {
+			continue
+		}
+		m := make([]byte, 4)
+		copy(m[1:], tlv.Value)
+		return binary.BigEndian.Uint32(m)
+	}
+
+	return 0
+}
+
+// GetMaxLinkBandwidth returns value of Maximum Link Bandwidth encoded in 32 bits in IEEE floating point format
+func (ls *NLRI) GetMaxLinkBandwidth() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1089 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetMaxReservableLinkBandwidth returns value of Maximum Reservable Link Bandwidth encoded in 32 bits in IEEE floating point format
+func (ls *NLRI) GetMaxReservableLinkBandwidth() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1090 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetUnreservedLinkBandwidth returns eight 32-bit IEEE floating point numbers
+func (ls *NLRI) GetUnreservedLinkBandwidth() []uint32 {
+	unResrved := make([]uint32, 8)
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1090 {
+			continue
+		}
+		for p := 0; p < len(tlv.Value); {
+			unResrved = append(unResrved, binary.BigEndian.Uint32(tlv.Value[p:p+4]))
+			p += 4
+		}
+		return unResrved
+	}
+
+	return nil
+}
+
+// GetLinkProtectionType returns value of Link Protection Type
+func (ls *NLRI) GetLinkProtectionType() uint16 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1093 {
+			continue
+		}
+		return binary.BigEndian.Uint16(tlv.Value)
+	}
+
+	return 0
+}
+
+// GetLinkMPLSProtocolMask returns value of MPLS Protocol Mask
+func (ls *NLRI) GetLinkMPLSProtocolMask() uint8 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1094 {
+			continue
+		}
+		return uint8(tlv.Value[0])
+	}
+
+	return 0
+}
+
+// GetSRLG returns slice of uint32 carrying data structure
+// consisting of a (variable) list of SRLG values
+func (ls *NLRI) GetSRLG() []uint32 {
+	srlg := make([]uint32, 0)
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1096 {
+			continue
+		}
+		for p := 0; p < len(tlv.Value); {
+			srlg = append(srlg, binary.BigEndian.Uint32(tlv.Value[p:p+4]))
+			p += 4
+		}
+		return srlg
+	}
+
+	return nil
+}
+
+// GetLinkName returns Link's name
+func (ls *NLRI) GetLinkName() string {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1098 {
+			continue
+		}
+		return string(tlv.Value)
+	}
+
+	return ""
 }
 
 // MarshalJSON defines a method to  BGP-LS TLV object into JSON format

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -65,6 +66,73 @@ func (l *LinkNLRI) GetLinkOSPFAreaID(local bool) string {
 		return l.LocalNode.GetOSPFAreaID()
 	}
 	return l.RemoteNode.GetOSPFAreaID()
+}
+
+// GetLinkID returns Local or Remote Link ID as a string, depending on passed parameter
+func (l *LinkNLRI) GetLinkID(local bool) string {
+	for _, tlv := range l.Link.LinkTLV {
+		if tlv.Type != 258 {
+			continue
+		}
+		id, err := UnmarshalLocalRemoteIdentifierTLV(tlv.Value)
+		if err != nil {
+			return ""
+		}
+		if id == nil {
+			return ""
+		}
+		return id.GetLinkID(local)
+	}
+
+	return ""
+}
+
+// GetLinkIPv4InterfaceAddr returns Link Interface IPv4 address as a string
+func (l *LinkNLRI) GetLinkIPv4InterfaceAddr() string {
+	for _, tlv := range l.Link.LinkTLV {
+		if tlv.Type != 259 {
+			continue
+		}
+		return net.IP(tlv.Value).To4().String()
+	}
+
+	return ""
+}
+
+// GetLinkIPv4NeighborAddr returns Link's neighbor IPv4 address as a string
+func (l *LinkNLRI) GetLinkIPv4NeighborAddr() string {
+	for _, tlv := range l.Link.LinkTLV {
+		if tlv.Type != 260 {
+			continue
+		}
+		return net.IP(tlv.Value).To4().String()
+	}
+
+	return ""
+}
+
+// GetLinkIPv6InterfaceAddr returns Link Interface IPv6 address as a string
+func (l *LinkNLRI) GetLinkIPv6InterfaceAddr() string {
+	for _, tlv := range l.Link.LinkTLV {
+		if tlv.Type != 261 {
+			continue
+		}
+		return net.IP(tlv.Value).To16().String()
+	}
+
+	return ""
+}
+
+// GetLinkIPv6NeighborAddr returns Link's neighbor IPv6 address as a string
+func (l *LinkNLRI) GetLinkIPv6NeighborAddr() string {
+	for _, tlv := range l.Link.LinkTLV {
+		if tlv.Type != 262 {
+			continue
+		}
+		return net.IP(tlv.Value).To16().String()
+	}
+
+	return ""
 }
 
 // MarshalJSON defines a method to Marshal Link NLRI object into JSON format
