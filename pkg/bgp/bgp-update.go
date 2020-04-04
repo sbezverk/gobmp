@@ -150,20 +150,6 @@ func (up *Update) GetAttrASPath(as4Capable bool) []uint32 {
 	return path
 }
 
-// GetAttrASPathString returns the number of ASes and a string with comma separated AS numbers.
-func (up *Update) GetAttrASPathString(as4Capable bool) (int32, string) {
-	var path string
-	ases := up.GetAttrASPath(as4Capable)
-	for i, as := range ases {
-		path += fmt.Sprintf("%d", as)
-		if i < len(ases)-1 {
-			path += ", "
-		}
-	}
-
-	return int32(len(ases)), path
-}
-
 // GetAttrNextHop returns the value of Next Hop attribute if it is defined, otherwise it returns nil
 func (up *Update) GetAttrNextHop() []byte {
 	var nh []byte

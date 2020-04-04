@@ -45,10 +45,8 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 		if o := update.GetAttrOrigin(); o != nil {
 			prfx.Origin = *o
 		}
-		if count, path := update.GetAttrASPathString(p.as4Capable); count != 0 {
-			prfx.ASPath = path
-			prfx.ASPathCount = count
-		}
+		prfx.ASPath = update.GetAttrASPath(p.as4Capable)
+		prfx.ASPathCount = int32(len(prfx.ASPath))
 		if ases := update.GetAttrASPath(p.as4Capable); len(ases) != 0 {
 			// Last element in AS_PATH would be the AS of the origin
 			prfx.OriginAS = fmt.Sprintf("%d", ases[len(ases)-1])
