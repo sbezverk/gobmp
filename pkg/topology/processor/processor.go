@@ -1,6 +1,11 @@
 package processor
 
 import (
+	"encoding/json"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/topology/dbclient"
 )
 
@@ -17,19 +22,32 @@ type Srv interface {
 	GetInterface() Messenger
 }
 
+type msg struct {
+	msgType int
+	msgData []byte
+}
 type processor struct {
+	stop  chan struct{}
+	queue chan msg
+	db    dbclient.DB
 }
 
 // NewProcessorSrv returns an instance of a processor server
 func NewProcessorSrv(client dbclient.DB) Srv {
-	return &processor{}
+	return &processor{
+		stop:  make(chan struct{}),
+		queue: make(chan msg),
+	}
 }
 
 func (p *processor) Start() error {
+	go p.msgProcessor()
+
 	return nil
 }
 
 func (p *processor) Stop() error {
+	close(p.stop)
 	return nil
 }
 
@@ -39,4 +57,47 @@ func (p *processor) GetInterface() Messenger {
 
 func (p *processor) SendMessage(msgType int, msg []byte) {
 	return
+}
+
+func (p *processor) msgProcessor() {
+	for {
+		select {
+		case msg := <-p.queue:
+			go p.procWorker(msg)
+		case <-p.stop:
+			return
+		default:
+		}
+	}
+}
+
+func (p *processor) procWorker(m msg) {
+	var obj interface{}
+	if err := json.Unmarshal(m.msgData, &obj); err != nil {
+		glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
+		return
+	}
+	switch m.msgType {
+	case bmp.PeerStateChangeMsg:
+		if _, ok := obj.(*message.PeerStateChange); !ok {
+			glog.Errorf("malformed PeerStateChange message")
+			return
+		}
+	case bmp.LSNodeMsg:
+		if _, ok := obj.(*message.LSNode); !ok {
+			glog.Errorf("malformed LSNode message")
+			return
+		}
+	case bmp.LSLinkMsg:
+		if _, ok := obj.(*message.LSLink); !ok {
+			glog.Errorf("malformed LSLink message")
+			return
+		}
+	}
+	if err := p.db.StoreMessage(m.msgType, obj); err != nil {
+		glog.Errorf("failed to store message of type: %din the database with error: %+v", m.msgType, err)
+		return
+	}
+
+	glog.Infof("message of type %d was stored in the database", m.msgType)
 }

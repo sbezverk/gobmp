@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -77,8 +76,6 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			prfx.Prefix = net.IP(a).To4().String()
 		}
 		prfxs = append(prfxs, prfx)
-
-		glog.V(6).Infof("Unicast message: %+v", prfx)
 	}
 
 	return prfxs, nil

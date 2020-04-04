@@ -81,11 +81,11 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
 		return
 	}
-	if err := p.publisher.PublishMessage(bmp.PeerUpMsg, []byte(m.RouterHash), j); err != nil {
+	if err := p.publisher.PublishMessage(bmp.PeerStateChangeMsg, []byte(m.RouterHash), j); err != nil {
 		glog.Errorf("failed to push PeerUp message to kafka with error: %+v", err)
 		return
 	}
-	glog.V(6).Infof("Peer Up: %+v", m)
+	glog.V(5).Infof("Peer Up message: %s", string(j))
 	glog.V(5).Infof("succeeded to push PeerUp message to kafka")
 }
 
@@ -124,7 +124,7 @@ func (p *producer) producePeerDownMessage(msg bmp.Message) {
 		glog.Errorf("failed to Marshal PeerStateChange struct with error: %+v", err)
 		return
 	}
-	if err := p.publisher.PublishMessage(bmp.PeerDownMsg, []byte(m.RouterHash), j); err != nil {
+	if err := p.publisher.PublishMessage(bmp.PeerStateChangeMsg, []byte(m.RouterHash), j); err != nil {
 		glog.Errorf("failed to push PeerDown message to kafka with error: %+v", err)
 		return
 	}

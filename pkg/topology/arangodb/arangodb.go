@@ -23,10 +23,6 @@ func (a *arangoDB) GetInterface() dbclient.DB {
 	return &arangoDB{}
 }
 
-func (a *arangoDB) AddRecord(recordType int, record interface{}) error {
-	return nil
-}
-
-func (a *arangoDB) DelRecord(recordType int, record interface{}) error {
+func (a *arangoDB) StoreMessage(msgType int, msg interface{}) error {
 	return nil
 }
