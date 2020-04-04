@@ -12,7 +12,6 @@ import (
 type PrefixSIDTLV struct {
 	Flags     uint8
 	Algorithm uint8
-	Reserved  []byte // 2 bytes
 	SID       []byte
 }
 
