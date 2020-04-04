@@ -1,0 +1,4 @@
+FROM scratch
+
+COPY ./cmd/bin/topology /topology
+ENTRYPOINT ["/topology"]
