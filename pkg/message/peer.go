@@ -85,7 +85,7 @@ func (p *producer) producePeerUpMessage(msg bmp.Message) {
 		glog.Errorf("failed to push PeerUp message to kafka with error: %+v", err)
 		return
 	}
-	glog.V(5).Infof("Peer Up message: %s", string(j))
+	glog.V(6).Infof("Peer Up message: %s", string(j))
 	glog.V(5).Infof("succeeded to push PeerUp message to kafka")
 }
 
