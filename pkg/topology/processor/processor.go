@@ -22,40 +22,55 @@ type Srv interface {
 	GetInterface() Messenger
 }
 
-type msg struct {
+type queueMsg struct {
 	msgType int
 	msgData []byte
 }
+
 type processor struct {
 	stop  chan struct{}
-	queue chan msg
+	queue chan *queueMsg
 	db    dbclient.DB
+	Messenger
 }
 
 // NewProcessorSrv returns an instance of a processor server
 func NewProcessorSrv(client dbclient.DB) Srv {
-	return &processor{
+	queue := make(chan *queueMsg)
+	p := &processor{
 		stop:  make(chan struct{}),
-		queue: make(chan msg),
+		queue: queue,
+		db:    client,
 	}
+	p.Messenger = p
+
+	return p
 }
 
 func (p *processor) Start() error {
+	glog.Info("Starting Processor")
 	go p.msgProcessor()
 
 	return nil
 }
 
 func (p *processor) Stop() error {
+	close(p.queue)
 	close(p.stop)
+
 	return nil
 }
 
 func (p *processor) GetInterface() Messenger {
-	return &processor{}
+	return p.Messenger
 }
 
 func (p *processor) SendMessage(msgType int, msg []byte) {
+	p.queue <- &queueMsg{
+		msgType: msgType,
+		msgData: msg,
+	}
+
 	return
 }
 
@@ -71,32 +86,39 @@ func (p *processor) msgProcessor() {
 	}
 }
 
-func (p *processor) procWorker(m msg) {
-	var obj interface{}
-	if err := json.Unmarshal(m.msgData, &obj); err != nil {
-		glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
-		return
-	}
+func (p *processor) procWorker(m *queueMsg) {
+	// var obj interface{}
 	switch m.msgType {
 	case bmp.PeerStateChangeMsg:
-		if _, ok := obj.(*message.PeerStateChange); !ok {
-			glog.Errorf("malformed PeerStateChange message")
+		var o message.PeerStateChange
+		if err := json.Unmarshal(m.msgData, &o); err != nil {
+			glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
+			return
+		}
+		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
+			glog.Errorf("failed to store message of type: %din the database with error: %+v", m.msgType, err)
 			return
 		}
 	case bmp.LSNodeMsg:
-		if _, ok := obj.(*message.LSNode); !ok {
-			glog.Errorf("malformed LSNode message")
+		var o message.LSNode
+		if err := json.Unmarshal(m.msgData, &o); err != nil {
+			glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
+			return
+		}
+		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
+			glog.Errorf("failed to store message of type: %din the database with error: %+v", m.msgType, err)
 			return
 		}
 	case bmp.LSLinkMsg:
-		if _, ok := obj.(*message.LSLink); !ok {
-			glog.Errorf("malformed LSLink message")
+		var o message.LSLink
+		if err := json.Unmarshal(m.msgData, &o); err != nil {
+			glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
 			return
 		}
-	}
-	if err := p.db.StoreMessage(m.msgType, obj); err != nil {
-		glog.Errorf("failed to store message of type: %din the database with error: %+v", m.msgType, err)
-		return
+		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
+			glog.Errorf("failed to store message of type: %din the database with error: %+v", m.msgType, err)
+			return
+		}
 	}
 
 	glog.Infof("message of type %d was stored in the database", m.msgType)

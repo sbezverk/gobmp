@@ -35,5 +35,7 @@ require (
 	github.com/sbezverk/gobmp/pkg/topology/dbclient v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/kafkamessenger v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/messenger v0.0.0-00010101000000-000000000000 // indirect
+	github.com/sbezverk/gobmp/pkg/topology/mockdb v0.0.0-00010101000000-000000000000 // indirect
+	github.com/sbezverk/gobmp/pkg/topology/mockmessenger v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/processor v0.0.0-00010101000000-000000000000 // indirect
 )

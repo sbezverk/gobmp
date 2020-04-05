@@ -10,6 +10,8 @@ import (
 	"github.com/sbezverk/gobmp/pkg/topology/dbclient"
 	"github.com/sbezverk/gobmp/pkg/topology/kafkamessenger"
 	"github.com/sbezverk/gobmp/pkg/topology/messenger"
+	"github.com/sbezverk/gobmp/pkg/topology/mockdb"
+	"github.com/sbezverk/gobmp/pkg/topology/mockmessenger"
 	"github.com/sbezverk/gobmp/pkg/topology/processor"
 )
 
@@ -24,7 +26,7 @@ func init() {
 	flag.StringVar(&msgSrvAddr, "message-server", "", "URL to the messages supplying server")
 	flag.StringVar(&dbSrvAddr, "database-server", "", "{dns name}:port or X.X.X.X:port of the graph database")
 	flag.BoolVar(&mockDB, "mock-database", false, "when set to true, received messages are stored in the file")
-	flag.BoolVar(&mockMsg, "mock-message", false, "when set to true, message server is disabled.")
+	flag.BoolVar(&mockMsg, "mock-messenger", false, "when set to true, message server is disabled.")
 }
 
 var (
@@ -62,8 +64,9 @@ func main() {
 			os.Exit(1)
 		}
 	} else {
-		// TODO Add database client mock initialization
+		dbSrv, _ = mockdb.NewDBSrvClient("")
 	}
+
 	dbSrv.Start()
 
 	// Initializing new processor process
@@ -80,7 +83,7 @@ func main() {
 			os.Exit(1)
 		}
 	} else {
-		// TODO Add message server mock initialization
+		msgSrv, _ = mockmessenger.NewMockMessenger(processorSrv.GetInterface())
 	}
 	msgSrv.Start()
 
