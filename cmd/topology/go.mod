@@ -38,4 +38,5 @@ require (
 	github.com/sbezverk/gobmp/pkg/topology/mockdb v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/mockmessenger v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/processor v0.0.0-00010101000000-000000000000 // indirect
+	github.com/segmentio/kafka-go v0.3.5 // indirect
 )

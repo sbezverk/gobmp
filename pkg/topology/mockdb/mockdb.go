@@ -25,7 +25,7 @@ func NewDBSrvClient(addr string) (dbclient.Srv, error) {
 }
 
 func (m *mockDB) Start() error {
-
+	glog.Info("Starting Mock DB Client")
 	return nil
 }
 

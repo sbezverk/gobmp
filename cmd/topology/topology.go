@@ -77,7 +77,7 @@ func main() {
 	// Initializing messenger process
 	var msgSrv messenger.Srv
 	if !mockMsg {
-		msgSrv, err = kafkamessenger.NewKafkaMessenger(processorSrv.GetInterface())
+		msgSrv, err = kafkamessenger.NewKafkaMessenger(msgSrvAddr, processorSrv.GetInterface())
 		if err != nil {
 			glog.Errorf("failed to initialize message server with error: %+v", err)
 			os.Exit(1)

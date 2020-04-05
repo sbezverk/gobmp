@@ -19,8 +19,8 @@ spec:
           - "5"
           - --message-server
           - broker.jalapeno:9092
-          - --db-server
-          - jalapeno.jalapeno
+          - --mock-database
+          - "true"
           image: 192.168.80.240:4000/jalapeno/gobmp-topology:0.0.0
           imagePullPolicy: Always
           name: gobmp-topology

@@ -1,4 +1,4 @@
 FROM scratch
 
-COPY ./cmd/bin/topology /topology
-ENTRYPOINT ["/topology"]
+COPY ./bin/gobmp-topology /gobmp-topology
+ENTRYPOINT ["/gobmp-topology"]
