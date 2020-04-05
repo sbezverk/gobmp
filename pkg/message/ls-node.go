@@ -3,7 +3,6 @@ package message
 import (
 	"net"
 
-	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -68,8 +67,6 @@ func (p *producer) lsNode(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 	if lp := update.GetAttrLocalPref(); lp != nil {
 		msg.LocalPref = *lp
 	}
-
-	glog.V(6).Infof("LS Node messages: %+v", msg)
 
 	return &msg, nil
 }

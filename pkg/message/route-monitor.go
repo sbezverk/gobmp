@@ -129,6 +129,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to push Unicast Prefix message to kafka with error: %+v", err)
 				return
 			}
+			glog.V(6).Infof("unicast_prefix message: %s", string(j))
 		}
 	}
 }

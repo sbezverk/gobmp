@@ -26,4 +26,6 @@ const (
 	LSNodeMsg = 8
 	// LSLinkMsg defines a subtype of BMP Route Monitoring message
 	LSLinkMsg = 9
+	// PeerStateChangeMsg defines BMP Peer Up/Down message
+	PeerStateChangeMsg = 10
 )

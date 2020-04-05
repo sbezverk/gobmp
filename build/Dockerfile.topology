@@ -1,0 +1,4 @@
+FROM scratch
+
+COPY ./bin/gobmp-topology /gobmp-topology
+ENTRYPOINT ["/gobmp-topology"]

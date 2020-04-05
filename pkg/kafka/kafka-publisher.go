@@ -43,9 +43,7 @@ type publisher struct {
 
 func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 	switch t {
-	case bmp.PeerUpMsg:
-		fallthrough
-	case bmp.PeerDownMsg:
+	case bmp.PeerStateChangeMsg:
 		return p.produceMessage(peerTopic, key, msg)
 	case bmp.UnicastPrefixMsg:
 		return p.produceMessage(unicastMessageTopic, key, msg)
