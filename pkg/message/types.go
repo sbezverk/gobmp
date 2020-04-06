@@ -168,3 +168,40 @@ type LSLink struct {
 	UnidirAvailableBW     uint32              `json:"unidir_available_bw,omitempty"`
 	UnidirBWUtilization   uint32              `json:"unidir_bw_utilization,omitempty"`
 }
+
+// L3VPNPrefix defines the structure of Layer 3 VPN message
+type L3VPNPrefix struct {
+	Action           string   `json:"action"` // Action can be "add" or "del"
+	Sequence         int      `json:"sequence,omitempty"`
+	Hash             string   `json:"hash,omitempty"`
+	RouterHash       string   `json:"router_hash,omitempty"`
+	RouterIP         string   `json:"router_ip,omitempty"`
+	BaseAttrHash     string   `json:"base_attr_hash,omitempty"`
+	PeerHash         string   `json:"peer_hash,omitempty"`
+	PeerIP           string   `json:"peer_ip,omitempty"`
+	PeerASN          int32    `json:"peer_asn,omitempty"`
+	Timestamp        string   `json:"timestamp,omitempty"`
+	Prefix           string   `json:"prefix,omitempty"`
+	PrefixLen        int32    `json:"prefix_len,omitempty"`
+	IsIPv4           bool     `json:"is_ipv4,omitempty"`
+	Origin           string   `json:"origin,omitempty"`
+	ASPath           []uint32 `json:"as_path,omitempty"`
+	ASPathCount      int32    `json:"as_path_count,omitempty"`
+	OriginAS         string   `json:"origin_as,omitempty"`
+	Nexthop          string   `json:"nexthop,omitempty"`
+	MED              uint32   `json:"med,omitempty"`
+	LocalPref        uint32   `json:"local_pref,omitempty"`
+	Aggregator       string   `json:"aggregator,omitempty"`
+	CommunityList    string   `json:"community_list,omitempty"`
+	ExtCommunityList string   `json:"ext_community_list,omitempty"`
+	ClusterList      string   `json:"cluster_list,omitempty"`
+	IsAtomicAgg      bool     `json:"is_atomic_agg,omitempty"`
+	IsNexthopIPv4    bool     `json:"is_nexthop_ipv4,omitempty"`
+	OriginatorID     string   `json:"originator_id,omitempty"`
+	PathID           int32    `json:"path_id,omitempty"`
+	Labels           []uint32 `json:"labels,omitempty"`
+	IsPrepolicy      bool     `json:"isprepolicy,omitempty"`
+	IsAdjRIBIn       bool     `json:"is_adj_rib_in,omitempty"`
+	VPNRD            string   `json:"vpn_rd,omitempty"`
+	VPNRDType        uint8    `json:"vpn_rd_type,omitempty"`
+}
