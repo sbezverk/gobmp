@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
@@ -46,6 +47,10 @@ func (mp *MPReachNLRI) String() string {
 
 // GetNextHop return a string representation of the next hop ip address.
 func (mp *MPReachNLRI) GetNextHop() string {
+	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 128 {
+		// In case of L3VPN AFI 1 SAFI 128, next hop is encoded as RD (Always 0, 8 bytes) + ipv4 address
+		return net.IP(mp.NextHopAddress[mp.NextHopAddressLength-4:]).To4().String()
+	}
 	if mp.NextHopAddressLength == 4 {
 		return net.IP(mp.NextHopAddress).To4().String()
 	} else if mp.NextHopAddressLength == 16 {
@@ -62,6 +67,20 @@ func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 			return nil, err
 		}
 		return nlri71, nil
+	}
+
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIL3VPN check for presense of NLRI L3VPN AFI 1 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
+func (mp *MPReachNLRI) GetNLRIL3VPN() (*l3vpn.NLRI, error) {
+	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 128 {
+		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.NLRI)
+		if err != nil {
+			return nil, err
+		}
+		return nlri, nil
 	}
 
 	// TODO return new type of errors to be able to check for the code

@@ -9,7 +9,12 @@ import (
 // l3vpn process MP_REACH_NLRI AFI 1/2 SAFI 128 update message and returns
 // L3VPN prefix object.
 func (p *producer) l3vpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*L3VPNPrefix, error) {
-	glog.Infof("bgp update: %+v", *update)
+	nlri14, err := update.GetNLRI14()
+	if err != nil {
+		return nil, err
+	}
+	glog.Infof("nlri14: %+v", *nlri14)
+
 	// var operation string
 	// switch op {
 	// case 0:
