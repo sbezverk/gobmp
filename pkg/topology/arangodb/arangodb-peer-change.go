@@ -3,7 +3,8 @@ package arangodb
 func (m *arangoDB) peerChangeHandler(obj *message.PeerStateChange) {
 	glog.Infof("><SB> peer change handler - update db with peer change message data")
 
-	bgp_peer_document := &database.BGPPeer{
+	// creates a new BGP peer document in Arango's BGPPeer vertex collection
+	bgp_peer_document := &arangoDB.BGPPeer{
 		RouterID:	message.LocalBGPID
 		LocalIP:	message.LocalIP
 		LocalASN:	message.LocalASN
