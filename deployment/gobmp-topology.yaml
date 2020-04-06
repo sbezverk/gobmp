@@ -18,9 +18,15 @@ spec:
           - --v
           - "5"
           - --message-server
-          - broker.jalapeno:9092
-          - --mock-database
-          - "true"
+          - "broker.jalapeno:9092"
+          - --database-server
+          - "http://arangodb.jalapeno:8529"
+          - --database-name
+          - "jalapeno"
+          - --database-user
+          - "root"
+          - --database-pass
+          - "jalapeno"
           image: 192.168.80.240:4000/jalapeno/gobmp-topology:0.0.0
           imagePullPolicy: Always
           name: gobmp-topology

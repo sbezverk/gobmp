@@ -20,6 +20,9 @@ var (
 	dbSrvAddr  string
 	mockDB     bool
 	mockMsg    bool
+	dbName     string
+	dbUser     string
+	dbPass     string
 )
 
 func init() {
@@ -27,6 +30,9 @@ func init() {
 	flag.StringVar(&dbSrvAddr, "database-server", "", "{dns name}:port or X.X.X.X:port of the graph database")
 	flag.BoolVar(&mockDB, "mock-database", false, "when set to true, received messages are stored in the file")
 	flag.BoolVar(&mockMsg, "mock-messenger", false, "when set to true, message server is disabled.")
+	flag.StringVar(&dbName, "database-name", "", "DB name")
+	flag.StringVar(&dbUser, "database-user", "", "DB User name")
+	flag.StringVar(&dbPass, "database-pass", "", "DB User's password")
 }
 
 var (
@@ -58,7 +64,7 @@ func main() {
 	var err error
 	// Initializing databse client
 	if !mockDB {
-		dbSrv, err = arangodb.NewDBSrvClient(dbSrvAddr)
+		dbSrv, err = arangodb.NewDBSrvClient(dbSrvAddr, dbUser, dbPass, dbName)
 		if err != nil {
 			glog.Errorf("failed to initialize databse client with error: %+v", err)
 			os.Exit(1)
@@ -67,7 +73,12 @@ func main() {
 		dbSrv, _ = mockdb.NewDBSrvClient("")
 	}
 
-	dbSrv.Start()
+	if err := dbSrv.Start(); err != nil {
+		if err != nil {
+			glog.Errorf("failed to connect to database with error: %+v", err)
+			os.Exit(1)
+		}
+	}
 
 	// Initializing new processor process
 	processorSrv := processor.NewProcessorSrv(dbSrv.GetInterface())
