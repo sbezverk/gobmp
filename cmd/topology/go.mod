@@ -26,6 +26,7 @@ replace (
 )
 
 require (
+	github.com/arangodb/go-driver v0.0.0-20200403100147-ca5dd87ffe93 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-00010101000000-000000000000 // indirect
