@@ -21,12 +21,19 @@ const (
 	unicastMessageTopic = "gobmp.parsed.unicast_prefix"
 	lsNodeMessageTopic  = "gobmp.parsed.ls_node"
 	lsLinkMessageTopic  = "gobmp.parsed.ls_link"
+	l3vpnMessageTopic   = "gobmp.parsed.l3vpn"
 )
 
 var (
 	// topics defines a list of topic to initialize and connect,
 	// initialization is done as a part of NewKafkaPublisher func.
-	topicNames = []string{peerTopic, unicastMessageTopic, lsNodeMessageTopic, lsLinkMessageTopic}
+	topicNames = []string{
+		peerTopic,
+		unicastMessageTopic,
+		lsNodeMessageTopic,
+		lsLinkMessageTopic,
+		l3vpnMessageTopic,
+	}
 )
 
 // topicConnection defines per topic connection and connection related information
@@ -51,6 +58,8 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 		return p.produceMessage(lsNodeMessageTopic, key, msg)
 	case bmp.LSLinkMsg:
 		return p.produceMessage(lsLinkMessageTopic, key, msg)
+	case bmp.L3VPNMsg:
+		return p.produceMessage(l3vpnMessageTopic, key, msg)
 	}
 
 	return fmt.Errorf("not implemented")

@@ -203,5 +203,5 @@ type L3VPNPrefix struct {
 	IsPrepolicy      bool     `json:"isprepolicy,omitempty"`
 	IsAdjRIBIn       bool     `json:"is_adj_rib_in,omitempty"`
 	VPNRD            string   `json:"vpn_rd,omitempty"`
-	VPNRDType        uint8    `json:"vpn_rd_type,omitempty"`
+	VPNRDType        uint16   `json:"vpn_rd_type"`
 }

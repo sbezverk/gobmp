@@ -28,4 +28,6 @@ const (
 	LSLinkMsg = 9
 	// PeerStateChangeMsg defines BMP Peer Up/Down message
 	PeerStateChangeMsg = 10
+	// L3VPNMsg defines BMP Peer Layer 3 VPN message
+	L3VPNMsg = 11
 )

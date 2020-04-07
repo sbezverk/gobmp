@@ -56,7 +56,22 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			glog.Infof("2 IP (IP version 6) : 4 MPLS Labels")
 		case 18:
 			glog.Infof("1 IP (IP version 4) : 128 MPLS-labeled VPN address")
-			p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
+
+			msg, err := p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
+			if err != nil {
+				glog.Errorf("failed to produce l3vpn message with error: %+v", err)
+				return
+			}
+			j, err = json.Marshal(&msg)
+			if err != nil {
+				glog.Errorf("failed to marshal l3vpn message with error: %+v", err)
+				return
+			}
+			if err := p.publisher.PublishMessage(bmp.L3VPNMsg, []byte(msg.RouterHash), j); err != nil {
+				glog.Errorf("failed to push L3VPN message to kafka with error: %+v", err)
+				return
+			}
+			glog.V(5).Infof("l3vpn message: %s", string(j))
 		case 19:
 			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
 			p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
