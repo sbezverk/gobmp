@@ -27,7 +27,7 @@ spec:
           - "root"
           - --database-pass
           - "jalapeno"
-          image: 192.168.80.240:4000/jalapeno/gobmp-topology:0.0.0
+          image: docker.io/sbezverk/gobmp-topology:0.0.0
           imagePullPolicy: Always
           name: gobmp-topology
 metadata:

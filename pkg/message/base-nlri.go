@@ -33,13 +33,9 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			PrefixLen:    int32(pr.Length),
 			IsAtomicAgg:  update.GetAttrAtomicAggregate(),
 			Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
-			OriginatorID: net.IP(update.GetAttrOriginatorID()).To4().String(),
-			// TODO Missing attributes for Unicast message, need to figure out where corresponding values are stored
-			// ExtCommunityList
-			// PathID
-			// Labels
-			// IsPrepolicy
-			// IsAdjRIBIn
+		}
+		if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
+			prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()
 		}
 		if o := update.GetAttrOrigin(); o != nil {
 			prfx.Origin = *o

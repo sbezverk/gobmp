@@ -274,18 +274,36 @@ func (up *Update) GetAttrClusterListID() []byte {
 	return l
 }
 
-// GetAttrExtendedCommunity returns the value of EXTENDED_COMMUNITY attribute if it is defined, otherwise it returns nil
-func (up *Update) GetAttrExtendedCommunity() []byte {
-	var l []byte
+// GetAttrExtCommunity returns a slice with all extended communities found in bgp update
+func (up *Update) GetAttrExtCommunity() ([]ExtCommunity, error) {
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType == 16 {
-			l = make([]byte, attr.AttributeLength)
-			copy(l, attr.Attribute)
-			return l
+			return UnmarshalBGPExtCommunity(attr.Attribute)
 		}
 	}
 
-	return l
+	return nil, fmt.Errorf("not found")
+}
+
+// GetExtCommunityRT returns  a slice of Route Target EXTENDED_COMMUNITY
+func (up *Update) GetExtCommunityRT() ([]ExtCommunity, error) {
+	rts := make([]ExtCommunity, 0)
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 16 {
+			all, err := UnmarshalBGPExtCommunity(attr.Attribute)
+			if err != nil {
+				return nil, err
+			}
+			for _, c := range all {
+				if c.IsRouteTarget() {
+					rts = append(rts, c)
+				}
+			}
+			return rts, nil
+		}
+	}
+
+	return nil, fmt.Errorf("not found")
 }
 
 // GetAttrAS4Path returns a sequence of AS4 path segments

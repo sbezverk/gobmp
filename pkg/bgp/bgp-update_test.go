@@ -2,6 +2,7 @@ package bgp
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -204,6 +205,57 @@ func TestGetAttrCommunityString(t *testing.T) {
 			got := tt.update.GetAttrCommunityString()
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Errorf("Expect list of Standard Communities %s does not match received list %s", tt.expect, got)
+			}
+		})
+	}
+}
+
+func TestGetAttrExtCommunity(t *testing.T) {
+	subtype := uint8(2)
+	tests := []struct {
+		name      string
+		input     *Update
+		expect    []ExtCommunity
+		expectStr string
+		fail      bool
+	}{
+		{
+			name: "extCommunity 1",
+			input: &Update{
+				PathAttributes: []PathAttribute{
+					{
+						AttributeType: 16,
+						Attribute:     []byte{0x00, 0x02, 0x02, 0x41, 0x00, 0x00, 0xfd, 0xec},
+					},
+				},
+			},
+			expect: []ExtCommunity{
+				{
+					Type:    0,
+					SubType: &subtype,
+					Value:   []byte{0x02, 0x41, 0x00, 0x00, 0xfd, 0xec},
+				},
+			},
+			expectStr: "rt=577:65004",
+			fail:      false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.input.GetAttrExtCommunity()
+			if err != nil && !tt.fail {
+				t.Fatalf("expected to succeed but failed with error: %+v", err)
+			}
+			if err == nil && tt.fail {
+				t.Fatalf("expected to fail but succeeded")
+			}
+			if err == nil {
+				if !reflect.DeepEqual(got, tt.expect) {
+					t.Errorf("Expected extCommunity %+v does not match to actual extCommunity %+v", got, tt.expect)
+				}
+				if strings.Compare(got[0].String(), tt.expectStr) != 0 {
+					t.Errorf("Expected extCommunity string %s does not match to actual extCommunity %+v", tt.expectStr, got[0].String())
+				}
 			}
 		})
 	}
