@@ -13,8 +13,12 @@ func (p *producer) l3vpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*L3
 	if err != nil {
 		return nil, err
 	}
-	glog.Infof("nlri14: %+v", *nlri14)
+	nlril3vpn, err := nlri14.GetNLRIL3VPN()
+	if err != nil {
+		return nil, err
+	}
 
+	glog.Infof("constructed l3vpn nlri: %+v", *nlril3vpn)
 	// var operation string
 	// switch op {
 	// case 0:

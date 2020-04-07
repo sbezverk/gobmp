@@ -74,7 +74,7 @@ func (rd *RD) String() string {
 type NLRI struct {
 	Length uint8
 	Labels []*Label
-	RD     RD
+	RD     *RD
 	Prefix []byte
 }
 
@@ -95,6 +95,19 @@ func UnmarshalL3VPNNLRI(b []byte) (*NLRI, error) {
 		n.Labels = append(n.Labels, l)
 		p += 3
 	}
+	if p+12 != len(b) {
+		// Something went wrong do not have enough bytes to decode RD and Prefix
+		// bailing out before making panic.
+		return nil, fmt.Errorf("failed to construct l3vpn NLRI, invalid data detected")
+	}
+	rd, err := makeRD(b[p : p+8])
+	if err != nil {
+		return nil, err
+	}
+	p += 8
+	n.RD = rd
+	n.Prefix = make([]byte, 4)
+	copy(n.Prefix, b[p:])
 
 	return &n, nil
 }
