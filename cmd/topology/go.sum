@@ -15,6 +15,7 @@ github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sbezverk/gobmp v0.0.0-20200404092850-35ed51bd7e3a h1:JcXgIoFf0tqBZ7ryLuJjDEvlem+kNFhkUk5rCeUweKw=
+github.com/sbezverk/gobmp v0.0.0-20200406173530-6fe0294827ae h1:7H4l5lrjZZTO8WmTaJS6iKD3VT7mNlvy+lAW5HIIKKA=
 github.com/segmentio/kafka-go v0.3.5 h1:2JVT1inno7LxEASWj+HflHh5sWGfM0gkRiLAxkXhGG4=
 github.com/segmentio/kafka-go v0.3.5/go.mod h1:OT5KXBPbaJJTcvokhWR2KFmm0niEx3mnccTwjmLvSi4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

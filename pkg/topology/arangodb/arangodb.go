@@ -1,13 +1,11 @@
 package arangodb
 
 import (
-	"context"
 	"time"
 
-	driver "github.com/arangodb/go-driver"
-	"github.com/arangodb/go-driver/http"
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/gobmp/pkg/topology/database"
 	"github.com/sbezverk/gobmp/pkg/topology/dbclient"
 )
 
@@ -16,15 +14,9 @@ var (
 )
 
 type arangoDB struct {
-	user   string
-	pass   string
-	dbName string
-	dbAddr string
-	conn   driver.Connection
-	client driver.Client
-	db     driver.Database
-	stop   chan struct{}
+	stop chan struct{}
 	dbclient.DB
+	dbi database.ArangoConn
 }
 
 // NewDBSrvClient returns an instance of a DB server client process
@@ -32,12 +24,18 @@ func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) 
 	if err := tools.URLAddrValidation(arangoSrv); err != nil {
 		return nil, err
 	}
+	dbi, err := database.NewArango(database.ArangoConfig{
+		URL:      arangoSrv,
+		User:     user,
+		Password: pass,
+		Database: dbname,
+	})
+	if err != nil {
+		return nil, err
+	}
 	arango := &arangoDB{
-		user:   user,
-		pass:   pass,
-		dbName: dbname,
-		dbAddr: arangoSrv,
-		stop:   make(chan struct{}),
+		stop: make(chan struct{}),
+		dbi:  dbi,
 	}
 	arango.DB = arango
 
@@ -45,9 +43,6 @@ func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) 
 }
 
 func (a *arangoDB) Start() error {
-	if err := a.connector(); err != nil {
-		return err
-	}
 	glog.Infof("Connected to arango database, starting monitor")
 	go a.monitor()
 
@@ -64,33 +59,6 @@ func (a *arangoDB) GetInterface() dbclient.DB {
 }
 
 func (a *arangoDB) StoreMessage(msgType int, msg interface{}) error {
-	return nil
-}
-
-func (a *arangoDB) connector() error {
-	conn, err := http.NewConnection(http.ConnectionConfig{
-		Endpoints: []string{a.dbAddr},
-	})
-	if err != nil {
-		return err
-	}
-	c, err := driver.NewClient(driver.ClientConfig{
-		Connection:     conn,
-		Authentication: driver.BasicAuthentication(a.user, a.pass),
-	})
-	if err != nil {
-		return err
-	}
-	a.conn = conn
-	a.client = c
-	ctx, cancel := context.WithTimeout(context.TODO(), arangoDBConnectTimeout)
-	defer cancel()
-	db, err := c.Database(ctx, a.dbName)
-	if err != nil {
-		return err
-	}
-	a.db = db
-
 	return nil
 }
 
