@@ -16,7 +16,9 @@ replace (
 	github.com/sbezverk/gobmp/pkg/sr => ../../pkg/sr
 	github.com/sbezverk/gobmp/pkg/srv6 => ../../pkg/srv6
 	github.com/sbezverk/gobmp/pkg/tools => ../../pkg/tools
+	github.com/sbezverk/gobmp/pkg/l3vpn => ../../pkg/l3vpn
 	github.com/sbezverk/gobmp/pkg/topology/arangodb => ../../pkg/topology/arangodb
+	github.com/sbezverk/gobmp/pkg/topology/database => ../../pkg/topology/database
 	github.com/sbezverk/gobmp/pkg/topology/dbclient => ../../pkg/topology/dbclient
 	github.com/sbezverk/gobmp/pkg/topology/kafkamessenger => ../../pkg/topology/kafkamessenger
 	github.com/sbezverk/gobmp/pkg/topology/messenger => ../../pkg/topology/messenger
@@ -33,6 +35,7 @@ require (
 	github.com/sbezverk/gobmp/pkg/message v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/pub v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/arangodb v0.0.0-00010101000000-000000000000 // indirect
+	github.com/sbezverk/gobmp/pkg/topology/database v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/dbclient v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/kafkamessenger v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/messenger v0.0.0-00010101000000-000000000000 // indirect

@@ -1,13 +1,14 @@
 package arangodb
 
 import (
-	"context"
+	"fmt"
 	"time"
 
-	driver "github.com/arangodb/go-driver"
-	"github.com/arangodb/go-driver/http"
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/gobmp/pkg/topology/database"
 	"github.com/sbezverk/gobmp/pkg/topology/dbclient"
 )
 
@@ -16,15 +17,9 @@ var (
 )
 
 type arangoDB struct {
-	user   string
-	pass   string
-	dbName string
-	dbAddr string
-	conn   driver.Connection
-	client driver.Client
-	db     driver.Database
-	stop   chan struct{}
+	stop chan struct{}
 	dbclient.DB
+	dbi database.ArangoConn
 }
 
 // NewDBSrvClient returns an instance of a DB server client process
@@ -32,12 +27,18 @@ func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) 
 	if err := tools.URLAddrValidation(arangoSrv); err != nil {
 		return nil, err
 	}
+	dbi, err := database.NewArango(database.ArangoConfig{
+		URL:      arangoSrv,
+		User:     user,
+		Password: pass,
+		Database: dbname,
+	})
+	if err != nil {
+		return nil, err
+	}
 	arango := &arangoDB{
-		user:   user,
-		pass:   pass,
-		dbName: dbname,
-		dbAddr: arangoSrv,
-		stop:   make(chan struct{}),
+		stop: make(chan struct{}),
+		dbi:  dbi,
 	}
 	arango.DB = arango
 
@@ -45,9 +46,6 @@ func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) 
 }
 
 func (a *arangoDB) Start() error {
-	if err := a.connector(); err != nil {
-		return err
-	}
 	glog.Infof("Connected to arango database, starting monitor")
 	go a.monitor()
 
@@ -64,32 +62,48 @@ func (a *arangoDB) GetInterface() dbclient.DB {
 }
 
 func (a *arangoDB) StoreMessage(msgType int, msg interface{}) error {
-	return nil
-}
-
-func (a *arangoDB) connector() error {
-	conn, err := http.NewConnection(http.ConnectionConfig{
-		Endpoints: []string{a.dbAddr},
-	})
-	if err != nil {
-		return err
+	switch msgType {
+	case bmp.PeerStateChangeMsg:
+		p, ok := msg.(*message.PeerStateChange)
+		if !ok {
+			return fmt.Errorf("malformed PeerStateChange message")
+		}
+		// Remove after the corresponding handler is added
+		glog.Infof("Object: %+v", p)
+		// go a.peerChangeHandler(p)
+	case bmp.UnicastPrefixMsg:
+		un, ok := msg.(*message.UnicastPrefix)
+		if !ok {
+			return fmt.Errorf("malformed UnicastPrefix message")
+		}
+		// Remove after the corresponding handler is added
+		glog.Infof("Object: %+v", un)
+		// go a.unicastPrefixHandler(un)
+	case bmp.LSNodeMsg:
+		ln, ok := msg.(*message.LSNode)
+		if !ok {
+			return fmt.Errorf("malformed LSNode message")
+		}
+		// Remove after the corresponding handler is added
+		glog.Infof("Object: %+v", ln)
+		// go a.lsNodeHandler(ln)
+	case bmp.LSLinkMsg:
+		ll, ok := msg.(*message.LSLink)
+		if !ok {
+			return fmt.Errorf("malformed LSLink message")
+		}
+		// Remove after the corresponding handler is added
+		glog.Infof("Object: %+v", ll)
+		// go a.lsLinkHandler(ll)
+	case bmp.L3VPNMsg:
+		l3, ok := msg.(*message.L3VPNPrefix)
+		if !ok {
+			return fmt.Errorf("malformed L3VPN message")
+		}
+		// Remove after the corresponding handler is added
+		glog.Infof("Object: %+v", l3)
+		// go a.l3vpnHandler(l3)
 	}
-	c, err := driver.NewClient(driver.ClientConfig{
-		Connection:     conn,
-		Authentication: driver.BasicAuthentication(a.user, a.pass),
-	})
-	if err != nil {
-		return err
-	}
-	a.conn = conn
-	a.client = c
-	ctx, cancel := context.WithTimeout(context.TODO(), arangoDBConnectTimeout)
-	defer cancel()
-	db, err := c.Database(ctx, a.dbName)
-	if err != nil {
-		return err
-	}
-	a.db = db
 
 	return nil
 }
