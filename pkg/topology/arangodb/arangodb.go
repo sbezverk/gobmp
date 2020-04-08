@@ -19,7 +19,7 @@ var (
 type arangoDB struct {
 	stop chan struct{}
 	dbclient.DB
-	dbi database.ArangoConn
+	*database.ArangoConn
 }
 
 // NewDBSrvClient returns an instance of a DB server client process
@@ -27,7 +27,7 @@ func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) 
 	if err := tools.URLAddrValidation(arangoSrv); err != nil {
 		return nil, err
 	}
-	dbi, err := database.NewArango(database.ArangoConfig{
+	arangoConn, err := database.NewArango(database.ArangoConfig{
 		URL:      arangoSrv,
 		User:     user,
 		Password: pass,
@@ -38,9 +38,12 @@ func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) 
 	}
 	arango := &arangoDB{
 		stop: make(chan struct{}),
-		dbi:  dbi,
 	}
 	arango.DB = arango
+	arango.ArangoConn = arangoConn
+	//	arangoConn.PrintCollections()
+
+	arango.ArangoConn.PrintCollections()
 
 	return arango, nil
 }
@@ -57,8 +60,13 @@ func (a *arangoDB) Stop() error {
 
 	return nil
 }
+
 func (a *arangoDB) GetInterface() dbclient.DB {
-	return &arangoDB{}
+	return a.DB
+}
+
+func (a *arangoDB) GetArangoDBInterface() *database.ArangoConn {
+	return a.ArangoConn
 }
 
 func (a *arangoDB) StoreMessage(msgType int, msg interface{}) error {
