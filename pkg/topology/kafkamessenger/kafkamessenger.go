@@ -88,7 +88,7 @@ func (k *kafka) topicReader(topicType int, topicName string) {
 		Brokers:   k.brokers,
 		Topic:     topicName,
 		Partition: 0,
-		MinBytes:  10e3, // 10KB
+		MinBytes:  0,
 		MaxBytes:  10e6, // 10MB
 	})
 	defer r.Close()
