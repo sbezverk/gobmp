@@ -16,6 +16,7 @@ replace (
 	github.com/sbezverk/gobmp/pkg/sr => ../../pkg/sr
 	github.com/sbezverk/gobmp/pkg/srv6 => ../../pkg/srv6
 	github.com/sbezverk/gobmp/pkg/tools => ../../pkg/tools
+	github.com/sbezverk/gobmp/pkg/l3vpn => ../../pkg/l3vpn
 	github.com/sbezverk/gobmp/pkg/topology/arangodb => ../../pkg/topology/arangodb
 	github.com/sbezverk/gobmp/pkg/topology/database => ../../pkg/topology/database
 	github.com/sbezverk/gobmp/pkg/topology/dbclient => ../../pkg/topology/dbclient

@@ -59,6 +59,12 @@ func (m *mockDB) StoreMessage(msgType int, msg interface{}) error {
 			return fmt.Errorf("malformed LSLink message")
 		}
 		go m.lsLinkHandler(ll)
+	case bmp.L3VPNMsg:
+		l3, ok := msg.(*message.L3VPNPrefix)
+		if !ok {
+			return fmt.Errorf("malformed LSLink message")
+		}
+		go m.l3vpnHandler(l3)
 	}
 
 	return nil
@@ -74,4 +80,8 @@ func (m *mockDB) lsNodeHandler(obj *message.LSNode) {
 
 func (m *mockDB) lsLinkHandler(obj *message.LSLink) {
 	glog.Infof("><SB> LS Link handler")
+}
+
+func (m *mockDB) l3vpnHandler(obj *message.L3VPNPrefix) {
+	glog.Infof("><SB> L3VPNPrefix handler")
 }
