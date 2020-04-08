@@ -139,16 +139,6 @@ func (p *processor) procWorker(m *queueMsg) {
 			glog.Errorf("failed to store message of type: %d in the database with error: %+v", m.msgType, err)
 			return
 		}
-	case bmp.L3VPNMsg:
-		var o message.L3VPNMsg
-		if err := json.Unmarshal(m.msgData, &o); err != nil {
-			glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
-			return
-		}
-		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
-			glog.Errorf("failed to store message of type: %din the database with error: %+v", m.msgType, err)
-			return
-		}
 	}
 
 	glog.Infof("message of type %d was stored in the database", m.msgType)
