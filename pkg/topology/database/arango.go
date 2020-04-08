@@ -139,12 +139,6 @@ func NewArango(cfg ArangoConfig) (*ArangoConn, error) {
 	return &ArangoConn{db: db, g: g, cols: cols}, nil
 }
 
-func (a *ArangoConn) PrintCollections() {
-	glog.Infof("collections: %+v", a.cols)
-	for k, v := range a.cols {
-		glog.Infof("key: %s value: %+v", k, v)
-	}
-}
 func ensureDatabase(c driver.Client, cfg ArangoConfig) (driver.Database, error) {
 	var db driver.Database
 

@@ -41,9 +41,6 @@ func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) 
 	}
 	arango.DB = arango
 	arango.ArangoConn = arangoConn
-	//	arangoConn.PrintCollections()
-
-	arango.ArangoConn.PrintCollections()
 
 	return arango, nil
 }
