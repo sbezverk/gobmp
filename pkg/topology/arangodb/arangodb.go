@@ -71,6 +71,14 @@ func (a *arangoDB) StoreMessage(msgType int, msg interface{}) error {
 		// Remove after the corresponding handler is added
 		glog.Infof("Object: %+v", p)
 		// go a.peerChangeHandler(p)
+	case bmp.UnicastPrefixMsg:
+		un, ok := msg.(*message.UnicastPrefix)
+		if !ok {
+			return fmt.Errorf("malformed UnicastPrefix message")
+		}
+		// Remove after the corresponding handler is added
+		glog.Infof("Object: %+v", un)
+		// go a.unicastPrefixHandler(un)
 	case bmp.LSNodeMsg:
 		ln, ok := msg.(*message.LSNode)
 		if !ok {
@@ -90,7 +98,7 @@ func (a *arangoDB) StoreMessage(msgType int, msg interface{}) error {
 	case bmp.L3VPNMsg:
 		l3, ok := msg.(*message.L3VPNPrefix)
 		if !ok {
-			return fmt.Errorf("malformed LSLink message")
+			return fmt.Errorf("malformed L3VPN message")
 		}
 		// Remove after the corresponding handler is added
 		glog.Infof("Object: %+v", l3)
