@@ -5,11 +5,11 @@ import "fmt"
 const EPENodeName = "EPENode"
 
 type EPENode struct {
-	Key          string `json:"_key,omitempty"`
-	Name         string `json:"Name,omitempty"`
-	RouterID     string `json:"RouterID,omitempty"`
-	PeerIP       []string `json:"PeerIP,omitempty"`
-	ASN          string `json:"ASN,omitempty"`
+	Key      string   `json:"_key,omitempty"`
+	Name     string   `json:"Name,omitempty"`
+	RouterID string   `json:"RouterID,omitempty"`
+	PeerIP   []string `json:"PeerIP,omitempty"`
+	ASN      string   `json:"ASN,omitempty"`
 }
 
 func (r EPENode) GetKey() (string, error) {

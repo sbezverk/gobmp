@@ -25,6 +25,7 @@ replace (
 	github.com/sbezverk/gobmp/pkg/topology/mockdb => ../../pkg/topology/mockdb
 	github.com/sbezverk/gobmp/pkg/topology/mockmessenger => ../../pkg/topology/mockmessenger
 	github.com/sbezverk/gobmp/pkg/topology/processor => ../../pkg/topology/processor
+	github.com/sbezverk/gobmp/pkg/l3vpn => ../../pkg/l3vpn
 )
 
 require (

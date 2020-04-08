@@ -42,10 +42,10 @@ var (
 	ErrCollectionNotFound = fmt.Errorf("Could not find collection")
 )
 
-func NewArango(cfg ArangoConfig) (ArangoConn, error) {
+func NewArango(cfg ArangoConfig) (*ArangoConn, error) {
 	// Connect to DB
 	if cfg.URL == "" || cfg.User == "" || cfg.Password == "" || cfg.Database == "" {
-		return ArangoConn{}, ErrEmptyConfig
+		return nil, ErrEmptyConfig
 	}
 	if !strings.Contains(cfg.URL, "http") {
 		cfg.URL = "http://" + cfg.URL
@@ -55,14 +55,14 @@ func NewArango(cfg ArangoConfig) (ArangoConn, error) {
 	})
 	if err != nil {
 		glog.Errorf("Failed to create HTTP connection: %v", err)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	// Authenticate with DB
 	conn, err = conn.SetAuthentication(driver.BasicAuthentication(cfg.User, cfg.Password))
 	if err != nil {
 		glog.Errorf("Failed to authenticate with arango: %v", err)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	c, err := driver.NewClient(driver.ClientConfig{
@@ -70,19 +70,19 @@ func NewArango(cfg ArangoConfig) (ArangoConn, error) {
 	})
 	if err != nil {
 		glog.Errorf("Failed to create client: %v", err)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	db, err := ensureDatabase(c, cfg)
 	if err != nil {
 		glog.Errorf("Failed to create DB")
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	g, err := ensureGraph(db, graphName)
 	if err != nil {
 		glog.Errorf("Failed to create Graph")
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	// Create / Connect  collections
@@ -91,52 +91,52 @@ func NewArango(cfg ArangoConfig) (ArangoConn, error) {
 	cols[RouterName], err = ensureVertexCollection(g, RouterName)
 	if err != nil {
 		glog.Errorf("Failed to connect to collection %q", RouterName)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	cols[EPENodeName], err = ensureVertexCollection(g, EPENodeName)
 	if err != nil {
 		glog.Errorf("Failed to connect to collection %q", EPENodeName)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	cols[EPEPrefixName], err = ensureVertexCollection(g, EPEPrefixName)
 	if err != nil {
 		glog.Errorf("Failed to connect to collection %q", EPEPrefixName)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	cols[EPELinkName], err = ensureVertexCollection(g, EPELinkName)
 	if err != nil {
 		glog.Errorf("Failed to connect to collection %q", EPELinkName)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	cols[L3VPNNodeName], err = ensureVertexCollection(g, L3VPNNodeName)
 	if err != nil {
 		glog.Errorf("Failed to connect to collection %q", L3VPNNodeName)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	cols[L3VPNPrefixName], err = ensureVertexCollection(g, L3VPNPrefixName)
 	if err != nil {
 		glog.Errorf("Failed to connect to collection %q", L3VPNPrefixName)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	cols[LSNodeName], err = ensureVertexCollection(g, LSNodeName)
 	if err != nil {
 		glog.Errorf("Failed to connect to collection %q", LSNodeName)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
 	cols[LSLinkName], err = ensureEdgeCollection(g, LSLinkName, []string{LSNodeName}, []string{LSNodeName})
 	if err != nil {
 		glog.Errorf("Failed to connect to collection %q", LSLinkName)
-		return ArangoConn{}, err
+		return nil, err
 	}
 
-	return ArangoConn{db: db, g: g, cols: cols}, nil
+	return &ArangoConn{db: db, g: g, cols: cols}, nil
 }
 
 func ensureDatabase(c driver.Client, cfg ArangoConfig) (driver.Database, error) {

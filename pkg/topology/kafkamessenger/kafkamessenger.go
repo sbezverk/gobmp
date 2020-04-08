@@ -17,6 +17,7 @@ const (
 	unicastMessageTopic = "gobmp.parsed.unicast_prefix"
 	lsNodeMessageTopic  = "gobmp.parsed.ls_node"
 	lsLinkMessageTopic  = "gobmp.parsed.ls_link"
+	l3vpnMessageTopic   = "gobmp.parsed.l3vpn"
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 		unicastMessageTopic: bmp.UnicastPrefixMsg,
 		lsNodeMessageTopic:  bmp.LSNodeMsg,
 		lsLinkMessageTopic:  bmp.LSLinkMsg,
+		l3vpnMessageTopic:   bmp.L3VPNMsg,
 	}
 )
 
@@ -88,7 +90,7 @@ func (k *kafka) topicReader(topicType int, topicName string) {
 		Brokers:   k.brokers,
 		Topic:     topicName,
 		Partition: 0,
-		MinBytes:  10e3, // 10KB
+		MinBytes:  0,
 		MaxBytes:  10e6, // 10MB
 	})
 	defer r.Close()
