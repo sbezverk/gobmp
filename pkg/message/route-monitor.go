@@ -123,10 +123,10 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to marshal ls_prefix message with error: %+v", err)
 				return
 			}
-			//			if err := p.publisher.PublishMessage(bmp.LSLinkMsg, []byte(msg.RouterHash), j); err != nil {
-			//				glog.Errorf("failed to push LSLink message to kafka with error: %+v", err)
-			//				return
-			//			}
+			if err := p.publisher.PublishMessage(bmp.LSPrefixMsg, []byte(msg.RouterHash), j); err != nil {
+				glog.Errorf("failed to push LSPrefix message to kafka with error: %+v", err)
+				return
+			}
 			glog.V(5).Infof("ls_prefix message: %s", string(j))
 		case 36:
 			glog.Infof("SRv6 SID NLRI")
