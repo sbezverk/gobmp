@@ -36,6 +36,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// There is no Path Attributes, just return
 		return
 	}
+	glog.Infof("All attributes in bgp update: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 	// Using first attribute type to select which nlri processor to call
 	switch routeMonitorMsg.Update.PathAttributes[0].AttributeType {
 	case 14:
@@ -71,7 +72,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to push L3VPN message to kafka with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("l3vpn message: %s", string(j))
+			glog.V(6).Infof("l3vpn message: %s", string(j))
 		case 19:
 			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
 			p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
@@ -91,7 +92,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to push LSNode message to kafka with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("ls_node message: %s", string(j))
+			glog.V(6).Infof("ls_node message: %s", string(j))
 		case 33:
 			glog.Infof("Link NLRI")
 			msg, err := p.lsLink("add", msg.PeerHeader, routeMonitorMsg.Update)
@@ -108,7 +109,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to push LSLink message to kafka with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("ls_link message: %s", string(j))
+			glog.V(6).Infof("ls_link message: %s", string(j))
 		case 34:
 			fallthrough
 		case 35:
@@ -127,9 +128,24 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to push LSPrefix message to kafka with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("ls_prefix message: %s", string(j))
+			glog.V(6).Infof("ls_prefix message: %s", string(j))
 		case 36:
 			glog.Infof("SRv6 SID NLRI")
+			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
+			if err != nil {
+				glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
+				return
+			}
+			j, err = json.Marshal(&msg)
+			if err != nil {
+				glog.Errorf("failed to marshal ls_srv6_sid message with error: %+v", err)
+				return
+			}
+			//			if err := p.publisher.PublishMessage(bmp.LSNodeMsg, []byte(msg.RouterHash), j); err != nil {
+			//				glog.Errorf("failed to push LSSRv6SID message to kafka with error: %+v", err)
+			//				return
+			//			}
+			glog.V(5).Infof("ls_node message: %s", string(j))
 		}
 	case 15:
 		// MP_UNREACH_NLRI
@@ -161,7 +177,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to push Unicast Prefix message to kafka with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("unicast_prefix message: %s", string(j))
+			glog.V(6).Infof("unicast_prefix message: %s", string(j))
 		}
 	}
 }

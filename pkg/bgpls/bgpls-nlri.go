@@ -57,6 +57,16 @@ func (ls *NLRI) GetMTID() string {
 	return s
 }
 
+// GetAllAttribute returns a slice with all attribute types found in BGP-LS NLRI object
+func (ls *NLRI) GetAllAttribute() []uint16 {
+	attrs := make([]uint16, 0)
+	for _, attr := range ls.LS {
+		attrs = append(attrs, attr.Type)
+	}
+
+	return attrs
+}
+
 // GetNodeFlags reeturns Flag Bits TLV carries a bit mask describing node attributes.
 func (ls *NLRI) GetNodeFlags() uint8 {
 	for _, tlv := range ls.LS {

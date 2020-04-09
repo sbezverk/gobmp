@@ -12,15 +12,17 @@ import (
 
 // SIDDescriptor defines SRv6 SID Descriptor Object
 type SIDDescriptor struct {
-	InformationTLV          *SIDInformationTLV
+	TLV                     []SIDInformationTLV
 	MultiTopologyIdentifier *base.MultiTopologyIdentifierTLV
 }
 
 func (srd *SIDDescriptor) String() string {
 	var s string
 	s += "SRv6 SID Descriptor Object:" + "\n"
-	if srd.InformationTLV != nil {
-		s += srd.InformationTLV.String()
+	if srd.TLV != nil {
+		for _, tlv := range srd.TLV {
+			s += tlv.String()
+		}
 	}
 	if srd.MultiTopologyIdentifier != nil {
 		s += srd.MultiTopologyIdentifier.String()
@@ -37,8 +39,8 @@ func (srd *SIDDescriptor) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, []byte("\"srv6SIDDescriptor\":")...)
 	jsonData = append(jsonData, '{')
 	jsonData = append(jsonData, []byte("\"srv6InformationTLV\":")...)
-	if srd.InformationTLV != nil {
-		b, err := json.Marshal(srd.InformationTLV)
+	if srd.TLV != nil {
+		b, err := json.Marshal(srd.TLV)
 		if err != nil {
 			return nil, err
 		}
@@ -69,30 +71,28 @@ func UnmarshalSRv6SIDDescriptor(b []byte) (*SIDDescriptor, error) {
 	srd := SIDDescriptor{}
 	for p := 0; p < len(b); {
 		t := binary.BigEndian.Uint16(b[p : p+2])
+		var l uint16
 		switch t {
 		case 518:
-			l := binary.BigEndian.Uint16(b[p+2 : p+4])
+			l = binary.BigEndian.Uint16(b[p+2 : p+4])
 			inf, err := UnmarshalSRv6SIDInformationTLV(b[p : p+int(l)])
 			if err != nil {
 				return nil, err
 			}
-			srd.InformationTLV = inf
-			p += 2      // Type
-			p += 2      // Length
-			p += int(l) // Actual TLV length
+			srd.TLV = inf
 		case 263:
-			l := binary.BigEndian.Uint16(b[p+2 : p+4])
+			l = binary.BigEndian.Uint16(b[p+2 : p+4])
 			mti, err := base.UnmarshalMultiTopologyIdentifierTLV(b[p : p+int(l)])
 			if err != nil {
 				return nil, err
 			}
 			srd.MultiTopologyIdentifier = mti
-			p += 2      // Type
-			p += 2      // Length
-			p += int(l) // Actual TLV length
 		default:
 			return nil, fmt.Errorf("invalid SRv6 SID Descriptor Type: %d", t)
 		}
+		p += 2      // Type
+		p += 2      // Length
+		p += int(l) // Actual TLV length
 	}
 
 	return &srd, nil

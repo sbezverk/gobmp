@@ -13,10 +13,11 @@ import (
 // SIDNLRI defines SRv6 SID NLRI onject
 // Mp RFC yet
 type SIDNLRI struct {
-	ProtocolID uint8
-	Identifier uint64
-	LocalNode  *base.NodeDescriptor
-	SRv6SID    *SIDDescriptor
+	ProtocolID    uint8
+	Identifier    uint64
+	LocalNode     *base.NodeDescriptor
+	SRv6SID       *SIDDescriptor
+	LocalNodeHash string
 }
 
 func (sr *SIDNLRI) String() string {
@@ -27,6 +28,39 @@ func (sr *SIDNLRI) String() string {
 	s += sr.SRv6SID.String()
 
 	return s
+}
+
+// GetAllAttribute returns a slice with all attribute types found in SRv6 SID NLRI object
+func (sr *SIDNLRI) GetAllAttribute() []uint16 {
+	attrs := make([]uint16, 0)
+	for _, attr := range sr.LocalNode.SubTLV {
+		attrs = append(attrs, attr.Type)
+	}
+	for _, attr := range sr.SRv6SID.TLV {
+		attrs = append(attrs, attr.Type)
+	}
+
+	return attrs
+}
+
+// GetSRv6SIDProtocolID returns a string representation of LinkNLRI ProtocolID field
+func (sr *SIDNLRI) GetSRv6SIDProtocolID() string {
+	return tools.ProtocolIDString(sr.ProtocolID)
+}
+
+// GetSRv6SIDLSID returns a value of Local Node Descriptor TLV BGP-LS Identifier
+func (sr *SIDNLRI) GetSRv6SIDLSID() uint32 {
+	return sr.LocalNode.GetLSID()
+}
+
+// GetSRv6SIDIGPRouterID returns a value of a local node Descriptor TLV IGP Router ID
+func (sr *SIDNLRI) GetSRv6SIDIGPRouterID() string {
+	return sr.LocalNode.GetIGPRouterID()
+}
+
+// GetSRv6SIDASN returns Autonomous System Number used to uniqely identify BGP-LS domain
+func (sr *SIDNLRI) GetSRv6SIDASN() uint32 {
+	return sr.LocalNode.GetASN()
 }
 
 // MarshalJSON defines a method to Marshal SRv6 SID NLRI object into JSON format

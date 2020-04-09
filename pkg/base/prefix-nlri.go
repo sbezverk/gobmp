@@ -29,6 +29,20 @@ func (p *PrefixNLRI) String() string {
 	return s
 }
 
+// GetAllAttribute returns a slice with all attribute types found in Prefix NLRI object
+func (p *PrefixNLRI) GetAllAttribute() []uint16 {
+	attrs := make([]uint16, 0)
+	for _, attr := range p.LocalNode.SubTLV {
+		attrs = append(attrs, attr.Type)
+	}
+
+	for _, attr := range p.Prefix.PrefixTLV {
+		attrs = append(attrs, attr.Type)
+	}
+
+	return attrs
+}
+
 // MarshalJSON defines a method to Marshal Prefix NLRI object into JSON format
 func (p *PrefixNLRI) MarshalJSON() ([]byte, error) {
 	var jsonData []byte

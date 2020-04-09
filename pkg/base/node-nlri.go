@@ -26,6 +26,16 @@ func (n *NodeNLRI) String() string {
 	return s
 }
 
+// GetAllAttribute returns a slice with all attribute types found in Node NLRI object
+func (n *NodeNLRI) GetAllAttribute() []uint16 {
+	attrs := make([]uint16, 0)
+	for _, attr := range n.LocalNode.SubTLV {
+		attrs = append(attrs, attr.Type)
+	}
+
+	return attrs
+}
+
 // GetNodeProtocolID returns a string representation of NodeNLRI ProtocolID field
 func (n *NodeNLRI) GetNodeProtocolID() string {
 	return tools.ProtocolIDString(n.ProtocolID)
