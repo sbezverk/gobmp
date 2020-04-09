@@ -34,7 +34,6 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 	}
 	// Processing other nlri and attributes, since they are optional, processing only if they exist
-	nlri71.GetLinkNLRI()
 	link, err := nlri71.GetLinkNLRI()
 	if err == nil {
 		msg.Protocol = link.GetLinkProtocolID()

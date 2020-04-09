@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/golang/glog"
@@ -99,4 +100,14 @@ func (p *PerPeerHeader) GetPeerHash() string {
 	data = append(data, p.PeerBGPID...)
 
 	return fmt.Sprintf("%x", md5.Sum(data))
+}
+
+// GetPeerAddrString returns a string representation of Peer address
+func (p *PerPeerHeader) GetPeerAddrString() string {
+	if p.FlagV {
+		// IPv6 specific conversions
+		return net.IP(p.PeerAddress).To16().String()
+	}
+	// IPv4 specific conversions
+	return net.IP(p.PeerAddress[12:]).To4().String()
 }

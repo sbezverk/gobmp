@@ -110,9 +110,24 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			}
 			glog.V(5).Infof("ls_link message: %s", string(j))
 		case 34:
-			glog.Infof("IPv4 Topology Prefix NLRI")
+			fallthrough
 		case 35:
-			glog.Infof("IPv6 Topology Prefix NLRI")
+			glog.Infof("Prefix NLRI")
+			msg, err := p.lsPrefix("add", msg.PeerHeader, routeMonitorMsg.Update)
+			if err != nil {
+				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
+				return
+			}
+			j, err = json.Marshal(&msg)
+			if err != nil {
+				glog.Errorf("failed to marshal ls_prefix message with error: %+v", err)
+				return
+			}
+			//			if err := p.publisher.PublishMessage(bmp.LSLinkMsg, []byte(msg.RouterHash), j); err != nil {
+			//				glog.Errorf("failed to push LSLink message to kafka with error: %+v", err)
+			//				return
+			//			}
+			glog.V(5).Infof("ls_prefix message: %s", string(j))
 		case 36:
 			glog.Infof("SRv6 SID NLRI")
 		}

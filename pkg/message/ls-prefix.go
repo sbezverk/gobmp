@@ -1,9 +1,6 @@
 package message
 
 import (
-	"net"
-
-	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -27,25 +24,16 @@ func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp
 		Timestamp:    ph.PeerTimestamp,
 	}
 	msg.Nexthop = nlri14.GetNextHop()
-	if ph.FlagV {
-		// IPv6 specific conversions
-		msg.PeerIP = net.IP(ph.PeerAddress).To16().String()
-	} else {
-		// IPv4 specific conversions
-		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-	}
+	msg.PeerIP = ph.GetPeerAddrString()
 	// Processing other nlri and attributes, since they are optional, processing only if they exist
-	nlri71.GetLinkNLRI()
-	prefix, err := nlri71.GetPrefixNLRI()
+	prfx, err := nlri71.GetPrefixNLRI()
 	if err == nil {
-		msg.Protocol = prefix.GetPrefixProtocolID()
-		msg.LSID = prefix.GetPrefixLSID()
-		msg.OSPFAreaID = prefix.GetPrefixOSPFAreaID()
-		if ph.FlagV {
-		} else {
-		}
-		msg.LocalNodeHash = prefix.LocalNodeHash
-		msg.IGPRouterID = prefix.GetLocalIGPRouterID()
+		msg.Protocol = prfx.GetPrefixProtocolID()
+		msg.LSID = prfx.GetPrefixLSID()
+		msg.OSPFAreaID = prfx.GetPrefixOSPFAreaID()
+		msg.LocalNodeHash = prfx.LocalNodeHash
+		msg.IGPRouterID = prfx.GetLocalIGPRouterID()
+		msg.IGPMetric = prfx.Prefix.GetPrefixMetric()
 	}
 	lsprefix, err := update.GetNLRI29()
 	if err == nil {
@@ -57,6 +45,9 @@ func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp
 		msg.MTID = lsprefix.GetMTID()
 		msg.ISISAreaID = lsprefix.GetISISAreaID()
 		msg.IGPMetric = lsprefix.GetIGPMetric()
+		if ps, err := lsprefix.GetLSPrefixSID(); err == nil {
+			msg.LSPrefixSID = ps
+		}
 	}
 	msg.ASPath = update.GetAttrASPath(p.as4Capable)
 	if med := update.GetAttrMED(); med != nil {
@@ -65,8 +56,6 @@ func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp
 	if lp := update.GetAttrLocalPref(); lp != nil {
 		msg.LocalPref = *lp
 	}
-
-	glog.Infof("lsPrefix message: %+v", msg)
 
 	return &msg, nil
 }

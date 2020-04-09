@@ -6,7 +6,6 @@ import (
 	"net"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -46,12 +45,12 @@ func (pd *PrefixDescriptor) GetPrefixMTI() []uint16 {
 }
 
 // GetPrefixIPReachability returns BGP route struct encoded in Prefix Descriptor TLV
-func (pd *PrefixDescriptor) GetPrefixIPReachability() *bgp.Route {
+func (pd *PrefixDescriptor) GetPrefixIPReachability() *Route {
 	for _, tlv := range pd.PrefixTLV {
 		if tlv.Type != 265 {
 			continue
 		}
-		routes, err := bgp.UnmarshalBGPRoutes(tlv.Value)
+		routes, err := UnmarshalRoutes(tlv.Value)
 		if err != nil {
 			return nil
 		}
