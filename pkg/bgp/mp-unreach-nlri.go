@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -12,7 +13,7 @@ import (
 type MPUnReachNLRI struct {
 	AddressFamilyID    uint16
 	SubAddressFamilyID uint8
-	WithdrawnRoutes    []Route
+	WithdrawnRoutes    []base.Route
 }
 
 func (mp *MPUnReachNLRI) String() string {
@@ -51,7 +52,7 @@ func UnmarshalMPUnReachNLRI(b []byte) (*MPUnReachNLRI, error) {
 	case 1:
 		fallthrough
 	case 2:
-		wdr, err := UnmarshalBGPRoutes(b)
+		wdr, err := base.UnmarshalRoutes(b)
 		if err != nil {
 			return nil, err
 		}

@@ -263,6 +263,17 @@ func (ls *NLRI) GetNodeSRLocalBlock() string {
 	return s
 }
 
+// GetLSPrefixSID returns a string representation of Prefix SID TLV
+func (ls *NLRI) GetLSPrefixSID() (*sr.PrefixSIDTLV, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1158 {
+			continue
+		}
+		return sr.UnmarshalPrefixSIDTLV(tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
 // GetNodeSRv6CapabilitiesTLV returns string representation of SRv6 Capabilities TLV
 func (ls *NLRI) GetNodeSRv6CapabilitiesTLV() string {
 	var s string

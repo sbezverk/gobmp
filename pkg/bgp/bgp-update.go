@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
@@ -14,10 +15,10 @@ import (
 // Update defines a structure of BGP Update message
 type Update struct {
 	WithdrawnRoutesLength    uint16
-	WithdrawnRoutes          []Route
+	WithdrawnRoutes          []base.Route
 	TotalPathAttributeLength uint16
 	PathAttributes           []PathAttribute
-	NLRI                     []Route
+	NLRI                     []base.Route
 }
 
 func (up *Update) String() string {
@@ -86,6 +87,16 @@ func (up *Update) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
+}
+
+// GetAllAttributeID return a slixe of int with all attributes found in BGP Update
+func (up *Update) GetAllAttributeID() []uint8 {
+	attrs := make([]uint8, 0)
+	for _, attr := range up.PathAttributes {
+		attrs = append(attrs, attr.AttributeType)
+	}
+
+	return attrs
 }
 
 // GetBaseAttrHash calculates 16 bytes MD5 Hash of all available base attributes.
@@ -397,7 +408,7 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	u := Update{}
 	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	wdr, err := UnmarshalBGPRoutes(b[p : p+int(u.WithdrawnRoutesLength)])
+	wdr, err := base.UnmarshalRoutes(b[p : p+int(u.WithdrawnRoutesLength)])
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +422,7 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	}
 	u.PathAttributes = attrs
 	p += int(u.TotalPathAttributeLength)
-	routes, err := UnmarshalBGPRoutes(b[p:len(b)])
+	routes, err := base.UnmarshalRoutes(b[p:len(b)])
 	if err != nil {
 		return nil, err
 	}

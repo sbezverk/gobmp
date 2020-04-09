@@ -1,4 +1,4 @@
-package bgp
+package base
 
 import (
 	"fmt"
@@ -34,9 +34,9 @@ func (r *Route) MarshalJSON() ([]byte, error) {
 	return jsonData, nil
 }
 
-// UnmarshalBGPRoutes builds BGP Withdrawn routes object
-func UnmarshalBGPRoutes(b []byte) ([]Route, error) {
-	glog.V(6).Infof("BGPRoutes Raw: %s", tools.MessageHex(b))
+// UnmarshalRoutes builds BGP Withdrawn routes object
+func UnmarshalRoutes(b []byte) ([]Route, error) {
+	glog.V(6).Infof("Routes Raw: %s", tools.MessageHex(b))
 	routes := make([]Route, 0)
 	for p := 0; p < len(b); {
 		route := Route{}

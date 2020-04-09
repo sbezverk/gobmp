@@ -30,4 +30,6 @@ const (
 	PeerStateChangeMsg = 10
 	// L3VPNMsg defines BMP Peer Layer 3 VPN message
 	L3VPNMsg = 11
+	// LSPrefixMsg defines BMP Route Monitoring message carrying Prefix NLRI
+	LSPrefixMsg = 12
 )
