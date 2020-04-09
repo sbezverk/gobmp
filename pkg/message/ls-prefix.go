@@ -1,6 +1,8 @@
 package message
 
 import (
+	"net"
+
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -34,6 +36,13 @@ func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp
 		msg.LocalNodeHash = prfx.LocalNodeHash
 		msg.IGPRouterID = prfx.GetLocalIGPRouterID()
 		msg.IGPMetric = prfx.Prefix.GetPrefixMetric()
+		route := prfx.Prefix.GetPrefixIPReachability()
+		msg.PrefixLen = int32(route.Length)
+		if ph.FlagV {
+			msg.Prefix = net.IP(prfx.Prefix.GetPrefixIPReachability().Prefix).To16().String()
+		} else {
+			msg.Prefix = net.IP(prfx.Prefix.GetPrefixIPReachability().Prefix).To4().String()
+		}
 	}
 	lsprefix, err := update.GetNLRI29()
 	if err == nil {
