@@ -3,6 +3,7 @@ package message
 import (
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -37,9 +38,9 @@ func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp
 	nlri71.GetLinkNLRI()
 	prefix, err := nlri71.GetPrefixNLRI()
 	if err == nil {
-		msg.Protocol = prefix.GetLinkProtocolID()
-		msg.LSID = prefix.GetLinkLSID(true)
-		msg.OSPFAreaID = prefix.GetLinkOSPFAreaID(true)
+		msg.Protocol = prefix.GetPrefixProtocolID()
+		msg.LSID = prefix.GetPrefixLSID()
+		msg.OSPFAreaID = prefix.GetPrefixOSPFAreaID()
 		if ph.FlagV {
 		} else {
 		}
@@ -64,6 +65,8 @@ func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp
 	if lp := update.GetAttrLocalPref(); lp != nil {
 		msg.LocalPref = *lp
 	}
+
+	glog.Infof("lsPrefix message: %+v", msg)
 
 	return &msg, nil
 }

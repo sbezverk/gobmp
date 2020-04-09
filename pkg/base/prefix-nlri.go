@@ -12,10 +12,11 @@ import (
 // PrefixNLRI defines Prefix NLRI onject
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type PrefixNLRI struct {
-	ProtocolID uint8
-	Identifier uint64
-	LocalNode  *NodeDescriptor
-	Prefix     *PrefixDescriptor
+	ProtocolID    uint8
+	Identifier    uint64
+	LocalNode     *NodeDescriptor
+	Prefix        *PrefixDescriptor
+	LocalNodeHash string
 }
 
 func (p *PrefixNLRI) String() string {
@@ -61,6 +62,36 @@ func (p *PrefixNLRI) MarshalJSON() ([]byte, error) {
 	jsonData = append(jsonData, '}')
 
 	return jsonData, nil
+}
+
+// GetPrefixProtocolID returns a string representation of Prefix NLRI ProtocolID field
+func (p *PrefixNLRI) GetPrefixProtocolID() string {
+	return tools.ProtocolIDString(p.ProtocolID)
+}
+
+// GetPrefixASN returns Autonomous System Number used to uniquely identify BGP-LS domain
+func (p *PrefixNLRI) GetPrefixASN() uint32 {
+	return p.LocalNode.GetASN()
+}
+
+// GetPrefixOSPFAreaID returns OSPF Area-ID found in Prefix Descriptor sub tlv
+func (p *PrefixNLRI) GetPrefixOSPFAreaID() string {
+	return p.LocalNode.GetOSPFAreaID()
+}
+
+// GetPrefixLSID returns a value of Prefix Descriptor TLV BGP-LS Identifier
+func (p *PrefixNLRI) GetPrefixLSID() uint32 {
+	return p.LocalNode.GetLSID()
+}
+
+// GetLocalIGPRouterID returns value of Local node IGP router id
+func (p *PrefixNLRI) GetLocalIGPRouterID() string {
+	return p.LocalNode.GetIGPRouterID()
+}
+
+// GetLocalASN returns value of Local Node's ASN
+func (p *PrefixNLRI) GetLocalASN() uint32 {
+	return p.LocalNode.GetASN()
 }
 
 // UnmarshalPrefixNLRI builds Prefix NLRI object
