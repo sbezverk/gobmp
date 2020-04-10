@@ -37,6 +37,8 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		return
 	}
 	glog.Infof("All attributes in bgp update: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+	// ipv4Flag used to differentiate between IPv4 and IPv6 Prefix NLRI messages
+	ipv4Flag := false
 	// Using first attribute type to select which nlri processor to call
 	switch routeMonitorMsg.Update.PathAttributes[0].AttributeType {
 	case 14:
@@ -111,10 +113,14 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			}
 			glog.V(6).Infof("ls_link message: %s", string(j))
 		case 34:
+			ipv4Flag = true
+			glog.Infof("IPv4 Prefix NLRI")
 			fallthrough
 		case 35:
-			glog.Infof("Prefix NLRI")
-			msg, err := p.lsPrefix("add", msg.PeerHeader, routeMonitorMsg.Update)
+			if !ipv4Flag {
+				glog.Infof("IPv6 Prefix NLRI")
+			}
+			msg, err := p.lsPrefix("add", msg.PeerHeader, routeMonitorMsg.Update, ipv4Flag)
 			if err != nil {
 				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
 				return
@@ -128,7 +134,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to push LSPrefix message to kafka with error: %+v", err)
 				return
 			}
-			glog.V(6).Infof("ls_prefix message: %s", string(j))
+			glog.V(5).Infof("ls_prefix message: %s", string(j))
 		case 36:
 			glog.Infof("SRv6 SID NLRI")
 			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
@@ -145,7 +151,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			//				glog.Errorf("failed to push LSSRv6SID message to kafka with error: %+v", err)
 			//				return
 			//			}
-			glog.V(5).Infof("ls_node message: %s", string(j))
+			glog.V(5).Infof("ls_srv6_sid message: %s", string(j))
 		}
 	case 15:
 		// MP_UNREACH_NLRI

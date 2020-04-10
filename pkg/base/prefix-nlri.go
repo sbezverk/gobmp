@@ -17,6 +17,7 @@ type PrefixNLRI struct {
 	LocalNode     *NodeDescriptor
 	Prefix        *PrefixDescriptor
 	LocalNodeHash string
+	IsPv4         bool
 }
 
 func (p *PrefixNLRI) String() string {
@@ -109,9 +110,11 @@ func (p *PrefixNLRI) GetLocalASN() uint32 {
 }
 
 // UnmarshalPrefixNLRI builds Prefix NLRI object
-func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
+func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 	glog.V(6).Infof("PrefixNLRI Raw: %s", tools.MessageHex(b))
-	pr := PrefixNLRI{}
+	pr := PrefixNLRI{
+		IsPv4: ipv4,
+	}
 	p := 0
 	pr.ProtocolID = b[p]
 	p++

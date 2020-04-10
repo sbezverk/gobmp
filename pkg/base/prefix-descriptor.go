@@ -45,7 +45,7 @@ func (pd *PrefixDescriptor) GetPrefixMTI() []uint16 {
 }
 
 // GetPrefixIPReachability returns BGP route struct encoded in Prefix Descriptor TLV
-func (pd *PrefixDescriptor) GetPrefixIPReachability() *Route {
+func (pd *PrefixDescriptor) GetPrefixIPReachability(ipv4 bool) *Route {
 	for _, tlv := range pd.PrefixTLV {
 		if tlv.Type != 265 {
 			continue
@@ -56,10 +56,20 @@ func (pd *PrefixDescriptor) GetPrefixIPReachability() *Route {
 		}
 		// Prefix descriptor should carry only a single route, if more than 1 something is wrong
 		// returning nil for that case.
-		if len(routes) == 1 {
-			return &routes[0]
+		if len(routes) != 1 {
+			return nil
 		}
-		break
+
+		r := Route{
+			Length: routes[0].Length,
+		}
+		if ipv4 {
+			r.Prefix = make([]byte, 4)
+		} else {
+			r.Prefix = make([]byte, 16)
+		}
+		copy(r.Prefix, routes[0].Prefix)
+		return &r
 	}
 
 	return nil

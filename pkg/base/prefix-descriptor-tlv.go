@@ -100,7 +100,7 @@ func (tlv *PrefixDescriptorTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalPrefixDescriptorTLV builds Prefix Descriptor Sub TLVs object
 func UnmarshalPrefixDescriptorTLV(b []byte) ([]PrefixDescriptorTLV, error) {
-	glog.V(6).Infof("PrefixDescriptorTLV Raw: %s", tools.MessageHex(b))
+	glog.V(5).Infof("PrefixDescriptorTLV Raw: %s", tools.MessageHex(b))
 	ptlvs := make([]PrefixDescriptorTLV, 0)
 	for p := 0; p < len(b); {
 		ptlv := PrefixDescriptorTLV{}
