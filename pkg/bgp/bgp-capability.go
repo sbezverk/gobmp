@@ -25,16 +25,6 @@ func (c *Capability) String() string {
 	return s
 }
 
-// MarshalJSON defines a method to Marshal BGP Capability Information TLV object into JSON format
-func (c *Capability) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalBGPInformationalTLVCapability builds BGP Capability Information TLV object
 func UnmarshalBGPInformationalTLVCapability(b []byte) ([]Capability, error) {
 	caps := make([]Capability, 0)

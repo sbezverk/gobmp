@@ -43,52 +43,6 @@ func (up *Update) String() string {
 	return s
 }
 
-// MarshalJSON defines a custom method to convert BGP Update object into JSON object
-func (up *Update) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-
-	jsonData = append(jsonData, []byte("{\"WithdrawnRoutesLength\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", up.WithdrawnRoutesLength))...)
-	jsonData = append(jsonData, []byte("\"WithdrawnRoutes\":")...)
-	//	jsonData = append(jsonData, []byte("{\"WithdrawnRoutes\":")...)
-	jsonData = append(jsonData, '[')
-	for i, wr := range up.WithdrawnRoutes {
-		b, err := json.Marshal(&wr)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-		if i < len(up.WithdrawnRoutes)-1 {
-			jsonData = append(jsonData, ',')
-		}
-	}
-	jsonData = append(jsonData, []byte("],")...)
-
-	jsonData = append(jsonData, []byte("\"TotalPathAttributeLength\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", up.TotalPathAttributeLength))...)
-
-	jsonData = append(jsonData, []byte("\"PathAttributes\":")...)
-	jsonData = append(jsonData, '[')
-	for i, pa := range up.PathAttributes {
-		b, err := json.Marshal(&pa)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-		if i < len(up.PathAttributes)-1 {
-			jsonData = append(jsonData, ',')
-		}
-	}
-	jsonData = append(jsonData, []byte("],")...)
-	// TODO Fix it
-	jsonData = append(jsonData, []byte("\"NLRI\":{}")...)
-	// TODO Fix it
-	//	jsonData = append(jsonData, tools.RawBytesToJSON(up.NLRI)...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // GetAllAttributeID return a slixe of int with all attributes found in BGP Update
 func (up *Update) GetAllAttributeID() []uint8 {
 	attrs := make([]uint8, 0)

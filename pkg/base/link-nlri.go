@@ -3,7 +3,6 @@ package base
 import (
 	"crypto/md5"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"net"
 
@@ -165,52 +164,6 @@ func (l *LinkNLRI) GetLocalIGPRouterID() string {
 // GetRemoteIGPRouterID returns value of Remote node IGP router id
 func (l *LinkNLRI) GetRemoteIGPRouterID() string {
 	return l.RemoteNode.GetIGPRouterID()
-}
-
-// MarshalJSON defines a method to Marshal Link NLRI object into JSON format
-func (l *LinkNLRI) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"protocolID\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", l.ProtocolID))...)
-	jsonData = append(jsonData, []byte("\"identifier\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", l.Identifier))...)
-	jsonData = append(jsonData, []byte("\"localNode\":")...)
-	if l.LocalNode != nil {
-		b, err := json.Marshal(l.LocalNode)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-		jsonData = append(jsonData, ',')
-	} else {
-		jsonData = append(jsonData, "{},"...)
-	}
-	jsonData = append(jsonData, []byte("\"remoteNode\":")...)
-	if l.RemoteNode != nil {
-		b, err := json.Marshal(l.RemoteNode)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-		jsonData = append(jsonData, ',')
-	} else {
-		jsonData = append(jsonData, "{},"...)
-	}
-	jsonData = append(jsonData, []byte("\"link\":")...)
-	if l.Link != nil {
-		b, err := json.Marshal(l.Link)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-	} else {
-		jsonData = append(jsonData, "{}"...)
-	}
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // UnmarshalLinkNLRI builds Link NLRI object

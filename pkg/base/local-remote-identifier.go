@@ -32,19 +32,6 @@ func (lri *LocalRemoteIdentifierTLV) GetLinkID(local bool) string {
 	return net.IP(lri.Remote).To4().String()
 }
 
-// MarshalJSON defines a method to Marshal Link Descriptor Local/Remote Identifiers TLV object into JSON format
-func (lri *LocalRemoteIdentifierTLV) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"Local\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", lri.Local))...)
-	jsonData = append(jsonData, []byte("\"Remote\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d", lri.Remote))...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalLocalRemoteIdentifierTLV builds Link Descriptor Local/Remote Identifiers TLV object
 func UnmarshalLocalRemoteIdentifierTLV(b []byte) (*LocalRemoteIdentifierTLV, error) {
 	glog.V(6).Infof("LocalRemoteIdentifierTLV Raw: %s", tools.MessageHex(b))

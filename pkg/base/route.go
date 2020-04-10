@@ -22,18 +22,6 @@ func (r *Route) String() string {
 	return s
 }
 
-// MarshalJSON defines a custom method to convert BGP Update object into JSON object
-func (r *Route) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, []byte("{\"Length\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", r.Length))...)
-	jsonData = append(jsonData, []byte("\"Prefix\":")...)
-	jsonData = append(jsonData, tools.RawBytesToJSON(r.Prefix)...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalRoutes builds BGP Withdrawn routes object
 func UnmarshalRoutes(b []byte) ([]Route, error) {
 	routes := make([]Route, 0)

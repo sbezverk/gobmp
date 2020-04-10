@@ -2,7 +2,6 @@ package ls
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -117,79 +116,6 @@ func (ls *NLRI71) GetSRv6SIDNLRI() (*srv6.SIDNLRI, error) {
 	}
 
 	return s, nil
-}
-
-// MarshalJSON defines a method to Marshal NLRI71 object into JSON format
-func (ls *NLRI71) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	var t string
-	var b []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"Type\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", ls.Type))...)
-	jsonData = append(jsonData, []byte("\"Description\":")...)
-	switch ls.Type {
-	case 1:
-		t = "Node"
-		n, err := base.UnmarshalNodeNLRI(ls.LS)
-		if err != nil {
-			return nil, err
-		}
-		b, err = json.Marshal(&n)
-		if err != nil {
-			return nil, err
-		}
-	case 2:
-		t = "Link"
-		l, err := base.UnmarshalLinkNLRI(ls.LS)
-		if err != nil {
-			return nil, err
-		}
-		b, err = json.Marshal(&l)
-		if err != nil {
-			return nil, err
-		}
-	case 3:
-		t = "IPv4 Topology Prefix"
-		n, err := base.UnmarshalPrefixNLRI(ls.LS, true)
-		if err != nil {
-			return nil, err
-		}
-		b, err = json.Marshal(&n)
-		if err != nil {
-			return nil, err
-		}
-	case 4:
-		t = "IPv6 Topology Prefix"
-		n, err := base.UnmarshalPrefixNLRI(ls.LS, false)
-		if err != nil {
-			return nil, err
-		}
-		b, err = json.Marshal(&n)
-		if err != nil {
-			return nil, err
-		}
-	case 6:
-		t = "SRv6 SID"
-		n, err := srv6.UnmarshalSRv6SIDNLRI(ls.LS)
-		if err != nil {
-			return nil, err
-		}
-		b, err = json.Marshal(&n)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		t = "Unknown"
-		b = tools.RawBytesToJSON(ls.LS)
-	}
-
-	jsonData = append(jsonData, []byte(fmt.Sprintf("\"%s\",", t))...)
-	jsonData = append(jsonData, []byte("\"LS\":")...)
-	jsonData = append(jsonData, b...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // UnmarshalLSNLRI71 builds Link State NLRI object ofor SAFI 71

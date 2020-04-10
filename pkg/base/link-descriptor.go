@@ -1,8 +1,6 @@
 package base
 
 import (
-	"encoding/json"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
@@ -21,31 +19,6 @@ func (ld *LinkDescriptor) String() string {
 	}
 
 	return s
-}
-
-// MarshalJSON defines a method to Marshal Link Descriptor object into JSON format
-func (ld *LinkDescriptor) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"LinkTLV\":")...)
-	jsonData = append(jsonData, '[')
-	if ld.LinkTLV != nil {
-		for i, tlv := range ld.LinkTLV {
-			b, err := json.Marshal(&tlv)
-			if err != nil {
-				return nil, err
-			}
-			jsonData = append(jsonData, b...)
-			if i < len(ld.LinkTLV)-1 {
-				jsonData = append(jsonData, ',')
-			}
-		}
-	}
-	jsonData = append(jsonData, ']')
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // UnmarshalLinkDescriptor build Link Descriptor object

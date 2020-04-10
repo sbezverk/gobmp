@@ -1,7 +1,6 @@
 package sr
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -27,30 +26,6 @@ func (lb *LocalBlock) String(level ...int) string {
 	s += fmt.Sprintf("Flag: %02x\n", lb.Flags)
 
 	return s
-}
-
-// MarshalJSON defines a method to Marshal SR Local Block TLV object into JSON format
-func (lb *LocalBlock) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"flag\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", lb.Flags))...)
-	jsonData = append(jsonData, []byte("\"tlvs\":")...)
-	for i, t := range lb.TLV {
-		jsonData = append(jsonData, '[')
-		b, err := json.Marshal(&t)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-		if i < len(lb.TLV)-1 {
-			jsonData = append(jsonData, ',')
-		}
-		jsonData = append(jsonData, ']')
-	}
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // UnmarshalSRLocalBlock builds SR Local Block object

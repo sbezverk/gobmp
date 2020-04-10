@@ -24,21 +24,6 @@ func (psid *PrefixSIDTLV) String() string {
 	return s
 }
 
-// MarshalJSON defines a method to Marshal SR Prefix SID TLV object into JSON format
-func (psid *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"flags\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", psid.Flags))...)
-	jsonData = append(jsonData, []byte("\"Algorithm\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", psid.Algorithm))...)
-	jsonData = append(jsonData, []byte("\"sid\":")...)
-	jsonData = append(jsonData, tools.RawBytesToJSON(psid.SID)...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalPrefixSIDTLV builds Prefix SID TLV Object
 func UnmarshalPrefixSIDTLV(b []byte) (*PrefixSIDTLV, error) {
 	glog.V(6).Infof("Prefix SID TLV Raw: %s", tools.MessageHex(b))
