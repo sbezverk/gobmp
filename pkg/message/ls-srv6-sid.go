@@ -7,7 +7,7 @@ import (
 )
 
 func (p *producer) lsSRv6SID(operation string, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSSRv6SID, error) {
-	glog.Infof("Available attributes: %+v", update.GetAllAttributeID())
+	glog.V(6).Infof("Available attributes: %+v", update.GetAllAttributeID())
 	nlri14, err := update.GetNLRI14()
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func (p *producer) lsSRv6SID(operation string, ph *bmp.PerPeerHeader, update *bg
 	// Processing other nlri and attributes, since they are optional, processing only if they exist
 	nlri6, err := nlri71.GetSRv6SIDNLRI()
 	if err == nil {
-		glog.Infof("nlri6 attributes: %+v", nlri6.GetAllAttribute())
+		glog.V(6).Infof("nlri6 attributes: %+v", nlri6.GetAllAttribute())
 		msg.Protocol = nlri6.GetSRv6SIDProtocolID()
 		msg.LocalNodeHash = nlri6.LocalNodeHash
 		msg.LSID = nlri6.GetSRv6SIDLSID()
@@ -41,7 +41,7 @@ func (p *producer) lsSRv6SID(operation string, ph *bmp.PerPeerHeader, update *bg
 	}
 	ls, err := update.GetNLRI29()
 	if err == nil {
-		glog.Infof("nlri29 attributes: %+v", ls.GetAllAttribute())
+		glog.V(6).Infof("nlri29 attributes: %+v", ls.GetAllAttribute())
 		msg.SRv6EndpointBehavior = ls.GetSRv6EndpointBehavior()
 		msg.SRv6BGPPeerNodeSID = ls.GetSRv6BGPPeerNodeSID()
 		msg.SRv6SIDStructure = ls.GetSRv6SIDStructure()

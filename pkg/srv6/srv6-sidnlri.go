@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -80,11 +81,10 @@ func (sr *SIDNLRI) GetSRv6SIDMTID() []uint16 {
 }
 
 // GetSRv6SID returns a slice of SIDs
-func (sr *SIDNLRI) GetSRv6SID() [][]byte {
-	sids := make([][]byte, len(sr.SRv6SID.TLV))
-	for i, sid := range sr.SRv6SID.TLV {
-		sids[i] = make([]byte, len(sid.SID))
-		copy(sids[i], sid.SID)
+func (sr *SIDNLRI) GetSRv6SID() []string {
+	sids := make([]string, 0)
+	for _, sid := range sr.SRv6SID.TLV {
+		sids = append(sids, net.IP(sid.SID).To16().String())
 	}
 
 	return sids
