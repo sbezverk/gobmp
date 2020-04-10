@@ -3,13 +3,11 @@ package message
 import (
 	"net"
 
-	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
 func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp.Update, ipv4 bool) (*LSPrefix, error) {
-	glog.Infof("lsPrefix IPv4 Prefix NLRI: %t", ipv4)
 	nlri14, err := update.GetNLRI14()
 	if err != nil {
 		return nil, err

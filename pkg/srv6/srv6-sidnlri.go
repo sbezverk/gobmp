@@ -24,8 +24,12 @@ func (sr *SIDNLRI) String() string {
 	var s string
 	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(sr.ProtocolID))
 	s += fmt.Sprintf("Identifier: %d\n", sr.Identifier)
-	s += sr.LocalNode.String()
-	s += sr.SRv6SID.String()
+	if sr.LocalNode != nil {
+		s += sr.LocalNode.String()
+	}
+	if sr.SRv6SID != nil {
+		s += sr.SRv6SID.String()
+	}
 
 	return s
 }
@@ -101,9 +105,7 @@ func (sr *SIDNLRI) MarshalJSON() ([]byte, error) {
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object
 func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 	glog.V(6).Infof("SRv6 SID NLRI Raw: %s", tools.MessageHex(b))
-	sr := SIDNLRI{
-		SRv6SID: &SIDDescriptor{},
-	}
+	sr := SIDNLRI{}
 	p := 0
 	sr.ProtocolID = b[p]
 	p++
@@ -121,7 +123,7 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 	// Skip Node Descriptor Type and Length 4 bytes
 	p += 4
 	p += int(l)
-	srd, err := UnmarshalSRv6SIDDescriptor(b[p:len(b)])
+	srd, err := UnmarshalSRv6SIDDescriptor(b[p:])
 	if err != nil {
 		return nil, err
 	}

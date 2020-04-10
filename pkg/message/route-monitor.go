@@ -36,7 +36,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// There is no Path Attributes, just return
 		return
 	}
-	glog.Infof("All attributes in bgp update: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+	glog.V(6).Infof("All attributes in bgp update: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 	// ipv4Flag used to differentiate between IPv4 and IPv6 Prefix NLRI messages
 	ipv4Flag := false
 	// Using first attribute type to select which nlri processor to call
@@ -58,8 +58,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		case 17:
 			glog.Infof("2 IP (IP version 6) : 4 MPLS Labels")
 		case 18:
-			glog.Infof("1 IP (IP version 4) : 128 MPLS-labeled VPN address")
-
+			glog.V(6).Infof("1 IP (IP version 4) : 128 MPLS-labeled VPN address")
 			msg, err := p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce l3vpn message with error: %+v", err)
@@ -77,9 +76,9 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			glog.V(6).Infof("l3vpn message: %s", string(j))
 		case 19:
 			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
-			p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
+			//			p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 		case 32:
-			glog.Infof("Node NLRI")
+			glog.V(6).Infof("Node NLRI")
 			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_node message with error: %+v", err)
@@ -96,7 +95,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			}
 			glog.V(6).Infof("ls_node message: %s", string(j))
 		case 33:
-			glog.Infof("Link NLRI")
+			glog.V(6).Infof("Link NLRI")
 			msg, err := p.lsLink("add", msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
@@ -114,11 +113,11 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			glog.V(6).Infof("ls_link message: %s", string(j))
 		case 34:
 			ipv4Flag = true
-			glog.Infof("IPv4 Prefix NLRI")
+			glog.V(6).Infof("IPv4 Prefix NLRI")
 			fallthrough
 		case 35:
 			if !ipv4Flag {
-				glog.Infof("IPv6 Prefix NLRI")
+				glog.V(6).Infof("IPv6 Prefix NLRI")
 			}
 			msg, err := p.lsPrefix("add", msg.PeerHeader, routeMonitorMsg.Update, ipv4Flag)
 			if err != nil {
@@ -134,10 +133,10 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to push LSPrefix message to kafka with error: %+v", err)
 				return
 			}
-			glog.V(5).Infof("ls_prefix message: %s", string(j))
+			glog.V(6).Infof("ls_prefix message: %s", string(j))
 		case 36:
 			glog.Infof("SRv6 SID NLRI")
-			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
+			msg, err := p.lsSRv6SID("add", msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
 				return

@@ -41,7 +41,7 @@ func (tlv *SIDInformationTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalSRv6SIDInformationTLV builds SRv6 SID Information TLV slice
 func UnmarshalSRv6SIDInformationTLV(b []byte) ([]SIDInformationTLV, error) {
-	glog.V(5).Infof("SRv6 SID Information TLV Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("SRv6 SID Information TLV Raw: %s", tools.MessageHex(b))
 	tlvs := make([]SIDInformationTLV, 0)
 	for p := 0; p < len(b); {
 		tlv := SIDInformationTLV{}
@@ -54,5 +54,6 @@ func UnmarshalSRv6SIDInformationTLV(b []byte) ([]SIDInformationTLV, error) {
 		tlvs = append(tlvs, tlv)
 		p += int(tlv.Length)
 	}
+
 	return tlvs, nil
 }
