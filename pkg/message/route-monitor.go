@@ -76,7 +76,6 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			glog.V(6).Infof("l3vpn message: %s", string(j))
 		case 19:
 			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
-			//			p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 		case 32:
 			glog.V(6).Infof("Node NLRI")
 			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
@@ -146,11 +145,11 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to marshal ls_srv6_sid message with error: %+v", err)
 				return
 			}
-			//			if err := p.publisher.PublishMessage(bmp.LSNodeMsg, []byte(msg.RouterHash), j); err != nil {
-			//				glog.Errorf("failed to push LSSRv6SID message to kafka with error: %+v", err)
-			//				return
-			//			}
-			glog.V(5).Infof("ls_srv6_sid message: %s", string(j))
+			if err := p.publisher.PublishMessage(bmp.LSSRv6SIDMsg, []byte(msg.RouterHash), j); err != nil {
+				glog.Errorf("failed to push LSSRv6SID message to kafka with error: %+v", err)
+				return
+			}
+			glog.V(6).Infof("ls_srv6_sid message: %s", string(j))
 		}
 	case 15:
 		// MP_UNREACH_NLRI
