@@ -85,26 +85,36 @@ func (k *kafka) Stop() error {
 }
 
 func (k *kafka) topicReader(topicType int, topicName string) {
-	glog.Infof("Starting Kafka reader for topic: %s", topicName)
-	r := kafkago.NewReader(kafkago.ReaderConfig{
-		Brokers:   k.brokers,
-		Topic:     topicName,
-		Partition: 0,
-		MinBytes:  0,
-		MaxBytes:  10e6, // 10MB
-	})
-	defer r.Close()
 	for {
-		m, err := r.ReadMessage(context.Background())
-		if err != nil {
-			break
-		}
-		// glog.Infof("message at offset %d: %s = %s\n", m.Offset, string(m.Key), string(m.Value))
-		k.proc.SendMessage(topicType, m.Value)
+		glog.Infof("Starting Kafka reader for topic: %s", topicName)
+		r := kafkago.NewReader(kafkago.ReaderConfig{
+			Brokers:   k.brokers,
+			Topic:     topicName,
+			Partition: 0,
+			MinBytes:  0,
+			MaxBytes:  10e6, // 10MB
+		})
+		defer r.Close()
 		select {
 		case <-k.stop:
 			return
 		default:
+		}
+		if err := func() error {
+			for {
+				m, err := r.ReadMessage(context.Background())
+				if err != nil {
+					return err
+				}
+				k.proc.SendMessage(topicType, m.Value)
+				select {
+				case <-k.stop:
+					return nil
+				default:
+				}
+			}
+		}(); err == nil {
+			return
 		}
 	}
 }
