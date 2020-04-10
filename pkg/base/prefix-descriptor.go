@@ -25,9 +25,8 @@ func (pd *PrefixDescriptor) String() string {
 	return s
 }
 
-// GetPrefixMTI returns Multi-Topology identifiers
-func (pd *PrefixDescriptor) GetPrefixMTI() []uint16 {
-	mtis := make([]uint16, 0)
+// GetPrefixMTID returns Multi-Topology identifiers
+func (pd *PrefixDescriptor) GetPrefixMTID() []uint16 {
 	for _, tlv := range pd.PrefixTLV {
 		if tlv.Type != 263 {
 			continue
@@ -36,11 +35,9 @@ func (pd *PrefixDescriptor) GetPrefixMTI() []uint16 {
 		if err != nil {
 			return nil
 		}
-		for _, i := range m.MTI {
-			mtis = append(mtis, uint16(i))
-		}
-		return mtis
+		return m.GetMTID()
 	}
+
 	return nil
 }
 

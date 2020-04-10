@@ -36,21 +36,15 @@ func (p *producer) lsSRv6SID(operation string, ph *bmp.PerPeerHeader, update *bg
 		msg.LSID = nlri6.GetSRv6SIDLSID()
 		msg.IGPRouterID = nlri6.GetSRv6SIDIGPRouterID()
 		msg.LocalNodeASN = nlri6.GetSRv6SIDASN()
+		msg.MTID = nlri6.GetSRv6SIDMTID()
+		msg.SRv6SID = nlri6.GetSRv6SID()
 	}
-	lsprefix, err := update.GetNLRI29()
+	ls, err := update.GetNLRI29()
 	if err == nil {
-		glog.Infof("nlri29 attributes: %+v", lsprefix.GetAllAttribute())
-		if ph.FlagV {
-			msg.RouterID = lsprefix.GetLocalIPv6RouterID()
-		} else {
-			msg.RouterID = lsprefix.GetLocalIPv4RouterID()
-		}
-		msg.MTID = lsprefix.GetMTID()
-		msg.ISISAreaID = lsprefix.GetISISAreaID()
-		msg.IGPMetric = lsprefix.GetIGPMetric()
-		if ps, err := lsprefix.GetLSPrefixSID(); err == nil {
-			msg.LSPrefixSID = ps
-		}
+		glog.Infof("nlri29 attributes: %+v", ls.GetAllAttribute())
+		msg.SRv6EndpointBehavior = ls.GetSRv6EndpointBehavior()
+		msg.SRv6BGPPeerNodeSID = ls.GetSRv6BGPPeerNodeSID()
+		msg.SRv6SIDStructure = ls.GetSRv6SIDStructure()
 	}
 	msg.ASPath = update.GetAttrASPath(p.as4Capable)
 	if med := update.GetAttrMED(); med != nil {

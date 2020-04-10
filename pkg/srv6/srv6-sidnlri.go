@@ -67,6 +67,29 @@ func (sr *SIDNLRI) GetSRv6SIDASN() uint32 {
 	return sr.LocalNode.GetASN()
 }
 
+// GetSRv6SIDMTID returns Multi-Topology identifiers
+func (sr *SIDNLRI) GetSRv6SIDMTID() []uint16 {
+	if sr.SRv6SID == nil {
+		return nil
+	}
+	if sr.SRv6SID.MultiTopologyIdentifier == nil {
+		return nil
+	}
+
+	return sr.SRv6SID.MultiTopologyIdentifier.GetMTID()
+}
+
+// GetSRv6SID returns a slice of SIDs
+func (sr *SIDNLRI) GetSRv6SID() [][]byte {
+	sids := make([][]byte, len(sr.SRv6SID.TLV))
+	for i, sid := range sr.SRv6SID.TLV {
+		sids[i] = make([]byte, len(sid.SID))
+		copy(sids[i], sid.SID)
+	}
+
+	return sids
+}
+
 // MarshalJSON defines a method to Marshal SRv6 SID NLRI object into JSON format
 func (sr *SIDNLRI) MarshalJSON() ([]byte, error) {
 	var jsonData []byte

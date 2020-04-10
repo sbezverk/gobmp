@@ -32,29 +32,22 @@ func (ls *NLRI) String() string {
 
 // GetMTID returns string of MT-ID TLV containing the array of MT-IDs of all
 // topologies where the node is reachable is allowed
-func (ls *NLRI) GetMTID() string {
-	var s string
+func (ls *NLRI) GetMTID() []uint16 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 263 {
 			continue
 		}
 		if len(tlv.Value) == 0 {
-			return s
+			return nil
 		}
-		mit, err := base.UnmarshalMultiTopologyIdentifierTLV(tlv.Value)
+		mtid, err := base.UnmarshalMultiTopologyIdentifierTLV(tlv.Value)
 		if err != nil {
-			return s
+			return nil
 		}
-		if mit == nil {
-			return s
-		}
-		s += fmt.Sprintf("%d", mit.MTI[0])
-		for i := 1; i < len(mit.MTI); i++ {
-			s += fmt.Sprintf(",%d", mit.MTI[i])
-		}
+		return mtid.GetMTID()
 	}
 
-	return s
+	return nil
 }
 
 // GetAllAttribute returns a slice with all attribute types found in BGP-LS NLRI object
@@ -437,13 +430,45 @@ func (ls *NLRI) GetLinkName() string {
 	return ""
 }
 
-// GetSRv6PeerNodeSID returns Peer Node SID object
-func (ls *NLRI) GetSRv6PeerNodeSID() *srv6.PeerNodeSID {
+// GetSRv6EndpointBehavior returns SRv6 SID NLRI Endpoint behavior object
+func (ls *NLRI) GetSRv6EndpointBehavior() *srv6.EndpointBehavior {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1250 {
+			continue
+		}
+		ep, err := srv6.UnmarshalSRv6EndpointBehaviorTLV(tlv.Value)
+		if err != nil {
+			return nil
+		}
+		return ep
+	}
+
+	return nil
+}
+
+// GetSRv6BGPPeerNodeSID returns Peer Node SID object
+func (ls *NLRI) GetSRv6BGPPeerNodeSID() *srv6.BGPPeerNodeSID {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1251 {
 			continue
 		}
-		sid, err := srv6.UnmarshalSRv6PeerNodeSID(tlv.Value)
+		sid, err := srv6.UnmarshalSRv6BGPPeerNodeSIDTLV(tlv.Value)
+		if err != nil {
+			return nil
+		}
+		return sid
+	}
+
+	return nil
+}
+
+// GetSRv6SIDStructure returns SID Structure object
+func (ls *NLRI) GetSRv6SIDStructure() *srv6.SIDStructure {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1252 {
+			continue
+		}
+		sid, err := srv6.UnmarshalSRv6SIDStructureTLV(tlv.Value)
 		if err != nil {
 			return nil
 		}
