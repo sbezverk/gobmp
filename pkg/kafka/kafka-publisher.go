@@ -17,12 +17,13 @@ import (
 
 // Define constants for each topic name
 const (
-	peerTopic            = "gobmp.parsed.peer"
-	unicastMessageTopic  = "gobmp.parsed.unicast_prefix"
-	lsNodeMessageTopic   = "gobmp.parsed.ls_node"
-	lsLinkMessageTopic   = "gobmp.parsed.ls_link"
-	l3vpnMessageTopic    = "gobmp.parsed.l3vpn"
-	lsPrefixMessageTopic = "gobmp.parsed.ls_prefix"
+	peerTopic             = "gobmp.parsed.peer"
+	unicastMessageTopic   = "gobmp.parsed.unicast_prefix"
+	lsNodeMessageTopic    = "gobmp.parsed.ls_node"
+	lsLinkMessageTopic    = "gobmp.parsed.ls_link"
+	l3vpnMessageTopic     = "gobmp.parsed.l3vpn"
+	lsPrefixMessageTopic  = "gobmp.parsed.ls_prefix"
+	lsSRv6SIDMessageTopic = "gobmp.parsed.ls_srv6_sid"
 )
 
 var (
@@ -35,6 +36,7 @@ var (
 		lsLinkMessageTopic,
 		l3vpnMessageTopic,
 		lsPrefixMessageTopic,
+		lsSRv6SIDMessageTopic,
 	}
 )
 
@@ -64,6 +66,8 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 		return p.produceMessage(l3vpnMessageTopic, key, msg)
 	case bmp.LSPrefixMsg:
 		return p.produceMessage(lsPrefixMessageTopic, key, msg)
+	case bmp.LSSRv6SIDMsg:
+		return p.produceMessage(lsSRv6SIDMessageTopic, key, msg)
 	}
 
 	return fmt.Errorf("not implemented")

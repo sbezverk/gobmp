@@ -35,6 +35,22 @@ func (l *LinkNLRI) String() string {
 	return s
 }
 
+// GetAllAttribute returns a slice with all attribute types found in Link NLRI object
+func (l *LinkNLRI) GetAllAttribute() []uint16 {
+	attrs := make([]uint16, 0)
+	for _, attr := range l.LocalNode.SubTLV {
+		attrs = append(attrs, attr.Type)
+	}
+	for _, attr := range l.RemoteNode.SubTLV {
+		attrs = append(attrs, attr.Type)
+	}
+	for _, attr := range l.Link.LinkTLV {
+		attrs = append(attrs, attr.Type)
+	}
+
+	return attrs
+}
+
 // GetLinkProtocolID returns a string representation of LinkNLRI ProtocolID field
 func (l *LinkNLRI) GetLinkProtocolID() string {
 	return tools.ProtocolIDString(l.ProtocolID)

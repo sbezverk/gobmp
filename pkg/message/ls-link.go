@@ -78,7 +78,7 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 		msg.MPLSProtoMask = lslink.GetLinkMPLSProtocolMask()
 		msg.SRLG = lslink.GetSRLG()
 		msg.LinkName = lslink.GetLinkName()
-		msg.PeerNodeSID = lslink.GetSRv6PeerNodeSID()
+		msg.SRv6BGPPeerNodeSID = lslink.GetSRv6BGPPeerNodeSID()
 		msg.UnidirAvailableBW = lslink.GetUnidirAvailableBandwidth()
 		msg.UnidirBWUtilization = lslink.GetUnidirUtilizedBandwidth()
 		msg.UnidirDelayVariation = lslink.GetUnidirDelayVariation()

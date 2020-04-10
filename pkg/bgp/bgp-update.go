@@ -422,7 +422,7 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	}
 	u.PathAttributes = attrs
 	p += int(u.TotalPathAttributeLength)
-	routes, err := base.UnmarshalRoutes(b[p:len(b)])
+	routes, err := base.UnmarshalRoutes(b[p:])
 	if err != nil {
 		return nil, err
 	}

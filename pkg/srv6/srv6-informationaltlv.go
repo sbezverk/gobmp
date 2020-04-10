@@ -39,17 +39,21 @@ func (tlv *SIDInformationTLV) MarshalJSON() ([]byte, error) {
 	return jsonData, nil
 }
 
-// UnmarshalSRv6SIDInformationTLV builds SRv6 SID Information TLV
-func UnmarshalSRv6SIDInformationTLV(b []byte) (*SIDInformationTLV, error) {
+// UnmarshalSRv6SIDInformationTLV builds SRv6 SID Information TLV slice
+func UnmarshalSRv6SIDInformationTLV(b []byte) ([]SIDInformationTLV, error) {
 	glog.V(6).Infof("SRv6 SID Information TLV Raw: %s", tools.MessageHex(b))
-	srtlv := SIDInformationTLV{}
-	p := 0
-	srtlv.Type = binary.BigEndian.Uint16(b[p : p+2])
-	p += 2
-	srtlv.Length = binary.BigEndian.Uint16(b[p : p+2])
-	p += 2
-	srtlv.SID = make([]byte, srtlv.Length)
-	copy(srtlv.SID, b[p:p+int(srtlv.Length)])
+	tlvs := make([]SIDInformationTLV, 0)
+	for p := 0; p < len(b); {
+		tlv := SIDInformationTLV{}
+		tlv.Type = binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		tlv.Length = binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		tlv.SID = make([]byte, tlv.Length)
+		copy(tlv.SID, b[p:p+int(tlv.Length)])
+		tlvs = append(tlvs, tlv)
+		p += int(tlv.Length)
+	}
 
-	return &srtlv, nil
+	return tlvs, nil
 }

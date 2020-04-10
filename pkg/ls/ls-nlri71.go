@@ -38,14 +38,14 @@ func (ls *NLRI71) String() string {
 		}
 	case 3:
 		t = "IPv4 Topology Prefix NLRI"
-		if n, err := base.UnmarshalPrefixNLRI(ls.LS); err == nil {
+		if n, err := base.UnmarshalPrefixNLRI(ls.LS, true); err == nil {
 			nlri = n.String()
 		} else {
 			nlri = err.Error() + "\n"
 		}
 	case 4:
 		t = "IPv6 Topology Prefix NLRI"
-		if n, err := base.UnmarshalPrefixNLRI(ls.LS); err == nil {
+		if n, err := base.UnmarshalPrefixNLRI(ls.LS, false); err == nil {
 			nlri = n.String()
 		} else {
 			nlri = err.Error() + "\n"
@@ -94,11 +94,11 @@ func (ls *NLRI71) GetLinkNLRI() (*base.LinkNLRI, error) {
 }
 
 // GetPrefixNLRI instantiates IPv4 or IPv6 Prefix NLRI object if one exists
-func (ls *NLRI71) GetPrefixNLRI() (*base.PrefixNLRI, error) {
+func (ls *NLRI71) GetPrefixNLRI(ipv4 bool) (*base.PrefixNLRI, error) {
 	if ls.Type != 3 && ls.Type != 4 {
 		return nil, fmt.Errorf("not found")
 	}
-	p, err := base.UnmarshalPrefixNLRI(ls.LS)
+	p, err := base.UnmarshalPrefixNLRI(ls.LS, ipv4)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (ls *NLRI71) MarshalJSON() ([]byte, error) {
 		}
 	case 3:
 		t = "IPv4 Topology Prefix"
-		n, err := base.UnmarshalPrefixNLRI(ls.LS)
+		n, err := base.UnmarshalPrefixNLRI(ls.LS, true)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func (ls *NLRI71) MarshalJSON() ([]byte, error) {
 		}
 	case 4:
 		t = "IPv6 Topology Prefix"
-		n, err := base.UnmarshalPrefixNLRI(ls.LS)
+		n, err := base.UnmarshalPrefixNLRI(ls.LS, false)
 		if err != nil {
 			return nil, err
 		}

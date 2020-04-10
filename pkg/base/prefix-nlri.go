@@ -17,6 +17,7 @@ type PrefixNLRI struct {
 	LocalNode     *NodeDescriptor
 	Prefix        *PrefixDescriptor
 	LocalNodeHash string
+	IsPv4         bool
 }
 
 func (p *PrefixNLRI) String() string {
@@ -27,6 +28,20 @@ func (p *PrefixNLRI) String() string {
 	s += p.Prefix.String()
 
 	return s
+}
+
+// GetAllAttribute returns a slice with all attribute types found in Prefix NLRI object
+func (p *PrefixNLRI) GetAllAttribute() []uint16 {
+	attrs := make([]uint16, 0)
+	for _, attr := range p.LocalNode.SubTLV {
+		attrs = append(attrs, attr.Type)
+	}
+
+	for _, attr := range p.Prefix.PrefixTLV {
+		attrs = append(attrs, attr.Type)
+	}
+
+	return attrs
 }
 
 // MarshalJSON defines a method to Marshal Prefix NLRI object into JSON format
@@ -95,9 +110,11 @@ func (p *PrefixNLRI) GetLocalASN() uint32 {
 }
 
 // UnmarshalPrefixNLRI builds Prefix NLRI object
-func UnmarshalPrefixNLRI(b []byte) (*PrefixNLRI, error) {
+func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 	glog.V(6).Infof("PrefixNLRI Raw: %s", tools.MessageHex(b))
-	pr := PrefixNLRI{}
+	pr := PrefixNLRI{
+		IsPv4: ipv4,
+	}
 	p := 0
 	pr.ProtocolID = b[p]
 	p++

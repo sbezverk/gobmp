@@ -7,7 +7,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSPrefix, error) {
+func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp.Update, ipv4 bool) (*LSPrefix, error) {
 	nlri14, err := update.GetNLRI14()
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp
 	msg.Nexthop = nlri14.GetNextHop()
 	msg.PeerIP = ph.GetPeerAddrString()
 	// Processing other nlri and attributes, since they are optional, processing only if they exist
-	prfx, err := nlri71.GetPrefixNLRI()
+	prfx, err := nlri71.GetPrefixNLRI(ipv4)
 	if err == nil {
 		msg.Protocol = prfx.GetPrefixProtocolID()
 		msg.LSID = prfx.GetPrefixLSID()
@@ -36,12 +36,13 @@ func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp
 		msg.LocalNodeHash = prfx.LocalNodeHash
 		msg.IGPRouterID = prfx.GetLocalIGPRouterID()
 		msg.IGPMetric = prfx.Prefix.GetPrefixMetric()
-		route := prfx.Prefix.GetPrefixIPReachability()
+		route := prfx.Prefix.GetPrefixIPReachability(ipv4)
 		msg.PrefixLen = int32(route.Length)
-		if ph.FlagV {
-			msg.Prefix = net.IP(prfx.Prefix.GetPrefixIPReachability().Prefix).To16().String()
+		pr := prfx.Prefix.GetPrefixIPReachability(ipv4).Prefix
+		if !ipv4 {
+			msg.Prefix = net.IP(pr).To16().String()
 		} else {
-			msg.Prefix = net.IP(prfx.Prefix.GetPrefixIPReachability().Prefix).To4().String()
+			msg.Prefix = net.IP(pr).To4().String()
 		}
 	}
 	lsprefix, err := update.GetNLRI29()

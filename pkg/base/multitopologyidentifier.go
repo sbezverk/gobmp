@@ -26,6 +26,15 @@ func (mti *MultiTopologyIdentifierTLV) String() string {
 	return s
 }
 
+// GetMTID returns a slice of MTI found in Multi Topology Identifier object
+func (mti *MultiTopologyIdentifierTLV) GetMTID() []uint16 {
+	mtis := make([]uint16, 0)
+	for _, m := range mti.MTI {
+		mtis = append(mtis, uint16(m))
+	}
+	return mtis
+}
+
 // MarshalJSON defines a method to Marshal slice of Multi Topology Identifier TLVs into JSON format
 func (mti *MultiTopologyIdentifierTLV) MarshalJSON() ([]byte, error) {
 	var jsonData []byte
