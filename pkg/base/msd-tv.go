@@ -21,19 +21,6 @@ func (tv *MSDTV) String() string {
 	return s
 }
 
-// MarshalJSON defines a method to Marshal MSD Type/Value object into JSON format
-func (tv *MSDTV) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"msdType\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", tv.Type))...)
-	jsonData = append(jsonData, []byte("\"msdValue\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d", tv.Value))...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalMSDTV builds slice of MSD Type Value tuples
 func UnmarshalMSDTV(b []byte) ([]MSDTV, error) {
 	glog.V(6).Infof("UnmarshalMSDTV Raw: %s", tools.MessageHex(b))

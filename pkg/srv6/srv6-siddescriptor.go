@@ -2,7 +2,6 @@ package srv6
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -29,40 +28,6 @@ func (srd *SIDDescriptor) String() string {
 	}
 
 	return s
-}
-
-// MarshalJSON defines a method to Marshal Link Descriptor object into JSON format
-func (srd *SIDDescriptor) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"srv6SIDDescriptor\":")...)
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"srv6InformationTLV\":")...)
-	if srd.TLV != nil {
-		b, err := json.Marshal(srd.TLV)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-	} else {
-		jsonData = append(jsonData, []byte("{}")...)
-	}
-	jsonData = append(jsonData, ',')
-	jsonData = append(jsonData, []byte("\"multiTopologyIdentifier\":")...)
-	if srd.MultiTopologyIdentifier != nil {
-		b, err := json.Marshal(srd.MultiTopologyIdentifier)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-	} else {
-		jsonData = append(jsonData, []byte("{}")...)
-	}
-	jsonData = append(jsonData, '}')
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // UnmarshalSRv6SIDDescriptor build SRv6 Descriptor Object

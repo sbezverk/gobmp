@@ -2,7 +2,6 @@ package base
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -48,54 +47,6 @@ func (tlv *PrefixDescriptorTLV) String() string {
 	}
 
 	return s
-}
-
-// MarshalJSON defines a method to Marshal Prefix Descriptor TLV object into JSON format
-func (tlv *PrefixDescriptorTLV) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	var b []byte
-
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"Type\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", tlv.Type))...)
-	jsonData = append(jsonData, []byte("\"Description\":")...)
-	switch tlv.Type {
-	case 263:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Multi-Topology Identifier\","))...)
-		jsonData = append(jsonData, []byte("\"multiTopologyIdentifier\":")...)
-		mit, err := UnmarshalMultiTopologyIdentifierTLV(tlv.Value)
-		if err != nil {
-			return nil, err
-		}
-		b, err = json.Marshal(mit)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-	case 264:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"OSPF Route Type\","))...)
-		jsonData = append(jsonData, []byte("\"ospfRouteType\":")...)
-		jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", tlv.Value))...)
-	case 265:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IP Reachability Information\","))...)
-		jsonData = append(jsonData, []byte("\"ipReachabilityInformation\":")...)
-		ipr, err := UnmarshalIPReachabilityInformation(tlv.Value)
-		if err != nil {
-			return nil, err
-		}
-		b, err = json.Marshal(ipr)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-	default:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown Prefix TLV\","))...)
-		jsonData = append(jsonData, []byte("\"Value\":")...)
-		jsonData = append(jsonData, tools.RawBytesToJSON(tlv.Value)...)
-	}
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // UnmarshalPrefixDescriptorTLV builds Prefix Descriptor Sub TLVs object

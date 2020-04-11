@@ -27,19 +27,6 @@ func (cap *CapabilityTLV) String(level ...int) string {
 	return s
 }
 
-// MarshalJSON defines a method to Marshal SR Capabilities TLV object into JSON format
-func (cap *CapabilityTLV) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"range\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", cap.Range))...)
-	jsonData = append(jsonData, []byte("\"sid\":")...)
-	jsonData = append(jsonData, tools.RawBytesToJSON(cap.SID.Value)...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalSRCapabilityTLV builds SR Capability TLV object
 func UnmarshalSRCapabilityTLV(b []byte) ([]CapabilityTLV, error) {
 	glog.V(6).Infof("SR Capability TLV Raw: %s", tools.MessageHex(b))

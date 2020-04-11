@@ -2,7 +2,6 @@ package base
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -42,41 +41,6 @@ func (p *PrefixNLRI) GetAllAttribute() []uint16 {
 	}
 
 	return attrs
-}
-
-// MarshalJSON defines a method to Marshal Prefix NLRI object into JSON format
-func (p *PrefixNLRI) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"protocolID\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", p.ProtocolID))...)
-	jsonData = append(jsonData, []byte("\"identifier\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", p.Identifier))...)
-	jsonData = append(jsonData, []byte("\"localNode\":")...)
-	if p.LocalNode != nil {
-		b, err := json.Marshal(p.LocalNode)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-		jsonData = append(jsonData, ',')
-	} else {
-		jsonData = append(jsonData, "{},"...)
-	}
-	jsonData = append(jsonData, []byte("\"prefix\":")...)
-	if p.Prefix != nil {
-		b, err := json.Marshal(p.Prefix)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-	} else {
-		jsonData = append(jsonData, "{}"...)
-	}
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // GetPrefixProtocolID returns a string representation of Prefix NLRI ProtocolID field

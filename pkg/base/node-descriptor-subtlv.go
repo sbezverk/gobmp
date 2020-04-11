@@ -42,39 +42,6 @@ func (stlv *NodeDescriptorSubTLV) String() string {
 	return s
 }
 
-// MarshalJSON defines a method to Marshal Node Descriptor Sub TLV object into JSON format
-func (stlv *NodeDescriptorSubTLV) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	var b []byte
-
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"Type\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", stlv.Type))...)
-	jsonData = append(jsonData, []byte("\"Description\":")...)
-	switch stlv.Type {
-	case 512:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Autonomous System\","))...)
-		b = append(b, []byte(fmt.Sprintf("%d", binary.BigEndian.Uint32(stlv.Value)))...)
-	case 513:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"BGP-LS Identifier\","))...)
-		b = append(b, tools.RawBytesToJSON(stlv.Value)...)
-	case 514:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"OSPF Area-ID\","))...)
-		b = append(b, tools.RawBytesToJSON(stlv.Value)...)
-	case 515:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"IGP Router-ID\","))...)
-		b = append(b, tools.RawBytesToJSON(stlv.Value)...)
-	default:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown Node\","))...)
-		b = append(b, []byte("[]")...)
-	}
-	jsonData = append(jsonData, []byte("\"Value\":")...)
-	jsonData = append(jsonData, b...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalNodeDescriptorSubTLV builds Node Descriptor Sub TLVs object
 func UnmarshalNodeDescriptorSubTLV(b []byte) ([]NodeDescriptorSubTLV, error) {
 	glog.V(6).Infof("NodeDescriptorSubTLV Raw: %s", tools.MessageHex(b))

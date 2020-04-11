@@ -1,9 +1,6 @@
 package sr
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
@@ -13,30 +10,6 @@ import (
 type Capability struct {
 	Flags uint8
 	TLV   []CapabilityTLV
-}
-
-// MarshalJSON defines a method to Marshal SR Capabilities TLV object into JSON format
-func (cap *Capability) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"flags\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", cap.Flags))...)
-	jsonData = append(jsonData, []byte("\"tlvs\":")...)
-	for i, t := range cap.TLV {
-		jsonData = append(jsonData, '[')
-		b, err := json.Marshal(&t)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-		if i < len(cap.TLV)-1 {
-			jsonData = append(jsonData, ',')
-		}
-		jsonData = append(jsonData, ']')
-	}
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // UnmarshalSRCapability builds SR Capability object

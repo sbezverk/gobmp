@@ -2,7 +2,6 @@ package base
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -59,30 +58,6 @@ func (n *NodeNLRI) GetNodeASN() uint32 {
 // GetNodeOSPFAreaID returns OSPF Area-ID found in Node Descriptor sub tlv
 func (n *NodeNLRI) GetNodeOSPFAreaID() string {
 	return n.LocalNode.GetOSPFAreaID()
-}
-
-// MarshalJSON defines a method to Marshal Node NLRI object into JSON format
-func (n *NodeNLRI) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"protocolID\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", n.ProtocolID))...)
-	jsonData = append(jsonData, []byte("\"identifier\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", n.Identifier))...)
-	jsonData = append(jsonData, []byte("\"localNode\":")...)
-	if n.LocalNode != nil {
-		b, err := json.Marshal(n.LocalNode)
-		if err != nil {
-			return nil, err
-		}
-		jsonData = append(jsonData, b...)
-	} else {
-		jsonData = append(jsonData, "{}"...)
-	}
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // UnmarshalNodeNLRI builds Node NLRI object

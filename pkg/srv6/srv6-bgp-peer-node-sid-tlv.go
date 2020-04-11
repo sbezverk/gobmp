@@ -38,23 +38,6 @@ func (b *BGPPeerNodeSID) String(level ...int) string {
 	return s
 }
 
-// MarshalJSON defines a method to Marshal SRv6 BGP Peer Node SID TLV object into JSON format
-func (b *BGPPeerNodeSID) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"flag\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", b.Flag))...)
-	jsonData = append(jsonData, []byte("\"weight\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", b.Weight))...)
-	jsonData = append(jsonData, []byte("\"peerASN\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", b.PeerASN))...)
-	jsonData = append(jsonData, []byte("\"peerID\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%s", tools.RawBytesToJSON(b.PeerID)))...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalSRv6BGPPeerNodeSIDTLV builds SRv6 BGP Peer Node SID TLV object
 func UnmarshalSRv6BGPPeerNodeSIDTLV(b []byte) (*BGPPeerNodeSID, error) {
 	glog.V(6).Infof("SRv6 BGP Peer Node SID TLV Raw: %s", tools.MessageHex(b))

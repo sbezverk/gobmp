@@ -23,19 +23,6 @@ func (ipr *IPReachabilityInformation) String() string {
 	return s
 }
 
-// MarshalJSON defines a method to Marshal IP Reachability Information TLV object into JSON format
-func (ipr *IPReachabilityInformation) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"prefixLengthBits\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", ipr.LengthInBits))...)
-	jsonData = append(jsonData, []byte("\"\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%s", tools.RawBytesToJSON(ipr.Prefix)))...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalIPReachabilityInformation builds IP Reachability Information TLV object
 func UnmarshalIPReachabilityInformation(b []byte) (*IPReachabilityInformation, error) {
 	glog.V(6).Infof("IPReachabilityInformationTLV Raw: %s", tools.MessageHex(b))

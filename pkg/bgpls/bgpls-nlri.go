@@ -2,7 +2,6 @@ package bgpls
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"net"
 
@@ -583,31 +582,6 @@ func (ls *NLRI) GetSRAdjacencySID() (*sr.AdjacencySIDTLV, error) {
 	}
 
 	return nil, fmt.Errorf("not found")
-}
-
-// MarshalJSON defines a method to  BGP-LS TLV object into JSON format
-func (ls *NLRI) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"BGPLSTLV\":")...)
-	jsonData = append(jsonData, '[')
-	if ls.LS != nil {
-		for i, tlv := range ls.LS {
-			b, err := json.Marshal(&tlv)
-			if err != nil {
-				return nil, err
-			}
-			jsonData = append(jsonData, b...)
-			if i < len(ls.LS)-1 {
-				jsonData = append(jsonData, ',')
-			}
-		}
-	}
-	jsonData = append(jsonData, ']')
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // UnmarshalBGPLSNLRI builds Prefix NLRI object

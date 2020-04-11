@@ -2,7 +2,6 @@ package base
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"net"
 
@@ -95,42 +94,6 @@ func (nd *NodeDescriptor) GetIGPRouterID() string {
 	}
 
 	return s
-}
-
-// MarshalJSON defines a method to Marshal Node Descriptor object into JSON format
-func (nd *NodeDescriptor) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"Type\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", nd.Type))...)
-	jsonData = append(jsonData, []byte("\"Description\":")...)
-	switch nd.Type {
-	case 256:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Local Node\","))...)
-	case 257:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Remote Node\","))...)
-	default:
-		jsonData = append(jsonData, []byte(fmt.Sprintf("\"Unknown Node\","))...)
-	}
-	jsonData = append(jsonData, []byte("\"SubTLV\":")...)
-	jsonData = append(jsonData, '[')
-	if nd.SubTLV != nil {
-		for i, stlv := range nd.SubTLV {
-			b, err := json.Marshal(&stlv)
-			if err != nil {
-				return nil, err
-			}
-			jsonData = append(jsonData, b...)
-			if i < len(nd.SubTLV)-1 {
-				jsonData = append(jsonData, ',')
-			}
-		}
-	}
-	jsonData = append(jsonData, ']')
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
 }
 
 // UnmarshalNodeDescriptor build Node Descriptor object

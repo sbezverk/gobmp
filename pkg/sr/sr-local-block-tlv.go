@@ -27,19 +27,6 @@ func (tlv *LocalBlockTLV) String(level ...int) string {
 	return s
 }
 
-// MarshalJSON defines a method to Marshal SR LocalBlock TLV object into JSON format
-func (tlv *LocalBlockTLV) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"sub_range\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", tlv.SubRange))...)
-	jsonData = append(jsonData, []byte("\"sid\":")...)
-	jsonData = append(jsonData, tools.RawBytesToJSON(tlv.SID.Value)...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalSRLocalBlockTLV builds SR LocalBlock TLV object
 func UnmarshalSRLocalBlockTLV(b []byte) ([]LocalBlockTLV, error) {
 	glog.V(6).Infof("SR LocalBlock TLV Raw: %s", tools.MessageHex(b))

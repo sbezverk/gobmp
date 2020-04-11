@@ -24,19 +24,6 @@ func (mp *MPUnReachNLRI) String() string {
 	return s
 }
 
-// MarshalJSON defines a custom method to convert MP REACH NLRI object into JSON object
-func (mp *MPUnReachNLRI) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-
-	jsonData = append(jsonData, []byte("{\"AddressFamilyID\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", mp.AddressFamilyID))...)
-	jsonData = append(jsonData, []byte("\"SubAddressFamilyID\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d", mp.SubAddressFamilyID))...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalMPUnReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPUnReachNLRI(b []byte) (*MPUnReachNLRI, error) {
 	glog.V(6).Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))

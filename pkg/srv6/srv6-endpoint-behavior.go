@@ -35,21 +35,6 @@ func (e *EndpointBehavior) String(level ...int) string {
 	return s
 }
 
-// MarshalJSON defines a method to Marshal SRv6 Endpoint Behavior TLV object into JSON format
-func (e *EndpointBehavior) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"endpointBehavior\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", e.EndpointBehavior))...)
-	jsonData = append(jsonData, []byte("\"flag\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", e.Flag))...)
-	jsonData = append(jsonData, []byte("\"algorithm\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d", e.Algorithm))...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalSRv6EndpointBehaviorTLV builds SRv6 Endpoint Behavior TLV object
 func UnmarshalSRv6EndpointBehaviorTLV(b []byte) (*EndpointBehavior, error) {
 	glog.V(6).Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))

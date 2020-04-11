@@ -37,23 +37,6 @@ func (st *SIDStructure) String(level ...int) string {
 	return s
 }
 
-// MarshalJSON defines a method to Marshal SRv6 SID Structure TLV object into JSON format
-func (st *SIDStructure) MarshalJSON() ([]byte, error) {
-	var jsonData []byte
-	jsonData = append(jsonData, '{')
-	jsonData = append(jsonData, []byte("\"locatorBlockLength\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", st.LBLength))...)
-	jsonData = append(jsonData, []byte("\"locatorNodeLength\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", st.LNLength))...)
-	jsonData = append(jsonData, []byte("\"sidFunctionLength\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d,", st.FunLength))...)
-	jsonData = append(jsonData, []byte("\"sidArgumentLength\":")...)
-	jsonData = append(jsonData, []byte(fmt.Sprintf("%d", st.ArgLength))...)
-	jsonData = append(jsonData, '}')
-
-	return jsonData, nil
-}
-
 // UnmarshalSRv6SIDStructureTLV builds SRv6 SID Structure TLV object
 func UnmarshalSRv6SIDStructureTLV(b []byte) (*SIDStructure, error) {
 	glog.V(6).Infof("SRv6 SID Structure TLV Raw: %s", tools.MessageHex(b))
