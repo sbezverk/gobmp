@@ -238,6 +238,12 @@ func getNLRIMessageType(pattrs []bgp.PathAttribute) (int, error) {
 	// 2 IP (IP version 6) : 128 MPLS-labeled VPN address
 	case nlri.AddressFamilyID == 2 && nlri.SubAddressFamilyID == 128:
 		return 19, nil
+	// AFI of 25 (L2VPN) and a SAFI of 65 (VPLS)
+	case nlri.AddressFamilyID == 25 && nlri.SubAddressFamilyID == 65:
+		return 23, nil
+	// AFI of 25 (L2VPN) and a SAFI of 70 (EVPN)
+	case nlri.AddressFamilyID == 25 && nlri.SubAddressFamilyID == 70:
+		return 24, nil
 	}
 
 	return 0, fmt.Errorf("unsupported nlri of type: afi %d safi %d", nlri.AddressFamilyID, nlri.SubAddressFamilyID)
