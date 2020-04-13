@@ -76,6 +76,8 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			glog.V(6).Infof("l3vpn message: %s", string(j))
 		case 19:
 			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
+		case 24:
+			glog.Infof("25 (L2VPN) : 70 (EVPN)")
 		case 32:
 			glog.V(6).Infof("Node NLRI")
 			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)

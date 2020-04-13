@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/evpn"
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -86,6 +87,20 @@ func (mp *MPReachNLRI) GetNLRIL3VPN() (*l3vpn.NLRI, error) {
 	return nil, fmt.Errorf("not found")
 }
 
+// GetNLRIEVPN check for presense of NLRI EVPN AFI 25 and SAFI 70 in the NLRI 14 NLRI data and if exists, instantiate EVPN object
+func (mp *MPReachNLRI) GetNLRIEVPN() (*evpn.NLRI, error) {
+	if mp.AddressFamilyID == 25 && mp.SubAddressFamilyID == 70 {
+		nlri, err := evpn.UnmarshalEVPNNLRI(mp.NLRI)
+		if err != nil {
+			return nil, err
+		}
+		return nlri, nil
+	}
+
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPReachNLRI(b []byte) (*MPReachNLRI, error) {
 	glog.V(6).Infof("MPReachNLRI Raw: %s", tools.MessageHex(b))
@@ -102,7 +117,7 @@ func UnmarshalMPReachNLRI(b []byte) (*MPReachNLRI, error) {
 	// Skip reserved byte
 	p++
 	mp.NLRI = make([]byte, len(b)-p)
-	copy(mp.NLRI, b[p:len(b)])
+	copy(mp.NLRI, b[p:])
 
 	return &mp, nil
 }
