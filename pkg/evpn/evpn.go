@@ -36,6 +36,10 @@ func UnmarshalEVPNNLRI(b []byte) (*NLRI, error) {
 			return nil, err
 		}
 	case 3:
+		n.RouteTypeSpec, err = UnmarshalEVPNInclusiveMulticastEthTag(b[p:])
+		if err != nil {
+			return nil, err
+		}
 	case 4:
 	default:
 		return nil, fmt.Errorf("unknown route type %d", n.RouteType)
