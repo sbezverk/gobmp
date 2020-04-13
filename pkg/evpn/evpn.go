@@ -26,11 +26,15 @@ func UnmarshalEVPNNLRI(b []byte) (*NLRI, error) {
 	p++
 	switch n.RouteType {
 	case 1:
-		n.RouteTypeSpec, err = UnmarshalEVPNEthAutoDiscoveryRoute(b[p:])
+		n.RouteTypeSpec, err = UnmarshalEVPNEthAutoDiscovery(b[p:])
 		if err != nil {
 			return nil, err
 		}
 	case 2:
+		n.RouteTypeSpec, err = UnmarshalEVPNMACIPAdvertisement(b[p:])
+		if err != nil {
+			return nil, err
+		}
 	case 3:
 	case 4:
 	default:
@@ -54,4 +58,20 @@ func MakeESI(b []byte) (*ESI, error) {
 	}
 
 	return &esi, nil
+}
+
+// MACAddress defines 6 bytes for Ethernet MAC Address field
+type MACAddress [6]byte
+
+// MakeMACAddress makes an instance of Ethernet MAC Address from a slice of bytes
+func MakeMACAddress(b []byte) (*MACAddress, error) {
+	if len(b) != 6 {
+		return nil, fmt.Errorf("wrong length of slice, expected 6 got %d", len(b))
+	}
+	mac := MACAddress{}
+	for i := 0; i < len(b); i++ {
+		esi[i] = b[i]
+	}
+
+	return &mac, nil
 }
