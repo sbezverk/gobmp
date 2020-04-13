@@ -74,7 +74,7 @@ func MakeMACAddress(b []byte) (*MACAddress, error) {
 	}
 	mac := MACAddress{}
 	for i := 0; i < len(b); i++ {
-		esi[i] = b[i]
+		mac[i] = b[i]
 	}
 
 	return &mac, nil

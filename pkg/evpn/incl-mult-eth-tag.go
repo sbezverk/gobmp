@@ -12,7 +12,7 @@ type InclusiveMulticastEthTag struct {
 }
 
 // GetRouteTypeSpec returns the instance of the Inclusive Multicast Ethernet Tag Route type object
-func (t *EthAutoDiscovery) GetRouteTypeSpec() interface{} {
+func (t *InclusiveMulticastEthTag) GetRouteTypeSpec() interface{} {
 	return t
 }
 
@@ -26,7 +26,7 @@ func UnmarshalEVPNInclusiveMulticastEthTag(b []byte) (*InclusiveMulticastEthTag,
 		return nil, err
 	}
 	p += 8
-	copy(t1.EthTag, b[p:p+4])
+	copy(t.EthTag, b[p:p+4])
 	p += 4
 	t.IPAddrLength = b[p]
 	p++

@@ -49,10 +49,11 @@ func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
 		p += int(t.IPAddrLength)
 	}
 	for i := 0; p < len(b); i++ {
-		t[i].Label, err = base.MakeLabel(b[p:])
+		l, err := base.MakeLabel(b[p:])
 		if err != nil {
 			return nil, err
 		}
+		t.Label = append(t.Label, l)
 		p += 3
 	}
 

@@ -13,11 +13,11 @@ type EthAutoDiscovery struct {
 
 // GetRouteTypeSpec returns the instance of a Ethernet Auto Discovery route type object
 func (t *EthAutoDiscovery) GetRouteTypeSpec() interface{} {
-	return t
+	return &t
 }
 
 // UnmarshalEVPNEthAutoDiscovery instantiates new instance of a Ethernet Auto Discovery route type object
-func UnmarshalEVPNEthAutoDiscovery(b []byte) (*EthAutoDiscoveryRoute, error) {
+func UnmarshalEVPNEthAutoDiscovery(b []byte) (*EthAutoDiscovery, error) {
 	var err error
 	t := EthAutoDiscovery{}
 	p := 0
@@ -31,7 +31,7 @@ func UnmarshalEVPNEthAutoDiscovery(b []byte) (*EthAutoDiscoveryRoute, error) {
 		return nil, err
 	}
 	p += 10
-	copy(t1.EthTag, b[p:p+4])
+	copy(t.EthTag, b[p:p+4])
 	p += 4
 	t.Label, err = base.MakeLabel(b[p:])
 	if err != nil {
