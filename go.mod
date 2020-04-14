@@ -6,6 +6,7 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-00010101000000-000000000000
 	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-00010101000000-000000000000
+	github.com/sbezverk/gobmp/pkg/evpn v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/gobmpsrv v0.0.0-00010101000000-000000000000
 	github.com/sbezverk/gobmp/pkg/kafka v0.0.0-00010101000000-000000000000
 	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-00010101000000-000000000000 // indirect
@@ -21,6 +22,7 @@ replace (
 	github.com/sbezverk/gobmp/pkg/bgp => ./pkg/bgp
 	github.com/sbezverk/gobmp/pkg/bgpls => ./pkg/bgpls
 	github.com/sbezverk/gobmp/pkg/bmp => ./pkg/bmp
+	github.com/sbezverk/gobmp/pkg/evpn => ./pkg/evpn
 	github.com/sbezverk/gobmp/pkg/gobmpsrv => ./pkg/gobmpsrv
 	github.com/sbezverk/gobmp/pkg/kafka => ./pkg/kafka
 	github.com/sbezverk/gobmp/pkg/l3vpn => ./pkg/l3vpn

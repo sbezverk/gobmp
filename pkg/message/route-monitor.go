@@ -76,6 +76,24 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			glog.V(6).Infof("l3vpn message: %s", string(j))
 		case 19:
 			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
+		case 24:
+			glog.Infof("25 (L2VPN) : 70 (EVPN)")
+			msg, err := p.evpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
+			if err != nil {
+				glog.Errorf("failed to produce evpn message with error: %+v", err)
+				return
+			}
+			j, err = json.Marshal(&msg)
+			if err != nil {
+				glog.Errorf("failed to marshal evpn message with error: %+v", err)
+				return
+			}
+			//			if err := p.publisher.PublishMessage(bmp.L3VPNMsg, []byte(msg.RouterHash), j); err != nil {
+			//				glog.Errorf("failed to push L3VPN message to kafka with error: %+v", err)
+			//				return
+			//			}
+			glog.V(6).Infof("evpn message: %s", string(j))
+
 		case 32:
 			glog.V(6).Infof("Node NLRI")
 			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
@@ -238,6 +256,12 @@ func getNLRIMessageType(pattrs []bgp.PathAttribute) (int, error) {
 	// 2 IP (IP version 6) : 128 MPLS-labeled VPN address
 	case nlri.AddressFamilyID == 2 && nlri.SubAddressFamilyID == 128:
 		return 19, nil
+	// AFI of 25 (L2VPN) and a SAFI of 65 (VPLS)
+	case nlri.AddressFamilyID == 25 && nlri.SubAddressFamilyID == 65:
+		return 23, nil
+	// AFI of 25 (L2VPN) and a SAFI of 70 (EVPN)
+	case nlri.AddressFamilyID == 25 && nlri.SubAddressFamilyID == 70:
+		return 24, nil
 	}
 
 	return 0, fmt.Errorf("unsupported nlri of type: afi %d safi %d", nlri.AddressFamilyID, nlri.SubAddressFamilyID)
