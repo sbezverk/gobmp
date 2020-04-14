@@ -34,6 +34,26 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 			},
 			fail: false,
 		},
+		{
+			name:  "nlri 2",
+			input: []byte{0x70, 0x05, 0xdc, 0x61, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64, 0x01, 0x01, 0x64},
+			expect: &NLRI{
+				Length: 14,
+				Labels: []*base.Label{
+					{
+						Value: 24006,
+						Exp:   0,
+						BoS:   true,
+					},
+				},
+				RD: &base.RD{
+					Type:  0,
+					Value: []byte{0x00, 0x64, 0x00, 0x00, 0x00, 0x64},
+				},
+				Prefix: []byte{1, 1, 100},
+			},
+			fail: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
