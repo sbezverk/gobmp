@@ -1,6 +1,11 @@
 package evpn
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/tools"
+)
 
 // RouteTypeSpec defines a method to get a route type specific information
 type RouteTypeSpec interface {
@@ -17,6 +22,7 @@ type NLRI struct {
 
 // UnmarshalEVPNNLRI instantiates an EVPN NLRI object
 func UnmarshalEVPNNLRI(b []byte) (*NLRI, error) {
+	glog.V(5).Infof("EVPN NLRI Raw: %s", tools.MessageHex(b))
 	var err error
 	n := NLRI{}
 	p := 0
