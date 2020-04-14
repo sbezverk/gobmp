@@ -33,10 +33,11 @@ func UnmarshalEVPNEthernetSegment(b []byte) (*EthernetSegment, error) {
 	p += 10
 	t.IPAddrLength = b[p]
 	p++
+	l := int(t.IPAddrLength / 8)
 	if t.IPAddrLength != 0 {
-		t.IPAddr = make([]byte, int(t.IPAddrLength))
-		copy(t.IPAddr, b[p:p+int(t.IPAddrLength)])
-		p += int(t.IPAddrLength)
+		t.IPAddr = make([]byte, l)
+		copy(t.IPAddr, b[p:p+l])
+		p += l
 	}
 
 	return &t, nil
