@@ -116,7 +116,7 @@ func UnmarshalMPReachNLRI(b []byte) (*MPReachNLRI, error) {
 	p += int(mp.NextHopAddressLength)
 	// Skip reserved byte
 	p++
-	mp.NLRI = make([]byte, len(b)-p)
+	mp.NLRI = make([]byte, len(b[p:]))
 	copy(mp.NLRI, b[p:])
 
 	return &mp, nil

@@ -38,7 +38,7 @@ func (p *producer) l3vpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*L3
 		PeerHash:     ph.GetPeerHash(),
 		PeerASN:      ph.PeerAS,
 		Timestamp:    ph.PeerTimestamp,
-		Prefix:       net.IP(nlril3vpn.Prefix).To4().String(),
+		Prefix:       net.IP(nlril3vpn.GetL3VPNPrefix()).To4().String(),
 		Nexthop:      nlri14.GetNextHop(),
 		PrefixLen:    32,
 		IsAtomicAgg:  update.GetAttrAtomicAggregate(),
