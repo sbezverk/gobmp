@@ -7,6 +7,7 @@ import "github.com/sbezverk/gobmp/pkg/base"
 type MACIPAdvertisement struct {
 	RD            *base.RD
 	ESI           *ESI
+	EthTag        []byte
 	MACAddrLength uint8
 	MACAddr       *MACAddress
 	IPAddrLength  uint8
@@ -34,16 +35,21 @@ func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
 		return nil, err
 	}
 	p += 10
+	copy(t.EthTag, b[p:p+4])
+	p += 4
 	t.MACAddrLength = b[p]
 	p++
-	t.MACAddr, err = MakeMACAddress(b[p : p+6])
-	if err != nil {
-		return nil, err
+	l := int(t.MACAddrLength / 8)
+	if l != 0 {
+		t.MACAddr, err = MakeMACAddress(b[p : p+l])
+		if err != nil {
+			return nil, err
+		}
+		p += l
 	}
-	p += 6
 	t.IPAddrLength = b[p]
 	p++
-	l := int(t.IPAddrLength / 8)
+	l = int(t.IPAddrLength / 8)
 	if t.IPAddrLength != 0 {
 		t.IPAddr = make([]byte, l)
 		copy(t.IPAddr, b[p:p+l])
