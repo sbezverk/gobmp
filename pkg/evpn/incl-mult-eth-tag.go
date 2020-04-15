@@ -15,39 +15,39 @@ type InclusiveMulticastEthTag struct {
 func (t *InclusiveMulticastEthTag) GetRouteTypeSpec() interface{} {
 	return t
 }
-func (t *InclusiveMulticastEthTag) GetRD() string {
+func (t *InclusiveMulticastEthTag) getRD() string {
 	return t.RD.String()
 }
 
-func (t *InclusiveMulticastEthTag) GetESI() *ESI {
+func (t *InclusiveMulticastEthTag) getESI() *ESI {
 	return nil
 }
 
-func (t *InclusiveMulticastEthTag) GetTag() []byte {
+func (t *InclusiveMulticastEthTag) getTag() []byte {
 	return t.EthTag
 }
 
-func (t *InclusiveMulticastEthTag) GetMAC() *MACAddress {
+func (t *InclusiveMulticastEthTag) getMAC() *MACAddress {
 	return nil
 }
 
-func (t *InclusiveMulticastEthTag) GetMACLength() *uint8 {
+func (t *InclusiveMulticastEthTag) getMACLength() *uint8 {
 	return nil
 }
 
-func (t *InclusiveMulticastEthTag) GetIPAddress() []byte {
+func (t *InclusiveMulticastEthTag) getIPAddress() []byte {
 	return t.IPAddr
 }
 
-func (t *InclusiveMulticastEthTag) GetIPLength() *uint8 {
+func (t *InclusiveMulticastEthTag) getIPLength() *uint8 {
 	return &t.IPAddrLength
 }
 
-func (t *InclusiveMulticastEthTag) GetGWAddress() []byte {
+func (t *InclusiveMulticastEthTag) getGWAddress() []byte {
 	return nil
 }
 
-func (t *InclusiveMulticastEthTag) GetLabel() []*base.Label {
+func (t *InclusiveMulticastEthTag) getLabel() []*base.Label {
 	return nil
 }
 

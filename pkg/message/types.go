@@ -1,7 +1,6 @@
 package message
 
 import (
-	"github.com/sbezverk/gobmp/pkg/evpn"
 	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 )
@@ -301,35 +300,35 @@ type EVPNPrefix struct {
 	Timestamp    string `json:"timestamp,omitempty"`
 	//	Prefix           string   `json:"prefix,omitempty"`
 	//	PrefixLen        int32    `json:"prefix_len,omitempty"`
-	IsIPv4           bool             `json:"is_ipv4,omitempty"`
-	Origin           string           `json:"origin,omitempty"`
-	ASPath           []uint32         `json:"as_path,omitempty"`
-	ASPathCount      int32            `json:"as_path_count,omitempty"`
-	OriginAS         string           `json:"origin_as,omitempty"`
-	Nexthop          string           `json:"nexthop,omitempty"`
-	MED              uint32           `json:"med,omitempty"`
-	LocalPref        uint32           `json:"local_pref,omitempty"`
-	Aggregator       string           `json:"aggregator,omitempty"`
-	CommunityList    string           `json:"community_list,omitempty"`
-	ExtCommunityList string           `json:"ext_community_list,omitempty"`
-	ClusterList      string           `json:"cluster_list,omitempty"`
-	IsAtomicAgg      bool             `json:"is_atomic_agg,omitempty"`
-	IsNexthopIPv4    bool             `json:"is_nexthop_ipv4,omitempty"`
-	OriginatorID     string           `json:"originator_id,omitempty"`
-	PathID           int32            `json:"path_id,omitempty"`
-	Labels           []uint32         `json:"labels,omitempty"`
-	IsPrepolicy      bool             `json:"isprepolicy,omitempty"`
-	IsAdjRIBIn       bool             `json:"is_adj_rib_in,omitempty"`
-	VPNRD            string           `json:"vpn_rd,omitempty"`
-	VPNRDType        uint16           `json:"vpn_rd_type"`
-	ESI              *evpn.ESI        `json:"eth_segment_id,omitempty"`
-	EthTag           []byte           `json:"eth_tag,omitempty"`
-	IPAddress        string           `json:"ip_address,omitempty"`
-	IPLength         uint8            `json:"ip_len,omitempty"`
-	GWAddress        string           `json:"gw_address,omitempty"`
-	MAC              *evpn.MACAddress `json:"mac,omitempty"`
-	MACLength        uint8            `json:"mac_len,omitempty"`
-	EVPNRouteType    uint8            `json:"evpn_route_type,omitempty"`
+	IsIPv4           bool     `json:"is_ipv4,omitempty"`
+	Origin           string   `json:"origin,omitempty"`
+	ASPath           []uint32 `json:"as_path,omitempty"`
+	ASPathCount      int32    `json:"as_path_count,omitempty"`
+	OriginAS         string   `json:"origin_as,omitempty"`
+	Nexthop          string   `json:"nexthop,omitempty"`
+	MED              uint32   `json:"med,omitempty"`
+	LocalPref        uint32   `json:"local_pref,omitempty"`
+	Aggregator       string   `json:"aggregator,omitempty"`
+	CommunityList    string   `json:"community_list,omitempty"`
+	ExtCommunityList string   `json:"ext_community_list,omitempty"`
+	ClusterList      string   `json:"cluster_list,omitempty"`
+	IsAtomicAgg      bool     `json:"is_atomic_agg,omitempty"`
+	IsNexthopIPv4    bool     `json:"is_nexthop_ipv4,omitempty"`
+	OriginatorID     string   `json:"originator_id,omitempty"`
+	PathID           int32    `json:"path_id,omitempty"`
+	Labels           []uint32 `json:"labels,omitempty"`
+	IsPrepolicy      bool     `json:"isprepolicy,omitempty"`
+	IsAdjRIBIn       bool     `json:"is_adj_rib_in,omitempty"`
+	VPNRD            string   `json:"vpn_rd,omitempty"`
+	VPNRDType        uint16   `json:"vpn_rd_type"`
+	ESI              string   `json:"eth_segment_id,omitempty"`
+	EthTag           []byte   `json:"eth_tag,omitempty"`
+	IPAddress        string   `json:"ip_address,omitempty"`
+	IPLength         uint8    `json:"ip_len,omitempty"`
+	GWAddress        string   `json:"gw_address,omitempty"`
+	MAC              string   `json:"mac,omitempty"`
+	MACLength        uint8    `json:"mac_len,omitempty"`
+	RouteType        uint8    `json:"route_type,omitempty"`
 	// TODO Type 3 carries nlri 22
 	// https://tools.ietf.org/html/rfc6514
 	// Add to the message

@@ -19,39 +19,39 @@ func (t *IPPrefix) GetRouteTypeSpec() interface{} {
 	return t
 }
 
-func (t *IPPrefix) GetRD() string {
+func (t *IPPrefix) getRD() string {
 	return t.RD.String()
 }
 
-func (t *IPPrefix) GetESI() *ESI {
+func (t *IPPrefix) getESI() *ESI {
 	return t.ESI
 }
 
-func (t *IPPrefix) GetTag() []byte {
+func (t *IPPrefix) getTag() []byte {
 	return nil
 }
 
-func (t *IPPrefix) GetMAC() *MACAddress {
+func (t *IPPrefix) getMAC() *MACAddress {
 	return nil
 }
 
-func (t *IPPrefix) GetMACLength() *uint8 {
+func (t *IPPrefix) getMACLength() *uint8 {
 	return nil
 }
 
-func (t *IPPrefix) GetIPAddress() []byte {
+func (t *IPPrefix) getIPAddress() []byte {
 	return t.IPAddr
 }
 
-func (t *IPPrefix) GetIPLength() *uint8 {
+func (t *IPPrefix) getIPLength() *uint8 {
 	return &t.IPAddrLength
 }
 
-func (t *IPPrefix) GetGWAddress() []byte {
+func (t *IPPrefix) getGWAddress() []byte {
 	return t.GWIPAddr
 }
 
-func (t *IPPrefix) GetLabel() []*base.Label {
+func (t *IPPrefix) getLabel() []*base.Label {
 	return t.Label
 }
 

@@ -16,39 +16,39 @@ func (t *EthernetSegment) GetRouteTypeSpec() interface{} {
 	return t
 }
 
-func (t *EthernetSegment) GetRD() string {
+func (t *EthernetSegment) getRD() string {
 	return t.RD.String()
 }
 
-func (t *EthernetSegment) GetESI() *ESI {
+func (t *EthernetSegment) getESI() *ESI {
 	return t.ESI
 }
 
-func (t *EthernetSegment) GetTag() []byte {
+func (t *EthernetSegment) getTag() []byte {
 	return nil
 }
 
-func (t *EthernetSegment) GetMAC() *MACAddress {
+func (t *EthernetSegment) getMAC() *MACAddress {
 	return nil
 }
 
-func (t *EthernetSegment) GetMACLength() *uint8 {
+func (t *EthernetSegment) getMACLength() *uint8 {
 	return nil
 }
 
-func (t *EthernetSegment) GetIPAddress() []byte {
+func (t *EthernetSegment) getIPAddress() []byte {
 	return t.IPAddr
 }
 
-func (t *EthernetSegment) GetIPLength() *uint8 {
+func (t *EthernetSegment) getIPLength() *uint8 {
 	return &t.IPAddrLength
 }
 
-func (t *EthernetSegment) GetGWAddress() []byte {
+func (t *EthernetSegment) getGWAddress() []byte {
 	return nil
 }
 
-func (t *EthernetSegment) GetLabel() []*base.Label {
+func (t *EthernetSegment) getLabel() []*base.Label {
 	return nil
 }
 

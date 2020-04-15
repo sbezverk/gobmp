@@ -11,15 +11,15 @@ import (
 // RouteTypeSpec defines a method to get a route type specific information
 type RouteTypeSpec interface {
 	GetRouteTypeSpec() interface{}
-	GetRD() string
-	GetESI() *ESI
-	GetTag() []byte
-	GetMAC() *MACAddress
-	GetMACLength() *uint8
-	GetIPAddress() []byte
-	GetIPLength() *uint8
-	GetGWAddress() []byte
-	GetLabel() []*base.Label
+	getRD() string
+	getESI() *ESI
+	getTag() []byte
+	getMAC() *MACAddress
+	getMACLength() *uint8
+	getIPAddress() []byte
+	getIPLength() *uint8
+	getGWAddress() []byte
+	getLabel() []*base.Label
 }
 
 // NLRI defines EVPN NLRI object
@@ -37,7 +37,52 @@ func (n *NLRI) GetEVPNRouteType() uint8 {
 
 // GetEVPNRD returns a string representation of RD if available
 func (n *NLRI) GetEVPNRD() string {
-	return n.RouteTypeSpec.GetRD()
+	return n.RouteTypeSpec.getRD()
+}
+
+// GetEVPNESI returns Ethernet Segment Identifier
+func (n *NLRI) GetEVPNESI() *ESI {
+	return n.RouteTypeSpec.getESI()
+}
+
+// GetEVPNTAG returns Ethernet TAG
+func (n *NLRI) GetEVPNTAG() []byte {
+	return n.RouteTypeSpec.getTag()
+}
+
+// GetEVPNMAC returns Ethernet MAC object
+func (n *NLRI) GetEVPNMAC() *MACAddress {
+	return n.RouteTypeSpec.getMAC()
+}
+
+// GetEVPNMACLength returns Ethernet MAC length in bits
+func (n *NLRI) GetEVPNMACLength() *uint8 {
+	return n.RouteTypeSpec.getMACLength()
+}
+
+// GetEVPNIPAddr returns IP Address object
+func (n *NLRI) GetEVPNIPAddr() []byte {
+	return n.RouteTypeSpec.getIPAddress()
+}
+
+// GetEVPNIPLength returns IP Address length in bits
+func (n *NLRI) GetEVPNIPLength() *uint8 {
+	return n.RouteTypeSpec.getIPLength()
+}
+
+// GetEVPNGWAddr returns IP Address of Gateway
+func (n *NLRI) GetEVPNGWAddr() []byte {
+	return n.RouteTypeSpec.getGWAddress()
+}
+
+// GetEVPNLabel returns stack of labels found in the nlri
+func (n *NLRI) GetEVPNLabel() []uint32 {
+	label := make([]uint32, 0)
+	for _, l := range n.RouteTypeSpec.getLabel() {
+		label = append(label, l.Value)
+	}
+
+	return label
 }
 
 // UnmarshalEVPNNLRI instantiates an EVPN NLRI object

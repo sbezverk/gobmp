@@ -20,39 +20,39 @@ func (t *MACIPAdvertisement) GetRouteTypeSpec() interface{} {
 	return t
 }
 
-func (t *MACIPAdvertisement) GetRD() string {
+func (t *MACIPAdvertisement) getRD() string {
 	return t.RD.String()
 }
 
-func (t *MACIPAdvertisement) GetESI() *ESI {
+func (t *MACIPAdvertisement) getESI() *ESI {
 	return t.ESI
 }
 
-func (t *MACIPAdvertisement) GetTag() []byte {
+func (t *MACIPAdvertisement) getTag() []byte {
 	return nil
 }
 
-func (t *MACIPAdvertisement) GetMAC() *MACAddress {
-	return nil
+func (t *MACIPAdvertisement) getMAC() *MACAddress {
+	return t.MACAddr
 }
 
-func (t *MACIPAdvertisement) GetMACLength() *uint8 {
-	return nil
+func (t *MACIPAdvertisement) getMACLength() *uint8 {
+	return &t.MACAddrLength
 }
 
-func (t *MACIPAdvertisement) GetIPAddress() []byte {
+func (t *MACIPAdvertisement) getIPAddress() []byte {
 	return t.IPAddr
 }
 
-func (t *MACIPAdvertisement) GetIPLength() *uint8 {
+func (t *MACIPAdvertisement) getIPLength() *uint8 {
 	return &t.IPAddrLength
 }
 
-func (t *MACIPAdvertisement) GetGWAddress() []byte {
+func (t *MACIPAdvertisement) getGWAddress() []byte {
 	return nil
 }
 
-func (t *MACIPAdvertisement) GetLabel() []*base.Label {
+func (t *MACIPAdvertisement) getLabel() []*base.Label {
 	return t.Label
 }
 

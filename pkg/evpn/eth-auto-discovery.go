@@ -16,39 +16,39 @@ func (t *EthAutoDiscovery) GetRouteTypeSpec() interface{} {
 	return &t
 }
 
-func (t *EthAutoDiscovery) GetRD() string {
+func (t *EthAutoDiscovery) getRD() string {
 	return t.RD.String()
 }
 
-func (t *EthAutoDiscovery) GetESI() *ESI {
+func (t *EthAutoDiscovery) getESI() *ESI {
 	return t.ESI
 }
 
-func (t *EthAutoDiscovery) GetTag() []byte {
+func (t *EthAutoDiscovery) getTag() []byte {
 	return t.EthTag
 }
 
-func (t *EthAutoDiscovery) GetMAC() *MACAddress {
+func (t *EthAutoDiscovery) getMAC() *MACAddress {
 	return nil
 }
 
-func (t *EthAutoDiscovery) GetMACLength() *uint8 {
+func (t *EthAutoDiscovery) getMACLength() *uint8 {
 	return nil
 }
 
-func (t *EthAutoDiscovery) GetIPAddress() []byte {
+func (t *EthAutoDiscovery) getIPAddress() []byte {
 	return nil
 }
 
-func (t *EthAutoDiscovery) GetIPLength() *uint8 {
+func (t *EthAutoDiscovery) getIPLength() *uint8 {
 	return nil
 }
 
-func (t *EthAutoDiscovery) GetGWAddress() []byte {
+func (t *EthAutoDiscovery) getGWAddress() []byte {
 	return nil
 }
 
-func (t *EthAutoDiscovery) GetLabel() []*base.Label {
+func (t *EthAutoDiscovery) getLabel() []*base.Label {
 	return t.Label
 }
 
