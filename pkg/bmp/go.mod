@@ -1,4 +1,4 @@
-module bmp 
+module github.com/sbezverk/gobmp/pkg/bmp 
 
 go 1.13
 
