@@ -1,4 +1,4 @@
-module parser
+module github.com/sbezverk/gobmp/pkg/parser
 
 go 1.14
 

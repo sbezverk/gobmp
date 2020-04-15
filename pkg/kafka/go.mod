@@ -1,4 +1,4 @@
-module kafka
+module github.com/sbezverk/gobmp/pkg/kafka
 
 go 1.13
 
