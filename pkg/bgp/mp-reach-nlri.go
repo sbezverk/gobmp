@@ -10,6 +10,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/gobmp/pkg/unicast"
 )
 
 // MPReachNLRI defines an MP Reach NLRI object
@@ -91,6 +92,34 @@ func (mp *MPReachNLRI) GetNLRIL3VPN() (*l3vpn.NLRI, error) {
 func (mp *MPReachNLRI) GetNLRIEVPN() (*evpn.NLRI, error) {
 	if mp.AddressFamilyID == 25 && mp.SubAddressFamilyID == 70 {
 		nlri, err := evpn.UnmarshalEVPNNLRI(mp.NLRI)
+		if err != nil {
+			return nil, err
+		}
+		return nlri, nil
+	}
+
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIUnicast check for presense of NLRI EVPN AFI 1 or 2  and SAFI 1 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
+func (mp *MPReachNLRI) GetNLRIUnicast() (*unicast.MPUnicastNLRI, error) {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 1 {
+		nlri, err := unicast.UnmarshalUnicastNLRI(mp.NLRI)
+		if err != nil {
+			return nil, err
+		}
+		return nlri, nil
+	}
+
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRILU check for presense of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
+func (mp *MPReachNLRI) GetNLRILU() (*unicast.MPLUNLRI, error) {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 4 {
+		nlri, err := unicast.UnmarshalLUNLRI(mp.NLRI)
 		if err != nil {
 			return nil, err
 		}

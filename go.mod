@@ -33,4 +33,5 @@ replace (
 	github.com/sbezverk/gobmp/pkg/sr => ./pkg/sr
 	github.com/sbezverk/gobmp/pkg/srv6 => ./pkg/srv6
 	github.com/sbezverk/gobmp/pkg/tools => ./pkg/tools
+	github.com/sbezverk/gobmp/pkg/unicast => ./pkg/unicast
 )

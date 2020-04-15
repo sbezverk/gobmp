@@ -70,7 +70,7 @@ type UnicastPrefix struct {
 	IsNexthopIPv4    bool     `json:"is_nexthop_ipv4,omitempty"`
 	OriginatorID     string   `json:"originator_id,omitempty"`
 	PathID           int32    `json:"path_id,omitempty"`
-	Labels           string   `json:"labels,omitempty"`
+	Labels           []uint32 `json:"labels,omitempty"`
 	IsPrepolicy      bool     `json:"isprepolicy,omitempty"`
 	IsAdjRIBIn       bool     `json:"is_adj_rib_in,omitempty"`
 }

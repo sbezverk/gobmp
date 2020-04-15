@@ -50,13 +50,21 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		}
 		switch t {
 		case 1:
-			glog.Infof("1 IP (IP version 4) : 1 unicast forwarding")
+			glog.Infof("1 IP (IP version 4) : 1 Unicast All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+			ipv4Flag = true
+			fallthrough
 		case 2:
-			glog.Infof("2 IP6 (IP version 6) : 1 unicast forwarding")
+			if !ipv4Flag {
+				glog.Infof("2 IP6 (IP version 6) : 1 Unicast All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+			}
 		case 16:
-			glog.Infof("1 IP (IP version 4) : 4 MPLS Labels")
+			glog.Infof("1 IP (IP version 4) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+			ipv4Flag = true
+			fallthrough
 		case 17:
-			glog.Infof("2 IP (IP version 6) : 4 MPLS Labels")
+			if !ipv4Flag {
+				glog.Infof("2 IP (IP version 6) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+			}
 		case 18:
 			glog.V(6).Infof("1 IP (IP version 4) : 128 MPLS-labeled VPN address")
 			msg, err := p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
