@@ -1,4 +1,4 @@
-module evpn
+module github.com/sbezverk/gobmp/pkg/evpn
 
 go 1.14
 

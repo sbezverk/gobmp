@@ -1,4 +1,4 @@
-module bgp
+module github.com/sbezverk/gobmp/pkg/bgp
 
 go 1.13
 

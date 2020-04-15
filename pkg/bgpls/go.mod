@@ -1,4 +1,4 @@
-module bgpls
+module github.com/sbezverk/gobmp/pkg/bgpls
 
 go 1.13
 

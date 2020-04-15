@@ -1,4 +1,4 @@
-module sr
+module github.com/sbezverk/gobmp/pkg/sr
 
 go 1.13
 
