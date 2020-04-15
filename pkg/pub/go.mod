@@ -1,4 +1,4 @@
-module pub
+module github.com/sbezverk/gobmp/pkg/pub
 
 go 1.14
 
