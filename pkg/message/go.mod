@@ -1,4 +1,4 @@
-module message
+module github.com/sbezverk/gobmp/pkg/message 
 
 go 1.13
 
