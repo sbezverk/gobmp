@@ -288,18 +288,18 @@ type LSSRv6SID struct {
 
 // EVPNPrefix defines the structure of EVPN message
 type EVPNPrefix struct {
-	Action           string   `json:"action"` // Action can be "add" or "del"
-	Sequence         int      `json:"sequence,omitempty"`
-	Hash             string   `json:"hash,omitempty"`
-	RouterHash       string   `json:"router_hash,omitempty"`
-	RouterIP         string   `json:"router_ip,omitempty"`
-	BaseAttrHash     string   `json:"base_attr_hash,omitempty"`
-	PeerHash         string   `json:"peer_hash,omitempty"`
-	PeerIP           string   `json:"peer_ip,omitempty"`
-	PeerASN          int32    `json:"peer_asn,omitempty"`
-	Timestamp        string   `json:"timestamp,omitempty"`
-	Prefix           string   `json:"prefix,omitempty"`
-	PrefixLen        int32    `json:"prefix_len,omitempty"`
+	Action       string `json:"action"` // Action can be "add" or "del"
+	Sequence     int    `json:"sequence,omitempty"`
+	Hash         string `json:"hash,omitempty"`
+	RouterHash   string `json:"router_hash,omitempty"`
+	RouterIP     string `json:"router_ip,omitempty"`
+	BaseAttrHash string `json:"base_attr_hash,omitempty"`
+	PeerHash     string `json:"peer_hash,omitempty"`
+	PeerIP       string `json:"peer_ip,omitempty"`
+	PeerASN      int32  `json:"peer_asn,omitempty"`
+	Timestamp    string `json:"timestamp,omitempty"`
+	//	Prefix           string   `json:"prefix,omitempty"`
+	//	PrefixLen        int32    `json:"prefix_len,omitempty"`
 	IsIPv4           bool     `json:"is_ipv4,omitempty"`
 	Origin           string   `json:"origin,omitempty"`
 	ASPath           []uint32 `json:"as_path,omitempty"`
@@ -321,17 +321,15 @@ type EVPNPrefix struct {
 	IsAdjRIBIn       bool     `json:"is_adj_rib_in,omitempty"`
 	VPNRD            string   `json:"vpn_rd,omitempty"`
 	VPNRDType        uint16   `json:"vpn_rd_type"`
+	ESI              string   `json:"eth_segment_id,omitempty"`
+	EthTag           []byte   `json:"eth_tag,omitempty"`
+	IPAddress        string   `json:"ip_address,omitempty"`
+	IPLength         uint8    `json:"ip_len,omitempty"`
+	GWAddress        string   `json:"gw_address,omitempty"`
+	MAC              string   `json:"mac,omitempty"`
+	MACLength        uint8    `json:"mac_len,omitempty"`
+	RouteType        uint8    `json:"route_type,omitempty"`
+	// TODO Type 3 carries nlri 22
+	// https://tools.ietf.org/html/rfc6514
+	// Add to the message
 }
-
-// 28: (rd):
-// 29: (rd_type):
-// 30: (rd_type):
-// 31: (orig_router_ip_len):
-// 32: (eth_tag):
-// 33: (eth_segment_id):
-// 34: (mac_len):
-// 35: (mac):
-// 36: (ip_len):
-// 37: (ip):
-// 38: (label):
-// 39: (label):

@@ -16,6 +16,42 @@ func (t *EthernetSegment) GetRouteTypeSpec() interface{} {
 	return t
 }
 
+func (t *EthernetSegment) getRD() string {
+	return t.RD.String()
+}
+
+func (t *EthernetSegment) getESI() *ESI {
+	return t.ESI
+}
+
+func (t *EthernetSegment) getTag() []byte {
+	return nil
+}
+
+func (t *EthernetSegment) getMAC() *MACAddress {
+	return nil
+}
+
+func (t *EthernetSegment) getMACLength() *uint8 {
+	return nil
+}
+
+func (t *EthernetSegment) getIPAddress() []byte {
+	return t.IPAddr
+}
+
+func (t *EthernetSegment) getIPLength() *uint8 {
+	return &t.IPAddrLength
+}
+
+func (t *EthernetSegment) getGWAddress() []byte {
+	return nil
+}
+
+func (t *EthernetSegment) getLabel() []*base.Label {
+	return nil
+}
+
 // UnmarshalEVPNEthernetSegment instantiates new instance of an Ethernet Segment Route object
 func UnmarshalEVPNEthernetSegment(b []byte) (*EthernetSegment, error) {
 	var err error

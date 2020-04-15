@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // ExtCommunity defines BGP Extended Commuity
@@ -26,19 +28,26 @@ func (ext *ExtCommunity) IsRouteTarget() bool {
 
 func (ext *ExtCommunity) String() string {
 	var s string
+	var prefix string
 	switch *ext.SubType {
+	case 0x0:
+		prefix = "mmb="
+	case 0x01:
+		prefix = "lb="
 	case 0x02:
-		s += fmt.Sprintf("rt=")
+		prefix = "rt="
 	case 0x03:
-		s += fmt.Sprintf("ro=")
+		prefix = "ro="
 	case 0x05:
-		s += fmt.Sprintf("odi=")
+		prefix = "odi="
+	case 0x06:
+		prefix = "df="
 	case 0x08:
-		s += fmt.Sprintf("bdc=")
+		prefix = "bdc="
 	case 0x09:
-		s += fmt.Sprintf("sas=")
+		prefix = "sas="
 	case 0x0a:
-		s += fmt.Sprintf("l2i=")
+		prefix = "l2i="
 	}
 	switch ext.Type {
 	case 0:
@@ -47,9 +56,36 @@ func (ext *ExtCommunity) String() string {
 		s += fmt.Sprintf("%s:%d", net.IP(ext.Value[0:4]).To4().String(), binary.BigEndian.Uint16(ext.Value[4:]))
 	case 2:
 		s += fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(ext.Value[0:4]), binary.BigEndian.Uint16(ext.Value[4:]))
+	case 6:
+		// EVPN related extended communities
+		switch *ext.SubType {
+		case 0x01:
+			// ESI Label Extended Community
+			l := make([]byte, 4)
+			copy(l, ext.Value[3:])
+			s += fmt.Sprintf("%d:%d", ext.Value[0], binary.BigEndian.Uint32(l))
+		case 0x02:
+			// ES-Import Route Target
+			for i, m := range ext.Value {
+				s += fmt.Sprintf("%02x", m)
+				if i < len(ext.Value)-1 {
+					s += ":"
+				}
+			}
+		case 0x00:
+			// MAC Mobility Extended Community
+			s += fmt.Sprintf("%d:%d", ext.Value[0], binary.BigEndian.Uint32(ext.Value[2:]))
+		case 0x06:
+			// The DF Election Extended Community
+			s += fmt.Sprintf("%d:0x%04x", ext.Value[0], binary.BigEndian.Uint16(ext.Value[1:]))
+		default:
+			prefix = "unknown="
+			s += fmt.Sprintf("Type: %d Subtype: %d Value: %s", ext.Type, *ext.SubType, tools.MessageHex(ext.Value))
+		}
+
 	}
 
-	return s
+	return prefix + s
 }
 
 func makeExtCommunity(b []byte) (*ExtCommunity, error) {

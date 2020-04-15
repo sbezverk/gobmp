@@ -15,6 +15,41 @@ type InclusiveMulticastEthTag struct {
 func (t *InclusiveMulticastEthTag) GetRouteTypeSpec() interface{} {
 	return t
 }
+func (t *InclusiveMulticastEthTag) getRD() string {
+	return t.RD.String()
+}
+
+func (t *InclusiveMulticastEthTag) getESI() *ESI {
+	return nil
+}
+
+func (t *InclusiveMulticastEthTag) getTag() []byte {
+	return t.EthTag
+}
+
+func (t *InclusiveMulticastEthTag) getMAC() *MACAddress {
+	return nil
+}
+
+func (t *InclusiveMulticastEthTag) getMACLength() *uint8 {
+	return nil
+}
+
+func (t *InclusiveMulticastEthTag) getIPAddress() []byte {
+	return t.IPAddr
+}
+
+func (t *InclusiveMulticastEthTag) getIPLength() *uint8 {
+	return &t.IPAddrLength
+}
+
+func (t *InclusiveMulticastEthTag) getGWAddress() []byte {
+	return nil
+}
+
+func (t *InclusiveMulticastEthTag) getLabel() []*base.Label {
+	return nil
+}
 
 // UnmarshalEVPNInclusiveMulticastEthTag instantiates new instance of an Inclusive Multicast Ethernet Tag Route type object
 func UnmarshalEVPNInclusiveMulticastEthTag(b []byte) (*InclusiveMulticastEthTag, error) {

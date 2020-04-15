@@ -20,6 +20,42 @@ func (t *MACIPAdvertisement) GetRouteTypeSpec() interface{} {
 	return t
 }
 
+func (t *MACIPAdvertisement) getRD() string {
+	return t.RD.String()
+}
+
+func (t *MACIPAdvertisement) getESI() *ESI {
+	return t.ESI
+}
+
+func (t *MACIPAdvertisement) getTag() []byte {
+	return nil
+}
+
+func (t *MACIPAdvertisement) getMAC() *MACAddress {
+	return t.MACAddr
+}
+
+func (t *MACIPAdvertisement) getMACLength() *uint8 {
+	return &t.MACAddrLength
+}
+
+func (t *MACIPAdvertisement) getIPAddress() []byte {
+	return t.IPAddr
+}
+
+func (t *MACIPAdvertisement) getIPLength() *uint8 {
+	return &t.IPAddrLength
+}
+
+func (t *MACIPAdvertisement) getGWAddress() []byte {
+	return nil
+}
+
+func (t *MACIPAdvertisement) getLabel() []*base.Label {
+	return t.Label
+}
+
 // UnmarshalEVPNMACIPAdvertisement instantiates new instance of a Ethernet Auto Discovery route type object
 func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
 	var err error

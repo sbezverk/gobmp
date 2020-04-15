@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -15,7 +16,8 @@ func (p *producer) evpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*EVP
 	if err != nil {
 		return nil, err
 	}
-	_, err = nlri14.GetNLRIEVPN()
+	glog.Infof("All attributes in evpn upate: %+v", update.GetAllAttributeID())
+	evpn, err := nlri14.GetNLRIEVPN()
 	if err != nil {
 		return nil, err
 	}
@@ -38,11 +40,9 @@ func (p *producer) evpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*EVP
 		PeerHash:     ph.GetPeerHash(),
 		PeerASN:      ph.PeerAS,
 		Timestamp:    ph.PeerTimestamp,
-		//		Prefix:       net.IP(nlril3vpn.Prefix).To4().String(),
-		Nexthop:     nlri14.GetNextHop(),
-		PrefixLen:   32,
-		IsAtomicAgg: update.GetAttrAtomicAggregate(),
-		Aggregator:  fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
+		Nexthop:      nlri14.GetNextHop(),
+		IsAtomicAgg:  update.GetAttrAtomicAggregate(),
+		Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
 	}
 	if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
 		prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()
@@ -81,6 +81,51 @@ func (p *producer) evpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*EVP
 				prfx.ExtCommunityList += ", "
 			}
 		}
+	}
+	if evpn != nil {
+		prfx.VPNRD = evpn.GetEVPNRD()
+		prfx.RouteType = evpn.GetEVPNRouteType()
+		e := evpn.GetEVPNESI()
+		if e != nil {
+			// TODO Change 10 for a const for ESI length
+			for i := 0; i < 10; i++ {
+				prfx.ESI += fmt.Sprintf("%02d", e[i])
+				// TODO same here ESI length -1
+				if i < 9 {
+					prfx.ESI += ":"
+				}
+			}
+		}
+		prfx.EthTag = evpn.GetEVPNTAG()
+		if ip := evpn.GetEVPNIPLength(); ip != nil {
+			prfx.IPLength = *ip
+			gw := evpn.GetEVPNGWAddr()
+			// IPv4 should have IPLength set to 32
+			if prfx.IPLength == 32 {
+				prfx.IPAddress = net.IP(evpn.GetEVPNIPAddr()).To4().String()
+				if gw != nil {
+					prfx.GWAddress = net.IP(gw).To4().String()
+				}
+			}
+			// Processing IPv6 IP and GW
+			if prfx.IPLength == 128 {
+				prfx.IPAddress = net.IP(evpn.GetEVPNIPAddr()).To16().String()
+				if gw != nil {
+					prfx.GWAddress = net.IP(gw).To16().String()
+				}
+			}
+		}
+		if mac := evpn.GetEVPNMACLength(); mac != nil {
+			prfx.MACLength = *mac
+			v := evpn.GetEVPNMAC()
+			for i := 0; i < int(prfx.MACLength/8); i++ {
+				prfx.MAC += fmt.Sprintf("%02x", v[i])
+				if i < int(prfx.MACLength/8)-1 {
+					prfx.MAC += ":"
+				}
+			}
+		}
+		prfx.Labels = evpn.GetEVPNLabel()
 	}
 
 	return &prfx, nil

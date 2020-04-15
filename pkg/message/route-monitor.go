@@ -92,7 +92,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			//				glog.Errorf("failed to push L3VPN message to kafka with error: %+v", err)
 			//				return
 			//			}
-			glog.V(6).Infof("evpn message: %s", string(j))
+			glog.V(5).Infof("evpn message: %s", string(j))
 
 		case 32:
 			glog.V(6).Infof("Node NLRI")
