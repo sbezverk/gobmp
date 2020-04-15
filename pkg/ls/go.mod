@@ -1,4 +1,4 @@
-module ls
+module github.com/sbezverk/gobmp/pkg/ls
 
 go 1.13
 

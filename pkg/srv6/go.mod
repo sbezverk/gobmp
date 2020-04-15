@@ -1,4 +1,4 @@
-module srv6
+module github.com/sbezverk/gobmp/pkg/srv6
 
 go 1.13
 

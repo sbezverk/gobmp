@@ -1,4 +1,4 @@
-module base
+module github.com/sbezverk/gobmp/pkg/base
 
 go 1.13
 
