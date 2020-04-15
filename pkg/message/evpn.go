@@ -41,9 +41,8 @@ func (p *producer) evpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*EVP
 		PeerASN:      ph.PeerAS,
 		Timestamp:    ph.PeerTimestamp,
 		Nexthop:      nlri14.GetNextHop(),
-		//		PrefixLen:    32,
-		IsAtomicAgg: update.GetAttrAtomicAggregate(),
-		Aggregator:  fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
+		IsAtomicAgg:  update.GetAttrAtomicAggregate(),
+		Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
 	}
 	if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
 		prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()

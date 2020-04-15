@@ -4,12 +4,22 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // RouteTypeSpec defines a method to get a route type specific information
 type RouteTypeSpec interface {
 	GetRouteTypeSpec() interface{}
+	GetRD() string
+	GetESI() *ESI
+	GetTag() []byte
+	GetMAC() *MACAddress
+	GetMACLength() *uint8
+	GetIPAddress() []byte
+	GetIPLength() *uint8
+	GetGWAddress() []byte
+	GetLabel() []*base.Label
 }
 
 // NLRI defines EVPN NLRI object
@@ -18,6 +28,16 @@ type NLRI struct {
 	RouteType uint8
 	Length    uint8
 	RouteTypeSpec
+}
+
+// GetEVPNRouteType returns the type of EVPN route
+func (n *NLRI) GetEVPNRouteType() uint8 {
+	return n.RouteType
+}
+
+// GetEVPNRD returns a string representation of RD if available
+func (n *NLRI) GetEVPNRD() string {
+	return n.RouteTypeSpec.GetRD()
 }
 
 // UnmarshalEVPNNLRI instantiates an EVPN NLRI object

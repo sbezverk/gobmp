@@ -19,6 +19,42 @@ func (t *IPPrefix) GetRouteTypeSpec() interface{} {
 	return t
 }
 
+func (t *IPPrefix) GetRD() string {
+	return t.RD.String()
+}
+
+func (t *IPPrefix) GetESI() *ESI {
+	return t.ESI
+}
+
+func (t *IPPrefix) GetTag() []byte {
+	return nil
+}
+
+func (t *IPPrefix) GetMAC() *MACAddress {
+	return nil
+}
+
+func (t *IPPrefix) GetMACLength() *uint8 {
+	return nil
+}
+
+func (t *IPPrefix) GetIPAddress() []byte {
+	return t.IPAddr
+}
+
+func (t *IPPrefix) GetIPLength() *uint8 {
+	return &t.IPAddrLength
+}
+
+func (t *IPPrefix) GetGWAddress() []byte {
+	return t.GWIPAddr
+}
+
+func (t *IPPrefix) GetLabel() []*base.Label {
+	return t.Label
+}
+
 // UnmarshalEVPNIPPrefix instantiates new IP Prefix route type object
 func UnmarshalEVPNIPPrefix(b []byte) (*IPPrefix, error) {
 	var err error
