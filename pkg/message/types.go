@@ -288,18 +288,18 @@ type LSSRv6SID struct {
 
 // EVPNPrefix defines the structure of EVPN message
 type EVPNPrefix struct {
-	Action           string   `json:"action"` // Action can be "add" or "del"
-	Sequence         int      `json:"sequence,omitempty"`
-	Hash             string   `json:"hash,omitempty"`
-	RouterHash       string   `json:"router_hash,omitempty"`
-	RouterIP         string   `json:"router_ip,omitempty"`
-	BaseAttrHash     string   `json:"base_attr_hash,omitempty"`
-	PeerHash         string   `json:"peer_hash,omitempty"`
-	PeerIP           string   `json:"peer_ip,omitempty"`
-	PeerASN          int32    `json:"peer_asn,omitempty"`
-	Timestamp        string   `json:"timestamp,omitempty"`
-	Prefix           string   `json:"prefix,omitempty"`
-	PrefixLen        int32    `json:"prefix_len,omitempty"`
+	Action       string `json:"action"` // Action can be "add" or "del"
+	Sequence     int    `json:"sequence,omitempty"`
+	Hash         string `json:"hash,omitempty"`
+	RouterHash   string `json:"router_hash,omitempty"`
+	RouterIP     string `json:"router_ip,omitempty"`
+	BaseAttrHash string `json:"base_attr_hash,omitempty"`
+	PeerHash     string `json:"peer_hash,omitempty"`
+	PeerIP       string `json:"peer_ip,omitempty"`
+	PeerASN      int32  `json:"peer_asn,omitempty"`
+	Timestamp    string `json:"timestamp,omitempty"`
+	//	Prefix           string   `json:"prefix,omitempty"`
+	//	PrefixLen        int32    `json:"prefix_len,omitempty"`
 	IsIPv4           bool     `json:"is_ipv4,omitempty"`
 	Origin           string   `json:"origin,omitempty"`
 	ASPath           []uint32 `json:"as_path,omitempty"`

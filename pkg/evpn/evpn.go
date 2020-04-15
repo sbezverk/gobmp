@@ -47,6 +47,15 @@ func UnmarshalEVPNNLRI(b []byte) (*NLRI, error) {
 			return nil, err
 		}
 	case 4:
+		n.RouteTypeSpec, err = UnmarshalEVPNEthernetSegment(b[p:])
+		if err != nil {
+			return nil, err
+		}
+	case 5:
+		n.RouteTypeSpec, err = UnmarshalEVPNIPPrefix(b[p:])
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("unknown route type %d", n.RouteType)
 	}

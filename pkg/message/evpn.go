@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -15,6 +16,7 @@ func (p *producer) evpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*EVP
 	if err != nil {
 		return nil, err
 	}
+	glog.Infof("All attributes in evpn upate: %+v", update.GetAllAttributeID())
 	_, err = nlri14.GetNLRIEVPN()
 	if err != nil {
 		return nil, err
@@ -38,9 +40,8 @@ func (p *producer) evpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*EVP
 		PeerHash:     ph.GetPeerHash(),
 		PeerASN:      ph.PeerAS,
 		Timestamp:    ph.PeerTimestamp,
-		//		Prefix:       net.IP(nlril3vpn.Prefix).To4().String(),
-		Nexthop:     nlri14.GetNextHop(),
-		PrefixLen:   32,
+		Nexthop:      nlri14.GetNextHop(),
+		//		PrefixLen:    32,
 		IsAtomicAgg: update.GetAttrAtomicAggregate(),
 		Aggregator:  fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
 	}

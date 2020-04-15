@@ -37,7 +37,7 @@ func UnmarshalL3VPNNLRI(b []byte) (*NLRI, error) {
 	n.Labels = make([]*base.Label, 0)
 	// subtract 12 from the length as label stack follows by RD 8 bytes and prefix 4 bytes
 	bos := false
-	for !bos {
+	for !bos && p < len(b) {
 		l, err := base.MakeLabel(b[p : p+3])
 		if err != nil {
 			return nil, err
