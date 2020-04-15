@@ -1,4 +1,4 @@
-module lgithub.com/sbezverk/gobmp/pkg/3vnp
+module github.com/sbezverk/gobmp/pkg/l3vnp
 
 go 1.14
 
