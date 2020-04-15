@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // ExtCommunity defines BGP Extended Commuity
@@ -38,6 +40,8 @@ func (ext *ExtCommunity) String() string {
 		prefix = "ro="
 	case 0x05:
 		prefix = "odi="
+	case 0x06:
+		prefix = "df="
 	case 0x08:
 		prefix = "bdc="
 	case 0x09:
@@ -71,6 +75,12 @@ func (ext *ExtCommunity) String() string {
 		case 0x00:
 			// MAC Mobility Extended Community
 			s += fmt.Sprintf("%d:%d", ext.Value[0], binary.BigEndian.Uint32(ext.Value[2:]))
+		case 0x06:
+			// The DF Election Extended Community
+			s += fmt.Sprintf("%d:0x%04x", ext.Value[0], binary.BigEndian.Uint16(ext.Value[1:]))
+		default:
+			prefix = "unknown="
+			s += fmt.Sprintf("Type: %d Subtype: %d Value: %s", ext.Type, *ext.SubType, tools.MessageHex(ext.Value))
 		}
 
 	}
