@@ -38,6 +38,8 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	}
 	// ipv4Flag used to differentiate between IPv4 and IPv6 Prefix NLRI messages
 	ipv4Flag := false
+	labeled := false
+	labeledSet := false
 	// Using first attribute type to select which nlri processor to call
 	switch routeMonitorMsg.Update.PathAttributes[0].AttributeType {
 	case 14:
@@ -49,38 +51,35 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		}
 		switch t {
 		case 1:
-			glog.V(5).Infof("1 IP (IP version 4) : 1 Unicast All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
-			ipv4Flag = true
+			// MP_REACH_NLRI AFI 1 SAFI 1
+			if !labeledSet {
+				labeledSet = true
+				labeled = false
+			}
 			fallthrough
 		case 2:
-			if !ipv4Flag {
-				glog.V(5).Infof("2 IP6 (IP version 6) : 1 Unicast All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+			// MP_REACH_NLRI AFI 2 SAFI 1
+			if !labeledSet {
+				labeledSet = true
+				labeled = false
 			}
-			// false passed since it is just a Unicast message
-			msgs, err := p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, false)
-			if err != nil {
-				glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
-				return
-			}
-			// Loop through and publish all collected messages
-			for _, m := range msgs {
-				if err := p.marshalAndPublish(&m, bmp.UnicastPrefixMsg, []byte(m.RouterHash), true); err != nil {
-					glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
-					return
-				}
-			}
+			fallthrough
 		case 16:
-			glog.V(5).Infof("1 IP (IP version 4) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
-			ipv4Flag = true
+			// MP_REACH_NLRI AFI 1 SAFI 4
+			if !labeledSet {
+				labeledSet = true
+				labeled = true
+			}
 			fallthrough
 		case 17:
-			if !ipv4Flag {
-				glog.V(5).Infof("2 IP (IP version 6) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+			// MP_REACH_NLRI AFI 2 SAFI 4
+			if !labeledSet {
+				labeledSet = true
+				labeled = true
 			}
-			// true passed since it is Labeled Unicast message
-			msgs, err := p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, true)
+			msgs, err := p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, labeled)
 			if err != nil {
-				glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
+				glog.Errorf("failed to produce Unicast Prefix message message with error: %+v", err)
 				return
 			}
 			// Loop through and publish all collected messages
@@ -91,119 +90,86 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				}
 			}
 		case 18:
-			glog.V(6).Infof("1 IP (IP version 4) : 128 MPLS-labeled VPN address")
 			msg, err := p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce l3vpn message with error: %+v", err)
 				return
 			}
-			j, err = json.Marshal(&msg)
-			if err != nil {
-				glog.Errorf("failed to marshal l3vpn message with error: %+v", err)
+			if err := p.marshalAndPublish(&msg, bmp.L3VPNMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process L3VPN message with error: %+v", err)
 				return
 			}
-			if err := p.publisher.PublishMessage(bmp.L3VPNMsg, []byte(msg.RouterHash), j); err != nil {
-				glog.Errorf("failed to push L3VPN message to kafka with error: %+v", err)
-				return
-			}
-			glog.V(6).Infof("l3vpn message: %s", string(j))
 		case 19:
-			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address")
+			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address, attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 		case 24:
-			glog.V(6).Infof("25 (L2VPN) : 70 (EVPN)")
 			msg, err := p.evpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce evpn message with error: %+v", err)
 				return
 			}
-			j, err = json.Marshal(&msg)
-			if err != nil {
-				glog.Errorf("failed to marshal evpn message with error: %+v", err)
+			if err := p.marshalAndPublish(&msg, bmp.EVPNMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process EVPNP message with error: %+v", err)
 				return
 			}
-			//			if err := p.publisher.PublishMessage(bmp.L3VPNMsg, []byte(msg.RouterHash), j); err != nil {
-			//				glog.Errorf("failed to push L3VPN message to kafka with error: %+v", err)
-			//				return
-			//			}
-			glog.V(5).Infof("evpn message: %s", string(j))
-
 		case 32:
-			glog.V(6).Infof("Node NLRI")
 			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_node message with error: %+v", err)
 				return
 			}
-			j, err = json.Marshal(&msg)
-			if err != nil {
-				glog.Errorf("failed to marshal ls_node message with error: %+v", err)
+			if err := p.marshalAndPublish(&msg, bmp.LSNodeMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process LSNode message with error: %+v", err)
 				return
 			}
-			if err := p.publisher.PublishMessage(bmp.LSNodeMsg, []byte(msg.RouterHash), j); err != nil {
-				glog.Errorf("failed to push LSNode message to kafka with error: %+v", err)
-				return
-			}
-			glog.V(6).Infof("ls_node message: %s", string(j))
 		case 33:
-			glog.V(6).Infof("Link NLRI")
 			msg, err := p.lsLink("add", msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				return
 			}
-			j, err = json.Marshal(&msg)
-			if err != nil {
-				glog.Errorf("failed to marshal ls_link message with error: %+v", err)
+			if err := p.marshalAndPublish(&msg, bmp.LSLinkMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process LSLink message with error: %+v", err)
 				return
 			}
-			if err := p.publisher.PublishMessage(bmp.LSLinkMsg, []byte(msg.RouterHash), j); err != nil {
-				glog.Errorf("failed to push LSLink message to kafka with error: %+v", err)
-				return
-			}
-			glog.V(6).Infof("ls_link message: %s", string(j))
 		case 34:
 			ipv4Flag = true
-			glog.V(6).Infof("IPv4 Prefix NLRI")
 			fallthrough
 		case 35:
-			if !ipv4Flag {
-				glog.V(6).Infof("IPv6 Prefix NLRI")
-			}
 			msg, err := p.lsPrefix("add", msg.PeerHeader, routeMonitorMsg.Update, ipv4Flag)
 			if err != nil {
 				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
 				return
 			}
-			j, err = json.Marshal(&msg)
-			if err != nil {
-				glog.Errorf("failed to marshal ls_prefix message with error: %+v", err)
+			if err := p.marshalAndPublish(&msg, bmp.LSPrefixMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process LSPrefix message with error: %+v", err)
 				return
 			}
-			if err := p.publisher.PublishMessage(bmp.LSPrefixMsg, []byte(msg.RouterHash), j); err != nil {
-				glog.Errorf("failed to push LSPrefix message to kafka with error: %+v", err)
-				return
-			}
-			glog.V(6).Infof("ls_prefix message: %s", string(j))
 		case 36:
-			glog.V(6).Infof("SRv6 SID NLRI")
 			msg, err := p.lsSRv6SID("add", msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
 				return
 			}
-			j, err = json.Marshal(&msg)
-			if err != nil {
-				glog.Errorf("failed to marshal ls_srv6_sid message with error: %+v", err)
+			if err := p.marshalAndPublish(&msg, bmp.LSSRv6SIDMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
 				return
 			}
-			if err := p.publisher.PublishMessage(bmp.LSSRv6SIDMsg, []byte(msg.RouterHash), j); err != nil {
-				glog.Errorf("failed to push LSSRv6SID message to kafka with error: %+v", err)
-				return
-			}
-			glog.V(6).Infof("ls_srv6_sid message: %s", string(j))
 		}
 	case 15:
 		// MP_UNREACH_NLRI
+		glog.Infof("MP_UNREAH_NLRI")
+		_, err := p.mpUnreach(msg.PeerHeader, routeMonitorMsg.Update)
+		if err != nil {
+			glog.Errorf("failed to produce  MP_UNREAH_NLRI messages with error: %+v", err)
+			return
+		}
+		//		// Loop through and publish all collected messages
+		//		for _, m := range msgs {
+		//			if err := p.marshalAndPublish(&m, bmp.UnicastPrefixMsg, []byte(m.RouterHash), true); err != nil {
+		//				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
+		//				return
+		//			}
+		//		}
 	default:
 		// Original BGP's NLRI messages processing
 		msgs := make([]UnicastPrefix, 0)
@@ -227,15 +193,6 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
 			}
-			// j, err := json.Marshal(&m)
-			// if err != nil {
-			// 	glog.Errorf("failed to marshal Unicast Prefix message with error: %+v", err)
-			// 	return
-			// }
-			// if err := p.publisher.PublishMessage(bmp.UnicastPrefixMsg, []byte(m.RouterHash), j); err != nil {
-			// 	glog.Errorf("failed to push Unicast Prefix message to kafka with error: %+v", err)
-			// 	return
-			// }
 			glog.V(6).Infof("unicast_prefix message: %s", string(j))
 		}
 	}

@@ -26,7 +26,7 @@ func (mp *MPUnReachNLRI) String() string {
 
 // UnmarshalMPUnReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPUnReachNLRI(b []byte) (*MPUnReachNLRI, error) {
-	glog.V(6).Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
+	glog.V(5).Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
 	mp := MPUnReachNLRI{}
 	p := 0
 	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])
