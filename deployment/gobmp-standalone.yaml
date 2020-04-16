@@ -15,6 +15,11 @@ spec:
      port: 5000
      protocol: TCP
      targetPort: 5000
+   - name: perf
+     nodePort: 30767
+     port: 56767
+     protocol: TCP
+     targetPort: 56767
   selector:
     app: gobmp
   type: NodePort
@@ -49,6 +54,9 @@ spec:
           - containerPort: 5000
             protocol: TCP
             name: 5000-tcp
+          - containerPort: 56767
+            protocol: TCP
+            name: perf
       volumes:
         - name: config-volume
           configMap:
