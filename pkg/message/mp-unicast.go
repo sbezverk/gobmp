@@ -17,19 +17,20 @@ func (p *producer) unicast(op int, ph *bmp.PerPeerHeader, update *bgp.Update, la
 	//	default:
 	//		return nil, fmt.Errorf("unknown operation %d", op)
 	//	}
+
 	nlri14, err := update.GetNLRI14()
 	if err != nil {
 		return nil, err
 	}
 	prfxs := make([]UnicastPrefix, 0)
 	if label {
-		//		nlri, err := nlri14.GetNLRILU()
-		//		if err != nil {
-		//			return nil, err
-		//		}
-		//		for _, p := range nlri.NLRI {
-		//			glog.Infof("MP Labeled Unicast prefix: %+v", p)
-		//		}
+		nlri, err := nlri14.GetNLRILU()
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range nlri.NLRI {
+			glog.Infof("MP Labeled Unicast prefix: %+v", p)
+		}
 	} else {
 		nlri, err := nlri14.GetNLRIUnicast()
 		if err != nil {

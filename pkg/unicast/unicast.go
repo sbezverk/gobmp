@@ -30,12 +30,14 @@ func UnmarshalUnicastNLRI(b []byte) (*MPUnicastNLRI, error) {
 	}
 	for p := 0; p < len(b); {
 		up := MPUnicastPrefix{}
-		up.AFI = binary.BigEndian.Uint16(b[p : p+2])
-		p += 2
-		up.SAFI = b[p]
-		p++
-		up.Count = b[p]
-		p++
+		if b[p] == 0x0 {
+			up.AFI = binary.BigEndian.Uint16(b[p : p+2])
+			p += 2
+			up.SAFI = b[p]
+			p++
+			up.Count = b[p]
+			p++
+		}
 		up.Length = b[p]
 		p++
 		l := int(up.Length / 8)
@@ -76,12 +78,14 @@ func UnmarshalLUNLRI(b []byte) (*MPLUNLRI, error) {
 		up := MPLUPrefix{
 			Label: make([]*base.Label, 0),
 		}
-		up.AFI = binary.BigEndian.Uint16(b[p : p+2])
-		p += 2
-		up.SAFI = b[p]
-		p++
-		up.Count = b[p]
-		p++
+		if b[p] == 0x0 {
+			up.AFI = binary.BigEndian.Uint16(b[p : p+2])
+			p += 2
+			up.SAFI = b[p]
+			p++
+			up.Count = b[p]
+			p++
+		}
 		up.Length = b[p]
 		p++
 		bos := false
