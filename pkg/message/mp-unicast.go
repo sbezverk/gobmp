@@ -96,6 +96,10 @@ func (p *producer) unicast(op int, ph *bmp.PerPeerHeader, update *bgp.Update, la
 			for _, l := range e.Label {
 				prfx.Labels = append(prfx.Labels, l.Value)
 			}
+			// Some Label Unicast may carry BGP Attribute 40 (Prefix SID)
+			if psid, err := update.GetAttrPrefixSID(); err == nil {
+				prfx.PrefixSID = psid
+			}
 		}
 		prfxs = append(prfxs, prfx)
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
+	"github.com/sbezverk/gobmp/pkg/prefixsid"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -348,6 +349,21 @@ func (up *Update) GetNLRI29() (*bgpls.NLRI, error) {
 				return nil, err
 			}
 			return nlri29, nil
+		}
+	}
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetAttrPrefixSID check for presense of BGP Attribute Prefix SID (40) and instantiates it
+func (up *Update) GetAttrPrefixSID() (*prefixsid.PSid, error) {
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 40 {
+			psid, err := prefixsid.UnmarshalBGPAttrPrefixSID(attr.Attribute)
+			if err != nil {
+				return nil, err
+			}
+			return psid, nil
 		}
 	}
 	// TODO return new type of errors to be able to check for the code
