@@ -12,7 +12,9 @@ require (
 	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/message v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/parser v0.0.0-00010101000000-000000000000 // indirect
+	github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/pub v0.0.0-00010101000000-000000000000 // indirect
+	github.com/sbezverk/gobmp/pkg/unicast v0.0.0-00010101000000-000000000000 // indirect
 	github.com/segmentio/kafka-go v0.3.5 // indirect
 )
 
@@ -29,8 +31,10 @@ replace (
 	github.com/sbezverk/gobmp/pkg/ls => ./pkg/ls
 	github.com/sbezverk/gobmp/pkg/message => ./pkg/message
 	github.com/sbezverk/gobmp/pkg/parser => ./pkg/parser
+	github.com/sbezverk/gobmp/pkg/prefixsid => ./pkg/prefixsid
 	github.com/sbezverk/gobmp/pkg/pub => ./pkg/pub
 	github.com/sbezverk/gobmp/pkg/sr => ./pkg/sr
 	github.com/sbezverk/gobmp/pkg/srv6 => ./pkg/srv6
 	github.com/sbezverk/gobmp/pkg/tools => ./pkg/tools
+	github.com/sbezverk/gobmp/pkg/unicast => ./pkg/unicast
 )

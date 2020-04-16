@@ -1,6 +1,7 @@
 package message
 
 import (
+	"github.com/sbezverk/gobmp/pkg/prefixsid"
 	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 )
@@ -32,47 +33,48 @@ type PeerStateChange struct {
 	BMPErrorCode     int    `json:"bmp_error_code,omitempty"`
 	BMPErrorSubCode  int    `json:"bmp_error_sub_code,omitempty"`
 	ErrorText        string `json:"error_text,omitempty"`
-	IsL3VPN          bool   `json:"is_l,omitempty"`
-	IsPrepolicy      bool   `json:"isprepolicy,omitempty"`
-	IsIPv4           bool   `json:"is_ipv4,omitempty"`
-	IsLocRIB         bool   `json:"is_locrib,omitempty"`
-	IsLocRIBFiltered bool   `json:"is_locrib_filtered,omitempty"`
+	IsL3VPN          bool   `json:"is_l"`
+	IsPrepolicy      bool   `json:"isprepolicy"`
+	IsIPv4           bool   `json:"is_ipv4"`
+	IsLocRIB         bool   `json:"is_locrib"`
+	IsLocRIBFiltered bool   `json:"is_locrib_filtered"`
 	TableName        string `json:"table_name,omitempty"`
 }
 
 // UnicastPrefix defines a message format sent as a result of BMP Route Monitor message
 // which carries BGP Update with original NLRI information.
 type UnicastPrefix struct {
-	Action           string   `json:"action"` // Action can be "add" or "del"
-	Sequence         int      `json:"sequence,omitempty"`
-	Hash             string   `json:"hash,omitempty"`
-	RouterHash       string   `json:"router_hash,omitempty"`
-	RouterIP         string   `json:"router_ip,omitempty"`
-	BaseAttrHash     string   `json:"base_attr_hash,omitempty"`
-	PeerHash         string   `json:"peer_hash,omitempty"`
-	PeerIP           string   `json:"peer_ip,omitempty"`
-	PeerASN          int32    `json:"peer_asn,omitempty"`
-	Timestamp        string   `json:"timestamp,omitempty"`
-	Prefix           string   `json:"prefix,omitempty"`
-	PrefixLen        int32    `json:"prefix_len,omitempty"`
-	IsIPv4           bool     `json:"is_ipv4,omitempty"`
-	Origin           string   `json:"origin,omitempty"`
-	ASPath           []uint32 `json:"as_path,omitempty"`
-	ASPathCount      int32    `json:"as_path_count,omitempty"`
-	OriginAS         string   `json:"origin_as,omitempty"`
-	Nexthop          string   `json:"nexthop,omitempty"`
-	MED              uint32   `json:"med,omitempty"`
-	LocalPref        uint32   `json:"local_pref,omitempty"`
-	Aggregator       string   `json:"aggregator,omitempty"`
-	CommunityList    string   `json:"community_list,omitempty"`
-	ExtCommunityList string   `json:"ext_community_list,omitempty"`
-	IsAtomicAgg      bool     `json:"is_atomic_agg,omitempty"`
-	IsNexthopIPv4    bool     `json:"is_nexthop_ipv4,omitempty"`
-	OriginatorID     string   `json:"originator_id,omitempty"`
-	PathID           int32    `json:"path_id,omitempty"`
-	Labels           string   `json:"labels,omitempty"`
-	IsPrepolicy      bool     `json:"isprepolicy,omitempty"`
-	IsAdjRIBIn       bool     `json:"is_adj_rib_in,omitempty"`
+	Action           string          `json:"action"` // Action can be "add" or "del"
+	Sequence         int             `json:"sequence,omitempty"`
+	Hash             string          `json:"hash,omitempty"`
+	RouterHash       string          `json:"router_hash,omitempty"`
+	RouterIP         string          `json:"router_ip,omitempty"`
+	BaseAttrHash     string          `json:"base_attr_hash,omitempty"`
+	PeerHash         string          `json:"peer_hash,omitempty"`
+	PeerIP           string          `json:"peer_ip,omitempty"`
+	PeerASN          int32           `json:"peer_asn,omitempty"`
+	Timestamp        string          `json:"timestamp,omitempty"`
+	Prefix           string          `json:"prefix,omitempty"`
+	PrefixLen        int32           `json:"prefix_len,omitempty"`
+	IsIPv4           bool            `json:"is_ipv4"`
+	Origin           string          `json:"origin,omitempty"`
+	ASPath           []uint32        `json:"as_path,omitempty"`
+	ASPathCount      int32           `json:"as_path_count,omitempty"`
+	OriginAS         string          `json:"origin_as,omitempty"`
+	Nexthop          string          `json:"nexthop,omitempty"`
+	MED              uint32          `json:"med,omitempty"`
+	LocalPref        uint32          `json:"local_pref,omitempty"`
+	Aggregator       string          `json:"aggregator,omitempty"`
+	CommunityList    string          `json:"community_list,omitempty"`
+	ExtCommunityList string          `json:"ext_community_list,omitempty"`
+	IsAtomicAgg      bool            `json:"is_atomic_agg"`
+	IsNexthopIPv4    bool            `json:"is_nexthop_ipv4"`
+	OriginatorID     string          `json:"originator_id,omitempty"`
+	PathID           int32           `json:"path_id,omitempty"`
+	Labels           []uint32        `json:"labels,omitempty"`
+	IsPrepolicy      bool            `json:"isprepolicy"`
+	IsAdjRIBIn       bool            `json:"is_adj_rib_in"`
+	PrefixSID        *prefixsid.PSid `json:"prefix_sid,omitempty"`
 }
 
 // LSNode defines a structure of LS Node message
@@ -107,8 +109,8 @@ type LSNode struct {
 	SRLocalBlock        string   `json:"sr_local_block,omitempty"`
 	SRv6CapabilitiesTLV string   `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             string   `json:"node_msd,omitempty"`
-	IsPrepolicy         bool     `json:"isprepolicy,omitempty"`
-	IsAdjRIBIn          bool     `json:"is_adj_rib_in,omitempty"`
+	IsPrepolicy         bool     `json:"isprepolicy"`
+	IsAdjRIBIn          bool     `json:"is_adj_rib_in"`
 }
 
 // LSLink defines a structure of LS link message
@@ -156,8 +158,8 @@ type LSLink struct {
 	LocalNodeASN          uint32               `json:"local_node_asn,omitempty"`
 	RemoteNodeASN         uint32               `json:"remote_node_asn,omitempty"`
 	SRv6BGPPeerNodeSID    *srv6.BGPPeerNodeSID `json:"srv6_bgp_peer_node_sid,omitempty"`
-	IsPrepolicy           bool                 `json:"isprepolicy,omitempty"`
-	IsAdjRIBIn            bool                 `json:"is_adj_rib_in,omitempty"`
+	IsPrepolicy           bool                 `json:"isprepolicy"`
+	IsAdjRIBIn            bool                 `json:"is_adj_rib_in"`
 	LSAdjacencySID        *sr.AdjacencySIDTLV  `json:"ls_adjacency_sid,omitempty"`
 	LinkMSD               string               `json:"link_msd,omitempty"`
 	UnidirLinkDelay       uint32               `json:"unidir_link_delay,omitempty"`
@@ -183,7 +185,7 @@ type L3VPNPrefix struct {
 	Timestamp        string   `json:"timestamp,omitempty"`
 	Prefix           string   `json:"prefix,omitempty"`
 	PrefixLen        int32    `json:"prefix_len,omitempty"`
-	IsIPv4           bool     `json:"is_ipv4,omitempty"`
+	IsIPv4           bool     `json:"is_ipv4"`
 	Origin           string   `json:"origin,omitempty"`
 	ASPath           []uint32 `json:"as_path,omitempty"`
 	ASPathCount      int32    `json:"as_path_count,omitempty"`
@@ -195,13 +197,13 @@ type L3VPNPrefix struct {
 	CommunityList    string   `json:"community_list,omitempty"`
 	ExtCommunityList string   `json:"ext_community_list,omitempty"`
 	ClusterList      string   `json:"cluster_list,omitempty"`
-	IsAtomicAgg      bool     `json:"is_atomic_agg,omitempty"`
-	IsNexthopIPv4    bool     `json:"is_nexthop_ipv4,omitempty"`
+	IsAtomicAgg      bool     `json:"is_atomic_agg"`
+	IsNexthopIPv4    bool     `json:"is_nexthop_ipv4"`
 	OriginatorID     string   `json:"originator_id,omitempty"`
 	PathID           int32    `json:"path_id,omitempty"`
 	Labels           []uint32 `json:"labels,omitempty"`
-	IsPrepolicy      bool     `json:"isprepolicy,omitempty"`
-	IsAdjRIBIn       bool     `json:"is_adj_rib_in,omitempty"`
+	IsPrepolicy      bool     `json:"isprepolicy"`
+	IsAdjRIBIn       bool     `json:"is_adj_rib_in"`
 	VPNRD            string   `json:"vpn_rd,omitempty"`
 	VPNRDType        uint16   `json:"vpn_rd_type"`
 }
@@ -239,8 +241,8 @@ type LSPrefix struct {
 	IGPMetric     uint32           `json:"igp_metric,omitempty"`
 	Prefix        string           `json:"prefix,omitempty"`
 	PrefixLen     int32            `json:"prefix_len,omitempty"`
-	IsPrepolicy   bool             `json:"isprepolicy,omitempty"`
-	IsAdjRIBIn    bool             `json:"is_adj_rib_in,omitempty"`
+	IsPrepolicy   bool             `json:"isprepolicy"`
+	IsAdjRIBIn    bool             `json:"is_adj_rib_in"`
 	LSPrefixSID   *sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
 }
 
@@ -278,8 +280,8 @@ type LSSRv6SID struct {
 	IGPMetric            uint32                 `json:"igp_metric,omitempty"`
 	Prefix               string                 `json:"prefix,omitempty"`
 	PrefixLen            int32                  `json:"prefix_len,omitempty"`
-	IsPrepolicy          bool                   `json:"isprepolicy,omitempty"`
-	IsAdjRIBIn           bool                   `json:"is_adj_rib_in,omitempty"`
+	IsPrepolicy          bool                   `json:"isprepolicy"`
+	IsAdjRIBIn           bool                   `json:"is_adj_rib_in"`
 	SRv6SID              []string               `json:"srv6_sid,omitempty"`
 	SRv6EndpointBehavior *srv6.EndpointBehavior `json:"srv6_endpoint_behavior,omitempty"`
 	SRv6BGPPeerNodeSID   *srv6.BGPPeerNodeSID   `json:"srv6_bgp_peer_node_sid,omitempty"`
@@ -288,19 +290,17 @@ type LSSRv6SID struct {
 
 // EVPNPrefix defines the structure of EVPN message
 type EVPNPrefix struct {
-	Action       string `json:"action"` // Action can be "add" or "del"
-	Sequence     int    `json:"sequence,omitempty"`
-	Hash         string `json:"hash,omitempty"`
-	RouterHash   string `json:"router_hash,omitempty"`
-	RouterIP     string `json:"router_ip,omitempty"`
-	BaseAttrHash string `json:"base_attr_hash,omitempty"`
-	PeerHash     string `json:"peer_hash,omitempty"`
-	PeerIP       string `json:"peer_ip,omitempty"`
-	PeerASN      int32  `json:"peer_asn,omitempty"`
-	Timestamp    string `json:"timestamp,omitempty"`
-	//	Prefix           string   `json:"prefix,omitempty"`
-	//	PrefixLen        int32    `json:"prefix_len,omitempty"`
-	IsIPv4           bool     `json:"is_ipv4,omitempty"`
+	Action           string   `json:"action"` // Action can be "add" or "del"
+	Sequence         int      `json:"sequence,omitempty"`
+	Hash             string   `json:"hash,omitempty"`
+	RouterHash       string   `json:"router_hash,omitempty"`
+	RouterIP         string   `json:"router_ip,omitempty"`
+	BaseAttrHash     string   `json:"base_attr_hash,omitempty"`
+	PeerHash         string   `json:"peer_hash,omitempty"`
+	PeerIP           string   `json:"peer_ip,omitempty"`
+	PeerASN          int32    `json:"peer_asn,omitempty"`
+	Timestamp        string   `json:"timestamp,omitempty"`
+	IsIPv4           bool     `json:"is_ipv4"`
 	Origin           string   `json:"origin,omitempty"`
 	ASPath           []uint32 `json:"as_path,omitempty"`
 	ASPathCount      int32    `json:"as_path_count,omitempty"`
@@ -312,13 +312,13 @@ type EVPNPrefix struct {
 	CommunityList    string   `json:"community_list,omitempty"`
 	ExtCommunityList string   `json:"ext_community_list,omitempty"`
 	ClusterList      string   `json:"cluster_list,omitempty"`
-	IsAtomicAgg      bool     `json:"is_atomic_agg,omitempty"`
-	IsNexthopIPv4    bool     `json:"is_nexthop_ipv4,omitempty"`
+	IsAtomicAgg      bool     `json:"is_atomic_agg"`
+	IsNexthopIPv4    bool     `json:"is_nexthop_ipv4"`
 	OriginatorID     string   `json:"originator_id,omitempty"`
 	PathID           int32    `json:"path_id,omitempty"`
 	Labels           []uint32 `json:"labels,omitempty"`
-	IsPrepolicy      bool     `json:"isprepolicy,omitempty"`
-	IsAdjRIBIn       bool     `json:"is_adj_rib_in,omitempty"`
+	IsPrepolicy      bool     `json:"isprepolicy"`
+	IsAdjRIBIn       bool     `json:"is_adj_rib_in"`
 	VPNRD            string   `json:"vpn_rd,omitempty"`
 	VPNRDType        uint16   `json:"vpn_rd_type"`
 	ESI              string   `json:"eth_segment_id,omitempty"`
