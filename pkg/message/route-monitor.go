@@ -57,6 +57,8 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			if !ipv4Flag {
 				glog.Infof("2 IP6 (IP version 6) : 1 Unicast All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 			}
+			// false passed since it is just a Unicast message
+			p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, false, ipv4Flag)
 		case 16:
 			glog.Infof("1 IP (IP version 4) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 			ipv4Flag = true
@@ -65,6 +67,8 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			if !ipv4Flag {
 				glog.Infof("2 IP (IP version 6) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 			}
+			// true passed since it is Labeled Unicast message
+			p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, true, ipv4Flag)
 		case 18:
 			glog.V(6).Infof("1 IP (IP version 4) : 128 MPLS-labeled VPN address")
 			msg, err := p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)

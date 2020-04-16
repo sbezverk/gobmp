@@ -60,6 +60,18 @@ func (o *OpenMessage) Is4BytesASCapable() (int32, bool) {
 	return 0, false
 }
 
+// IsMultiLabelCapable returns true or false if Open message originated by a bgp speaker
+// supporting Multiple Label Capability
+func (o *OpenMessage) IsMultiLabelCapable() bool {
+	for _, t := range o.OptionalParameters {
+		if t.Type == 8 {
+			return true
+		}
+	}
+
+	return false
+}
+
 // UnmarshalBGPOpenMessage validate information passed in byte slice and returns BGPOpenMessage object
 func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 	glog.V(6).Infof("BGPOpenMessage Raw: %s", tools.MessageHex(b))
