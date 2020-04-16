@@ -105,13 +105,13 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []byte
-		expect *MPLUNLRI
+		expect *MPUnicastNLRI
 	}{
 		{
 			name:  "mp unicast nlri 1",
 			input: []byte{0x38, 0x00, 0x00, 0x31, 0x0a, 0x00, 0x00, 0x00},
-			expect: &MPLUNLRI{
-				NLRI: []MPLUPrefix{
+			expect: &MPUnicastNLRI{
+				NLRI: []MPUnicastPrefix{
 					{
 						Length: 0x38,
 						Label: []*base.Label{
@@ -129,8 +129,8 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 		{
 			name:  "mp unicast nlri 1",
 			input: []byte{0x38, 0x00, 0x00, 0x31, 0x0a, 0x00, 0x00, 0x00},
-			expect: &MPLUNLRI{
-				NLRI: []MPLUPrefix{
+			expect: &MPUnicastNLRI{
+				NLRI: []MPUnicastPrefix{
 					{
 						Length: 0x38,
 						Label: []*base.Label{

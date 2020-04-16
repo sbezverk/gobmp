@@ -117,7 +117,7 @@ func (mp *MPReachNLRI) GetNLRIUnicast() (*unicast.MPUnicastNLRI, error) {
 }
 
 // GetNLRILU check for presense of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
-func (mp *MPReachNLRI) GetNLRILU() (*unicast.MPLUNLRI, error) {
+func (mp *MPReachNLRI) GetNLRILU() (*unicast.MPUnicastNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 4 {
 		nlri, err := unicast.UnmarshalLUNLRI(mp.NLRI)
 		if err != nil {

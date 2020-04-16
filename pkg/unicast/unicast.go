@@ -13,6 +13,7 @@ type MPUnicastPrefix struct {
 	AFI    uint16
 	SAFI   uint8
 	Count  uint8
+	Label  []*base.Label
 	Length uint8
 	Prefix []byte
 }
@@ -53,29 +54,14 @@ func UnmarshalUnicastNLRI(b []byte) (*MPUnicastNLRI, error) {
 	return &mpnlri, nil
 }
 
-// MPLUPrefix defines a single NLRI entry
-type MPLUPrefix struct {
-	AFI    uint16
-	SAFI   uint8
-	Count  uint8
-	Length uint8
-	Label  []*base.Label
-	Prefix []byte
-}
-
-// MPLUNLRI defines a collection of MP Unicast Prefixes recieved in MP_BGP_REACH_NLRI
-type MPLUNLRI struct {
-	NLRI []MPLUPrefix
-}
-
 // UnmarshalLUNLRI builds MP NLRI object from the slice of bytes
-func UnmarshalLUNLRI(b []byte) (*MPLUNLRI, error) {
+func UnmarshalLUNLRI(b []byte) (*MPUnicastNLRI, error) {
 	glog.V(5).Infof("MP Label Unicast NLRI Raw: %s", tools.MessageHex(b))
-	mpnlri := MPLUNLRI{
-		NLRI: make([]MPLUPrefix, 0),
+	mpnlri := MPUnicastNLRI{
+		NLRI: make([]MPUnicastPrefix, 0),
 	}
 	for p := 0; p < len(b); {
-		up := MPLUPrefix{
+		up := MPUnicastPrefix{
 			Label: make([]*base.Label, 0),
 		}
 		if b[p] == 0x0 {

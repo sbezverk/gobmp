@@ -50,25 +50,48 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		}
 		switch t {
 		case 1:
-			glog.Infof("1 IP (IP version 4) : 1 Unicast All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+			glog.V(5).Infof("1 IP (IP version 4) : 1 Unicast All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 			ipv4Flag = true
 			fallthrough
 		case 2:
 			if !ipv4Flag {
-				glog.Infof("2 IP6 (IP version 6) : 1 Unicast All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+				glog.V(5).Infof("2 IP6 (IP version 6) : 1 Unicast All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 			}
 			// false passed since it is just a Unicast message
-			p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, false, ipv4Flag)
+			msgs, err := p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, false, ipv4Flag)
+			if err != nil {
+				glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
+				return
+			}
+			// Loop through and publish all collected messages
+			for _, m := range msgs {
+				if err := p.marshalAndPublish(&m, bmp.UnicastPrefixMsg, []byte(m.RouterHash), true); err != nil {
+					glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
+					return
+				}
+			}
 		case 16:
-			glog.Infof("1 IP (IP version 4) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+			glog.V(5).Infof("1 IP (IP version 4) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 			ipv4Flag = true
 			fallthrough
 		case 17:
 			if !ipv4Flag {
-				glog.Infof("2 IP (IP version 6) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
+				glog.V(5).Infof("2 IP (IP version 6) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 			}
 			// true passed since it is Labeled Unicast message
 			p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, true, ipv4Flag)
+			msgs, err := p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, true, ipv4Flag)
+			if err != nil {
+				glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
+				return
+			}
+			// Loop through and publish all collected messages
+			for _, m := range msgs {
+				if err := p.marshalAndPublish(&m, bmp.UnicastPrefixMsg, []byte(m.RouterHash), true); err != nil {
+					glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
+					return
+				}
+			}
 		case 18:
 			glog.V(6).Infof("1 IP (IP version 4) : 128 MPLS-labeled VPN address")
 			msg, err := p.l3vpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
@@ -202,18 +225,36 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		msgs = append(msgs, msg...)
 		// Loop through and publish all collected messages
 		for _, m := range msgs {
-			j, err := json.Marshal(&m)
-			if err != nil {
-				glog.Errorf("failed to marshal Unicast Prefix message with error: %+v", err)
+			if err := p.marshalAndPublish(&m, bmp.UnicastPrefixMsg, []byte(m.RouterHash), false); err != nil {
+				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
 			}
-			if err := p.publisher.PublishMessage(bmp.UnicastPrefixMsg, []byte(m.RouterHash), j); err != nil {
-				glog.Errorf("failed to push Unicast Prefix message to kafka with error: %+v", err)
-				return
-			}
+			// j, err := json.Marshal(&m)
+			// if err != nil {
+			// 	glog.Errorf("failed to marshal Unicast Prefix message with error: %+v", err)
+			// 	return
+			// }
+			// if err := p.publisher.PublishMessage(bmp.UnicastPrefixMsg, []byte(m.RouterHash), j); err != nil {
+			// 	glog.Errorf("failed to push Unicast Prefix message to kafka with error: %+v", err)
+			// 	return
+			// }
 			glog.V(6).Infof("unicast_prefix message: %s", string(j))
 		}
 	}
+}
+
+func (p *producer) marshalAndPublish(msg interface{}, msgType int, hash []byte, debug bool) error {
+	j, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal a message of type %d with error: %+v", msgType, err)
+	}
+	if err := p.publisher.PublishMessage(msgType, hash, j); err != nil {
+		return fmt.Errorf("failed to push a message of type %d to kafka with error: %+v", msgType, err)
+	}
+	if debug {
+		glog.Infof("message of type: %+v json: %+v", msgType, j)
+	}
+	return nil
 }
 
 func getNLRIMessageType(pattrs []bgp.PathAttribute) (int, error) {
