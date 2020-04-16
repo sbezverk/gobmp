@@ -41,7 +41,7 @@ type PSid struct {
 
 // UnmarshalBGPAttrPrefixSID instantiates a prefix sid object
 func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
-	glog.Infof("UnmarshalBGPAttrPrefixSID RAW: %+v", tools.MessageHex(b))
+	glog.V(6).Infof("UnmarshalBGPAttrPrefixSID Raw: %+v", tools.MessageHex(b))
 	psid := PSid{
 		LabelIndex:     nil,
 		OriginatorSRGB: nil,

@@ -25,7 +25,7 @@ type MPUnicastNLRI struct {
 
 // UnmarshalUnicastNLRI builds MP NLRI object from the slice of bytes
 func UnmarshalUnicastNLRI(b []byte) (*MPUnicastNLRI, error) {
-	glog.V(5).Infof("MP Unicast NLRI Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("MP Unicast NLRI Raw: %s", tools.MessageHex(b))
 	mpnlri := MPUnicastNLRI{
 		NLRI: make([]MPUnicastPrefix, 0),
 	}
@@ -56,7 +56,7 @@ func UnmarshalUnicastNLRI(b []byte) (*MPUnicastNLRI, error) {
 
 // UnmarshalLUNLRI builds MP NLRI object from the slice of bytes
 func UnmarshalLUNLRI(b []byte) (*MPUnicastNLRI, error) {
-	glog.V(5).Infof("MP Label Unicast NLRI Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("MP Label Unicast NLRI Raw: %s", tools.MessageHex(b))
 	mpnlri := MPUnicastNLRI{
 		NLRI: make([]MPUnicastPrefix, 0),
 	}
