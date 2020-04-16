@@ -57,7 +57,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.V(5).Infof("2 IP6 (IP version 6) : 1 Unicast All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 			}
 			// false passed since it is just a Unicast message
-			msgs, err := p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, false, ipv4Flag)
+			msgs, err := p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, false)
 			if err != nil {
 				glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
 				return
@@ -78,8 +78,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.V(5).Infof("2 IP (IP version 6) : 4 MPLS Labels All attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 			}
 			// true passed since it is Labeled Unicast message
-			p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, true, ipv4Flag)
-			msgs, err := p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, true, ipv4Flag)
+			msgs, err := p.unicast(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update, true)
 			if err != nil {
 				glog.Errorf("failed to produce original NLRI Withdraw message with error: %+v", err)
 				return
@@ -251,7 +250,7 @@ func (p *producer) marshalAndPublish(msg interface{}, msgType int, hash []byte, 
 		return fmt.Errorf("failed to push a message of type %d to kafka with error: %+v", msgType, err)
 	}
 	if debug {
-		glog.Infof("message of type: %+v json: %+v", msgType, j)
+		glog.Infof("message of type: %+v json: %s", msgType, string(j))
 	}
 	return nil
 }

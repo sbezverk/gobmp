@@ -46,6 +46,11 @@ func (mp *MPReachNLRI) String() string {
 	return s
 }
 
+// IsIPv6NLRI return true if NLRI is for IPv6 address family
+func (mp *MPReachNLRI) IsIPv6NLRI() bool {
+	return mp.AddressFamilyID == 2
+}
+
 // GetNextHop return a string representation of the next hop ip address.
 func (mp *MPReachNLRI) GetNextHop() string {
 	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 128 {

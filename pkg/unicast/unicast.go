@@ -91,6 +91,8 @@ func UnmarshalLUNLRI(b []byte) (*MPUnicastNLRI, error) {
 		up.Prefix = make([]byte, l)
 		copy(up.Prefix, b[p:p+l])
 		p += l
+		// Adjusting prefix length to remove bits used by labels each label takes 3 bytes or 24 bits
+		up.Length -= uint8(len(up.Label) * 24)
 		mpnlri.NLRI = append(mpnlri.NLRI, up)
 	}
 

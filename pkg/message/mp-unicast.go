@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/unicast"
 )
 
 // unicast process nlri 14 afi 1/2 safi 1 messages and generates UnicastPrefix messages
-func (p *producer) unicast(op int, ph *bmp.PerPeerHeader, update *bgp.Update, label bool, ipv4 bool) ([]UnicastPrefix, error) {
+func (p *producer) unicast(op int, ph *bmp.PerPeerHeader, update *bgp.Update, label bool) ([]UnicastPrefix, error) {
 	var operation string
 	switch op {
 	case 0:
@@ -40,7 +39,6 @@ func (p *producer) unicast(op int, ph *bmp.PerPeerHeader, update *bgp.Update, la
 		}
 	}
 	for _, e := range u.NLRI {
-		glog.Infof("MP Labeled Unicast prefix: %+v", p)
 		prfx := UnicastPrefix{
 			Action:       operation,
 			RouterHash:   p.speakerHash,
@@ -71,11 +69,17 @@ func (p *producer) unicast(op int, ph *bmp.PerPeerHeader, update *bgp.Update, la
 		if lp := update.GetAttrLocalPref(); lp != nil {
 			prfx.LocalPref = *lp
 		}
-		if !ipv4 {
+		if ph.FlagV {
+			// Peer is IPv6
+			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
+		} else {
+			// Peer is IPv4
+			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
+		}
+		prfx.Nexthop = nlri14.GetNextHop()
+		if nlri14.IsIPv6NLRI() {
 			// IPv6 specific conversions
 			prfx.IsIPv4 = false
-			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-			prfx.Nexthop = net.IP(update.GetAttrNextHop()).To16().String()
 			prfx.IsNexthopIPv4 = false
 			a := make([]byte, 16)
 			copy(a, e.Prefix)
@@ -83,8 +87,6 @@ func (p *producer) unicast(op int, ph *bmp.PerPeerHeader, update *bgp.Update, la
 		} else {
 			// IPv4 specific conversions
 			prfx.IsIPv4 = true
-			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-			prfx.Nexthop = net.IP(update.GetAttrNextHop()).To4().String()
 			prfx.IsNexthopIPv4 = true
 			a := make([]byte, 4)
 			copy(a, e.Prefix)
