@@ -88,7 +88,8 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		glog.Errorf("failed to NLRI 71 with error: %+v", err)
 		return
 	}
-	switch ls.GetSubType() {
+	t := ls.GetSubType()
+	switch t {
 	case 32:
 		msg, err := p.lsNode(nlri, operation, ph, update)
 		if err != nil {
@@ -132,5 +133,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 			glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
 			return
 		}
+	default:
+		glog.Warningf("Unknown NLRI 71 Sub type %d", t)
 	}
 }
