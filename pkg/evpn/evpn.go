@@ -22,7 +22,12 @@ type RouteTypeSpec interface {
 	getLabel() []*base.Label
 }
 
-// NLRI defines EVPN NLRI object
+// Route defines a collection of EVPN NLRI objects of the same type
+type Route struct {
+	Route []*NLRI
+}
+
+// NLRI defines a single EVPN NLRI object
 // https://tools.ietf.org/html/rfc7432
 type NLRI struct {
 	RouteType uint8
@@ -86,46 +91,53 @@ func (n *NLRI) GetEVPNLabel() []uint32 {
 }
 
 // UnmarshalEVPNNLRI instantiates an EVPN NLRI object
-func UnmarshalEVPNNLRI(b []byte) (*NLRI, error) {
+func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 	glog.V(5).Infof("EVPN NLRI Raw: %s", tools.MessageHex(b))
-	var err error
-	n := NLRI{}
-	p := 0
-	n.RouteType = b[p]
-	p++
-	n.Length = b[p]
-	p++
-	switch n.RouteType {
-	case 1:
-		n.RouteTypeSpec, err = UnmarshalEVPNEthAutoDiscovery(b[p:])
-		if err != nil {
-			return nil, err
+	r := Route{
+		Route: make([]*NLRI, 0),
+	}
+	for p := 0; p < len(b); {
+		var err error
+		n := &NLRI{}
+		n.RouteType = b[p]
+		p++
+		n.Length = b[p]
+		p++
+		l := int(n.Length)
+		switch n.RouteType {
+		case 1:
+			n.RouteTypeSpec, err = UnmarshalEVPNEthAutoDiscovery(b[p : p+l])
+			if err != nil {
+				return nil, err
+			}
+		case 2:
+			n.RouteTypeSpec, err = UnmarshalEVPNMACIPAdvertisement(b[p : p+l])
+			if err != nil {
+				return nil, err
+			}
+		case 3:
+			n.RouteTypeSpec, err = UnmarshalEVPNInclusiveMulticastEthTag(b[p : p+l])
+			if err != nil {
+				return nil, err
+			}
+		case 4:
+			n.RouteTypeSpec, err = UnmarshalEVPNEthernetSegment(b[p : p+l])
+			if err != nil {
+				return nil, err
+			}
+		case 5:
+			n.RouteTypeSpec, err = UnmarshalEVPNIPPrefix(b[p : p+l])
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("unknown route type %d", n.RouteType)
 		}
-	case 2:
-		n.RouteTypeSpec, err = UnmarshalEVPNMACIPAdvertisement(b[p:])
-		if err != nil {
-			return nil, err
-		}
-	case 3:
-		n.RouteTypeSpec, err = UnmarshalEVPNInclusiveMulticastEthTag(b[p:])
-		if err != nil {
-			return nil, err
-		}
-	case 4:
-		n.RouteTypeSpec, err = UnmarshalEVPNEthernetSegment(b[p:])
-		if err != nil {
-			return nil, err
-		}
-	case 5:
-		n.RouteTypeSpec, err = UnmarshalEVPNIPPrefix(b[p:])
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("unknown route type %d", n.RouteType)
+		r.Route = append(r.Route, n)
+		p += l
 	}
 
-	return &n, nil
+	return &r, nil
 }
 
 // ESI defines 10 bytes of Ethernet Segment Identifier

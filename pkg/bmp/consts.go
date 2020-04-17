@@ -32,6 +32,8 @@ const (
 	L3VPNMsg = 11
 	// LSPrefixMsg defines BMP Route Monitoring message carrying Prefix NLRI
 	LSPrefixMsg = 12
-	// LSSRv6SIDMsg defines BMP Route Monitoring message carrying Prefix NLRI
+	// LSSRv6SIDMsg defines BMP Route Monitoring message carrying SRv6 SID NLRI
 	LSSRv6SIDMsg = 13
+	// EVPNMsg defines BMP Route Monitoring message carrying EVPN NLRI
+	EVPNMsg = 14
 )

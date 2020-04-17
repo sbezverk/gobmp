@@ -94,13 +94,13 @@ func (mp *MPReachNLRI) GetNLRIL3VPN() (*l3vpn.NLRI, error) {
 }
 
 // GetNLRIEVPN check for presense of NLRI EVPN AFI 25 and SAFI 70 in the NLRI 14 NLRI data and if exists, instantiate EVPN object
-func (mp *MPReachNLRI) GetNLRIEVPN() (*evpn.NLRI, error) {
+func (mp *MPReachNLRI) GetNLRIEVPN() (*evpn.Route, error) {
 	if mp.AddressFamilyID == 25 && mp.SubAddressFamilyID == 70 {
-		nlri, err := evpn.UnmarshalEVPNNLRI(mp.NLRI)
+		route, err := evpn.UnmarshalEVPNNLRI(mp.NLRI)
 		if err != nil {
 			return nil, err
 		}
-		return nlri, nil
+		return route, nil
 	}
 
 	// TODO return new type of errors to be able to check for the code

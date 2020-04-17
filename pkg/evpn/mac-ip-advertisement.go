@@ -71,6 +71,7 @@ func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
 		return nil, err
 	}
 	p += 10
+	t.EthTag = make([]byte, 4)
 	copy(t.EthTag, b[p:p+4])
 	p += 4
 	t.MACAddrLength = b[p]
@@ -92,7 +93,7 @@ func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
 		p += l
 	}
 	for i := 0; p < len(b); i++ {
-		l, err := base.MakeLabel(b[p:])
+		l, err := base.MakeLabel(b[p : p+3])
 		if err != nil {
 			return nil, err
 		}
