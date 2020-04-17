@@ -11,13 +11,9 @@ import (
 
 // evpn process MP_REACH_NLRI AFI 25 SAFI 70 update message and returns
 // EVPN prefix object.
-func (p *producer) evpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]EVPNPrefix, error) {
-	nlri14, err := update.GetNLRI14()
-	if err != nil {
-		return nil, err
-	}
+func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]EVPNPrefix, error) {
 	glog.Infof("All attributes in evpn upate: %+v", update.GetAllAttributeID())
-	evpn, err := nlri14.GetNLRIEVPN()
+	evpn, err := nlri.GetNLRIEVPN()
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +36,7 @@ func (p *producer) evpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]EV
 			PeerHash:     ph.GetPeerHash(),
 			PeerASN:      ph.PeerAS,
 			Timestamp:    ph.PeerTimestamp,
-			Nexthop:      nlri14.GetNextHop(),
+			Nexthop:      nlri.GetNextHop(),
 			IsAtomicAgg:  update.GetAttrAtomicAggregate(),
 			Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
 		}

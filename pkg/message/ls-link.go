@@ -1,20 +1,26 @@
 package message
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSLink, error) {
-	nlri14, err := update.GetNLRI14()
+func (p *producer) lsLink(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSLink, error) {
+	nlri71, err := nlri.GetNLRI71()
 	if err != nil {
 		return nil, err
 	}
-	nlri71, err := nlri14.GetNLRI71()
-	if err != nil {
-		return nil, err
+	var operation string
+	switch op {
+	case 0:
+		operation = "add"
+	case 1:
+		operation = "del"
+	default:
+		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSLink{
 		Action:       operation,
@@ -25,7 +31,7 @@ func (p *producer) lsLink(operation string, ph *bmp.PerPeerHeader, update *bgp.U
 		PeerASN:      ph.PeerAS,
 		Timestamp:    ph.PeerTimestamp,
 	}
-	msg.Nexthop = nlri14.GetNextHop()
+	msg.Nexthop = nlri.GetNextHop()
 	if ph.FlagV {
 		// IPv6 specific conversions
 		msg.PeerIP = net.IP(ph.PeerAddress).To16().String()
