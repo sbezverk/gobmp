@@ -67,6 +67,7 @@ func UnmarshalEVPNEthAutoDiscovery(b []byte) (*EthAutoDiscovery, error) {
 		return nil, err
 	}
 	p += 10
+	t.EthTag = make([]byte, 4)
 	copy(t.EthTag, b[p:p+4])
 	p += 4
 	bos := false

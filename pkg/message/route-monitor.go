@@ -102,14 +102,16 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		case 19:
 			glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address, attributes: %+v", routeMonitorMsg.Update.GetAllAttributeID())
 		case 24:
-			msg, err := p.evpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
+			msgs, err := p.evpn(AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
 				glog.Errorf("failed to produce evpn message with error: %+v", err)
 				return
 			}
-			if err := p.marshalAndPublish(&msg, bmp.EVPNMsg, []byte(msg.RouterHash), false); err != nil {
-				glog.Errorf("failed to process EVPNP message with error: %+v", err)
-				return
+			for _, msg := range msgs {
+				if err := p.marshalAndPublish(&msg, bmp.EVPNMsg, []byte(msg.RouterHash), false); err != nil {
+					glog.Errorf("failed to process EVPNP message with error: %+v", err)
+					return
+				}
 			}
 		case 32:
 			msg, err := p.lsNode("add", msg.PeerHeader, routeMonitorMsg.Update)

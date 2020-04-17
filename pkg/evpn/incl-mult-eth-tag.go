@@ -61,6 +61,7 @@ func UnmarshalEVPNInclusiveMulticastEthTag(b []byte) (*InclusiveMulticastEthTag,
 		return nil, err
 	}
 	p += 8
+	t.EthTag = make([]byte, 4)
 	copy(t.EthTag, b[p:p+4])
 	p += 4
 	t.IPAddrLength = b[p]

@@ -71,6 +71,7 @@ func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
 		return nil, err
 	}
 	p += 10
+	t.EthTag = make([]byte, 4)
 	copy(t.EthTag, b[p:p+4])
 	p += 4
 	t.MACAddrLength = b[p]

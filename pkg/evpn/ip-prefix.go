@@ -70,6 +70,7 @@ func UnmarshalEVPNIPPrefix(b []byte) (*IPPrefix, error) {
 		return nil, err
 	}
 	p += 10
+	t.EthTag = make([]byte, 4)
 	copy(t.EthTag, b[p:p+4])
 	t.IPAddrLength = b[p]
 	p++
