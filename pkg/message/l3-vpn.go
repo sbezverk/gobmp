@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -22,6 +23,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		operation = "add"
 	case 1:
 		operation = "del"
+		glog.Infof("Delete operation for L3VPN prefix: %s", net.IP(nlril3vpn.GetL3VPNPrefix()).To4().String())
 	default:
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
