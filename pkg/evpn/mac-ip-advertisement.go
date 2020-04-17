@@ -92,7 +92,7 @@ func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
 		p += l
 	}
 	for i := 0; p < len(b); i++ {
-		l, err := base.MakeLabel(b[p:])
+		l, err := base.MakeLabel(b[p : p+3])
 		if err != nil {
 			return nil, err
 		}

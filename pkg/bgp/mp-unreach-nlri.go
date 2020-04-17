@@ -35,16 +35,17 @@ func UnmarshalMPUnReachNLRI(b []byte) (*MPUnReachNLRI, error) {
 	p++
 	// Only SAFI 1 and 2 NLRI's carries []Route, other SAFI
 	// may carry different type in NLRI, hence will require different decoding.
-	switch mp.SubAddressFamilyID {
-	case 1:
-		fallthrough
-	case 2:
-		wdr, err := base.UnmarshalRoutes(b)
-		if err != nil {
-			return nil, err
-		}
-		mp.WithdrawnRoutes = wdr
-	}
+	glog.Infof("MP_UNREACH_NLRI for AFI: %d SAFI: %d", mp.AddressFamilyID, mp.SubAddressFamilyID)
+	// switch mp.SubAddressFamilyID {
+	// case 1:
+	// 	fallthrough
+	// case 2:
+	// 	wdr, err := base.UnmarshalRoutes(b)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	mp.WithdrawnRoutes = wdr
+	// }
 
 	return &mp, nil
 }
