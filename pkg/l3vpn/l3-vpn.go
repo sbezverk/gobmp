@@ -1,6 +1,8 @@
 package l3vpn
 
 import (
+	"bytes"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -28,23 +30,30 @@ func (n *NLRI) GetL3VPNPrefix() []byte {
 
 // UnmarshalL3VPNNLRI instantiates a L3 VPN NLRI object
 func UnmarshalL3VPNNLRI(b []byte) (*NLRI, error) {
-	glog.V(6).Infof("L3VPN NLRI Raw: %s", tools.MessageHex(b))
+	glog.V(5).Infof("L3VPN NLRI Raw: %s", tools.MessageHex(b))
 	n := NLRI{}
 	p := 0
 	// Getting length of NLRI in bytes
 	n.Length = uint8(b[p] / 8)
 	p++
-	n.Labels = make([]*base.Label, 0)
-	// subtract 12 from the length as label stack follows by RD 8 bytes and prefix 4 bytes
-	bos := false
-	for !bos && p < len(b) {
-		l, err := base.MakeLabel(b[p : p+3])
-		if err != nil {
-			return nil, err
-		}
-		n.Labels = append(n.Labels, l)
+	// Next 3 bytes are a part of Compatibility field 0x800000
+	// then it is MP_UNREACH_NLRI and no Label information is present
+	if bytes.Compare([]byte{0x80, 0x00, 0x00}, b[p:p+3]) == 0 {
 		p += 3
-		bos = l.BoS
+		n.Labels = nil
+	} else {
+		// Otherwise getting labels
+		n.Labels = make([]*base.Label, 0)
+		bos := false
+		for !bos && p < len(b) {
+			l, err := base.MakeLabel(b[p : p+3])
+			if err != nil {
+				return nil, err
+			}
+			n.Labels = append(n.Labels, l)
+			p += 3
+			bos = l.BoS
+		}
 	}
 	rd, err := base.MakeRD(b[p : p+8])
 	if err != nil {

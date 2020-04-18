@@ -13,7 +13,6 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 		input  []byte
 		expect *MPUnicastNLRI
 	}{
-		// 18 0a 00 82
 		{
 			name:  "mp unicast nlri 1",
 			input: []byte{0x18, 0x0a, 0x00, 0x82},
@@ -87,6 +86,21 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "Default prefix",
+			input: []byte{0x0},
+			expect: &MPUnicastNLRI{
+				NLRI: []MPUnicastPrefix{
+					{
+						AFI:    0,
+						SAFI:   0,
+						Count:  0,
+						Length: 0x0,
+						Prefix: []byte{},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -113,7 +127,7 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
 					{
-						Length: 0x38,
+						Length: 32,
 						Label: []*base.Label{
 							{
 								Value: 3,
@@ -132,7 +146,7 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
 					{
-						Length: 0x38,
+						Length: 32,
 						Label: []*base.Label{
 							{
 								Value: 3,

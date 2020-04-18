@@ -20,24 +20,6 @@ func (rm *RouteMonitor) String() string {
 	return s
 }
 
-// CheckSAFI checks if Route Monitor message carries specified SAFI and returns true or false
-func (rm *RouteMonitor) CheckSAFI(safi int) bool {
-	for _, pa := range rm.Update.PathAttributes {
-		if pa.AttributeType == 0x0e {
-			mp, err := bgp.UnmarshalMPReachNLRI(pa.Attribute)
-			if err != nil {
-				glog.Errorf("failed to unmarshal MP_REACH_NLRI with error: %+v", err)
-				return false
-			}
-			if mp.SubAddressFamilyID == uint8(safi) {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
 // UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
 func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 	glog.V(6).Infof("BMP Route Monitor Message Raw: %s", tools.MessageHex(b))

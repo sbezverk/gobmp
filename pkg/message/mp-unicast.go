@@ -10,7 +10,8 @@ import (
 )
 
 // unicast process nlri 14 afi 1/2 safi 1 messages and generates UnicastPrefix messages
-func (p *producer) unicast(op int, ph *bmp.PerPeerHeader, update *bgp.Update, label bool) ([]UnicastPrefix, error) {
+func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update, label bool) ([]UnicastPrefix, error) {
+	var err error
 	var operation string
 	switch op {
 	case 0:
@@ -21,19 +22,19 @@ func (p *producer) unicast(op int, ph *bmp.PerPeerHeader, update *bgp.Update, la
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 
-	nlri14, err := update.GetNLRI14()
-	if err != nil {
-		return nil, err
-	}
+	//	nlri14, err := update.GetNLRI14()
+	//	if err != nil {
+	//		return nil, err
+	//	}
 	prfxs := make([]UnicastPrefix, 0)
 	var u *unicast.MPUnicastNLRI
 	if label {
-		u, err = nlri14.GetNLRILU()
+		u, err = nlri.GetNLRILU()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		u, err = nlri14.GetNLRIUnicast()
+		u, err = nlri.GetNLRIUnicast()
 		if err != nil {
 			return nil, err
 		}
@@ -76,8 +77,8 @@ func (p *producer) unicast(op int, ph *bmp.PerPeerHeader, update *bgp.Update, la
 			// Peer is IPv4
 			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 		}
-		prfx.Nexthop = nlri14.GetNextHop()
-		if nlri14.IsIPv6NLRI() {
+		prfx.Nexthop = nlri.GetNextHop()
+		if nlri.IsIPv6NLRI() {
 			// IPv6 specific conversions
 			prfx.IsIPv4 = false
 			prfx.IsNexthopIPv4 = false

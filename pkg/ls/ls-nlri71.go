@@ -118,6 +118,29 @@ func (ls *NLRI71) GetSRv6SIDNLRI() (*srv6.SIDNLRI, error) {
 	return s, nil
 }
 
+// GetSubType return NLRI 71 subtype
+func (ls *NLRI71) GetSubType() int {
+	switch ls.Type {
+	case 1:
+		// Node NLRI
+		return 32
+	case 2:
+		// Link NLRI
+		return 33
+	case 3:
+		// IPv4 Topology Prefix NLRI
+		return 34
+	case 4:
+		// IPv6 Topology Prefix NLRI
+		return 35
+	case 6:
+		// SRv6 SID NLRI
+		return 36
+	}
+
+	return 0
+}
+
 // UnmarshalLSNLRI71 builds Link State NLRI object ofor SAFI 71
 func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 	glog.V(6).Infof("LSNLRI71 Raw: %s", tools.MessageHex(b))

@@ -4,18 +4,15 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
 // l3vpn process MP_REACH_NLRI AFI 1/2 SAFI 128 update message and returns
 // L3VPN prefix object.
-func (p *producer) l3vpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*L3VPNPrefix, error) {
-	nlri14, err := update.GetNLRI14()
-	if err != nil {
-		return nil, err
-	}
-	nlril3vpn, err := nlri14.GetNLRIL3VPN()
+func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*L3VPNPrefix, error) {
+	nlril3vpn, err := nlri.GetNLRIL3VPN()
 	if err != nil {
 		return nil, err
 	}
@@ -26,6 +23,7 @@ func (p *producer) l3vpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*L3
 		operation = "add"
 	case 1:
 		operation = "del"
+		glog.Infof("Delete operation for L3VPN prefix: %s", net.IP(nlril3vpn.GetL3VPNPrefix()).To4().String())
 	default:
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
@@ -39,10 +37,11 @@ func (p *producer) l3vpn(op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*L3
 		PeerASN:      ph.PeerAS,
 		Timestamp:    ph.PeerTimestamp,
 		Prefix:       net.IP(nlril3vpn.GetL3VPNPrefix()).To4().String(),
-		Nexthop:      nlri14.GetNextHop(),
-		PrefixLen:    32,
-		IsAtomicAgg:  update.GetAttrAtomicAggregate(),
-		Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
+		Nexthop:      nlri.GetNextHop(),
+		// TODO, why 32 is hard coded here?????
+		PrefixLen:   32,
+		IsAtomicAgg: update.GetAttrAtomicAggregate(),
+		Aggregator:  fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
 	}
 	if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
 		prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()

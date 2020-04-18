@@ -310,36 +310,6 @@ func (up *Update) GetAttrAS4Aggregator() []byte {
 	return agg
 }
 
-// GetNLRI14 check for presense of NLRI 14  (MP_REACH_NLRI) in the update and if exists, instantiate MPReachNLRI object
-func (up *Update) GetNLRI14() (*MPReachNLRI, error) {
-	for _, attr := range up.PathAttributes {
-		if attr.AttributeType == 14 {
-			nlri14, err := UnmarshalMPReachNLRI(attr.Attribute)
-			if err != nil {
-				return nil, err
-			}
-			return nlri14, nil
-		}
-	}
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
-}
-
-// GetNLRI15 check for presense of NLRI 15  (MP_UNREACH_NLRI) in the update and if exists, instantiate MPUnReachNLRI object
-func (up *Update) GetNLRI15() (*MPUnReachNLRI, error) {
-	for _, attr := range up.PathAttributes {
-		if attr.AttributeType == 15 {
-			nlri15, err := UnmarshalMPUnReachNLRI(attr.Attribute)
-			if err != nil {
-				return nil, err
-			}
-			return nlri15, nil
-		}
-	}
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
-}
-
 // GetNLRI29 check for presense of NLRI 29 in the update and if exists, instantiate NLRI29 object
 func (up *Update) GetNLRI29() (*bgpls.NLRI, error) {
 	for _, attr := range up.PathAttributes {

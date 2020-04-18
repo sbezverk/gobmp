@@ -1,20 +1,26 @@
 package message
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp.Update, ipv4 bool) (*LSPrefix, error) {
-	nlri14, err := update.GetNLRI14()
+func (p *producer) lsPrefix(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update, ipv4 bool) (*LSPrefix, error) {
+	nlri71, err := nlri.GetNLRI71()
 	if err != nil {
 		return nil, err
 	}
-	nlri71, err := nlri14.GetNLRI71()
-	if err != nil {
-		return nil, err
+	var operation string
+	switch op {
+	case 0:
+		operation = "add"
+	case 1:
+		operation = "del"
+	default:
+		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSPrefix{
 		Action:       operation,
@@ -25,7 +31,7 @@ func (p *producer) lsPrefix(operation string, ph *bmp.PerPeerHeader, update *bgp
 		PeerASN:      ph.PeerAS,
 		Timestamp:    ph.PeerTimestamp,
 	}
-	msg.Nexthop = nlri14.GetNextHop()
+	msg.Nexthop = nlri.GetNextHop()
 	msg.PeerIP = ph.GetPeerAddrString()
 	// Processing other nlri and attributes, since they are optional, processing only if they exist
 	prfx, err := nlri71.GetPrefixNLRI(ipv4)

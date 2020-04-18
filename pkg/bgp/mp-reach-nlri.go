@@ -22,6 +22,11 @@ type MPReachNLRI struct {
 	NLRI                 []byte
 }
 
+// GetAFISAFIType returns underlaying NLRI's type based on AFI/SAFI
+func (mp *MPReachNLRI) GetAFISAFIType() int {
+	return getNLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)
+}
+
 func (mp *MPReachNLRI) String() string {
 	var s string
 	s += fmt.Sprintf("Address Family ID: %d\n", mp.AddressFamilyID)
@@ -136,7 +141,7 @@ func (mp *MPReachNLRI) GetNLRILU() (*unicast.MPUnicastNLRI, error) {
 }
 
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes
-func UnmarshalMPReachNLRI(b []byte) (*MPReachNLRI, error) {
+func UnmarshalMPReachNLRI(b []byte) (MPNLRI, error) {
 	glog.V(6).Infof("MPReachNLRI Raw: %s", tools.MessageHex(b))
 	mp := MPReachNLRI{}
 	p := 0
