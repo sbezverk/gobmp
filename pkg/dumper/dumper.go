@@ -9,8 +9,8 @@ import (
 
 type msgOut struct {
 	MsgType int    `json:"msg_type,omitempty"`
-	MsgHash []byte `json:"msg_hash,omitempty"`
-	Msg     []byte `json:"msg_data,omitempty"`
+	MsgHash string `json:"msg_hash,omitempty"`
+	Msg     string `json:"msg_data,omitempty"`
 }
 
 type pubwriter struct {
@@ -21,8 +21,8 @@ func (pw *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) err
 	var err error
 	m := msgOut{
 		MsgType: msgType,
-		MsgHash: msgHash,
-		Msg:     msg,
+		MsgHash: string(msgHash),
+		Msg:     string(msg),
 	}
 	b, err := json.Marshal(&m)
 	if err != nil {
