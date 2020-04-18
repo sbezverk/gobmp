@@ -127,7 +127,7 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
 					{
-						Length: 0x38,
+						Length: 32,
 						Label: []*base.Label{
 							{
 								Value: 3,
@@ -146,7 +146,7 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
 					{
-						Length: 0x38,
+						Length: 32,
 						Label: []*base.Label{
 							{
 								Value: 3,
