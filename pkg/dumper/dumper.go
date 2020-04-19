@@ -1,7 +1,7 @@
 package dumper
 
 import (
-	"encoding/json"
+	"log"
 	"os"
 
 	"github.com/sbezverk/gobmp/pkg/pub"
@@ -14,33 +14,25 @@ type msgOut struct {
 }
 
 type pubwriter struct {
-	output *os.File
+	output *log.Logger
 }
 
 func (pw *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) error {
-	var err error
 	m := msgOut{
 		MsgType: msgType,
 		MsgHash: string(msgHash),
 		Msg:     string(msg),
 	}
-	b, err := json.Marshal(&m)
-	if err != nil {
-		return err
-	}
-	_, err = pw.write(b)
 
-	return err
-}
+	pw.output.Printf("%+v", m)
 
-func (pw *pubwriter) write(msg []byte) (int, error) {
-	return pw.output.Write(msg)
+	return nil
 }
 
 // NewDumper returns a new instance of standard out  dumper
 func NewDumper() pub.Publisher {
 	pw := pubwriter{
-		output: os.Stdout,
+		output: log.New(os.Stdout, "gobmp:", log.Lmicroseconds),
 	}
 
 	return &pw
