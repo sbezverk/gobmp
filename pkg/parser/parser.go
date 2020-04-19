@@ -14,7 +14,6 @@ func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
-		default:
 		}
 	}
 }
