@@ -15,13 +15,9 @@ type LocalBlockTLV struct {
 	SID      *SIDTLV
 }
 
-func (tlv *LocalBlockTLV) String(level ...int) string {
+func (tlv *LocalBlockTLV) String() string {
 	var s string
-	l := 0
-	if level != nil {
-		l = level[0]
-	}
-	s += tools.AddLevel(l)
+
 	s += "SR Local Block TLV:" + "\n"
 
 	return s

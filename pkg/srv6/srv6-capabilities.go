@@ -15,15 +15,10 @@ type CapabilityTLV struct {
 	Reserved uint16
 }
 
-func (cap *CapabilityTLV) String(level ...int) string {
+func (cap *CapabilityTLV) String() string {
 	var s string
-	l := 0
-	if level != nil {
-		l = level[0]
-	}
-	s += tools.AddLevel(l)
+
 	s += "SRv6 Capability TLV:" + "\n"
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", cap.Flag)
 
 	return s

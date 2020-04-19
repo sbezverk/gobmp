@@ -15,13 +15,9 @@ type CapabilityTLV struct {
 	SID   *SIDTLV
 }
 
-func (cap *CapabilityTLV) String(level ...int) string {
+func (cap *CapabilityTLV) String() string {
 	var s string
-	l := 0
-	if level != nil {
-		l = level[0]
-	}
-	s += tools.AddLevel(l)
+
 	s += "SR Capability TLV:" + "\n"
 
 	return s

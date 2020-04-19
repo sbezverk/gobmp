@@ -15,14 +15,8 @@ type SubTLV struct {
 	Value  []byte
 }
 
-func (stlv *SubTLV) String(level ...int) string {
+func (stlv *SubTLV) String() string {
 	var s string
-	l := 0
-	if level != nil {
-		l = level[0]
-	}
-	s += tools.AddLevel(l)
-
 	return s
 }
 

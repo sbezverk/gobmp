@@ -18,23 +18,16 @@ type LocatorTLV struct {
 	SubTLV    []SubTLV
 }
 
-func (loc *LocatorTLV) String(level ...int) string {
+func (loc *LocatorTLV) String() string {
 	var s string
-	l := 0
-	if level != nil {
-		l = level[0]
-	}
-	s += tools.AddLevel(l)
+
 	s += "SRv6 Locator TLV:" + "\n"
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", loc.Flag)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Algorithm: %d\n", loc.Algorithm)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Metric: %d\n", loc.Metric)
 	if loc.SubTLV != nil {
 		for _, stlv := range loc.SubTLV {
-			s += stlv.String(l + 2)
+			s += stlv.String()
 		}
 	}
 
