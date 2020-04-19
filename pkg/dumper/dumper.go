@@ -32,7 +32,7 @@ func (pw *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) err
 // NewDumper returns a new instance of standard out  dumper
 func NewDumper() pub.Publisher {
 	pw := pubwriter{
-		output: log.New(os.Stdout, "gobmp:", log.Lmicroseconds),
+		output: log.New(os.Stdout, "gobmp: ", log.Lmicroseconds),
 	}
 
 	return &pw

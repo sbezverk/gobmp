@@ -10,17 +10,21 @@ import (
 
 // MessageHex returns Hexadecimal string of a byte slice passed as a parameter
 func MessageHex(b []byte) string {
-	var s string
-	s += "[ "
+	buffer := make([]byte, len(b)*6+2)
+	p := 0
+	copy(buffer[p:], []byte("[ "))
+	p += 2
 	for i := 0; i < len(b); i++ {
-		s += fmt.Sprintf("%02x", b[i])
+		copy(buffer[p:], []byte(fmt.Sprintf("0x%02x", b[i])))
+		p += 4
 		if i < len(b)-1 {
-			s += " "
+			copy(buffer[p:], []byte(", "))
+			p += 2
 		}
 	}
-	s += " ]"
+	copy(buffer[p:], []byte(" ]"))
 
-	return s
+	return string(buffer)
 }
 
 // ProtocolIDString returns string with protocol deacription based on the id
