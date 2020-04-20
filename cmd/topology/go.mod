@@ -7,8 +7,10 @@ replace (
 	github.com/sbezverk/gobmp/pkg/bgp => ../../pkg/bgp
 	github.com/sbezverk/gobmp/pkg/bgpls => ../../pkg/bgpls
 	github.com/sbezverk/gobmp/pkg/bmp => ../../pkg/bmp
+	github.com/sbezverk/gobmp/pkg/evpn => ../../pkg/evpn
 	github.com/sbezverk/gobmp/pkg/gobmpsrv => ../../pkg/gobmpsrv
 	github.com/sbezverk/gobmp/pkg/kafka => ../../pkg/kafka
+	github.com/sbezverk/gobmp/pkg/l3vpn => ../../pkg/l3vpn
 	github.com/sbezverk/gobmp/pkg/ls => ../../pkg/ls
 	github.com/sbezverk/gobmp/pkg/message => ../../pkg/message
 	github.com/sbezverk/gobmp/pkg/parser => ../../pkg/parser
@@ -16,7 +18,6 @@ replace (
 	github.com/sbezverk/gobmp/pkg/sr => ../../pkg/sr
 	github.com/sbezverk/gobmp/pkg/srv6 => ../../pkg/srv6
 	github.com/sbezverk/gobmp/pkg/tools => ../../pkg/tools
-	github.com/sbezverk/gobmp/pkg/l3vpn => ../../pkg/l3vpn
 	github.com/sbezverk/gobmp/pkg/topology/arangodb => ../../pkg/topology/arangodb
 	github.com/sbezverk/gobmp/pkg/topology/database => ../../pkg/topology/database
 	github.com/sbezverk/gobmp/pkg/topology/dbclient => ../../pkg/topology/dbclient
@@ -25,7 +26,6 @@ replace (
 	github.com/sbezverk/gobmp/pkg/topology/mockdb => ../../pkg/topology/mockdb
 	github.com/sbezverk/gobmp/pkg/topology/mockmessenger => ../../pkg/topology/mockmessenger
 	github.com/sbezverk/gobmp/pkg/topology/processor => ../../pkg/topology/processor
-	github.com/sbezverk/gobmp/pkg/l3vpn => ../../pkg/l3vpn
 )
 
 require (
@@ -34,6 +34,7 @@ require (
 	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/message v0.0.0-00010101000000-000000000000 // indirect
+	github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200420180605-a5787800ee75 // indirect
 	github.com/sbezverk/gobmp/pkg/pub v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/arangodb v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/database v0.0.0-00010101000000-000000000000 // indirect
@@ -43,5 +44,6 @@ require (
 	github.com/sbezverk/gobmp/pkg/topology/mockdb v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/mockmessenger v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/processor v0.0.0-00010101000000-000000000000 // indirect
+	github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200420180605-a5787800ee75 // indirect
 	github.com/segmentio/kafka-go v0.3.5 // indirect
 )
