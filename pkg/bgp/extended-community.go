@@ -51,8 +51,6 @@ func (ext *ExtCommunity) String() string {
 	case 0x0b:
 		prefix = "color="
 	}
-
-	
 	switch ext.Type {
 	case 0:
 		s += fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(ext.Value[0:2]), binary.BigEndian.Uint32(ext.Value[2:]))
