@@ -67,7 +67,6 @@ type UnicastPrefix struct {
 	Aggregator       string          `json:"aggregator,omitempty"`
 	CommunityList    string          `json:"community_list,omitempty"`
 	ExtCommunityList string          `json:"ext_community_list,omitempty"`
-	LgCommunityList  string          `json:"large_community_list,omitempty"`
 	IsAtomicAgg      bool            `json:"is_atomic_agg"`
 	IsNexthopIPv4    bool            `json:"is_nexthop_ipv4"`
 	OriginatorID     string          `json:"originator_id,omitempty"`
@@ -197,7 +196,6 @@ type L3VPNPrefix struct {
 	Aggregator       string   `json:"aggregator,omitempty"`
 	CommunityList    string   `json:"community_list,omitempty"`
 	ExtCommunityList string   `json:"ext_community_list,omitempty"`
-	LgCommunityList  string   `json:"large_community_list,omitempty"`	
 	ClusterList      string   `json:"cluster_list,omitempty"`
 	IsAtomicAgg      bool     `json:"is_atomic_agg"`
 	IsNexthopIPv4    bool     `json:"is_nexthop_ipv4"`
@@ -313,7 +311,6 @@ type EVPNPrefix struct {
 	Aggregator       string   `json:"aggregator,omitempty"`
 	CommunityList    string   `json:"community_list,omitempty"`
 	ExtCommunityList string   `json:"ext_community_list,omitempty"`
-	LgCommunityList  string   `json:"large_community_list,omitempty"`
 	ClusterList      string   `json:"cluster_list,omitempty"`
 	IsAtomicAgg      bool     `json:"is_atomic_agg"`
 	IsNexthopIPv4    bool     `json:"is_nexthop_ipv4"`
