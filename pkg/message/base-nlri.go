@@ -52,15 +52,6 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 		if lp := update.GetAttrLocalPref(); lp != nil {
 			prfx.LocalPref = *lp
 		}
-		exts, err := update.GetAttrExtCommunity()
-		if err == nil {
-			for i, ext := range exts {
-				prfx.ExtCommunityList += ext.String()
-				if i < len(exts)-1 {
-					prfx.ExtCommunityList += ", "
-				}
-			}
-		}
 		if ph.FlagV {
 			// IPv6 specific conversions
 			prfx.IsIPv4 = false
