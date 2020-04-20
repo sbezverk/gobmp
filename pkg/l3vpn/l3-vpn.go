@@ -2,6 +2,7 @@ package l3vpn
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -31,6 +32,9 @@ func (n *NLRI) GetL3VPNPrefix() []byte {
 // UnmarshalL3VPNNLRI instantiates a L3 VPN NLRI object
 func UnmarshalL3VPNNLRI(b []byte) (*NLRI, error) {
 	glog.V(5).Infof("L3VPN NLRI Raw: %s", tools.MessageHex(b))
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
+	}
 	n := NLRI{}
 	p := 0
 	// Getting length of NLRI in bytes

@@ -2,6 +2,7 @@ package unicast
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -26,6 +27,9 @@ type MPUnicastNLRI struct {
 // UnmarshalUnicastNLRI builds MP NLRI object from the slice of bytes
 func UnmarshalUnicastNLRI(b []byte) (*MPUnicastNLRI, error) {
 	glog.V(6).Infof("MP Unicast NLRI Raw: %s", tools.MessageHex(b))
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
+	}
 	mpnlri := MPUnicastNLRI{
 		NLRI: make([]MPUnicastPrefix, 0),
 	}

@@ -144,6 +144,9 @@ func (ls *NLRI71) GetSubType() int {
 // UnmarshalLSNLRI71 builds Link State NLRI object ofor SAFI 71
 func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 	glog.V(6).Infof("LSNLRI71 Raw: %s", tools.MessageHex(b))
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
+	}
 	ls := NLRI71{}
 	p := 0
 	ls.Type = binary.BigEndian.Uint16(b[p : p+2])

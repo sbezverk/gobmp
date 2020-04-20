@@ -143,6 +143,9 @@ func (mp *MPReachNLRI) GetNLRILU() (*unicast.MPUnicastNLRI, error) {
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPReachNLRI(b []byte) (MPNLRI, error) {
 	glog.V(6).Infof("MPReachNLRI Raw: %s", tools.MessageHex(b))
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
+	}
 	mp := MPReachNLRI{}
 	p := 0
 	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])

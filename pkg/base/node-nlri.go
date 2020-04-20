@@ -63,6 +63,9 @@ func (n *NodeNLRI) GetNodeOSPFAreaID() string {
 // UnmarshalNodeNLRI builds Node NLRI object
 func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
 	glog.V(6).Infof("NodeNLRI Raw: %s", tools.MessageHex(b))
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
+	}
 	n := NodeNLRI{}
 	p := 0
 	n.ProtocolID = b[p]
