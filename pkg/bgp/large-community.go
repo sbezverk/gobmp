@@ -3,9 +3,6 @@ package bgp
 import (
 	"encoding/binary"
 	"fmt"
-	"net"
-
-	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // LgCommunity defines BGP Large Commuity https://tools.ietf.org/html/rfc8092
@@ -20,12 +17,17 @@ func makeLgCommunity(b []byte) (*LgCommunity, error) {
 	if len(b) != 12 {
 		return nil, fmt.Errorf("invalid length expected 12 got %d", len(b))
 	}
-	lg.GlobalAdmin = uint32(b[:4])
-	lg.LocalData1 = uint32(b[4:8])
-	lg.LocalData2 = uint32(b[8:12])
+	lg.GlobalAdmin = binary.BigEndian.Uint32(b[:4])
+	lg.LocalData1 = binary.BigEndian.Uint32(b[4:8])
+	lg.LocalData2 = binary.BigEndian.Uint32(b[8:12])
 
 	return &lg, nil
 }
+
+func (lg *LgCommunity) String() string {
+	return fmt.Sprintf("%d:%d:%d", lg.GlobalAdmin,lg.LocalData1,lg.LocalData2)
+}
+	
 
 // UnmarshalBGPLgCommunity builds a slice of Large Communities
 func UnmarshalBGPLgCommunity(b []byte) ([]LgCommunity, error) {

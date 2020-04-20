@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-00010101000000-000000000000
 	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-00010101000000-000000000000
 	github.com/sbezverk/gobmp/pkg/dumper v0.0.0-00010101000000-000000000000 // indirect
