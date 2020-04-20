@@ -1,0 +1,59 @@
+package bgp
+
+import (
+	"encoding/binary"
+	"fmt"
+	"net"
+
+	"github.com/sbezverk/gobmp/pkg/tools"
+)
+
+// LgCommunity defines BGP Large Commuity https://tools.ietf.org/html/rfc8092
+type LgCommunity struct {
+	Type    uint8
+	SubType *uint8
+	Value   []byte
+}
+
+func makeLgCommunity(b []byte) (*LgCommunity, error) {
+	ext := ExtCommunity{}
+	if len(b) != 8 {
+		return nil, fmt.Errorf("invalid length expected 12 got %d", len(b))
+	}
+	p := 0
+	ext.Type = b[p]
+	p++
+	l := 7
+	switch ext.Type & 0x3f {
+	case 0:
+		fallthrough
+	case 1:
+		fallthrough
+	case 2:
+		fallthrough
+	case 6:
+		st := uint8(b[p])
+		ext.SubType = &st
+		l = 6
+		p++
+	}
+	ext.Value = make([]byte, l)
+	copy(ext.Value, b[p:])
+
+	return &ext, nil
+}
+
+// UnmarshalBGPExtCommunity builds a slice of Extended Communities
+func UnmarshalBGPLgCommunity(b []byte) ([]LgCommunity, error) {
+	exts := make([]LgCommunity, 0)
+	for p := 0; p < len(b); {
+		ext, err := makeLgCommunity(b[p : p+8])
+		if err != nil {
+			return nil, err
+		}
+		p += 8
+		exts = append(exts, *ext)
+	}
+
+	return exts, nil
+}
