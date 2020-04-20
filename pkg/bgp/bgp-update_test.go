@@ -212,6 +212,7 @@ func TestGetAttrCommunityString(t *testing.T) {
 
 func TestGetAttrExtCommunity(t *testing.T) {
 	subtype := uint8(2)
+	subtypeColor := uint8(0xb)
 	tests := []struct {
 		name      string
 		input     *Update
@@ -239,6 +240,51 @@ func TestGetAttrExtCommunity(t *testing.T) {
 			expectStr: "rt=577:65004",
 			fail:      false,
 		},
+		{
+			name: "2 extended Communities",
+			input: &Update{
+				PathAttributes: []PathAttribute{
+					{
+						AttributeType: 16,
+						Attribute:     []byte{0x00, 0x02, 0x02, 0x41, 0x00, 0x00, 0xfd, 0xec, 0x00, 0x02, 0x02, 0x41, 0x00, 0x00, 0xfd, 0xed},
+					},
+				},
+			},
+			expect: []ExtCommunity{
+				{
+					Type:    0,
+					SubType: &subtype,
+					Value:   []byte{0x02, 0x41, 0x00, 0x00, 0xfd, 0xec},
+				},
+				{
+					Type:    0,
+					SubType: &subtype,
+					Value:   []byte{0x02, 0x41, 0x00, 0x00, 0xfd, 0xed},
+				},
+			},
+			expectStr: "rt=577:65004,rt=577:65005",
+			fail:      false,
+		},
+		{
+			name: "color extCommunity",
+			input: &Update{
+				PathAttributes: []PathAttribute{
+					{
+						AttributeType: 16,
+						Attribute:     []byte{0x03, 0x0b, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00},
+					},
+				},
+			},
+			expect: []ExtCommunity{
+				{
+					Type:    3,
+					SubType: &subtypeColor,
+					Value:   []byte{0x03, 0x00, 0x00, 0x00, 0x00, 0x00},
+				},
+			},
+			expectStr: "color=50331648",
+			fail:      false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -251,10 +297,13 @@ func TestGetAttrExtCommunity(t *testing.T) {
 			}
 			if err == nil {
 				if !reflect.DeepEqual(got, tt.expect) {
-					t.Errorf("Expected extCommunity %+v does not match to actual extCommunity %+v", got, tt.expect)
+					t.Errorf("Expected extCommunity %+v does not match to actual extCommunity %+v", tt.expect, got)
 				}
-				if strings.Compare(got[0].String(), tt.expectStr) != 0 {
-					t.Errorf("Expected extCommunity string %s does not match to actual extCommunity %+v", tt.expectStr, got[0].String())
+				cStr := strings.Split(tt.expectStr, ",")
+				for i, c := range got {
+					if strings.Compare(c.String(), cStr[i]) != 0 {
+						t.Errorf("Expected extCommunity string %s does not match to actual extCommunity %+v", cStr[i], c.String())
+					}
 				}
 			}
 		})
