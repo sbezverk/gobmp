@@ -56,6 +56,18 @@ func (ext *ExtCommunity) String() string {
 		s += fmt.Sprintf("%s:%d", net.IP(ext.Value[0:4]).To4().String(), binary.BigEndian.Uint16(ext.Value[4:]))
 	case 2:
 		s += fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(ext.Value[0:4]), binary.BigEndian.Uint16(ext.Value[4:]))
+	case 3:
+		switch *ext.SubType {
+		case 0xb:
+			prefix = "color="
+			s += fmt.Sprintf("%d", binary.BigEndian.Uint32(ext.Value[0:4]))
+		case 0xc:
+			prefix = "tunnel-type="
+			s += fmt.Sprintf("%d", binary.BigEndian.Uint16(ext.Value[2:4]))
+		default:
+			prefix = fmt.Sprintf("%d=",*ext.SubType)
+			s += fmt.Sprintf("%d", binary.BigEndian.Uint32(ext.Value[0:4]))
+		}
 	case 6:
 		// EVPN related extended communities
 		switch *ext.SubType {
@@ -109,6 +121,11 @@ func makeExtCommunity(b []byte) (*ExtCommunity, error) {
 		ext.SubType = &st
 		l = 6
 		p++
+	case 3:
+		st := uint8(b[p])
+                ext.SubType = &st
+		l = 6
+		p+=3
 	}
 	ext.Value = make([]byte, l)
 	copy(ext.Value, b[p:])

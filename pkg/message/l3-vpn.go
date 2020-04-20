@@ -61,6 +61,25 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 	if lp := update.GetAttrLocalPref(); lp != nil {
 		prfx.LocalPref = *lp
 	}
+	if coms := update.GetAttrCommunityString(); coms != "" {
+		prfx.CommunityList += coms
+	}
+	if exts, _  := update.GetAttrExtCommunity(); exts != nil {
+                        for i, ext := range exts {
+                                prfx.ExtCommunityList += ext.String()
+				if i < len(exts)-1 {
+					prfx.ExtCommunityList += ", "
+                                }
+				}
+		}
+	if lgs, _  := update.GetAttrLgCommunity(); lgs != nil {
+		        for i, lg := range lgs {
+				prfx.LgCommunityList += lg.String()
+                                if i < len(lgs)-1 {
+                                        prfx.LgCommunityList += ", "
+                                }
+                        }
+                }
 	if ph.FlagV {
 		// IPv6 specific conversions
 		prfx.IsIPv4 = false

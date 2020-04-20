@@ -69,15 +69,25 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 			prfx.IsNexthopIPv4 = true
 		}
-		exts, err := update.GetAttrExtCommunity()
-		if err == nil {
-			for i, ext := range exts {
-				prfx.ExtCommunityList += ext.String()
+                if coms := update.GetAttrCommunityString(); coms != "" {
+                        prfx.CommunityList += coms
+                }
+		if exts, _  := update.GetAttrExtCommunity(); exts != nil {
+                        for i, ext := range exts {
+                                prfx.ExtCommunityList += ext.String()
 				if i < len(exts)-1 {
 					prfx.ExtCommunityList += ", "
-				}
+                                }
 			}
 		}
+		if lgs, _  := update.GetAttrLgCommunity(); lgs != nil {
+			for i, lg := range lgs {
+				prfx.LgCommunityList += lg.String()
+                                if i < len(lgs)-1 {
+                                        prfx.LgCommunityList += ", "
+                                }
+                        }
+                }
 		// Do not want to panic on nil pointer
 		if e != nil {
 			prfx.VPNRD = e.GetEVPNRD()
