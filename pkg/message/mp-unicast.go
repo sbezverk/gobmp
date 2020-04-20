@@ -70,6 +70,11 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 		if lp := update.GetAttrLocalPref(); lp != nil {
 			prfx.LocalPref = *lp
 		}
+
+                if coms := update.GetAttrCommunityString(); coms != "" {
+			prfx.CommunityList += coms
+                }
+
 		if exts, _  := update.GetAttrExtCommunity(); exts != nil {
 			for i, ext := range exts {
 				prfx.ExtCommunityList += ext.String()
@@ -91,7 +96,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 		}
 
 		if ph.FlagV {
-			// Peer is IPv6
+			// Peer is IPv4
 			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
 		} else {
 			// Peer is IPv4

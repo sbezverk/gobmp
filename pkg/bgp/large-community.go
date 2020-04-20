@@ -37,7 +37,7 @@ func UnmarshalBGPLgCommunity(b []byte) ([]LgCommunity, error) {
 		if err != nil {
 			return nil, err
 		}
-		p += 8
+		p += 12
 		lgs = append(lgs, *lg)
 	}
 
