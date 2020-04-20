@@ -18,7 +18,6 @@ func (ipr *IPReachabilityInformation) String() string {
 	var s string
 	s += "   IP Reachability Information:" + "\n"
 	s += fmt.Sprintf("      Prefix length in bits: %d\n", ipr.LengthInBits)
-	s += fmt.Sprintf("      Prefix: %s\n", string(tools.RawBytesToJSON(ipr.Prefix)))
 
 	return s
 }
@@ -28,8 +27,13 @@ func UnmarshalIPReachabilityInformation(b []byte) (*IPReachabilityInformation, e
 	glog.V(6).Infof("IPReachabilityInformationTLV Raw: %s", tools.MessageHex(b))
 	ipr := IPReachabilityInformation{
 		LengthInBits: b[0],
-		Prefix:       b[1:],
 	}
+	l := ipr.LengthInBits / 8
+	if ipr.LengthInBits%8 != 0 {
+		l++
+	}
+	ipr.Prefix = make([]byte, l)
+	copy(ipr.Prefix, b[1:])
 
 	return &ipr, nil
 }

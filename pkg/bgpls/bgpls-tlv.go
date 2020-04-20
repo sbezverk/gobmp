@@ -90,7 +90,7 @@ func (tlv *TLV) String() string {
 			s += err.Error() + "\n"
 			break
 		}
-		s += cap.String(2)
+		s += cap.String()
 	case 1088:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Administrative group (color))\n", tlv.Type)
 		s += fmt.Sprintf("      Administrative group (color): %d\n", binary.BigEndian.Uint32(tlv.Value))
@@ -125,7 +125,7 @@ func (tlv *TLV) String() string {
 			s += err.Error() + "\n"
 			break
 		}
-		s += endx.String(1)
+		s += endx.String()
 	case 1155:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Prefix Metric)\n", tlv.Type)
 		m := binary.BigEndian.Uint32(tlv.Value)
@@ -145,7 +145,7 @@ func (tlv *TLV) String() string {
 			s += err.Error() + "\n"
 			break
 		}
-		s += l.String(1)
+		s += l.String()
 	case 1170:
 		s += fmt.Sprintf("   BGP-LS TLV Type: %d (Prefix Attributes Flags)\n", tlv.Type)
 		s += fmt.Sprintf("      Flag: %s\n", tools.MessageHex(tlv.Value))

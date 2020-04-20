@@ -10,17 +10,21 @@ import (
 
 // MessageHex returns Hexadecimal string of a byte slice passed as a parameter
 func MessageHex(b []byte) string {
-	var s string
-	s += "[ "
+	buffer := make([]byte, len(b)*6+2)
+	p := 0
+	copy(buffer[p:], []byte("[ "))
+	p += 2
 	for i := 0; i < len(b); i++ {
-		s += fmt.Sprintf("%02x", b[i])
+		copy(buffer[p:], []byte(fmt.Sprintf("0x%02x", b[i])))
+		p += 4
 		if i < len(b)-1 {
-			s += " "
+			copy(buffer[p:], []byte(", "))
+			p += 2
 		}
 	}
-	s += " ]"
+	copy(buffer[p:], []byte(" ]"))
 
-	return s
+	return string(buffer)
 }
 
 // ProtocolIDString returns string with protocol deacription based on the id
@@ -43,32 +47,6 @@ func ProtocolIDString(id uint8) string {
 	default:
 		return "Unknown"
 	}
-}
-
-// AddLevel adds a number of \t defined in level to allign and return the string
-func AddLevel(level ...int) string {
-	var s string
-	if level != nil {
-		for i := 0; i < level[0]; i++ {
-			s += "\t"
-		}
-	}
-	return s
-}
-
-// RawBytesToJSON converts a slice of bytes into a comma separated JSON representation
-func RawBytesToJSON(rb []byte) []byte {
-	b := []byte{}
-	b = append(b, '[')
-	for i := 0; i < len(rb); i++ {
-		b = append(b, fmt.Sprintf("%d", rb[i])...)
-		if i < len(rb)-1 {
-			b = append(b, ',')
-		}
-	}
-	b = append(b, ']')
-
-	return b
 }
 
 // HostAddrValidator parser host address passed as a string, and make sure it follows X.X.X.X:YYZZ format

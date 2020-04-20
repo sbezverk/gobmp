@@ -27,7 +27,6 @@ func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
-		default:
 		}
 	}
 }

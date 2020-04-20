@@ -17,22 +17,13 @@ type BGPPeerNodeSID struct {
 	PeerID  []byte
 }
 
-func (b *BGPPeerNodeSID) String(level ...int) string {
+func (b *BGPPeerNodeSID) String() string {
 	var s string
-	l := 0
-	if level != nil {
-		l = level[0]
-	}
-	s += tools.AddLevel(l)
-	s += "SRv6 BGP Peer Node SID TLV:" + "\n"
 
-	s += tools.AddLevel(l + 1)
+	s += "SRv6 BGP Peer Node SID TLV:" + "\n"
 	s += fmt.Sprintf("Flag: %02x\n", b.Flag)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Weight: %d\n", b.Weight)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Peer ASN: %d\n", b.PeerASN)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Peer ID: %s\n", tools.MessageHex(b.PeerID))
 
 	return s
