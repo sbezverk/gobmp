@@ -96,7 +96,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 		}
 
 		if ph.FlagV {
-			// Peer is IPv4
+			// Peer is IPv6
 			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
 		} else {
 			// Peer is IPv4
