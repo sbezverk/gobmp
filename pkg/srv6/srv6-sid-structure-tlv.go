@@ -16,22 +16,12 @@ type SIDStructure struct {
 	ArgLength uint8
 }
 
-func (st *SIDStructure) String(level ...int) string {
+func (st *SIDStructure) String() string {
 	var s string
-	l := 0
-	if level != nil {
-		l = level[0]
-	}
-	s += tools.AddLevel(l)
 	s += "SRv6 SID Structure TLV:" + "\n"
-
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Locator Block length: %d\n", st.LBLength)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Locator Node length: %d\n", st.LNLength)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("SID Function length: %d\n", st.FunLength)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("SID Argument length: %d\n", st.ArgLength)
 
 	return s

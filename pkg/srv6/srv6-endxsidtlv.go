@@ -20,28 +20,19 @@ type EndXSIDTLV struct {
 	SubTLV           []SubTLV
 }
 
-func (x *EndXSIDTLV) String(level ...int) string {
+func (x *EndXSIDTLV) String() string {
 	var s string
-	l := 0
-	if level != nil {
-		l = level[0]
-	}
-	s += tools.AddLevel(l)
+
 	s += "SRv6 End.X SID TLV:" + "\n"
 
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Endpoint Behavior: %d\n", x.EndpointBehavior)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", x.Flag)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Algorithm: %d\n", x.Algorithm)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Weight: %d\n", x.Weight)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("SID: %s\n", tools.MessageHex(x.SID))
 	if x.SubTLV != nil {
 		for _, stlv := range x.SubTLV {
-			s += stlv.String(l + 2)
+			s += stlv.String()
 		}
 	}
 

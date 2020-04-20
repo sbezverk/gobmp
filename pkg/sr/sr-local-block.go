@@ -7,22 +7,17 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
-// LocalBlockTLV defines SR Local Block TLV object
+// LocalBlock defines SR Local Block TLV object
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.1.4
 type LocalBlock struct {
 	Flags uint8
 	TLV   []LocalBlockTLV
 }
 
-func (lb *LocalBlock) String(level ...int) string {
+func (lb *LocalBlock) String() string {
 	var s string
-	l := 0
-	if level != nil {
-		l = level[0]
-	}
-	s += tools.AddLevel(l)
+
 	s += "SR Local Block TLV:" + "\n"
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", lb.Flags)
 
 	return s

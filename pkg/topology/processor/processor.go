@@ -81,7 +81,6 @@ func (p *processor) msgProcessor() {
 			go p.procWorker(msg)
 		case <-p.stop:
 			return
-		default:
 		}
 	}
 }

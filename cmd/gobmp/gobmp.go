@@ -10,16 +10,19 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/dumper"
 	"github.com/sbezverk/gobmp/pkg/gobmpsrv"
 	"github.com/sbezverk/gobmp/pkg/kafka"
+	"github.com/sbezverk/gobmp/pkg/pub"
 )
 
 var (
-	dstPort   int
-	srcPort   int
-	perfPort  int
-	kafkaSrv  string
-	intercept bool
+	dstPort     int
+	srcPort     int
+	perfPort    int
+	kafkaSrv    string
+	intercept   bool
+	dumpmessage bool
 )
 
 func init() {
@@ -28,6 +31,8 @@ func init() {
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
 	flag.BoolVar(&intercept, "intercept", false, "Mode of operation, in intercept mode, when intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
 	flag.IntVar(&perfPort, "performance-port", 56767, "port used for performance debugging")
+	flag.BoolVar(&dumpmessage, "dump-message", false, "Dump resulting messages to standard output")
+
 }
 
 var (
@@ -59,13 +64,19 @@ func main() {
 	go func() {
 		glog.Info(http.ListenAndServe(fmt.Sprintf(":%d", perfPort), nil))
 	}()
-
-	publisher, err := kafka.NewKafkaPublisher(kafkaSrv)
-	if err != nil {
-		glog.Warningf("Kafka publisher is disabled, no Kafka server URL is provided.")
+	var publisher pub.Publisher
+	var err error
+	if !dumpmessage {
+		publisher, err = kafka.NewKafkaPublisher(kafkaSrv)
+		if err != nil {
+			glog.Warningf("Kafka publisher is disabled, no Kafka server URL is provided.")
+		} else {
+			glog.V(6).Infof("Kafka publisher has been successfully initialized.")
+		}
 	} else {
-		glog.V(6).Infof("Kafka publisher has been successfully initialized.")
+		publisher = dumper.NewDumper()
 	}
+
 	// Initializing bmp server
 	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, intercept, publisher)
 	if err != nil {

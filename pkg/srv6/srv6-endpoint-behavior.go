@@ -16,20 +16,12 @@ type EndpointBehavior struct {
 	Algorithm        uint8
 }
 
-func (e *EndpointBehavior) String(level ...int) string {
+func (e *EndpointBehavior) String() string {
 	var s string
-	l := 0
-	if level != nil {
-		l = level[0]
-	}
-	s += tools.AddLevel(l)
-	s += "SRv6 End.X SID TLV:" + "\n"
 
-	s += tools.AddLevel(l + 1)
+	s += "SRv6 End.X SID TLV:" + "\n"
 	s += fmt.Sprintf("Endpoint Behavior: %d\n", e.EndpointBehavior)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Flag: %02x\n", e.Flag)
-	s += tools.AddLevel(l + 1)
 	s += fmt.Sprintf("Algorithm: %d\n", e.Algorithm)
 
 	return s
