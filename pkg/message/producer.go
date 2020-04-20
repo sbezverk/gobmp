@@ -6,6 +6,11 @@ import (
 	"github.com/sbezverk/gobmp/pkg/pub"
 )
 
+const (
+	peerUP = iota
+	peerDown
+)
+
 // Producer defines methods to act as a message producer
 type Producer interface {
 	Producer(queue chan bmp.Message, stop chan struct{})
@@ -34,9 +39,9 @@ func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
 func (p *producer) producingWorker(msg bmp.Message) {
 	switch obj := msg.Payload.(type) {
 	case *bmp.PeerUpMessage:
-		p.producePeerUpMessage(msg)
+		p.producePeerMessage(peerUP, msg)
 	case *bmp.PeerDownMessage:
-		p.producePeerDownMessage(msg)
+		p.producePeerMessage(peerDown, msg)
 	case *bmp.RouteMonitor:
 		p.produceRouteMonitorMessage(msg)
 	default:
