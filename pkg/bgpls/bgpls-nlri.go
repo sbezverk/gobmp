@@ -587,6 +587,9 @@ func (ls *NLRI) GetSRAdjacencySID() (*sr.AdjacencySIDTLV, error) {
 // UnmarshalBGPLSNLRI builds Prefix NLRI object
 func UnmarshalBGPLSNLRI(b []byte) (*NLRI, error) {
 	glog.V(6).Infof("BGPLSNLRI Raw: %s", tools.MessageHex(b))
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
+	}
 	bgpls := NLRI{}
 	ls, err := UnmarshalBGPLSTLV(b)
 	if err != nil {

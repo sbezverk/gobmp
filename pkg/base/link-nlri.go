@@ -169,6 +169,9 @@ func (l *LinkNLRI) GetRemoteIGPRouterID() string {
 // UnmarshalLinkNLRI builds Link NLRI object
 func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	glog.V(6).Infof("LinkNLRI Raw: %s", tools.MessageHex(b))
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
+	}
 	l := LinkNLRI{}
 	p := 0
 	l.ProtocolID = b[p]

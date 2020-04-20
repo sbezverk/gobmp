@@ -10,6 +10,9 @@ import (
 
 // MessageHex returns Hexadecimal string of a byte slice passed as a parameter
 func MessageHex(b []byte) string {
+	if len(b) == 0 {
+		return "[]"
+	}
 	buffer := make([]byte, len(b)*6+2)
 	p := 0
 	copy(buffer[p:], []byte("[ "))
