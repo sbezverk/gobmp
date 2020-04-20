@@ -49,21 +49,6 @@ func ProtocolIDString(id uint8) string {
 	}
 }
 
-// RawBytesToJSON converts a slice of bytes into a comma separated JSON representation
-func RawBytesToJSON(rb []byte) []byte {
-	b := []byte{}
-	b = append(b, '[')
-	for i := 0; i < len(rb); i++ {
-		b = append(b, fmt.Sprintf("%d", rb[i])...)
-		if i < len(rb)-1 {
-			b = append(b, ',')
-		}
-	}
-	b = append(b, ']')
-
-	return b
-}
-
 // HostAddrValidator parser host address passed as a string, and make sure it follows X.X.X.X:YYZZ format
 func HostAddrValidator(addr string) error {
 	host, port, _ := net.SplitHostPort(addr)
