@@ -69,8 +69,8 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 			prfx.IsNexthopIPv4 = true
 		}
-                if coms := update.GetAttrCommunityString(); coms != "" {
-                        prfx.CommunityList += coms
+		if coms := update.GetAttrCommunityString(); coms != "" {
+			prfx.CommunityList += coms
                 }
 		if exts, _  := update.GetAttrExtCommunity(); exts != nil {
                         for i, ext := range exts {
