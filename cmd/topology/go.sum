@@ -20,8 +20,12 @@ github.com/sbezverk/gobmp v0.0.0-20200406173530-6fe0294827ae h1:7H4l5lrjZZTO8WmT
 github.com/sbezverk/gobmp v0.0.0-20200420180605-a5787800ee75 h1:bx6YIaMFo7ZGxiI8rypZUNdOHQuSphAQ709Ji2U/HYM=
 github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200420180605-a5787800ee75 h1:tnMBH32GtIIHaQV1YFWVPRXaAXGir/u6ZgECN08p11U=
 github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200420180605-a5787800ee75/go.mod h1:7StEI37UO9JsPl51EL0+wnq0WNTxezx2IGITtS5GK5o=
+github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200420194628-6cc21f2ad3fd h1:IADASoGO6N8kINLjhK4Z11uqLvjXgvIaJIiF/pRDZZo=
+github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200420194628-6cc21f2ad3fd/go.mod h1:7StEI37UO9JsPl51EL0+wnq0WNTxezx2IGITtS5GK5o=
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200420180605-a5787800ee75 h1:74lRC1bUYQjgEjERNp40REwY6BTmKEz59lIeyxG+XZk=
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200420180605-a5787800ee75/go.mod h1:oRLemn6wUxRjPMFUa03BWfYK80SNJEAfGyECTrBDmuY=
+github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200420194628-6cc21f2ad3fd h1:57XauI1Bzcud8uOAmCl4/Ob7Az9hI1C/7KODycQkZc0=
+github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200420194628-6cc21f2ad3fd/go.mod h1:oRLemn6wUxRjPMFUa03BWfYK80SNJEAfGyECTrBDmuY=
 github.com/segmentio/kafka-go v0.3.5 h1:2JVT1inno7LxEASWj+HflHh5sWGfM0gkRiLAxkXhGG4=
 github.com/segmentio/kafka-go v0.3.5/go.mod h1:OT5KXBPbaJJTcvokhWR2KFmm0niEx3mnccTwjmLvSi4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

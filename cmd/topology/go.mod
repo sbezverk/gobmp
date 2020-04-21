@@ -34,7 +34,6 @@ require (
 	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/message v0.0.0-00010101000000-000000000000 // indirect
-	github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200420180605-a5787800ee75 // indirect
 	github.com/sbezverk/gobmp/pkg/pub v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/arangodb v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/database v0.0.0-00010101000000-000000000000 // indirect
@@ -44,6 +43,5 @@ require (
 	github.com/sbezverk/gobmp/pkg/topology/mockdb v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/mockmessenger v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/processor v0.0.0-00010101000000-000000000000 // indirect
-	github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200420180605-a5787800ee75 // indirect
 	github.com/segmentio/kafka-go v0.3.5 // indirect
 )

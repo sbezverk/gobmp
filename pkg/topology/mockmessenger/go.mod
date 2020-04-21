@@ -1,4 +1,4 @@
-module mockmessenger
+module github.com/sbezverk/gobmp/pkg/topology/mockmessenger
 
 go 1.14
 
