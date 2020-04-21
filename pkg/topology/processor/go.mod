@@ -1,4 +1,4 @@
-module processor
+module github.com/sbezverk/gobmp/pkg/topology/processor
 
 go 1.14
 
