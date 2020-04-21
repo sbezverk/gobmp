@@ -1,4 +1,4 @@
-module github.com/sbezverk/gobmp/pkg/topologydatabase
+module github.com/sbezverk/gobmp/pkg/topology/database
 
 go 1.14
 
