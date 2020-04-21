@@ -17,7 +17,6 @@ const (
 )
 
 func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
-	var j []byte
 	if msg.PeerHeader == nil {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return
@@ -73,7 +72,6 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
 			}
-			glog.V(6).Infof("unicast_prefix message: %s", string(j))
 		}
 	}
 }

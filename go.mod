@@ -7,10 +7,8 @@ require (
 	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-00010101000000-000000000000
 	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-00010101000000-000000000000
 	github.com/sbezverk/gobmp/pkg/dumper v0.0.0-00010101000000-000000000000
-	github.com/sbezverk/gobmp/pkg/evpn v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/gobmpsrv v0.0.0-00010101000000-000000000000
 	github.com/sbezverk/gobmp/pkg/kafka v0.0.0-00010101000000-000000000000
-	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/message v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/parser v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200420214652-390271d2c7c6

@@ -24,7 +24,7 @@ type PeerStateChange struct {
 	LocalIP          string `json:"local_ip,omitempty"`
 	LocalPort        int    `json:"local_port,omitempty"`
 	LocalBGPID       string `json:"local_bgp_id,omitempty"`
-	InfoData         string `json:"info_data,omitempty"`
+	InfoData         []byte `json:"info_data,omitempty"`
 	AdvCapabilities  string `json:"adv_cap,omitempty"`
 	RcvCapabilities  string `json:"recv_cap,omitempty"`
 	RemoteHolddown   int    `json:"remote_holddown,omitempty"`
