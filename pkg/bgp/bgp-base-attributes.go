@@ -30,3 +30,10 @@ type BaseAttributes struct {
 	// SecPath
 	// AttrSet
 }
+
+// UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
+// and instantiates BaseAttributes object
+func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, err) {
+
+	return nil, nil
+}
