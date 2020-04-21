@@ -37,9 +37,15 @@ func UnmarshalRoutes(b []byte) ([]Route, error) {
 			l++
 		}
 		p++
+		// Check that the following copy would not exceed the slice capacity
+		safeOffset := int(l)
+		// The sum of a current pointer in the slice and safeOffset should not exceed  the byte slice length.
+		if p+safeOffset > len(b) {
+			safeOffset = len(b) - p
+		}
 		route.Prefix = make([]byte, l)
-		copy(route.Prefix, b[p:p+int(l)])
-		p += int(l)
+		copy(route.Prefix, b[p:p+safeOffset])
+		p += safeOffset
 		routes = append(routes, route)
 	}
 
