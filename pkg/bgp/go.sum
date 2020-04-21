@@ -1,8 +1,6 @@
 github.com/go-test/deep v1.0.5/go.mod h1:QV8Hv/iy04NyLBxAdO9njL0iVPN1S4d/A3NVv1V36o8=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b h1:VKtxabqXZkF25pY9ekfRL6a582T4P37/31XEstQ5p58=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
-github.com/sbezverk/gobmp v0.0.0-20200406173530-6fe0294827ae h1:7H4l5lrjZZTO8WmTaJS6iKD3VT7mNlvy+lAW5HIIKKA=
-github.com/sbezverk/gobmp v0.0.0-20200420194628-6cc21f2ad3fd h1:yVs7DBqMO30fvyYmyyieTb8DtjMI85ReOl9x9pwaeDc=
 github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200420194628-6cc21f2ad3fd h1:IADASoGO6N8kINLjhK4Z11uqLvjXgvIaJIiF/pRDZZo=
 github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200420194628-6cc21f2ad3fd/go.mod h1:7StEI37UO9JsPl51EL0+wnq0WNTxezx2IGITtS5GK5o=
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200420194628-6cc21f2ad3fd h1:57XauI1Bzcud8uOAmCl4/Ob7Az9hI1C/7KODycQkZc0=
