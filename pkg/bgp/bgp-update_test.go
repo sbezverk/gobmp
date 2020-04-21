@@ -90,6 +90,18 @@ func TestGetAttrASPath(t *testing.T) {
 			},
 			expect: []uint32{29691, 13030, 37662, 37204, 56696, 56696},
 		},
+		{
+			name: "panic case #4",
+			update: &Update{
+				PathAttributes: []PathAttribute{
+					{
+						AttributeType: 2,
+						Attribute:     []byte{0x02, 0x06, 0x00, 0x00, 0xbf, 0xee, 0x00, 0x00, 0xd0, 0x6c, 0x00, 0x00, 0x1b, 0x1b, 0x00, 0x00, 0x05, 0x13, 0x00, 0x00, 0x0b, 0x62, 0x00, 0x00, 0x51, 0xcc},
+					},
+				},
+			},
+			expect: []uint32{49134, 53356, 6939, 1299, 2914, 20940},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

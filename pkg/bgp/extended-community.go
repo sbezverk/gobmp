@@ -17,8 +17,14 @@ type ExtCommunity struct {
 
 // IsRouteTarget return true is a specific extended community of Route Target type
 func (ext *ExtCommunity) IsRouteTarget() bool {
+	var subType uint8
+	if ext.SubType == nil {
+		subType = 0xff
+	} else {
+		subType = *ext.SubType
+	}
 	if ext.SubType != nil {
-		if *ext.SubType == 2 {
+		if subType == 2 {
 			return true
 		}
 	}
@@ -29,7 +35,13 @@ func (ext *ExtCommunity) IsRouteTarget() bool {
 func (ext *ExtCommunity) String() string {
 	var s string
 	var prefix string
-	switch *ext.SubType {
+	var subType uint8
+	if ext.SubType == nil {
+		subType = 0xff
+	} else {
+		subType = *ext.SubType
+	}
+	switch subType {
 	case 0x0:
 		prefix = "mmb="
 	case 0x01:
@@ -57,7 +69,7 @@ func (ext *ExtCommunity) String() string {
 	case 2:
 		s += fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(ext.Value[0:4]), binary.BigEndian.Uint16(ext.Value[4:]))
 	case 3:
-		switch *ext.SubType {
+		switch subType {
 		case 0xb:
 			prefix = "color="
 			s += fmt.Sprintf("%d", binary.BigEndian.Uint32(ext.Value[0:4]))
@@ -65,12 +77,12 @@ func (ext *ExtCommunity) String() string {
 			prefix = "tunnel-type="
 			s += fmt.Sprintf("%d", binary.BigEndian.Uint16(ext.Value[2:4]))
 		default:
-			prefix = fmt.Sprintf("%d=", *ext.SubType)
+			prefix = fmt.Sprintf("%d=", subType)
 			s += fmt.Sprintf("%d", binary.BigEndian.Uint32(ext.Value[0:4]))
 		}
 	case 6:
 		// EVPN related extended communities
-		switch *ext.SubType {
+		switch subType {
 		case 0x01:
 			// ESI Label Extended Community
 			l := make([]byte, 4)
@@ -91,10 +103,12 @@ func (ext *ExtCommunity) String() string {
 			// The DF Election Extended Community
 			s += fmt.Sprintf("%d:0x%04x", ext.Value[0], binary.BigEndian.Uint16(ext.Value[1:]))
 		default:
-			prefix = "unknown="
-			s += fmt.Sprintf("Type: %d Subtype: %d Value: %s", ext.Type, *ext.SubType, tools.MessageHex(ext.Value))
+			prefix = fmt.Sprintf("%d=", subType)
+			s += fmt.Sprintf("%d", binary.BigEndian.Uint32(ext.Value[0:4]))
 		}
-
+	default:
+		prefix = "unknown="
+		s += fmt.Sprintf("Type: %d Subtype: %d Value: %s", ext.Type, subType, tools.MessageHex(ext.Value))
 	}
 
 	return prefix + s

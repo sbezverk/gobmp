@@ -102,7 +102,7 @@ func (up *Update) GetAttrASPath() []uint32 {
 			if int(l)*4 == len(attr.Attribute)-p {
 				as4 = true
 			}
-			for n := 0; n < int(l); n++ {
+			for p < len(attr.Attribute) {
 				if as4 {
 					as := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
 					p += 4
