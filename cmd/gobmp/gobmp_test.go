@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"os"
 	"reflect"
 	"testing"
 
@@ -12,7 +13,9 @@ import (
 func TestMain(m *testing.M) {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
-	m.Run()
+	rc := m.Run()
+	os.Exit(rc)
+
 }
 func TestCommonHeader(t *testing.T) {
 	tests := []struct {

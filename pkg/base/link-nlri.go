@@ -205,11 +205,11 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	// Skip Node Type and Length 4 bytes
 	p += 4
 	// Link Descriptor
-	ld, err := UnmarshalLinkDescriptor(b[p:len(b)])
+	ld, err := UnmarshalLinkDescriptor(b[p:])
 	if err != nil {
 		return nil, err
 	}
 	l.Link = ld
-	l.LinkHash = fmt.Sprintf("%x", md5.Sum(b[p:len(b)]))
+	l.LinkHash = fmt.Sprintf("%x", md5.Sum(b[p:]))
 	return &l, nil
 }

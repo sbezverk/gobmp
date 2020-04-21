@@ -1,4 +1,4 @@
-module mockdb
+module github.com/sbezverk/gobmp/pkg/topology/mockdb
 
 go 1.14
 

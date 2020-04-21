@@ -1,7 +1,6 @@
-module arangodb
+module github.com/sbezverk/gobmp/pkg/topology/arangodb
 
 go 1.14
-
 
 replace (
 	github.com/sbezverk/gobmp/pkg/topology/dbclient => ../dbclient

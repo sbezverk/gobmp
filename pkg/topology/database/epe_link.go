@@ -6,16 +6,16 @@ const EPELinkName = "EPELink"
 
 type EPELink struct {
 	Key              string `json:"_key,omitempty"`
-        RouterID         string `json:"RouterID,omitempty"`
-        ASN              string `json:"ASN,omitempty"`
-        PeerRouterID     string `json:"PeerRouterID,omitempty"`
+	RouterID         string `json:"RouterID,omitempty"`
+	ASN              string `json:"ASN,omitempty"`
+	PeerRouterID     string `json:"PeerRouterID,omitempty"`
 	LocalInterfaceIP string `json:"LocalInterfaceIP,omitempty"`
 	PeerIP           string `json:"PeerIP,omitempty"`
-        Protocol         string `json:"Protocol,omitempty"`
-        LocalPref        string `json:"LocalPref,omitempty"`
-        MED              string `json:"MED,omitempty"`
-        Nexthop          string `json:"Nexthop,omitempty"`
-        EPELabel         string `json:"EPELabel,omitempty"`
+	Protocol         string `json:"Protocol,omitempty"`
+	LocalPref        string `json:"LocalPref,omitempty"`
+	MED              string `json:"MED,omitempty"`
+	Nexthop          string `json:"Nexthop,omitempty"`
+	EPELabel         string `json:"EPELabel,omitempty"`
 }
 
 func (r EPELink) GetKey() (string, error) {

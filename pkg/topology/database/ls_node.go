@@ -5,15 +5,15 @@ import "fmt"
 const LSNodeName = "LSNode"
 
 type LSNode struct {
-	Key          string `json:"_key,omitempty"`
-	Name         string `json:"Name,omitempty"`
-	RouterID     string `json:"RouterID,omitempty"`
+	Key      string `json:"_key,omitempty"`
+	Name     string `json:"Name,omitempty"`
+	RouterID string `json:"RouterID,omitempty"`
 	//BGPID        string `json:"BGPID,omitempty"`
-	ASN          string `json:"ASN,omitempty"`
-        SRGB         string `json:"SRGB,omitempty"`
-        SIDIndex     string `json:"SIDIndex,omitempty"`
-        PrefixSID    string `json:"PrefixSID,omitempty"`
-	IGPID        string `json:"IGPID,omitempty"`
+	ASN       string `json:"ASN,omitempty"`
+	SRGB      string `json:"SRGB,omitempty"`
+	SIDIndex  string `json:"SIDIndex,omitempty"`
+	PrefixSID string `json:"PrefixSID,omitempty"`
+	IGPID     string `json:"IGPID,omitempty"`
 }
 
 func (r LSNode) GetKey() (string, error) {
@@ -37,7 +37,7 @@ func (r *LSNode) makeKey() (string, error) {
 	ret := ""
 	if r.RouterID != "" {
 		ret = fmt.Sprintf("%s", r.RouterID)
-//		ret = fmt.Sprintf("Router/%s", r.RouterIP)
+		//		ret = fmt.Sprintf("Router/%s", r.RouterIP)
 		err = nil
 	}
 	return ret, err
@@ -46,4 +46,3 @@ func (r *LSNode) makeKey() (string, error) {
 func (r LSNode) GetType() string {
 	return LSNodeName
 }
-
