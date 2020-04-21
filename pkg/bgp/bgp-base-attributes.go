@@ -50,6 +50,9 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 			l = uint16(b[p])
 			p++
 		}
+		switch t {
+		case 1:
+		}
 	}
 	return &baseAttr, nil
 }
