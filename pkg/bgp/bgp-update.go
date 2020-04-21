@@ -86,7 +86,7 @@ func (up *Update) GetAttrOrigin() *string {
 }
 
 // GetAttrASPath returns a sequence of AS path segments
-func (up *Update) GetAttrASPath(as4Capable bool) []uint32 {
+func (up *Update) GetAttrASPath() []uint32 {
 	path := make([]uint32, 0)
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType != 2 {
@@ -98,8 +98,12 @@ func (up *Update) GetAttrASPath(as4Capable bool) []uint32 {
 			// Length of path segment in 2 bytes
 			l := attr.Attribute[p]
 			p++
+			as4 := false
+			if int(l)*4 == len(attr.Attribute)-p {
+				as4 = true
+			}
 			for n := 0; n < int(l); n++ {
-				if as4Capable {
+				if as4 {
 					as := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
 					p += 4
 					path = append(path, as)

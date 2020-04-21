@@ -52,7 +52,7 @@ func (p *producer) lsSRv6SID(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 		msg.SRv6BGPPeerNodeSID = ls.GetSRv6BGPPeerNodeSID()
 		msg.SRv6SIDStructure = ls.GetSRv6SIDStructure()
 	}
-	msg.ASPath = update.GetAttrASPath(p.as4Capable)
+	msg.ASPath = update.GetAttrASPath()
 	if med := update.GetAttrMED(); med != nil {
 		msg.MED = *med
 	}

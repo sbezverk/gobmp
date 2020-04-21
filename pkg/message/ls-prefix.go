@@ -65,7 +65,7 @@ func (p *producer) lsPrefix(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 			msg.LSPrefixSID = ps
 		}
 	}
-	msg.ASPath = update.GetAttrASPath(p.as4Capable)
+	msg.ASPath = update.GetAttrASPath()
 	if med := update.GetAttrMED(); med != nil {
 		msg.MED = *med
 	}

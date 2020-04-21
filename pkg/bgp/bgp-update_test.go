@@ -28,8 +28,7 @@ func TestGetAttrASPath(t *testing.T) {
 					},
 				},
 			},
-			as4Capable: false,
-			expect:     []uint32{577},
+			expect: []uint32{577},
 		},
 		{
 			name: "single segment path 2 AS",
@@ -41,8 +40,7 @@ func TestGetAttrASPath(t *testing.T) {
 					},
 				},
 			},
-			as4Capable: false,
-			expect:     []uint32{577, 578},
+			expect: []uint32{577, 578},
 		},
 		{
 			name: "2 segment path 2 AS",
@@ -54,8 +52,7 @@ func TestGetAttrASPath(t *testing.T) {
 					},
 				},
 			},
-			as4Capable: false,
-			expect:     []uint32{577, 578},
+			expect: []uint32{577, 578},
 		},
 		{
 			name: "panic case #1",
@@ -67,8 +64,7 @@ func TestGetAttrASPath(t *testing.T) {
 					},
 				},
 			},
-			as4Capable: true,
-			expect:     []uint32{7200},
+			expect: []uint32{7200},
 		},
 		{
 			name: "panic case #2",
@@ -80,13 +76,24 @@ func TestGetAttrASPath(t *testing.T) {
 					},
 				},
 			},
-			as4Capable: true,
-			expect:     []uint32{7200, 100000},
+			expect: []uint32{7200, 100000},
+		},
+		{
+			name: "panic case #3",
+			update: &Update{
+				PathAttributes: []PathAttribute{
+					{
+						AttributeType: 2,
+						Attribute:     []byte{0x02, 0x06, 0x73, 0xfb, 0x32, 0xe6, 0x93, 0x1e, 0x91, 0x54, 0xdd, 0x78, 0xdd, 0x78},
+					},
+				},
+			},
+			expect: []uint32{29691, 13030, 37662, 37204, 56696, 56696},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.update.GetAttrASPath(tt.as4Capable)
+			got := tt.update.GetAttrASPath()
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Errorf("Expect list of ASes %+v does not match received list %+v", tt.expect, got)
 			}

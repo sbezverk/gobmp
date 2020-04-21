@@ -49,9 +49,9 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 	if o := update.GetAttrOrigin(); o != nil {
 		prfx.Origin = *o
 	}
-	prfx.ASPath = update.GetAttrASPath(p.as4Capable)
+	prfx.ASPath = update.GetAttrASPath()
 	prfx.ASPathCount = int32(len(prfx.ASPath))
-	if ases := update.GetAttrASPath(p.as4Capable); len(ases) != 0 {
+	if ases := update.GetAttrASPath(); len(ases) != 0 {
 		// Last element in AS_PATH would be the AS of the origin
 		prfx.OriginAS = fmt.Sprintf("%d", ases[len(ases)-1])
 	}
