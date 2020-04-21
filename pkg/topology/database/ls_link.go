@@ -7,30 +7,30 @@ import (
 const LSLinkName = "LSLink"
 
 type LSLink struct {
-	LocalRouterKey   string `json:"_from,omitempty"`
-        RemoteRouterKey  string `json:"_to,omitempty"`
-        Key	           string `json:"_key,omitempty"`
-	LocalRouterID      string `json:"LocalRouterID,omitempty"`
-	RemoteRouterID     string `json:"RemoteRouterID,omitempty"`
-	Protocol           string `json:"Protocol,omitempty"`
-        IGPID              string `json:"IGPID,omitempty"`
-	Level              string `json:"Level,omitempty"`
-	RouterID           string `json:"RouterID,omitempty"`
-        NodeName           string `json:"NodeName,omitempty"`
-	ASN                string `json:"ASN,omitempty"`
-	LocalInterfaceIP   string `json:"FromInterfaceIP,omitempty"`
-        RemoteInterfaceIP  string `json:"ToInterfaceIP,omitempty"`
-	IGPMetric       string `json:"IGPMetric,omitempty"`
-        TEMetric        string `json:"TEMetric,omitempty"`
-        AdminGroup      string `json:"AdminGroup,omitempty"`
-	MaxLinkBW       string `json:"MaxLinkBW,omitempty"`
-        MaxResvBW       string `json:"MaxResvBW,omitempty"`
-        UnResvBW        string `json:"UnResvBW,omitempty"`
-        LinkProtection  string `json:"LinkProtection,omitempty"`
-        LinkName        string `json:"LinkName,omitempty"`
-	SRLG            string `json:"SRLG"`
-	UniDirMinDelay  string `json:"UniDirMinDelay,omitempty"`
-	AdjacencySID    string `json:"AdjacencySID,omitempty"`
+	LocalRouterKey    string `json:"_from,omitempty"`
+	RemoteRouterKey   string `json:"_to,omitempty"`
+	Key               string `json:"_key,omitempty"`
+	LocalRouterID     string `json:"LocalRouterID,omitempty"`
+	RemoteRouterID    string `json:"RemoteRouterID,omitempty"`
+	Protocol          string `json:"Protocol,omitempty"`
+	IGPID             string `json:"IGPID,omitempty"`
+	Level             string `json:"Level,omitempty"`
+	RouterID          string `json:"RouterID,omitempty"`
+	NodeName          string `json:"NodeName,omitempty"`
+	ASN               string `json:"ASN,omitempty"`
+	LocalInterfaceIP  string `json:"FromInterfaceIP,omitempty"`
+	RemoteInterfaceIP string `json:"ToInterfaceIP,omitempty"`
+	IGPMetric         string `json:"IGPMetric,omitempty"`
+	TEMetric          string `json:"TEMetric,omitempty"`
+	AdminGroup        string `json:"AdminGroup,omitempty"`
+	MaxLinkBW         string `json:"MaxLinkBW,omitempty"`
+	MaxResvBW         string `json:"MaxResvBW,omitempty"`
+	UnResvBW          string `json:"UnResvBW,omitempty"`
+	LinkProtection    string `json:"LinkProtection,omitempty"`
+	LinkName          string `json:"LinkName,omitempty"`
+	SRLG              string `json:"SRLG"`
+	UniDirMinDelay    string `json:"UniDirMinDelay,omitempty"`
+	AdjacencySID      string `json:"AdjacencySID,omitempty"`
 }
 
 func (l LSLink) GetKey() (string, error) {
@@ -75,4 +75,3 @@ func (l *LSLink) SetEdge(to DBObject, from DBObject) error {
 	}
 	return nil
 }
-

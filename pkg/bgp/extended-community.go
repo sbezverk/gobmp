@@ -65,7 +65,7 @@ func (ext *ExtCommunity) String() string {
 			prefix = "tunnel-type="
 			s += fmt.Sprintf("%d", binary.BigEndian.Uint16(ext.Value[2:4]))
 		default:
-			prefix = fmt.Sprintf("%d=",*ext.SubType)
+			prefix = fmt.Sprintf("%d=", *ext.SubType)
 			s += fmt.Sprintf("%d", binary.BigEndian.Uint32(ext.Value[0:4]))
 		}
 	case 6:
@@ -123,9 +123,9 @@ func makeExtCommunity(b []byte) (*ExtCommunity, error) {
 		p++
 	case 3:
 		st := uint8(b[p])
-                ext.SubType = &st
+		ext.SubType = &st
 		l = 6
-		p+=3
+		p += 3
 	}
 	ext.Value = make([]byte, l)
 	copy(ext.Value, b[p:])

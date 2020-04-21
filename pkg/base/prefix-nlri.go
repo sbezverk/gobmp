@@ -97,7 +97,7 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 	// Skip Node Descriptor Type and Length 4 bytes
 	p += 4
 	p += int(ndl)
-	pn, err := UnmarshalPrefixDescriptor(b[p:len(b)])
+	pn, err := UnmarshalPrefixDescriptor(b[p:])
 	if err != nil {
 		return nil, err
 	}

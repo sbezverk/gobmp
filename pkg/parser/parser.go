@@ -54,7 +54,7 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 				return
 			}
 			perPerHeaderLen = bmp.PerPeerHeaderLength
-			if _, err = bmp.UnmarshalBMPStatsReportMessage(b[p+perPerHeaderLen : len(b)]); err != nil {
+			if _, err = bmp.UnmarshalBMPStatsReportMessage(b[p+perPerHeaderLen:]); err != nil {
 				glog.Errorf("fail to recover BMP Stats Reports message with error: %+v", err)
 				return
 			}

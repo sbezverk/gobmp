@@ -54,8 +54,8 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 		}
 		if coms := update.GetAttrCommunityString(); coms != "" {
 			prfx.CommunityList += coms
-                }
-		if exts, _  := update.GetAttrExtCommunity(); exts != nil {
+		}
+		if exts, _ := update.GetAttrExtCommunity(); exts != nil {
 			for i, ext := range exts {
 				prfx.ExtCommunityList += ext.String()
 				if i < len(exts)-1 {
@@ -63,7 +63,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 				}
 			}
 		}
-		if lgs, _  := update.GetAttrLgCommunity(); lgs != nil {
+		if lgs, _ := update.GetAttrLgCommunity(); lgs != nil {
 			for i, lg := range lgs {
 				prfx.LgCommunityList += lg.String()
 				if i < len(lgs)-1 {

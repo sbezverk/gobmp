@@ -253,13 +253,13 @@ func (up *Update) GetAttrExtCommunity() ([]ExtCommunity, error) {
 
 // GetAttrLgCommunity returns a slice with all large communities found in bgp update
 func (up *Update) GetAttrLgCommunity() ([]LgCommunity, error) {
-        for _, attr := range up.PathAttributes {
-                if attr.AttributeType == 32 {
-                        return UnmarshalBGPLgCommunity(attr.Attribute)
-                }
-        }
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 32 {
+			return UnmarshalBGPLgCommunity(attr.Attribute)
+		}
+	}
 
-        return nil, fmt.Errorf("not found")
+	return nil, fmt.Errorf("not found")
 }
 
 // GetExtCommunityRT returns  a slice of Route Target EXTENDED_COMMUNITY

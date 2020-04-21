@@ -6,21 +6,21 @@ const EPEPrefixName = "EPEPrefix"
 
 type EPEPrefix struct {
 	Key           string `json:"_key,omitempty"`
-        Prefix        string `json:"Prefix,omitempty"`
-        Length        string `json:"Length,omitempty"`
-        PeerIP        string `json:"PeerIP,omitempty"`
-        PeerASN       string `json:"PeerASN,omitempty"`
-        Nexthop       string `json:"Nexthop,omitempty"`
+	Prefix        string `json:"Prefix,omitempty"`
+	Length        string `json:"Length,omitempty"`
+	PeerIP        string `json:"PeerIP,omitempty"`
+	PeerASN       string `json:"PeerASN,omitempty"`
+	Nexthop       string `json:"Nexthop,omitempty"`
 	OriginASN     string `json:"OriginASN,omitempty"`
 	ASPath        string `json:"ASPath,omitempty"`
-        ASPathCount   string `json:"ASPathCount,omitempty"`
-        MED           string `json:"MED,omitempty"`
-        LocalPref      string `json:"LocalPref,omitempty"`
-        CommunityList string `json:"CommunityList,omitempty"`
-        ExtComm       string `json:"ExtComm,omitempty"`
-        IsIPv4        string `json:"IsIPv4,omitempty"`
-        IsNexthopIPv4 string `json:"IsNexthopIPv4,omitempty"`
-        Labels        string `json:"Labels,omitempty"`
+	ASPathCount   string `json:"ASPathCount,omitempty"`
+	MED           string `json:"MED,omitempty"`
+	LocalPref     string `json:"LocalPref,omitempty"`
+	CommunityList string `json:"CommunityList,omitempty"`
+	ExtComm       string `json:"ExtComm,omitempty"`
+	IsIPv4        string `json:"IsIPv4,omitempty"`
+	IsNexthopIPv4 string `json:"IsNexthopIPv4,omitempty"`
+	Labels        string `json:"Labels,omitempty"`
 }
 
 func (r EPEPrefix) GetKey() (string, error) {
