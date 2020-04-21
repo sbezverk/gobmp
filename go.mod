@@ -13,7 +13,7 @@ require (
 	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/message v0.0.0-00010101000000-000000000000 // indirect
 	github.com/sbezverk/gobmp/pkg/parser v0.0.0-00010101000000-000000000000 // indirect
-	github.com/sbezverk/gobmp/pkg/pub v0.0.0-00010101000000-000000000000
+	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200420214652-390271d2c7c6
 	github.com/segmentio/kafka-go v0.3.5 // indirect
 )
 
