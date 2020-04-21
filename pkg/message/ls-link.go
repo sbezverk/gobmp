@@ -96,7 +96,7 @@ func (p *producer) lsLink(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 			msg.LSAdjacencySID = adj
 		}
 	}
-	msg.ASPath = update.GetAttrASPath(p.as4Capable)
+	msg.ASPath = update.GetAttrASPath()
 	if med := update.GetAttrMED(); med != nil {
 		msg.MED = *med
 	}

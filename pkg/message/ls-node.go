@@ -66,7 +66,7 @@ func (p *producer) lsNode(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
 		msg.SRv6CapabilitiesTLV = lsnode.GetNodeSRv6CapabilitiesTLV()
 	}
-	msg.ASPath = update.GetAttrASPath(p.as4Capable)
+	msg.ASPath = update.GetAttrASPath()
 	if med := update.GetAttrMED(); med != nil {
 		msg.MED = *med
 	}
