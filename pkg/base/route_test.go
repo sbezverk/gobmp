@@ -2,6 +2,7 @@ package base
 
 import (
 	"net"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -57,6 +58,36 @@ func TestGetPrefixIPReachability(t *testing.T) {
 			}
 			if strings.Compare(tt.expect, rs) != 0 {
 				t.Errorf("failed, expected %s route got %s route", tt.expect, rs)
+			}
+		})
+	}
+}
+
+func TestUnmarshalBaseNLRI(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []byte
+		expect []Route
+	}{
+		{
+			name:  "Default prefix",
+			input: []byte{0x0},
+			expect: []Route{
+				{
+					Length: 0x0,
+					Prefix: []byte{},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := UnmarshalRoutes(tt.input)
+			if err != nil {
+				t.Fatalf("test failed with error: %+v", err)
+			}
+			if !reflect.DeepEqual(tt.expect, got) {
+				t.Fatalf("test failed as expected nlri %+v does not match actual nlri %+v", tt.expect, got)
 			}
 		})
 	}

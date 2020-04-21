@@ -101,6 +101,64 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "Panic case #1",
+			input: []byte{0x00, 0x00, 0x00, 0x01, 0x17, 0x89, 0xe8, 0x70},
+			expect: &MPUnicastNLRI{
+				NLRI: []MPUnicastPrefix{
+					{
+						AFI:    0,
+						SAFI:   0,
+						Count:  1,
+						Length: 23,
+						Prefix: []byte{137, 232, 112},
+					},
+				},
+			},
+		},
+		{
+			name:  "Panic case #2",
+			input: []byte{0x00, 0x00, 0x00, 0x01, 0x17, 0xd8, 0xee, 0xfe, 0x00, 0x00, 0x00, 0x01, 0x18, 0xcd, 0x6b, 0x58, 0x00, 0x00, 0x00, 0x01, 0x14, 0xcd, 0x63, 0x40, 0x00, 0x00, 0x00, 0x01, 0x18, 0xb1, 0xc8, 0xef, 0x00, 0x00, 0x00, 0x01, 0x18, 0xb1, 0xc8, 0xee},
+			expect: &MPUnicastNLRI{
+				NLRI: []MPUnicastPrefix{
+					{
+						AFI:    0,
+						SAFI:   0,
+						Count:  1,
+						Length: 23,
+						Prefix: []byte{216, 238, 254},
+					},
+					{
+						AFI:    0,
+						SAFI:   0,
+						Count:  1,
+						Length: 24,
+						Prefix: []byte{205, 107, 88},
+					},
+					{
+						AFI:    0,
+						SAFI:   0,
+						Count:  1,
+						Length: 20,
+						Prefix: []byte{205, 99, 64},
+					},
+					{
+						AFI:    0,
+						SAFI:   0,
+						Count:  1,
+						Length: 24,
+						Prefix: []byte{177, 200, 239},
+					},
+					{
+						AFI:    0,
+						SAFI:   0,
+						Count:  1,
+						Length: 24,
+						Prefix: []byte{177, 200, 238},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
