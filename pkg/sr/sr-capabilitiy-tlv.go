@@ -11,8 +11,8 @@ import (
 // CapabilityTLV defines SR Capability TLV object
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.1.2
 type CapabilityTLV struct {
-	Range uint32
-	SID   *SIDTLV
+	Range uint32  `json:"range,omitempty"`
+	SID   *SIDTLV `json:"sid_tlv,omitempty"`
 }
 
 func (cap *CapabilityTLV) String() string {

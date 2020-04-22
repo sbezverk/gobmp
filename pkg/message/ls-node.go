@@ -61,7 +61,9 @@ func (p *producer) lsNode(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 			msg.RouterID = lsnode.GetLocalIPv4RouterID()
 		}
 		msg.NodeMSD = lsnode.GetNodeMSD()
-		msg.SRCapabilities = lsnode.GetNodeSRCapabilities()
+		if cap, err := lsnode.GetNodeSRCapabilities(); err == nil {
+			msg.SRCapabilities = cap
+		}
 		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
 		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
 		msg.SRv6CapabilitiesTLV = lsnode.GetNodeSRv6CapabilitiesTLV()

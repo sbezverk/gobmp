@@ -8,8 +8,8 @@ import (
 // Capability defines SR Capability object
 // https://datatracker.ietf.org/doc/draft-ietf-idr-bgp-ls-segment-routing-ext/?include_text=1 Section 2.1.2
 type Capability struct {
-	Flags uint8
-	TLV   []CapabilityTLV
+	Flags uint8           `json:"sr_capability_flags,omitempty"`
+	TLV   []CapabilityTLV `json:"sr_capability_tlv,omitempty"`
 }
 
 // UnmarshalSRCapability builds SR Capability object
