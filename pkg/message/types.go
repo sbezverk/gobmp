@@ -80,38 +80,38 @@ type UnicastPrefix struct {
 
 // LSNode defines a structure of LS Node message
 type LSNode struct {
-	Action              string   `json:"action"` // Action can be "add" or "del"
-	Sequence            int      `json:"sequence,omitempty"`
-	Hash                string   `json:"hash,omitempty"`
-	RouterHash          string   `json:"router_hash,omitempty"`
-	RouterIP            string   `json:"router_ip,omitempty"`
-	BaseAttrHash        string   `json:"base_attr_hash,omitempty"`
-	PeerHash            string   `json:"peer_hash,omitempty"`
-	PeerIP              string   `json:"peer_ip,omitempty"`
-	PeerASN             int32    `json:"peer_asn,omitempty"`
-	Timestamp           string   `json:"timestamp,omitempty"`
-	IGPRouterID         string   `json:"igp_router_id,omitempty"`
-	RouterID            string   `json:"router_id,omitempty"`
-	RoutingID           string   `json:"routing_id,omitempty"`
-	ASN                 uint32   `json:"asn,omitempty"`
-	LSID                uint32   `json:"ls_id,omitempty"`
-	MTID                []uint16 `json:"mt_id,omitempty"`
-	OSPFAreaID          string   `json:"ospf_area_id,omitempty"`
-	ISISAreaID          string   `json:"isis_area_id,omitempty"`
-	Protocol            string   `json:"protocol,omitempty"`
-	Flags               uint8    `json:"flags,omitempty"`
-	ASPath              []uint32 `json:"as_path,omitempty"`
-	Nexthop             string   `json:"nexthop,omitempty"`
-	MED                 uint32   `json:"med,omitempty"`
-	LocalPref           uint32   `json:"local_pref,omitempty"`
-	Name                string   `json:"name,omitempty"`
-	SRCapabilities      string   `json:"ls_sr_capabilities,omitempty"`
-	SRAlgorithm         []int    `json:"sr_algorithm,omitempty"`
-	SRLocalBlock        string   `json:"sr_local_block,omitempty"`
-	SRv6CapabilitiesTLV string   `json:"srv6_capabilities_tlv,omitempty"`
-	NodeMSD             string   `json:"node_msd,omitempty"`
-	IsPrepolicy         bool     `json:"isprepolicy"`
-	IsAdjRIBIn          bool     `json:"is_adj_rib_in"`
+	Action              string         `json:"action"` // Action can be "add" or "del"
+	Sequence            int            `json:"sequence,omitempty"`
+	Hash                string         `json:"hash,omitempty"`
+	RouterHash          string         `json:"router_hash,omitempty"`
+	RouterIP            string         `json:"router_ip,omitempty"`
+	BaseAttrHash        string         `json:"base_attr_hash,omitempty"`
+	PeerHash            string         `json:"peer_hash,omitempty"`
+	PeerIP              string         `json:"peer_ip,omitempty"`
+	PeerASN             int32          `json:"peer_asn,omitempty"`
+	Timestamp           string         `json:"timestamp,omitempty"`
+	IGPRouterID         string         `json:"igp_router_id,omitempty"`
+	RouterID            string         `json:"router_id,omitempty"`
+	RoutingID           string         `json:"routing_id,omitempty"`
+	ASN                 uint32         `json:"asn,omitempty"`
+	LSID                uint32         `json:"ls_id,omitempty"`
+	MTID                []uint16       `json:"mt_id,omitempty"`
+	OSPFAreaID          string         `json:"ospf_area_id,omitempty"`
+	ISISAreaID          string         `json:"isis_area_id,omitempty"`
+	Protocol            string         `json:"protocol,omitempty"`
+	Flags               uint8          `json:"flags,omitempty"`
+	ASPath              []uint32       `json:"as_path,omitempty"`
+	Nexthop             string         `json:"nexthop,omitempty"`
+	MED                 uint32         `json:"med,omitempty"`
+	LocalPref           uint32         `json:"local_pref,omitempty"`
+	Name                string         `json:"name,omitempty"`
+	SRCapabilities      *sr.Capability `json:"ls_sr_capabilities,omitempty"`
+	SRAlgorithm         []int          `json:"sr_algorithm,omitempty"`
+	SRLocalBlock        string         `json:"sr_local_block,omitempty"`
+	SRv6CapabilitiesTLV string         `json:"srv6_capabilities_tlv,omitempty"`
+	NodeMSD             string         `json:"node_msd,omitempty"`
+	IsPrepolicy         bool           `json:"isprepolicy"`
+	IsAdjRIBIn          bool           `json:"is_adj_rib_in"`
 }
 
 // LSLink defines a structure of LS link message

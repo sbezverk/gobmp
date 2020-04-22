@@ -197,29 +197,15 @@ func (ls *NLRI) GetLinkMSD() string {
 }
 
 // GetNodeSRCapabilities returns string representation of SR Capabilities
-func (ls *NLRI) GetNodeSRCapabilities() string {
-	var s string
+func (ls *NLRI) GetNodeSRCapabilities() (*sr.Capability, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1034 {
 			continue
 		}
-		cap, err := sr.UnmarshalSRCapability(tlv.Value)
-		if err != nil {
-			return s
-		}
-		if cap == nil {
-			return s
-		}
-		s += fmt.Sprintf("%02x ", cap.Flags)
-		for _, tlv := range cap.TLV {
-			if tlv.SID == nil {
-				continue
-			}
-			s += fmt.Sprintf("%d:%d ", tlv.Range, tlv.SID.Value)
-		}
+		return sr.UnmarshalSRCapability(tlv.Value)
 	}
 
-	return s
+	return nil, fmt.Errorf("not found")
 }
 
 // GetSRAlgorithm returns a list of SR Algorithms

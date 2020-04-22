@@ -4,5 +4,5 @@ package sr
 type SIDTLV struct {
 	Type   uint16
 	Length uint16
-	Value  []byte
+	Value  []byte `json:"sid,omitempty"`
 }
