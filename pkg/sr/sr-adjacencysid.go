@@ -10,9 +10,9 @@ import (
 // AdjacencySIDTLV defines Prefix SID TLV Object
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.2.1
 type AdjacencySIDTLV struct {
-	Flags  uint8  `json:"sr_adj_sid_flags,omitempty"`
-	Weight uint8  `json:"sr_adj_sid_weight,omitempty"`
-	SID    []byte `json:"sr_adj_sid,omitempty"`
+	Flags  uint8  `json:"flags,omitempty"`
+	Weight uint8  `json:"weight"`
+	SID    []byte `json:"sid,omitempty"`
 }
 
 func (asid *AdjacencySIDTLV) String() string {
