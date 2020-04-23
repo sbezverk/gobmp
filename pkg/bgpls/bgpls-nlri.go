@@ -554,7 +554,9 @@ func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
 }
 
 // GetSRAdjacencySID returns SR Adjacency SID object
-func (ls *NLRI) GetSRAdjacencySID() (*sr.AdjacencySIDTLV, error) {
+func (ls *NLRI) GetSRAdjacencySID() ([]*sr.AdjacencySIDTLV, error) {
+	adjs := make([]*sr.AdjacencySIDTLV, 0)
+	// It appears Path Attributes can carry multiple entries of SR Adjacency SID
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1099 {
 			continue
@@ -563,11 +565,10 @@ func (ls *NLRI) GetSRAdjacencySID() (*sr.AdjacencySIDTLV, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		return adj, nil
+		adjs = append(adjs, adj)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return adjs, nil
 }
 
 // UnmarshalBGPLSNLRI builds Prefix NLRI object
