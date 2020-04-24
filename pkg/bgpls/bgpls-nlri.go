@@ -15,7 +15,8 @@ import (
 // NLRI defines BGP-LS NLRI object as collection of BGP-LS TLVs
 // https://tools.ietf.org/html/rfc7752#section-3.3
 type NLRI struct {
-	LS []TLV
+	LS           []TLV
+	AttributeMap map[uint16][][]byte
 }
 
 func (ls *NLRI) String() string {
@@ -84,22 +85,24 @@ func (ls *NLRI) GetNodeName() string {
 // GetISISAreaID returns a string IS-IS Area Identifier TLVs
 func (ls *NLRI) GetISISAreaID() string {
 	var s string
-	for _, tlv := range ls.LS {
-		if tlv.Type != 1027 {
+	values, ok := ls.AttributeMap[1027]
+	if !ok {
+		return ""
+	}
+	for i, v := range values {
+		if len(v) != 4 {
+			// Malformed area id skipping
 			continue
 		}
-		for p := 0; p < len(tlv.Value); {
-			s += fmt.Sprintf("%02x.", tlv.Value[p])
-			s += fmt.Sprintf("%02x", tlv.Value[p+1])
-			s += fmt.Sprintf("%02x", tlv.Value[p+2])
-			p += 3
-			if p < len(tlv.Value) {
-				s += ","
-			}
+		p := 0
+		s += fmt.Sprintf("%02x.", v[p])
+		s += fmt.Sprintf("%02x", v[p+1])
+		s += fmt.Sprintf("%02x", v[p+2])
+		if i < len(values)-1 {
+			s += ","
 		}
-		return s
 	}
-	return ""
+	return s
 }
 
 // GetLocalIPv4RouterID returns string with local Node IPv4 router ID
@@ -583,6 +586,33 @@ func UnmarshalBGPLSNLRI(b []byte) (*NLRI, error) {
 		return nil, err
 	}
 	bgpls.LS = ls
+	bgpls.AttributeMap = buildAttributeMap(b)
 
 	return &bgpls, nil
+}
+
+func buildAttributeMap(b []byte) map[uint16][][]byte {
+	m := make(map[uint16][][]byte)
+	for p := 0; p < len(b); {
+		t := binary.BigEndian.Uint16(b[p : p+2])
+		tlvs, ok := m[t]
+		if !ok {
+			// If type of attribute is not in the map, allocating empty slice
+			tlvs = make([][]byte, 0)
+		}
+		p += 2
+		l := binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		safe := int(l)
+		if p+safe > len(b) {
+			safe = len(b) - p
+		}
+		v := make([]byte, safe)
+		copy(v, b[p:p+safe])
+		p += safe
+		tlvs = append(tlvs, v)
+		m[t] = tlvs
+	}
+
+	return m
 }
