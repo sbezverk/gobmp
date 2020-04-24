@@ -2,6 +2,7 @@ package bgpls
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net"
 
@@ -15,10 +16,9 @@ import (
 // TLV defines BGP-LS TLV object
 // https://tootlv.ietf.org/html/rfc7752#section-3.3
 type TLV struct {
-	Type       uint16
-	Length     uint16
-	Value      []byte
-	Capability *sr.Capability
+	Type   uint16
+	Length uint16
+	Value  []byte
 }
 
 func (tlv *TLV) String() string {
@@ -203,5 +203,34 @@ func UnmarshalBGPLSTLV(b []byte) ([]TLV, error) {
 		lstlvs = append(lstlvs, lstlv)
 	}
 
+	buildAttributeMap(b)
+
 	return lstlvs, nil
+}
+
+func buildAttributeMap(b []byte) map[uint16][]TLV {
+	m := make(map[uint16][]TLV)
+	for p := 0; p < len(b); {
+		lstlv := TLV{}
+		lstlv.Type = binary.BigEndian.Uint16(b[p : p+2])
+		lstlvs, ok := m[lstlv.Type]
+		if !ok {
+			// If type of attribute is not in the map, allocating empty slice
+			lstlvs = make([]TLV, 0)
+		}
+		p += 2
+		lstlv.Length = binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		lstlv.Value = make([]byte, lstlv.Length)
+		// TODO add check for Offset not exceeding slice's capacity
+		copy(lstlv.Value, b[p:p+int(lstlv.Length)])
+		p += int(lstlv.Length)
+		lstlvs = append(lstlvs, lstlv)
+		m[lstlv.Type] = lstlvs
+	}
+
+	ms, _ := json.Marshal(m)
+	glog.Infof("><SB> Resulted map: %s", string(ms))
+
+	return m
 }
