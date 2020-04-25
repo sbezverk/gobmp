@@ -15,22 +15,22 @@ import (
 // codes for each can be found:
 // https://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml#bgp-parameters-2
 type BaseAttributes struct {
-	BaseAttrHash  string   `json:"base_attr_hash,omitempty"`
-	Origin        string   `json:"origin,omitempty"`
-	ASPath        []uint32 `json:"as_path,omitempty"`
-	ASPathCount   int32    `json:"as_path_count,omitempty"`
-	Nexthop       string   `json:"nexthop,omitempty"`
-	MED           uint32   `json:"med,omitempty"`
-	LocalPref     uint32   `json:"local_pref,omitempty"`
-	IsAtomicAgg   bool     `json:"is_atomic_agg"`
-	Aggregator    string   `json:"aggregator,omitempty"`
-	CommunityList string   `json:"community_list,omitempty"`
-	OriginatorID  string   `json:"originator_id,omitempty"`
-	// ClusterList
-	ExtCommunityList string `json:"ext_community_list,omitempty"`
-	// AS4Path
-	// AS4PathCount
-	// AS4Aggregator
+	BaseAttrHash     string   `json:"base_attr_hash,omitempty"`
+	Origin           string   `json:"origin,omitempty"`
+	ASPath           []uint32 `json:"as_path,omitempty"`
+	ASPathCount      int32    `json:"as_path_count,omitempty"`
+	Nexthop          string   `json:"nexthop,omitempty"`
+	MED              uint32   `json:"med,omitempty"`
+	LocalPref        uint32   `json:"local_pref,omitempty"`
+	IsAtomicAgg      bool     `json:"is_atomic_agg"`
+	Aggregator       []byte   `json:"aggregator,omitempty"`
+	CommunityList    string   `json:"community_list,omitempty"`
+	OriginatorID     string   `json:"originator_id,omitempty"`
+	ClusterList      string   `json:"cluster_list,omitempty"`
+	ExtCommunityList string   `json:"ext_community_list,omitempty"`
+	AS4Path          []uint32 `json:"as4_path,omitempty"`
+	AS4PathCount     int32    `json:"as4_path_count,omitempty"`
+	AS4Aggregator    []byte   `json:"as4_aggregator,omitempty"`
 	// PMSITunnel
 	// TunnelEncapAttr
 	// TraficEng
@@ -70,15 +70,26 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 		case 3:
 			baseAttr.Nexthop = unmarshalAttrNextHop(b[p : p+int(l)])
 		case 4:
+			baseAttr.MED = unmarshalAttrMED(b[p : p+int(l)])
 		case 5:
+			baseAttr.LocalPref = unmarshalAttrLocalPref(b[p : p+int(l)])
 		case 6:
+			baseAttr.IsAtomicAgg = true
 		case 7:
+			baseAttr.Aggregator = unmarshalAttrAggregator(b[p : p+int(l)])
 		case 8:
+			baseAttr.CommunityList = unmarshalAttrCommunity(b[p : p+int(l)])
 		case 9:
+			baseAttr.OriginatorID = unmarshalAttrOriginatorID(b[p : p+int(l)])
 		case 10:
+			baseAttr.ClusterList = unmarshalAttrClusterList(b[p : p+int(l)])
 		case 16:
+			baseAttr.ExtCommunityList = unmarshalAttrExtCommunity(b[p : p+int(l)])
 		case 17:
+			baseAttr.AS4Path = unmarshalAttrAS4Path(b[p : p+int(l)])
+			baseAttr.AS4PathCount = int32(len(baseAttr.AS4Path))
 		case 18:
+			baseAttr.AS4Aggregator = unmarshalAttrAS4Aggregator(b[p : p+int(l)])
 		case 22:
 		case 23:
 		case 24:
@@ -88,6 +99,7 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 		case 28:
 		case 29:
 		case 32:
+			baseAttr.LgCommunityList = unmarshalAttrLgCommunity(b[p : p+int(l)])
 		case 33:
 		case 128:
 		}
@@ -154,193 +166,149 @@ func unmarshalAttrNextHop(b []byte) string {
 	return net.IP(b).To16().String()
 }
 
-// // getAttrMED returns the value of MED attribute if it is defined, otherwise it returns nil
-// func getAttrMED() *uint32 {
-// 	var med uint32
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 4 {
-// 			med = binary.BigEndian.Uint32(attr.Attribute)
-// 			return &med
-// 		}
-// 	}
+// unmarshalAttrMED returns the value of MED attribute
+func unmarshalAttrMED(b []byte) uint32 {
+	if len(b) != 4 {
+		return 0
+	}
+	return binary.BigEndian.Uint32(b)
+}
 
-// 	return nil
-// }
+// unmarshalAttrLocalPref returns the value of LOCAL_PREF attribute
+func unmarshalAttrLocalPref(b []byte) uint32 {
+	if len(b) != 4 {
+		return 0
+	}
+	return binary.BigEndian.Uint32(b)
+}
 
-// // getAttrLocalPref returns the value of LOCAL_PREF attribute if it is defined, otherwise it returns nil
-// func getAttrLocalPref() *uint32 {
-// 	var lp uint32
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 5 {
-// 			lp = binary.BigEndian.Uint32(attr.Attribute)
-// 			return &lp
-// 		}
-// 	}
+// unmarshalAttrAggregator returns the value of AGGREGATOR attribute
+func unmarshalAttrAggregator(b []byte) []byte {
+	agg := make([]byte, len(b))
+	copy(agg, b)
 
-// 	return nil
-// }
+	return agg
+}
 
-// // getAttrAtomicAggregate returns 1 if ATOMIC_AGGREGATE exists, 0 if does not
-// func getAttrAtomicAggregate() bool {
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 6 {
-// 			return true
-// 		}
-// 	}
+// getCommunity returns a slice of communities
+func getCommunity(b []byte) []uint32 {
+	comm := make([]uint32, 0)
+	for p := 0; p < len(b); {
+		c := binary.BigEndian.Uint32(b[p : p+4])
+		p += 4
+		comm = append(comm, c)
+	}
 
-// 	return false
-// }
+	return comm
+}
 
-// // getAttrAggregator returns the value of AGGREGATOR attribute if it is defined, otherwise it returns nil
-// func getAttrAggregator() []byte {
-// 	var agg []byte
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 7 {
-// 			agg = make([]byte, attr.AttributeLength)
-// 			copy(agg, attr.Attribute)
-// 			return agg
-// 		}
-// 	}
+// unmarshalAttrCommunity returns the string with comma separated communities.
+func unmarshalAttrCommunity(b []byte) string {
+	var communities string
+	cs := getCommunity(b)
+	for i, c := range cs {
+		communities += fmt.Sprintf("%d:%d", (0xffff0000&c)>>16, 0xffff&c)
+		if i < len(cs)-1 {
+			communities += ", "
+		}
+	}
 
-// 	return agg
-// }
+	return communities
+}
 
-// // getAttrCommunity returns a slice of communities
-// func getAttrCommunity() []uint32 {
-// 	comm := make([]uint32, 0)
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType != 8 {
-// 			continue
-// 		}
-// 		for p := 0; p < len(attr.Attribute); {
-// 			c := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
-// 			p += 4
-// 			comm = append(comm, c)
-// 		}
-// 	}
+// unmarshalAttrOriginatorID returns the value of ORIGINATOR_ID attribute
+func unmarshalAttrOriginatorID(b []byte) string {
+	if len(b) == 4 {
+		return net.IP(b).To4().String()
+	}
 
-// 	return comm
-// }
+	return "invalid length"
+}
 
-// // getAttrCommunityString returns the string with comma separated communities.
-// func getAttrCommunityString() string {
-// 	var communities string
-// 	cs := up.getAttrCommunity()
-// 	for i, c := range cs {
-// 		communities += fmt.Sprintf("%d:%d", (0xffff0000&c)>>16, 0xffff&c)
-// 		if i < len(cs)-1 {
-// 			communities += ", "
-// 		}
-// 	}
+// getClusterID returns a slice of Cluster IDs from Cluster List attribute
+func getClusterID(b []byte) [][]byte {
+	cl := make([][]byte, 0)
+	i := 0
+	for p := 0; p < len(b); {
+		cl[i] = make([]byte, 4)
+		copy(cl[i], b[p:p+4])
+		i++
+	}
 
-// 	return communities
-// }
+	return cl
+}
 
-// // getAttrOriginatorID returns the value of ORIGINATOR_ID attribute if it is defined, otherwise it returns nil
-// func getAttrOriginatorID() []byte {
-// 	var id []byte
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 9 {
-// 			id = make([]byte, attr.AttributeLength)
-// 			copy(id, attr.Attribute)
-// 			return id
-// 		}
-// 	}
+// unmarshalAttrClusterList returns the string with comma separated communities.
+func unmarshalAttrClusterList(b []byte) string {
+	var clist string
+	cl := getClusterID(b)
+	for i, c := range cl {
+		clist += net.IP(c).To4().String()
+		if i < len(cl)-1 {
+			clist += ", "
+		}
+	}
 
-// 	return id
-// }
+	return clist
+}
 
-// // getAttrClusterListID returns the value of CLUSTER_LIST attribute if it is defined, otherwise it returns nil
-// func getAttrClusterListID() []byte {
-// 	var l []byte
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 10 {
-// 			l = make([]byte, attr.AttributeLength)
-// 			copy(l, attr.Attribute)
-// 			return l
-// 		}
-// 	}
+//  unmarshalAttrExtCommunity returns a slice with all extended communities found in bgp update
+func unmarshalAttrExtCommunity(b []byte) string {
+	ext, err := UnmarshalBGPExtCommunity(b)
+	if err != nil {
+		return ""
+	}
+	var s string
+	for i, c := range ext {
+		s += c.String()
+		if i < len(ext)-1 {
+			s += ", "
+		}
+	}
 
-// 	return l
-// }
+	return s
+}
 
-// // getAttrExtCommunity returns a slice with all extended communities found in bgp update
-// func getAttrExtCommunity() ([]ExtCommunity, error) {
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 16 {
-// 			return UnmarshalBGPExtCommunity(attr.Attribute)
-// 		}
-// 	}
+// unmarshalAttrLgCommunity returns a slice with all large communities found in bgp update
+func unmarshalAttrLgCommunity(b []byte) string {
+	lg, err := UnmarshalBGPLgCommunity(b)
+	if err != nil {
+		return ""
+	}
+	var s string
+	for i, c := range lg {
+		s += c.String()
+		if i < len(lg)-1 {
+			s += ", "
+		}
+	}
 
-// 	return nil, fmt.Errorf("not found")
-// }
+	return s
+}
 
-// // getAttrLgCommunity returns a slice with all large communities found in bgp update
-// func getAttrLgCommunity() ([]LgCommunity, error) {
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 32 {
-// 			return UnmarshalBGPLgCommunity(attr.Attribute)
-// 		}
-// 	}
+// unmarshalAttrAS4Path returns a sequence of AS4 path segments
+func unmarshalAttrAS4Path(b []byte) []uint32 {
+	path := make([]uint32, 0)
+	for p := 0; p < len(b); {
+		// Skipping type
+		p++
+		// Length of path segment in 4 bytes
+		l := b[p]
+		p++
+		for n := 0; n < int(l); n++ {
+			as := binary.BigEndian.Uint32(b[p : p+4])
+			p += 4
+			path = append(path, as)
+		}
+	}
 
-// 	return nil, fmt.Errorf("not found")
-// }
+	return path
+}
 
-// // GetExtCommunityRT returns  a slice of Route Target EXTENDED_COMMUNITY
-// func GetExtCommunityRT() ([]ExtCommunity, error) {
-// 	rts := make([]ExtCommunity, 0)
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 16 {
-// 			all, err := UnmarshalBGPExtCommunity(attr.Attribute)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 			for _, c := range all {
-// 				if c.IsRouteTarget() {
-// 					rts = append(rts, c)
-// 				}
-// 			}
-// 			return rts, nil
-// 		}
-// 	}
+// getAttrAS4Aggregator returns the value of AS4 AGGREGATOR attribute
+func unmarshalAttrAS4Aggregator(b []byte) []byte {
+	agg := make([]byte, len(b))
+	copy(agg, b)
 
-// 	return nil, fmt.Errorf("not found")
-// }
-
-// // getAttrAS4Path returns a sequence of AS4 path segments
-// func getAttrAS4Path() []uint32 {
-// 	path := make([]uint32, 0)
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType != 17 {
-// 			continue
-// 		}
-// 		for p := 0; p < len(attr.Attribute); {
-// 			// Skipping type
-// 			p++
-// 			// Length of path segment in 4 bytes
-// 			l := attr.Attribute[p]
-// 			p++
-// 			for n := 0; n < int(l); n++ {
-// 				as := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
-// 				p += 4
-// 				path = append(path, as)
-// 			}
-// 		}
-// 	}
-
-// 	return path
-// }
-
-// // getAttrAS4Aggregator returns the value of AS4 AGGREGATOR attribute if it is defined, otherwise it returns nil
-// func getAttrAS4Aggregator() []byte {
-// 	var agg []byte
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 18 {
-// 			agg = make([]byte, attr.AttributeLength)
-// 			copy(agg, attr.Attribute)
-// 			return agg
-// 		}
-// 	}
-
-// 	return agg
-// }
+	return agg
+}

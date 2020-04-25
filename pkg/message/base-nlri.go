@@ -23,16 +23,17 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 	prfxs := make([]UnicastPrefix, 0)
 	for _, pr := range update.NLRI {
 		prfx := UnicastPrefix{
-			Action:       operation,
-			RouterHash:   p.speakerHash,
-			RouterIP:     p.speakerIP,
-			BaseAttrHash: update.GetBaseAttrHash(),
-			PeerHash:     ph.GetPeerHash(),
-			PeerASN:      ph.PeerAS,
-			Timestamp:    ph.PeerTimestamp,
-			PrefixLen:    int32(pr.Length),
-			IsAtomicAgg:  update.GetAttrAtomicAggregate(),
-			Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
+			Action:         operation,
+			RouterHash:     p.speakerHash,
+			RouterIP:       p.speakerIP,
+			BaseAttrHash:   update.GetBaseAttrHash(),
+			PeerHash:       ph.GetPeerHash(),
+			PeerASN:        ph.PeerAS,
+			Timestamp:      ph.PeerTimestamp,
+			PrefixLen:      int32(pr.Length),
+			IsAtomicAgg:    update.GetAttrAtomicAggregate(),
+			Aggregator:     fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
+			BaseAttributes: update.BaseAttributes,
 		}
 		if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
 			prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()
