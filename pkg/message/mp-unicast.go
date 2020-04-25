@@ -22,10 +22,6 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 
-	//	nlri14, err := update.GetNLRI14()
-	//	if err != nil {
-	//		return nil, err
-	//	}
 	prfxs := make([]UnicastPrefix, 0)
 	var u *unicast.MPUnicastNLRI
 	if label {
@@ -52,6 +48,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			IsAtomicAgg:  update.GetAttrAtomicAggregate(),
 			Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
 			PathID:       int32(e.PathID),
+			BaseAttributes: update.BaseAttributes,
 		}
 		if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
 			prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()

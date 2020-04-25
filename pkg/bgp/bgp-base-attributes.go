@@ -1,5 +1,13 @@
 package bgp
 
+import (
+	"crypto/md5"
+	"encoding/binary"
+	"encoding/json"
+	"fmt"
+	"net"
+)
+
 // BaseAttributes defines a structure holding BGP's basic, non nlri based attributes,
 // codes for each can be found:
 // https://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml#bgp-parameters-2
@@ -35,15 +43,14 @@ type BaseAttributes struct {
 // and instantiates BaseAttributes object
 func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 	baseAttr := BaseAttributes{}
-
-	for p:=0;p<len()b; {
+	for p := 0; p < len(b); {
 		flag := b[p]
 		p++
 		t := b[p]
 		p += 2
 		var l uint16
 		// Checking for Extened
-		if f&0x10 == 0x10 {
+		if flag&0x10 == 0x10 {
 			l = binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
 		} else {
@@ -52,79 +59,96 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 		}
 		switch t {
 		case 1:
+			baseAttr.Origin = unmarshalAttrOrigin(b[p : p+int(l)])
+		case 2:
+			baseAttr.ASPath = unmarshalAttrASPath(b[p : p+int(l)])
+			baseAttr.ASPathCount = int32(len(baseAttr.ASPath))
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+		case 9:
+		case 10:
+		case 16:
+		case 17:
+		case 18:
+		case 22:
+		case 23:
+		case 24:
+		case 25:
+		case 26:
+		case 27:
+		case 28:
+		case 29:
+		case 32:
+		case 33:
+		case 128:
 		}
+		p += int(l)
 	}
+	// Calculating hash of all recovered base attributes
+	ba, err := json.Marshal(baseAttr)
+	if err != nil {
+		return nil, err
+	}
+	baseAttr.BaseAttrHash = fmt.Sprintf("%s", md5.Sum(ba))
+
 	return &baseAttr, nil
 }
 
-// // getAttrOrigin returns the value of Origin attribute if it is defined, otherwise it returns nil
-// func getAttrOrigin() *string {
-// 	var o string
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 1 {
-// 			switch attr.Attribute[0] {
-// 			case 0:
-// 				o = "igp"
-// 			case 1:
-// 				o = "egp"
-// 			case 2:
-// 				o = "incomplete"
-// 			}
-// 			return &o
-// 		}
-// 	}
+// unmarshalAttrOrigin returns the value of Origin attribute
+func unmarshalAttrOrigin(b []byte) string {
+	switch b[0] {
+	case 0:
+		return "igp"
+	case 1:
+		return "egp"
+	case 2:
+		return "incomplete"
+	default:
+		return ""
+	}
+}
 
-// 	return nil
-// }
+// unmarshalAttrASPath returns a slice with a list of ASes
+func unmarshalAttrASPath(b []byte) []uint32 {
+	path := make([]uint32, 0)
+	for p := 0; p < len(b); {
+		// Skipping type
+		p++
+		// Length of path segment in 2 bytes
+		l := b[p]
+		p++
+		as4 := false
+		if int(l)*4 == len(b)-p {
+			as4 = true
+		}
+		for n := 0; n < int(l); n++ {
+			if as4 {
+				as := binary.BigEndian.Uint32(b[p : p+4])
+				p += 4
+				path = append(path, as)
+			} else {
+				as := binary.BigEndian.Uint16(b[p : p+2])
+				p += 2
+				path = append(path, uint32(as))
+			}
+		}
+	}
 
-// // getAttrASPath returns a sequence of AS path segments
-// func getAttrASPath() []uint32 {
-// 	path := make([]uint32, 0)
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType != 2 {
-// 			continue
-// 		}
-// 		for p := 0; p < len(attr.Attribute); {
-// 			// Skipping type
-// 			p++
-// 			// Length of path segment in 2 bytes
-// 			l := attr.Attribute[p]
-// 			p++
-// 			as4 := false
-// 			if int(l)*4 == len(attr.Attribute)-p {
-// 				as4 = true
-// 			}
-// 			for n := 0; n < int(l); n++ {
-// 				if as4 {
-// 					as := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
-// 					p += 4
-// 					path = append(path, as)
-// 				} else {
-// 					as := binary.BigEndian.Uint16(attr.Attribute[p : p+2])
-// 					p += 2
-// 					path = append(path, uint32(as))
-// 				}
+	return path
+}
 
-// 			}
-// 		}
-// 	}
-
-// 	return path
-// }
-
-// // getAttrNextHop returns the value of Next Hop attribute if it is defined, otherwise it returns nil
-// func getAttrNextHop() []byte {
-// 	var nh []byte
-// 	for _, attr := range up.PathAttributes {
-// 		if attr.AttributeType == 3 {
-// 			nh = make([]byte, attr.AttributeLength)
-// 			copy(nh, attr.Attribute)
-// 			return nh
-// 		}
-// 	}
-
-// 	return nh
-// }
+// unmarshalAttrNextHop returns the value of Next Hop attribute
+func unmarshalAttrNextHop(b []byte) string {
+	if len(b) == 4 {
+		return net.IP(b).To4().String()
+	} else {
+		return net.IP(b).To16().String()
+	}
+}
 
 // // getAttrMED returns the value of MED attribute if it is defined, otherwise it returns nil
 // func getAttrMED() *uint32 {
