@@ -85,7 +85,6 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 			baseAttr.ClusterList = unmarshalAttrClusterList(b[p : p+int(l)])
 		case 16:
 			baseAttr.ExtCommunityList = unmarshalAttrExtCommunity(b[p : p+int(l)])
-			glog.Infof("><SB2> ext community: %s", baseAttr.ExtCommunityList)
 		case 17:
 			baseAttr.AS4Path = unmarshalAttrAS4Path(b[p : p+int(l)])
 			baseAttr.AS4PathCount = int32(len(baseAttr.AS4Path))
@@ -268,7 +267,7 @@ func unmarshalAttrExtCommunity(b []byte) string {
 			s += ", "
 		}
 	}
-	glog.Infof("><SB1> ext community: %s", s)
+
 	return s
 }
 
