@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/unicast"
@@ -50,6 +51,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			PathID:       int32(e.PathID),
 			BaseAttributes: update.BaseAttributes,
 		}
+		glog.Infof("><SB3> ext community: %s", update.BaseAttributes.ExtCommunityList)
 		if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
 			prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()
 		}

@@ -43,6 +43,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		IsAtomicAgg: update.GetAttrAtomicAggregate(),
 		Aggregator:  fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
 		PathID:      int32(nlril3vpn.PathID),
+		BaseAttributes: update.BaseAttributes,
 	}
 	if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
 		prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()

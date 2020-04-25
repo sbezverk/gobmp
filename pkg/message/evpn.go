@@ -29,16 +29,17 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	}
 	for _, e := range evpn.Route {
 		prfx := EVPNPrefix{
-			Action:       operation,
-			RouterHash:   p.speakerHash,
-			RouterIP:     p.speakerIP,
-			BaseAttrHash: update.GetBaseAttrHash(),
-			PeerHash:     ph.GetPeerHash(),
-			PeerASN:      ph.PeerAS,
-			Timestamp:    ph.PeerTimestamp,
-			Nexthop:      nlri.GetNextHop(),
-			IsAtomicAgg:  update.GetAttrAtomicAggregate(),
-			Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
+			Action:         operation,
+			RouterHash:     p.speakerHash,
+			RouterIP:       p.speakerIP,
+			BaseAttrHash:   update.GetBaseAttrHash(),
+			PeerHash:       ph.GetPeerHash(),
+			PeerASN:        ph.PeerAS,
+			Timestamp:      ph.PeerTimestamp,
+			Nexthop:        nlri.GetNextHop(),
+			IsAtomicAgg:    update.GetAttrAtomicAggregate(),
+			Aggregator:     fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
+			BaseAttributes: update.BaseAttributes,
 		}
 		if orid := update.GetAttrOriginatorID(); len(orid) != 0 {
 			prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()

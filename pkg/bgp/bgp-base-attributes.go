@@ -45,7 +45,7 @@ type BaseAttributes struct {
 // UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
 // and instantiates BaseAttributes object
 func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
-	glog.Infof("UnmarshalBGPBaseAttributes RAW: %+v", tools.MessageHex(b))
+	glog.V(6).Infof("UnmarshalBGPBaseAttributes RAW: %+v", tools.MessageHex(b))
 	baseAttr := BaseAttributes{}
 	for p := 0; p < len(b); {
 		flag := b[p]
@@ -85,6 +85,7 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 			baseAttr.ClusterList = unmarshalAttrClusterList(b[p : p+int(l)])
 		case 16:
 			baseAttr.ExtCommunityList = unmarshalAttrExtCommunity(b[p : p+int(l)])
+			glog.Infof("><SB2> ext community: %s", baseAttr.ExtCommunityList)
 		case 17:
 			baseAttr.AS4Path = unmarshalAttrAS4Path(b[p : p+int(l)])
 			baseAttr.AS4PathCount = int32(len(baseAttr.AS4Path))
@@ -230,9 +231,11 @@ func getClusterID(b []byte) [][]byte {
 	cl := make([][]byte, 0)
 	i := 0
 	for p := 0; p < len(b); {
-		cl[i] = make([]byte, 4)
-		copy(cl[i], b[p:p+4])
+		c := make([]byte, 4)
+		copy(c, b[p:p+4])
+		p += 4
 		i++
+		cl = append(cl, c)
 	}
 
 	return cl
@@ -265,7 +268,7 @@ func unmarshalAttrExtCommunity(b []byte) string {
 			s += ", "
 		}
 	}
-
+	glog.Infof("><SB1> ext community: %s", s)
 	return s
 }
 
