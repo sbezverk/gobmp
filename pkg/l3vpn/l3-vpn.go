@@ -2,6 +2,7 @@ package l3vpn
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -11,6 +12,7 @@ import (
 
 // NLRI defines L3 VPN NLRI object
 type NLRI struct {
+	PathID uint32
 	Length uint8
 	Labels []*base.Label
 	RD     *base.RD
@@ -37,6 +39,11 @@ func UnmarshalL3VPNNLRI(b []byte) (*NLRI, error) {
 	}
 	n := NLRI{}
 	p := 0
+	if b[p] == 0 {
+		// NLRI carries Path ID
+		n.PathID = binary.BigEndian.Uint32(b[p : p+4])
+		p += 4
+	}
 	// Getting length of NLRI in bytes
 	n.Length = uint8(b[p] / 8)
 	p++
