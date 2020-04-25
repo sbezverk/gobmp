@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // BaseAttributes defines a structure holding BGP's basic, non nlri based attributes,
@@ -42,12 +45,13 @@ type BaseAttributes struct {
 // UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
 // and instantiates BaseAttributes object
 func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
+	glog.Infof("UnmarshalBGPBaseAttributes RAW: %+v", tools.MessageHex(b))
 	baseAttr := BaseAttributes{}
 	for p := 0; p < len(b); {
 		flag := b[p]
 		p++
 		t := b[p]
-		p += 2
+		p++
 		var l uint16
 		// Checking for Extened
 		if flag&0x10 == 0x10 {
@@ -64,6 +68,7 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 			baseAttr.ASPath = unmarshalAttrASPath(b[p : p+int(l)])
 			baseAttr.ASPathCount = int32(len(baseAttr.ASPath))
 		case 3:
+			baseAttr.Nexthop = unmarshalAttrNextHop(b[p : p+int(l)])
 		case 4:
 		case 5:
 		case 6:
@@ -93,7 +98,7 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 	if err != nil {
 		return nil, err
 	}
-	baseAttr.BaseAttrHash = fmt.Sprintf("%s", md5.Sum(ba))
+	baseAttr.BaseAttrHash = fmt.Sprintf("%x", md5.Sum(ba))
 
 	return &baseAttr, nil
 }
@@ -145,9 +150,8 @@ func unmarshalAttrASPath(b []byte) []uint32 {
 func unmarshalAttrNextHop(b []byte) string {
 	if len(b) == 4 {
 		return net.IP(b).To4().String()
-	} else {
-		return net.IP(b).To16().String()
 	}
+	return net.IP(b).To16().String()
 }
 
 // // getAttrMED returns the value of MED attribute if it is defined, otherwise it returns nil

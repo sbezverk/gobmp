@@ -45,7 +45,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		}
 		// Loop through and publish all collected messages
 		for _, m := range msgs {
-			if err := p.marshalAndPublish(&m, bmp.UnicastPrefixMsg, []byte(m.RouterHash), false); err != nil {
+			if err := p.marshalAndPublish(&m, bmp.UnicastPrefixMsg, []byte(m.RouterHash), true); err != nil {
 				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
 			}
