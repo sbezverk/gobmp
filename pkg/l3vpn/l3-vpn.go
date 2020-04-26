@@ -50,8 +50,8 @@ func UnmarshalL3VPNNLRI(b []byte) (*NLRI, error) {
 	// Next 3 bytes are a part of Compatibility field 0x800000
 	// then it is MP_UNREACH_NLRI and no Label information is present
 	if bytes.Compare([]byte{0x80, 0x00, 0x00}, b[p:p+3]) == 0 {
-		p += 3
 		n.Labels = nil
+		p += 3
 	} else {
 		// Otherwise getting labels
 		n.Labels = make([]*base.Label, 0)

@@ -1,6 +1,7 @@
 package unicast
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -69,25 +70,37 @@ func UnmarshalLUNLRI(b []byte) (*MPUnicastNLRI, error) {
 		}
 		up.Length = b[p]
 		p++
-		bos := false
-		for !bos && p < len(b) {
-			label, err := base.MakeLabel(b[p : p+3])
-			if err != nil {
-				return nil, err
-			}
-			up.Label = append(up.Label, label)
-			bos = label.BoS
+		// Next 3 bytes are a part of Compatibility field 0x800000
+		// then it is MP_UNREACH_NLRI and no Label information is present
+		compatibilityField := 0
+		if bytes.Compare([]byte{0x80, 0x00, 0x00}, b[p:p+3]) == 0 {
+			up.Label = nil
+			compatibilityField = 3
 			p += 3
+		} else {
+			// Otherwise getting labels
+			up.Label = make([]*base.Label, 0)
+			bos := false
+			for !bos && p < len(b) {
+				l, err := base.MakeLabel(b[p : p+3])
+				if err != nil {
+					return nil, err
+				}
+				up.Label = append(up.Label, l)
+				p += 3
+				bos = l.BoS
+			}
 		}
-		l := int(up.Length/8) - (len(up.Label) * 3)
+		// Adjusting prefix length to remove bits used by labels each label takes 3 bytes, or 3 bytes
+		// of Compatibility field
+		l := int(up.Length/8) - (len(up.Label) * 3) - compatibilityField
 		if up.Length%8 != 0 {
 			l++
 		}
 		up.Prefix = make([]byte, l)
 		copy(up.Prefix, b[p:p+l])
 		p += l
-		// Adjusting prefix length to remove bits used by labels each label takes 3 bytes or 24 bits
-		up.Length -= uint8(len(up.Label) * 24)
+		up.Length = uint8(l * 8)
 		mpnlri.NLRI = append(mpnlri.NLRI, up)
 	}
 

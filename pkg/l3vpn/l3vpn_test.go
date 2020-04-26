@@ -8,7 +8,6 @@ import (
 )
 
 func TestUnmarshalL3VPNNLRI(t *testing.T) {
-	rd, _ := base.MakeRD([]byte{0x00, 0x00, 0x02, 0x41, 0x00, 0x00, 0xfd, 0x9b})
 	tests := []struct {
 		name   string
 		input  []byte
