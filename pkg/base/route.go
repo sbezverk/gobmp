@@ -1,6 +1,7 @@
 package base
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -9,6 +10,7 @@ import (
 
 // Route defines a structure of BGP Withdrawn prefix
 type Route struct {
+	PathID uint32
 	Length uint8
 	Prefix []byte
 }
@@ -32,6 +34,11 @@ func UnmarshalRoutes(b []byte) ([]Route, error) {
 	for p := 0; p < len(b); {
 		route := Route{}
 		route.Length = b[p]
+		// Check if there is Path ID in NLRI
+		if b[p] == 0 {
+			route.PathID = binary.BigEndian.Uint32(b[p : p+4])
+			p += 4
+		}
 		l := route.Length / 8
 		if route.Length%8 != 0 {
 			l++
