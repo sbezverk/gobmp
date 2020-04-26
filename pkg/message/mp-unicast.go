@@ -51,6 +51,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			PrefixLen:    int32(e.Length),
 			IsAtomicAgg:  update.GetAttrAtomicAggregate(),
 			Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
+			PathID:       int32(e.PathID),
 		}
 		if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
 			prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()
