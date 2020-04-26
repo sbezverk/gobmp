@@ -23,10 +23,9 @@ func (p *producer) lsLink(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSLink{
-		Action:     operation,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
-		//		BaseAttrHash:   update.GetBaseAttrHash(),
+		Action:         operation,
+		RouterHash:     p.speakerHash,
+		RouterIP:       p.speakerIP,
 		PeerHash:       ph.GetPeerHash(),
 		PeerASN:        ph.PeerAS,
 		Timestamp:      ph.PeerTimestamp,
@@ -97,13 +96,6 @@ func (p *producer) lsLink(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 			msg.LSAdjacencySID = adj
 		}
 	}
-	//	msg.ASPath = update.GetAttrASPath()
-	//	if med := update.GetAttrMED(); med != nil {
-	//		msg.MED = *med
-	//	}
-	//	if lp := update.GetAttrLocalPref(); lp != nil {
-	//		msg.LocalPref = *lp
-	//	}
 
 	return &msg, nil
 }

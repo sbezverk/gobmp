@@ -32,58 +32,20 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		Action:     operation,
 		RouterHash: p.speakerHash,
 		RouterIP:   p.speakerIP,
-		//		BaseAttrHash: update.GetBaseAttrHash(),
-		PeerHash:  ph.GetPeerHash(),
-		PeerASN:   ph.PeerAS,
-		Timestamp: ph.PeerTimestamp,
-		Prefix:    net.IP(nlril3vpn.GetL3VPNPrefix()).To4().String(),
-		Nexthop:   nlri.GetNextHop(),
+		PeerHash:   ph.GetPeerHash(),
+		PeerASN:    ph.PeerAS,
+		Timestamp:  ph.PeerTimestamp,
+		Prefix:     net.IP(nlril3vpn.GetL3VPNPrefix()).To4().String(),
+		Nexthop:    nlri.GetNextHop(),
 		// TODO, why 32 is hard coded here?????
-		PrefixLen: 32,
-		//		IsAtomicAgg: update.GetAttrAtomicAggregate(),
-		//		Aggregator:  fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
-		PathID: int32(nlril3vpn.PathID),
-		//		IsAtomicAgg:    update.GetAttrAtomicAggregate(),
-		//		Aggregator:     fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
+		PrefixLen:      32,
+		PathID:         int32(nlril3vpn.PathID),
 		BaseAttributes: update.BaseAttributes,
 	}
-	//	if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
-	//		prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()
-	//	}
-	//	if o := update.GetAttrOrigin(); o != nil {
-	//		prfx.Origin = *o
-	//	}
-	//	prfx.ASPath = update.GetAttrASPath()
-	//	prfx.ASPathCount = int32(len(prfx.ASPath))
 	if ases := update.GetAttrASPath(); len(ases) != 0 {
 		// Last element in AS_PATH would be the AS of the origin
 		prfx.OriginAS = fmt.Sprintf("%d", ases[len(ases)-1])
 	}
-	//	if med := update.GetAttrMED(); med != nil {
-	//		prfx.MED = *med
-	//	}
-	//	if lp := update.GetAttrLocalPref(); lp != nil {
-	//		prfx.LocalPref = *lp
-	//	}
-	//	if coms := update.GetAttrCommunityString(); coms != "" {
-	//		prfx.CommunityList += coms
-	//	}
-	//	if exts, err := update.GetAttrExtCommunity(); err == nil {
-	//		for i, ext := range exts {
-	//			prfx.ExtCommunityList += ext.String()
-	//			if i < len(exts)-1 {
-	//				prfx.ExtCommunityList += ", "
-	//			}
-	//		}
-	//	}
-	//	if lgs, _ := update.GetAttrLgCommunity(); lgs != nil {
-	//		for i, lg := range lgs {
-	//			prfx.LgCommunityList += lg.String()
-	//			if i < len(lgs)-1 {
-	//				prfx.LgCommunityList += ", "
-	//			}
-	//		}
-	//	}
 	if ph.FlagV {
 		// IPv6 specific conversions
 		prfx.IsIPv4 = false
