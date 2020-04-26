@@ -79,12 +79,15 @@ func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, error) {
 			l = uint16(b[p])
 			p++
 		}
-		attrs = append(attrs, PathAttribute{
+		pa := PathAttribute{
 			AttributeTypeFlags: f,
 			AttributeType:      t,
 			AttributeLength:    l,
-			Attribute:          b[p : p+int(l)],
-		})
+		}
+		pa.Attribute = make([]byte, int(l))
+		copy(pa.Attribute, b[p:p+int(l)])
+		attrs = append(attrs, pa)
+
 		p += int(l)
 	}
 

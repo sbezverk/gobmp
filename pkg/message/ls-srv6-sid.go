@@ -23,13 +23,13 @@ func (p *producer) lsSRv6SID(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSSRv6SID{
-		Action:       operation,
-		RouterHash:   p.speakerHash,
-		RouterIP:     p.speakerIP,
-		BaseAttrHash: update.GetBaseAttrHash(),
-		PeerHash:     ph.GetPeerHash(),
-		PeerASN:      ph.PeerAS,
-		Timestamp:    ph.PeerTimestamp,
+		Action:         operation,
+		RouterHash:     p.speakerHash,
+		RouterIP:       p.speakerIP,
+		PeerHash:       ph.GetPeerHash(),
+		PeerASN:        ph.PeerAS,
+		Timestamp:      ph.PeerTimestamp,
+		BaseAttributes: update.BaseAttributes,
 	}
 	msg.Nexthop = nlri.GetNextHop()
 	msg.PeerIP = ph.GetPeerAddrString()
@@ -51,13 +51,6 @@ func (p *producer) lsSRv6SID(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 		msg.SRv6EndpointBehavior = ls.GetSRv6EndpointBehavior()
 		msg.SRv6BGPPeerNodeSID = ls.GetSRv6BGPPeerNodeSID()
 		msg.SRv6SIDStructure = ls.GetSRv6SIDStructure()
-	}
-	msg.ASPath = update.GetAttrASPath()
-	if med := update.GetAttrMED(); med != nil {
-		msg.MED = *med
-	}
-	if lp := update.GetAttrLocalPref(); lp != nil {
-		msg.LocalPref = *lp
 	}
 
 	return &msg, nil

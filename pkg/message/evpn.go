@@ -29,34 +29,18 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	}
 	for _, e := range evpn.Route {
 		prfx := EVPNPrefix{
-			Action:       operation,
-			RouterHash:   p.speakerHash,
-			RouterIP:     p.speakerIP,
-			BaseAttrHash: update.GetBaseAttrHash(),
-			PeerHash:     ph.GetPeerHash(),
-			PeerASN:      ph.PeerAS,
-			Timestamp:    ph.PeerTimestamp,
-			Nexthop:      nlri.GetNextHop(),
-			IsAtomicAgg:  update.GetAttrAtomicAggregate(),
-			Aggregator:   fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
+			Action:         operation,
+			RouterHash:     p.speakerHash,
+			RouterIP:       p.speakerIP,
+			PeerHash:       ph.GetPeerHash(),
+			PeerASN:        ph.PeerAS,
+			Timestamp:      ph.PeerTimestamp,
+			Nexthop:        nlri.GetNextHop(),
+			BaseAttributes: update.BaseAttributes,
 		}
-		if orid := update.GetAttrOriginatorID(); len(orid) != 0 {
-			prfx.OriginatorID = net.IP(update.GetAttrOriginatorID()).To4().String()
-		}
-		if or := update.GetAttrOrigin(); or != nil {
-			prfx.Origin = *or
-		}
-		prfx.ASPath = update.GetAttrASPath()
-		prfx.ASPathCount = int32(len(prfx.ASPath))
 		if ases := update.GetAttrASPath(); len(ases) != 0 {
 			// Last element in AS_PATH would be the AS of the origin
 			prfx.OriginAS = fmt.Sprintf("%d", ases[len(ases)-1])
-		}
-		if med := update.GetAttrMED(); med != nil {
-			prfx.MED = *med
-		}
-		if lp := update.GetAttrLocalPref(); lp != nil {
-			prfx.LocalPref = *lp
 		}
 		if ph.FlagV {
 			// IPv6 specific conversions
@@ -68,25 +52,6 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			prfx.IsIPv4 = true
 			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 			prfx.IsNexthopIPv4 = true
-		}
-		if coms := update.GetAttrCommunityString(); coms != "" {
-			prfx.CommunityList += coms
-		}
-		if exts, _ := update.GetAttrExtCommunity(); exts != nil {
-			for i, ext := range exts {
-				prfx.ExtCommunityList += ext.String()
-				if i < len(exts)-1 {
-					prfx.ExtCommunityList += ", "
-				}
-			}
-		}
-		if lgs, _ := update.GetAttrLgCommunity(); lgs != nil {
-			for i, lg := range lgs {
-				prfx.LgCommunityList += lg.String()
-				if i < len(lgs)-1 {
-					prfx.LgCommunityList += ", "
-				}
-			}
 		}
 		// Do not want to panic on nil pointer
 		if e != nil {

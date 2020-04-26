@@ -23,13 +23,13 @@ func (p *producer) lsPrefix(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSPrefix{
-		Action:       operation,
-		RouterHash:   p.speakerHash,
-		RouterIP:     p.speakerIP,
-		BaseAttrHash: update.GetBaseAttrHash(),
-		PeerHash:     ph.GetPeerHash(),
-		PeerASN:      ph.PeerAS,
-		Timestamp:    ph.PeerTimestamp,
+		Action:         operation,
+		RouterHash:     p.speakerHash,
+		RouterIP:       p.speakerIP,
+		PeerHash:       ph.GetPeerHash(),
+		PeerASN:        ph.PeerAS,
+		Timestamp:      ph.PeerTimestamp,
+		BaseAttributes: update.BaseAttributes,
 	}
 	msg.Nexthop = nlri.GetNextHop()
 	msg.PeerIP = ph.GetPeerAddrString()
@@ -64,13 +64,6 @@ func (p *producer) lsPrefix(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		if ps, err := lsprefix.GetLSPrefixSID(); err == nil {
 			msg.LSPrefixSID = ps
 		}
-	}
-	msg.ASPath = update.GetAttrASPath()
-	if med := update.GetAttrMED(); med != nil {
-		msg.MED = *med
-	}
-	if lp := update.GetAttrLocalPref(); lp != nil {
-		msg.LocalPref = *lp
 	}
 
 	return &msg, nil

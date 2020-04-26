@@ -20,6 +20,7 @@ type Update struct {
 	TotalPathAttributeLength uint16
 	PathAttributes           []PathAttribute
 	NLRI                     []base.Route
+	BaseAttributes           *BaseAttributes
 }
 
 func (up *Update) String() string {
@@ -375,7 +376,13 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Building BGP's update Base attributes struct which is common to all messages
+	baseAttrs, err := UnmarshalBGPBaseAttributes(b[p : p+int(u.TotalPathAttributeLength)])
+	if err != nil {
+		return nil, err
+	}
 	u.PathAttributes = attrs
+	u.BaseAttributes = baseAttrs
 	p += int(u.TotalPathAttributeLength)
 	routes, err := base.UnmarshalRoutes(b[p:])
 	if err != nil {

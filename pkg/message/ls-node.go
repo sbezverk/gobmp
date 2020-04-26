@@ -23,13 +23,13 @@ func (p *producer) lsNode(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSNode{
-		Action:       operation,
-		RouterHash:   p.speakerHash,
-		RouterIP:     p.speakerIP,
-		BaseAttrHash: update.GetBaseAttrHash(),
-		PeerHash:     ph.GetPeerHash(),
-		PeerASN:      ph.PeerAS,
-		Timestamp:    ph.PeerTimestamp,
+		Action:         operation,
+		RouterHash:     p.speakerHash,
+		RouterIP:       p.speakerIP,
+		PeerHash:       ph.GetPeerHash(),
+		PeerASN:        ph.PeerAS,
+		Timestamp:      ph.PeerTimestamp,
+		BaseAttributes: update.BaseAttributes,
 	}
 	msg.Nexthop = nlri.GetNextHop()
 	if ph.FlagV {
@@ -67,13 +67,6 @@ func (p *producer) lsNode(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
 		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
 		msg.SRv6CapabilitiesTLV = lsnode.GetNodeSRv6CapabilitiesTLV()
-	}
-	msg.ASPath = update.GetAttrASPath()
-	if med := update.GetAttrMED(); med != nil {
-		msg.MED = *med
-	}
-	if lp := update.GetAttrLocalPref(); lp != nil {
-		msg.LocalPref = *lp
 	}
 
 	return &msg, nil
