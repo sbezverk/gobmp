@@ -47,7 +47,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			PrefixLen: int32(e.Length),
 			//			IsAtomicAgg:    update.GetAttrAtomicAggregate(),
 			//			Aggregator:     fmt.Sprintf("%v", update.GetAttrAS4Aggregator()),
-                        PathID:       int32(e.PathID),
+			PathID:         int32(e.PathID),
 			BaseAttributes: update.BaseAttributes,
 		}
 		//		if oid := update.GetAttrOriginatorID(); len(oid) != 0 {
