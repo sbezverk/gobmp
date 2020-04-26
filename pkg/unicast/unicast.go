@@ -11,9 +11,7 @@ import (
 
 // MPUnicastPrefix defines a single NLRI entry
 type MPUnicastPrefix struct {
-	AFI    uint16
-	SAFI   uint8
-	Count  uint8
+	PathID uint32
 	Label  []*base.Label
 	Length uint8
 	Prefix []byte
@@ -37,12 +35,8 @@ func UnmarshalUnicastNLRI(b []byte) (*MPUnicastNLRI, error) {
 		up := MPUnicastPrefix{}
 		// When default prefix is sent, actual NLRI is 1 byte with value of 0x0
 		if b[p] == 0x0 && len(b) != 1 {
-			up.AFI = binary.BigEndian.Uint16(b[p : p+2])
-			p += 2
-			up.SAFI = b[p]
-			p++
-			up.Count = b[p]
-			p++
+			up.PathID = binary.BigEndian.Uint32(b[p : p+4])
+			p += 4
 		}
 		up.Length = b[p]
 		p++
@@ -69,13 +63,9 @@ func UnmarshalLUNLRI(b []byte) (*MPUnicastNLRI, error) {
 		up := MPUnicastPrefix{
 			Label: make([]*base.Label, 0),
 		}
-		if b[p] == 0x0 {
-			up.AFI = binary.BigEndian.Uint16(b[p : p+2])
-			p += 2
-			up.SAFI = b[p]
-			p++
-			up.Count = b[p]
-			p++
+		if b[p] == 0x0 && len(b) != 1 {
+			up.PathID = binary.BigEndian.Uint32(b[p : p+4])
+			p += 4
 		}
 		up.Length = b[p]
 		p++

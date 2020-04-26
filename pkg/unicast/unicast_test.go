@@ -19,9 +19,7 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  0,
+						PathID: 0,
 						Length: 0x18,
 						Prefix: []byte{0x0a, 0x00, 0x82},
 					},
@@ -34,9 +32,7 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 0x20,
 						Prefix: []byte{0x0a, 0x00, 0x00, 0x02},
 					},
@@ -49,37 +45,27 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 0x16,
 						Prefix: []byte{0x47, 0x47, 0x08},
 					},
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 0x18,
 						Prefix: []byte{0x47, 0x47, 0x04},
 					},
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 0x18,
 						Prefix: []byte{0x47, 0x47, 0x03},
 					},
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 0x18,
 						Prefix: []byte{0x47, 0x47, 0x02},
 					},
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 0x18,
 						Prefix: []byte{0x47, 0x47, 0x01},
 					},
@@ -92,9 +78,6 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  0,
 						Length: 0x0,
 						Prefix: []byte{},
 					},
@@ -107,9 +90,7 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 23,
 						Prefix: []byte{137, 232, 112},
 					},
@@ -122,39 +103,42 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 23,
 						Prefix: []byte{216, 238, 254},
 					},
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 24,
 						Prefix: []byte{205, 107, 88},
 					},
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 20,
 						Prefix: []byte{205, 99, 64},
 					},
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 24,
 						Prefix: []byte{177, 200, 239},
 					},
 					{
-						AFI:    0,
-						SAFI:   0,
-						Count:  1,
+						PathID: 1,
 						Length: 24,
 						Prefix: []byte{177, 200, 238},
+					},
+				},
+			},
+		},
+		{
+			name:  "Panic case #3",
+			input: []byte{0x00, 0x00, 0x00, 0x01, 0x80, 0x01, 0x92, 0x01, 0x68, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x93},
+			expect: &MPUnicastNLRI{
+				NLRI: []MPUnicastPrefix{
+					{
+						PathID: 1,
+						Length: 128,
+						Prefix: []byte{0x01, 0x92, 0x01, 0x68, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x93},
 					},
 				},
 			},
@@ -199,7 +183,7 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 			},
 		},
 		{
-			name:  "mp unicast nlri 1",
+			name:  "mp unicast nlri 2",
 			input: []byte{0x38, 0x00, 0x00, 0x31, 0x0a, 0x00, 0x00, 0x00},
 			expect: &MPUnicastNLRI{
 				NLRI: []MPUnicastPrefix{
@@ -213,6 +197,74 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 							},
 						},
 						Prefix: []byte{0x0a, 0x00, 0x00, 0x00},
+					},
+				},
+			},
+		},
+		{
+			name:  "mp unicast nlri 3",
+			input: []byte{0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x31, 0xc0, 0xa8, 0x50, 0x00, 0x00, 0x00, 0x01, 0x38, 0x00, 0x00, 0x31, 0x5a, 0x1e, 0x0a, 0x01, 0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x31, 0x09, 0x00, 0xcb, 0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x31, 0x09, 0x00, 0x67, 0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x31, 0x09, 0x00, 0x22},
+			expect: &MPUnicastNLRI{
+				NLRI: []MPUnicastPrefix{
+					{
+						PathID: 1,
+						Length: 24,
+						Label: []*base.Label{
+							{
+								Value: 3,
+								Exp:   0x0,
+								BoS:   true,
+							},
+						},
+						Prefix: []byte{0xc0, 0xa8, 0x50},
+					},
+					{
+						PathID: 1,
+						Length: 32,
+						Label: []*base.Label{
+							{
+								Value: 3,
+								Exp:   0x0,
+								BoS:   true,
+							},
+						},
+						Prefix: []byte{90, 30, 10, 1},
+					},
+					{
+						PathID: 1,
+						Length: 24,
+						Label: []*base.Label{
+							{
+								Value: 3,
+								Exp:   0x0,
+								BoS:   true,
+							},
+						},
+						Prefix: []byte{9, 0, 203},
+					},
+					{
+						PathID: 1,
+						Length: 24,
+						Label: []*base.Label{
+							{
+								Value: 3,
+								Exp:   0x0,
+								BoS:   true,
+							},
+						},
+						Prefix: []byte{9, 0, 103},
+					},
+					{
+						PathID: 1,
+						Length: 24,
+						Label: []*base.Label{
+							{
+								Value: 3,
+								Exp:   0x0,
+								BoS:   true,
+							},
+						},
+						Prefix: []byte{9, 0, 34},
 					},
 				},
 			},
