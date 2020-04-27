@@ -44,7 +44,7 @@ func UnmarshalRoutes(b []byte) ([]Route, error) {
 		route := Route{}
 		route.Length = b[p]
 		// Check if there is Path ID in NLRI
-		if b[p] == 0 {
+		if b[p] == 0 && len(b) != 0 {
 			route.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 		}

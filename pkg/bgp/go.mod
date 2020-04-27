@@ -18,6 +18,7 @@ replace (
 	github.com/sbezverk/gobmp/pkg/sr => ../sr
 	github.com/sbezverk/gobmp/pkg/srv6 => ../srv6
 	github.com/sbezverk/gobmp/pkg/tools => ../tools
+	github.com/sbezverk/gobmp/pkg/unicast => ../unicast
 )
 
 require (
