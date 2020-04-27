@@ -10,40 +10,14 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
-// // NLRI defines L3 VPN NLRI object
-// type NLRI struct {
-// 	PathID uint32
-// 	Length uint8
-// 	Labels []*base.Label
-// 	RD     *base.RD
-// 	Prefix []byte
-// }
-
-// MPL3VPNNLRI defines a collection of MP Unicast Prefixes recieved in MP_BGP_REACH_NLRI
-type MPL3VPNNLRI struct {
-	NLRI []base.Route
-}
-
-// GetL3VPNPrefix returns l3 vpn prefix as a full size slice, not just significant bits,
-// to be suitable for converting into a string with net.IP
-// func (n *MPL3VPNNLRI) GetL3VPNPrefix() [][]byte {
-// 	vpn := make([][]byte, len(n.NLRI))
-// 	for i, r := range n.NLRI {
-// 		vpn[i] = make([]byte, len(r.Prefix))
-// 		copy(vpn[i], r.Prefix)
-// 	}
-
-// 	return vpn
-// }
-
 // UnmarshalL3VPNNLRI instantiates a L3 VPN NLRI object
-func UnmarshalL3VPNNLRI(b []byte) (*MPL3VPNNLRI, error) {
+func UnmarshalL3VPNNLRI(b []byte) (*base.MPNLRI, error) {
 	glog.V(5).Infof("L3VPN NLRI Raw: %s", tools.MessageHex(b))
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
 
-	mpnlri := MPL3VPNNLRI{
+	mpnlri := base.MPNLRI{
 		NLRI: make([]base.Route, 0),
 	}
 	for p := 0; p < len(b); {

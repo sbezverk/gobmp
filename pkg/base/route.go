@@ -8,6 +8,11 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+// MPNLRI defines a collection of Prefixes/Routes sent in NLRI of MP_REACH or MP_UNREACH attribute
+type MPNLRI struct {
+	NLRI []Route
+}
+
 // Route defines a structure of NLRI prefix element
 type Route struct {
 	PathID uint32

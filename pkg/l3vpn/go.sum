@@ -1,3 +1,6 @@
 github.com/go-test/deep v1.0.5/go.mod h1:QV8Hv/iy04NyLBxAdO9njL0iVPN1S4d/A3NVv1V36o8=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b h1:VKtxabqXZkF25pY9ekfRL6a582T4P37/31XEstQ5p58=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
+github.com/sbezverk/gobmp v0.0.0-20200426195957-034c26ec47d2 h1:k876kFaMNQvox7bITbeKpOhy/BmpPic2h84Ji5rh1NY=
+github.com/sbezverk/gobmp/pkg/evpn v0.0.0-20200426195957-034c26ec47d2 h1:Q4bChQiR6Knse5Om0Z6CUSn+krzY7F+YtFpMzcQsNxk=
+github.com/sbezverk/gobmp/pkg/evpn v0.0.0-20200426195957-034c26ec47d2/go.mod h1:KCnnqweLqkw+f/15QB8v0WEZM3Kc3mex0FQrTYFKpIs=

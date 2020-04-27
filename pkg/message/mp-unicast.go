@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
-	"github.com/sbezverk/gobmp/pkg/unicast"
 )
 
 // unicast process nlri 14 afi 1/2 safi 1 messages and generates UnicastPrefix messages
@@ -23,7 +23,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 	}
 
 	prfxs := make([]UnicastPrefix, 0)
-	var u *unicast.MPUnicastNLRI
+	var u *base.MPNLRI
 	if label {
 		u, err = nlri.GetNLRILU()
 		if err != nil {

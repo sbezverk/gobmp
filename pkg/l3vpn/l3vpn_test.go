@@ -11,13 +11,13 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []byte
-		expect *MPL3VPNNLRI
+		expect *base.MPNLRI
 		fail   bool
 	}{
 		{
 			name:  "nlri 1",
 			input: []byte{120, 5, 220, 49, 0, 0, 2, 65, 0, 0, 253, 235, 3, 3, 3, 3},
-			expect: &MPL3VPNNLRI{
+			expect: &base.MPNLRI{
 				NLRI: []base.Route{
 					{
 						PathID: 0,
@@ -42,7 +42,7 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 		{
 			name:  "nlri 2",
 			input: []byte{0x70, 0x05, 0xdc, 0x61, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64, 0x01, 0x01, 0x64},
-			expect: &MPL3VPNNLRI{
+			expect: &base.MPNLRI{
 				NLRI: []base.Route{
 					{
 						PathID: 0,
@@ -67,7 +67,7 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 		{
 			name:  "nlri 4",
 			input: []byte{0x00, 0x00, 0x00, 0x01, 0x78, 0x05, 0xdc, 0x41, 0x00, 0x00, 0x02, 0x41, 0x00, 0x00, 0xfd, 0x9a, 0x09, 0x16, 0x02, 0x16},
-			expect: &MPL3VPNNLRI{
+			expect: &base.MPNLRI{
 				NLRI: []base.Route{
 					{
 						PathID: 1,
