@@ -8,10 +8,19 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
-// Route defines a structure of BGP Withdrawn prefix
+// MPNLRI defines a collection of Prefixes/Routes sent in NLRI of MP_REACH or MP_UNREACH attribute
+type MPNLRI struct {
+	NLRI []Route
+}
+
+// Route defines a structure of NLRI prefix element
 type Route struct {
 	PathID uint32
 	Length uint8
+	// Used in Labeled Unicast and L3VPN NLRI
+	Label []*Label
+	// Used in Labeled L3VPN NLRI
+	RD     *RD
 	Prefix []byte
 }
 
@@ -35,7 +44,7 @@ func UnmarshalRoutes(b []byte) ([]Route, error) {
 		route := Route{}
 		route.Length = b[p]
 		// Check if there is Path ID in NLRI
-		if b[p] == 0 {
+		if b[p] == 0 && len(b) > 4 {
 			route.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 		}

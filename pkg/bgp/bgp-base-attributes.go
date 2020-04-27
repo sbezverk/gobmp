@@ -132,16 +132,14 @@ func unmarshalAttrOrigin(b []byte) string {
 // unmarshalAttrASPath returns a slice with a list of ASes
 func unmarshalAttrASPath(b []byte) []uint32 {
 	path := make([]uint32, 0)
+	as4 := isASPath4(b)
 	for p := 0; p < len(b); {
 		// Skipping type
 		p++
-		// Length of path segment in 2 bytes
+		// Length of path segment of type
 		l := b[p]
 		p++
-		as4 := false
-		if int(l)*4 == len(b)-p {
-			as4 = true
-		}
+		// Attempting to detect if 2 or 4 bytes AS is used
 		for n := 0; n < int(l); n++ {
 			if as4 {
 				as := binary.BigEndian.Uint32(b[p : p+4])
@@ -156,6 +154,22 @@ func unmarshalAttrASPath(b []byte) []uint32 {
 	}
 
 	return path
+}
+
+func isASPath4(b []byte) bool {
+	l := 0
+	s := 0
+	for p := 0; p < len(b); {
+		l += int(b[p+1] * 4)
+		p += int(b[p+1]*4) + 2
+		s++
+	}
+
+	if l+s*2 == len(b) {
+		return true
+	}
+
+	return false
 }
 
 // unmarshalAttrNextHop returns the value of Next Hop attribute

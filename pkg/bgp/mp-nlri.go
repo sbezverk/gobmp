@@ -1,19 +1,18 @@
 package bgp
 
 import (
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/evpn"
-	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
-	"github.com/sbezverk/gobmp/pkg/unicast"
 )
 
 // MPNLRI defines a common interface methind for MP Reach and MP Unreach NLRIs
 type MPNLRI interface {
 	GetAFISAFIType() int
-	GetNLRILU() (*unicast.MPUnicastNLRI, error)
-	GetNLRIUnicast() (*unicast.MPUnicastNLRI, error)
+	GetNLRILU() (*base.MPNLRI, error)
+	GetNLRIUnicast() (*base.MPNLRI, error)
 	GetNLRIEVPN() (*evpn.Route, error)
-	GetNLRIL3VPN() (*l3vpn.NLRI, error)
+	GetNLRIL3VPN() (*base.MPNLRI, error)
 	GetNLRI71() (*ls.NLRI71, error)
 	GetNextHop() string
 	IsIPv6NLRI() bool

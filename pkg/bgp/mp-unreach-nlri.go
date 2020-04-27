@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/evpn"
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
@@ -57,7 +58,7 @@ func (mp *MPUnReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 }
 
 // GetNLRIL3VPN check for presense of NLRI L3VPN AFI 1 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
-func (mp *MPUnReachNLRI) GetNLRIL3VPN() (*l3vpn.NLRI, error) {
+func (mp *MPUnReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 128 {
 		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.WithdrawnRoutes)
 		if err != nil {
@@ -85,7 +86,7 @@ func (mp *MPUnReachNLRI) GetNLRIEVPN() (*evpn.Route, error) {
 }
 
 // GetNLRIUnicast check for presense of NLRI EVPN AFI 1 or 2  and SAFI 1 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
-func (mp *MPUnReachNLRI) GetNLRIUnicast() (*unicast.MPUnicastNLRI, error) {
+func (mp *MPUnReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 1 {
 		nlri, err := unicast.UnmarshalUnicastNLRI(mp.WithdrawnRoutes)
 		if err != nil {
@@ -99,7 +100,7 @@ func (mp *MPUnReachNLRI) GetNLRIUnicast() (*unicast.MPUnicastNLRI, error) {
 }
 
 // GetNLRILU check for presense of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
-func (mp *MPUnReachNLRI) GetNLRILU() (*unicast.MPUnicastNLRI, error) {
+func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 4 {
 		nlri, err := unicast.UnmarshalLUNLRI(mp.WithdrawnRoutes)
 		if err != nil {
