@@ -8,10 +8,14 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
-// Route defines a structure of BGP Withdrawn prefix
+// Route defines a structure of NLRI prefix element
 type Route struct {
 	PathID uint32
 	Length uint8
+	// Used in Labeled Unicast and L3VPN NLRI
+	Label []*Label
+	// Used in Labeled L3VPN NLRI
+	RD     *RD
 	Prefix []byte
 }
 

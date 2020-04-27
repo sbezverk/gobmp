@@ -13,7 +13,7 @@ type MPNLRI interface {
 	GetNLRILU() (*unicast.MPUnicastNLRI, error)
 	GetNLRIUnicast() (*unicast.MPUnicastNLRI, error)
 	GetNLRIEVPN() (*evpn.Route, error)
-	GetNLRIL3VPN() (*l3vpn.NLRI, error)
+	GetNLRIL3VPN() (*l3vpn.MPL3VPNNLRI, error)
 	GetNLRI71() (*ls.NLRI71, error)
 	GetNextHop() string
 	IsIPv6NLRI() bool

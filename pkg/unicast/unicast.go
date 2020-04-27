@@ -10,17 +10,9 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
-// MPUnicastPrefix defines a single NLRI entry
-type MPUnicastPrefix struct {
-	PathID uint32
-	Label  []*base.Label
-	Length uint8
-	Prefix []byte
-}
-
 // MPUnicastNLRI defines a collection of MP Unicast Prefixes recieved in MP_BGP_REACH_NLRI
 type MPUnicastNLRI struct {
-	NLRI []MPUnicastPrefix
+	NLRI []base.Route
 }
 
 // UnmarshalUnicastNLRI builds MP NLRI object from the slice of bytes
@@ -30,10 +22,10 @@ func UnmarshalUnicastNLRI(b []byte) (*MPUnicastNLRI, error) {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
 	mpnlri := MPUnicastNLRI{
-		NLRI: make([]MPUnicastPrefix, 0),
+		NLRI: make([]base.Route, 0),
 	}
 	for p := 0; p < len(b); {
-		up := MPUnicastPrefix{}
+		up := base.Route{}
 		// When default prefix is sent, actual NLRI is 1 byte with value of 0x0
 		if b[p] == 0x0 && len(b) != 1 {
 			up.PathID = binary.BigEndian.Uint32(b[p : p+4])
@@ -58,10 +50,10 @@ func UnmarshalUnicastNLRI(b []byte) (*MPUnicastNLRI, error) {
 func UnmarshalLUNLRI(b []byte) (*MPUnicastNLRI, error) {
 	glog.V(6).Infof("MP Label Unicast NLRI Raw: %s", tools.MessageHex(b))
 	mpnlri := MPUnicastNLRI{
-		NLRI: make([]MPUnicastPrefix, 0),
+		NLRI: make([]base.Route, 0),
 	}
 	for p := 0; p < len(b); {
-		up := MPUnicastPrefix{
+		up := base.Route{
 			Label: make([]*base.Label, 0),
 		}
 		if b[p] == 0x0 && len(b) != 1 {

@@ -40,7 +40,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		}
 		msgs, err := p.unicast(nlri, operation, ph, update, labeled)
 		if err != nil {
-			glog.Errorf("failed to produce Unicast Prefix message message with error: %+v", err)
+			glog.Errorf("failed to produce Unicast Prefix messages with error: %+v", err)
 			return
 		}
 		// Loop through and publish all collected messages
@@ -51,21 +51,23 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 			}
 		}
 	case 18:
-		msg, err := p.l3vpn(nlri, operation, ph, update)
+		msgs, err := p.l3vpn(nlri, operation, ph, update)
 		if err != nil {
-			glog.Errorf("failed to produce l3vpn message with error: %+v", err)
+			glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
 			return
 		}
-		if err := p.marshalAndPublish(&msg, bmp.L3VPNMsg, []byte(msg.RouterHash), false); err != nil {
-			glog.Errorf("failed to process L3VPN message with error: %+v", err)
-			return
+		for _, msg := range msgs {
+			if err := p.marshalAndPublish(&msg, bmp.L3VPNMsg, []byte(msg.RouterHash), true); err != nil {
+				glog.Errorf("failed to process L3VPN message with error: %+v", err)
+				return
+			}
 		}
 	case 19:
 		glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address, attributes: %+v", update.GetAllAttributeID())
 	case 24:
 		msgs, err := p.evpn(nlri, operation, ph, update)
 		if err != nil {
-			glog.Errorf("failed to produce evpn message with error: %+v", err)
+			glog.Errorf("failed to produce evpn messages with error: %+v", err)
 			return
 		}
 		for _, msg := range msgs {

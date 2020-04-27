@@ -85,7 +85,7 @@ func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 }
 
 // GetNLRIL3VPN check for presense of NLRI L3VPN AFI 1 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
-func (mp *MPReachNLRI) GetNLRIL3VPN() (*l3vpn.NLRI, error) {
+func (mp *MPReachNLRI) GetNLRIL3VPN() (*l3vpn.MPL3VPNNLRI, error) {
 	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 128 {
 		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.NLRI)
 		if err != nil {
