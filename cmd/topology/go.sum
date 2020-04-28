@@ -23,6 +23,8 @@ github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200426195957-034c26ec47d2 h1:DK
 github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200426195957-034c26ec47d2/go.mod h1:7StEI37UO9JsPl51EL0+wnq0WNTxezx2IGITtS5GK5o=
 github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200427174949-508195467849 h1:HTic+of1EHd1YvB7TDJF/fcNuOu5wAr5pO+QKj/5ooY=
 github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200427174949-508195467849/go.mod h1:7StEI37UO9JsPl51EL0+wnq0WNTxezx2IGITtS5GK5o=
+github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200428011349-6c4ffcfd76f3 h1:oVp8hy+bscSjc/D2Fv8ihs8smhtOnuTvI5cNJX8nPZA=
+github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200428011349-6c4ffcfd76f3/go.mod h1:6Z6blfSQjFCptQFd3HCiUpxRUSb0AoXCSmWQSMaX5ko=
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200420194628-6cc21f2ad3fd h1:57XauI1Bzcud8uOAmCl4/Ob7Az9hI1C/7KODycQkZc0=
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200420194628-6cc21f2ad3fd/go.mod h1:oRLemn6wUxRjPMFUa03BWfYK80SNJEAfGyECTrBDmuY=
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200423191552-088ef43f1382 h1:ljO8uJ3M2+DvAiAdITUQeGBUVwzCZOce595ax8Rw/vo=
@@ -31,6 +33,8 @@ github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200426195957-034c26ec47d2 h1:T8sb
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200426195957-034c26ec47d2/go.mod h1:oRLemn6wUxRjPMFUa03BWfYK80SNJEAfGyECTrBDmuY=
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200427174949-508195467849 h1:+68kOMwSb90ejTQUkhUw1Z+I5JmPHHf9J/vTD4csXiM=
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200427174949-508195467849/go.mod h1:oRLemn6wUxRjPMFUa03BWfYK80SNJEAfGyECTrBDmuY=
+github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200428011349-6c4ffcfd76f3 h1:zyNW+QvaWPLPbNkHxSp67vH5NlTgATmK8qubVCVqVHQ=
+github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200428011349-6c4ffcfd76f3/go.mod h1:emTQvRWuK805mF3x8TX/i4ZlzUya1E9cCx+NLaSHULc=
 github.com/segmentio/kafka-go v0.3.5 h1:2JVT1inno7LxEASWj+HflHh5sWGfM0gkRiLAxkXhGG4=
 github.com/segmentio/kafka-go v0.3.5/go.mod h1:OT5KXBPbaJJTcvokhWR2KFmm0niEx3mnccTwjmLvSi4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

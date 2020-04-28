@@ -31,18 +31,10 @@ replace (
 require (
 	github.com/arangodb/go-driver v0.0.0-20200403100147-ca5dd87ffe93 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
-	github.com/sbezverk/gobmp/pkg/base v0.0.0-20200427174949-508195467849 // indirect
 	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-20200427174949-508195467849 // indirect
-	github.com/sbezverk/gobmp/pkg/bgpls v0.0.0-20200427174949-508195467849 // indirect
 	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200423191552-088ef43f1382 // indirect
-	github.com/sbezverk/gobmp/pkg/evpn v0.0.0-20200427174949-508195467849 // indirect
-	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-20200427174949-508195467849 // indirect
-	github.com/sbezverk/gobmp/pkg/ls v0.0.0-20200427174949-508195467849 // indirect
 	github.com/sbezverk/gobmp/pkg/message v0.0.0-20200423191552-088ef43f1382 // indirect
-	github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200427174949-508195467849 // indirect
 	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200423191552-088ef43f1382 // indirect
-	github.com/sbezverk/gobmp/pkg/sr v0.0.0-20200427174949-508195467849 // indirect
-	github.com/sbezverk/gobmp/pkg/srv6 v0.0.0-20200427174949-508195467849 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/arangodb v0.0.0-20200423191552-088ef43f1382 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/database v0.0.0-20200423191552-088ef43f1382 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/dbclient v0.0.0-20200423191552-088ef43f1382 // indirect
@@ -51,6 +43,5 @@ require (
 	github.com/sbezverk/gobmp/pkg/topology/mockdb v0.0.0-20200423191552-088ef43f1382 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/mockmessenger v0.0.0-20200423191552-088ef43f1382 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/processor v0.0.0-20200423191552-088ef43f1382 // indirect
-	github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200427174949-508195467849 // indirect
 	github.com/segmentio/kafka-go v0.3.5 // indirect
 )
