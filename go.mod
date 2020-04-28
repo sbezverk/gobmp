@@ -4,7 +4,6 @@ go 1.14
 
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/sbezverk/gobmp/pkg/base v0.0.0-20200427224151-df8fa9efd730 // indirect
 	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-20200423191552-088ef43f1382
 	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200423191552-088ef43f1382
 	github.com/sbezverk/gobmp/pkg/dumper v0.0.0-20200423191552-088ef43f1382
