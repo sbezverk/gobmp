@@ -51,6 +51,8 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 			}
 		}
 	case 18:
+		fallthrough
+	case 19:
 		msgs, err := p.l3vpn(nlri, operation, ph, update)
 		if err != nil {
 			glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
@@ -62,8 +64,6 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
-	case 19:
-		glog.Infof("2 IP (IP version 6) : 128 MPLS-labeled VPN address, attributes: %+v", update.GetAllAttributeID())
 	case 24:
 		msgs, err := p.evpn(nlri, operation, ph, update)
 		if err != nil {

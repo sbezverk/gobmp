@@ -57,10 +57,15 @@ func (mp *MPReachNLRI) IsIPv6NLRI() bool {
 	return mp.AddressFamilyID == 2
 }
 
+// IsNextHopIPv6 return true if the next hop is IPv6 address, otherwise it returns flase
+func (mp *MPReachNLRI) IsNextHopIPv6() bool {
+	return mp.NextHopAddressLength == 16
+}
+
 // GetNextHop return a string representation of the next hop ip address.
 func (mp *MPReachNLRI) GetNextHop() string {
-	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 128 {
-		// In case of L3VPN AFI 1 SAFI 128, next hop is encoded as RD (Always 0, 8 bytes) + ipv4 address
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 128 {
+		// In case of L3VPN AFI 1/2 SAFI 128, next hop is encoded as RD (Always 0, 8 bytes) + ipv4 address
 		return net.IP(mp.NextHopAddress[mp.NextHopAddressLength-4:]).To4().String()
 	}
 	if mp.NextHopAddressLength == 4 {
@@ -87,7 +92,7 @@ func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 
 // GetNLRIL3VPN check for presense of NLRI L3VPN AFI 1 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
 func (mp *MPReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
-	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 128 {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 128 {
 		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.NLRI)
 		if err != nil {
 			return nil, err
