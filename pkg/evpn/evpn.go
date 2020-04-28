@@ -92,7 +92,7 @@ func (n *NLRI) GetEVPNLabel() []uint32 {
 
 // UnmarshalEVPNNLRI instantiates an EVPN NLRI object
 func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
-	glog.V(5).Infof("EVPN NLRI Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("EVPN NLRI Raw: %s", tools.MessageHex(b))
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}

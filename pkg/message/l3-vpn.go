@@ -45,23 +45,29 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			// Last element in AS_PATH would be the AS of the origin
 			prfx.OriginAS = fmt.Sprintf("%d", ases[len(ases)-1])
 		}
-		if ph.FlagV {
+		if nlri.IsIPv6NLRI() {
 			// IPv6 specific conversions
 			prfx.IsIPv4 = false
-			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-			prfx.IsNexthopIPv4 = false
 			p := make([]byte, 16)
 			copy(p, e.Prefix)
 			prfx.Prefix = net.IP(p).To16().String()
-
 		} else {
 			// IPv4 specific conversions
 			prfx.IsIPv4 = true
-			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-			prfx.IsNexthopIPv4 = true
 			p := make([]byte, 4)
 			copy(p, e.Prefix)
 			prfx.Prefix = net.IP(p).To4().String()
+		}
+		if nlri.IsNextHopIPv6() {
+			prfx.IsNexthopIPv4 = false
+		} else {
+			prfx.IsNexthopIPv4 = true
+		}
+		if ph.FlagV {
+			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
+
+		} else {
+			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 		}
 		prfx.Labels = make([]uint32, 0)
 		for _, l := range e.Label {

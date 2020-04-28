@@ -43,6 +43,12 @@ func (mp *MPUnReachNLRI) GetNextHop() string {
 	return ""
 }
 
+// IsNextHopIPv6 return true if the next hop is IPv6 address, otherwise it returns flase.
+// in case of MP_UNREACH_NLRI there is no Next Hope field and this func should not be used.
+func (mp *MPUnReachNLRI) IsNextHopIPv6() bool {
+	return false
+}
+
 // GetNLRI71 check for presense of NLRI 71 in the NLRI 14 NLRI data and if exists, instantiate NLRI71 object
 func (mp *MPUnReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 	if mp.SubAddressFamilyID == 71 {

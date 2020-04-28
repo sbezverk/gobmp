@@ -16,6 +16,7 @@ type MPNLRI interface {
 	GetNLRI71() (*ls.NLRI71, error)
 	GetNextHop() string
 	IsIPv6NLRI() bool
+	IsNextHopIPv6() bool
 	String() string
 }
 
