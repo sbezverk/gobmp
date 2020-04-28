@@ -1,4 +1,4 @@
-module gobmpsrv
+module github.com/sbezverk/gobmp/pkg/gobmpsrv
 
 go 1.14
 
