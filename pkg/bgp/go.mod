@@ -26,7 +26,7 @@ require (
 	github.com/sbezverk/gobmp/pkg/base v0.0.0-20200428011349-6c4ffcfd76f3
 	github.com/sbezverk/gobmp/pkg/bgpls v0.0.0-20200428011349-6c4ffcfd76f3
 	github.com/sbezverk/gobmp/pkg/evpn v0.0.0-20200428011349-6c4ffcfd76f3
-	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-20200428011349-6c4ffcfd76f3
+	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-20200428014347-511952572d3d
 	github.com/sbezverk/gobmp/pkg/ls v0.0.0-20200428011349-6c4ffcfd76f3
 	github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200428011349-6c4ffcfd76f3
 	github.com/sbezverk/gobmp/pkg/sr v0.0.0-20200428011349-6c4ffcfd76f3 // indirect
