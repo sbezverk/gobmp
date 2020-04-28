@@ -43,7 +43,6 @@ require (
 	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200423191552-088ef43f1382 // indirect
 	github.com/sbezverk/gobmp/pkg/sr v0.0.0-20200427174949-508195467849 // indirect
 	github.com/sbezverk/gobmp/pkg/srv6 v0.0.0-20200427174949-508195467849 // indirect
-	github.com/sbezverk/gobmp/pkg/tools v0.0.0-20200427174949-508195467849 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/arangodb v0.0.0-20200423191552-088ef43f1382 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/database v0.0.0-20200423191552-088ef43f1382 // indirect
 	github.com/sbezverk/gobmp/pkg/topology/dbclient v0.0.0-20200423191552-088ef43f1382 // indirect
