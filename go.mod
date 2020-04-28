@@ -13,7 +13,6 @@ require (
 	github.com/sbezverk/gobmp/pkg/message v0.0.0-20200423191552-088ef43f1382 // indirect
 	github.com/sbezverk/gobmp/pkg/parser v0.0.0-20200423191552-088ef43f1382 // indirect
 	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200423191552-088ef43f1382
-	github.com/sbezverk/gobmp/pkg/tools v0.0.0-20200427224151-df8fa9efd730 // indirect
 	github.com/segmentio/kafka-go v0.3.5 // indirect
 )
 
