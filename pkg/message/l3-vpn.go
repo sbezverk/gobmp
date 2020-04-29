@@ -75,6 +75,9 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		}
 		prfx.VPNRD = e.RD.String()
 		prfx.VPNRDType = e.RD.Type
+		if psid, err := update.GetAttrPrefixSID(); err == nil {
+			prfx.PrefixSID = psid
+		}
 		prfxs = append(prfxs, prfx)
 	}
 

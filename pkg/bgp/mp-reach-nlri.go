@@ -178,7 +178,8 @@ func UnmarshalMPReachNLRI(b []byte) (MPNLRI, error) {
 	p++
 	mp.NextHopAddressLength = uint8(b[p])
 	p++
-	mp.NextHopAddress = b[p : p+int(mp.NextHopAddressLength)]
+	mp.NextHopAddress = make([]byte, mp.NextHopAddressLength)
+	copy(mp.NextHopAddress, b[p:p+int(mp.NextHopAddressLength)])
 	p += int(mp.NextHopAddressLength)
 	// Skip reserved byte
 	p++

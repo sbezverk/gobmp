@@ -22,7 +22,7 @@ func (rm *RouteMonitor) String() string {
 
 // UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
 func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
-	glog.V(6).Infof("BMP Route Monitor Message Raw: %s", tools.MessageHex(b))
+	glog.V(5).Infof("BMP Route Monitor Message Raw: %s", tools.MessageHex(b))
 	rm := RouteMonitor{}
 	p := 0
 	// Skip 16 bytes of a marker

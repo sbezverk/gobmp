@@ -12,7 +12,7 @@ import (
 
 // UnmarshalL3VPNNLRI instantiates a L3 VPN NLRI object
 func UnmarshalL3VPNNLRI(b []byte) (*base.MPNLRI, error) {
-	glog.V(6).Infof("L3VPN NLRI Raw: %s", tools.MessageHex(b))
+	glog.V(5).Infof("L3VPN NLRI Raw: %s", tools.MessageHex(b))
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
@@ -24,7 +24,7 @@ func UnmarshalL3VPNNLRI(b []byte) (*base.MPNLRI, error) {
 		up := base.Route{
 			Label: make([]*base.Label, 0),
 		}
-		if b[p] == 0x0 && len(b) != 1 {
+		if b[p] == 0x0 && len(b) > 4 {
 			up.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 		}
