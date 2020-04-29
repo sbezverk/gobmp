@@ -59,20 +59,38 @@ func (mp *MPReachNLRI) IsIPv6NLRI() bool {
 
 // IsNextHopIPv6 return true if the next hop is IPv6 address, otherwise it returns flase
 func (mp *MPReachNLRI) IsNextHopIPv6() bool {
-	return mp.NextHopAddressLength == 16
+	// https://tools.ietf.org/id/draft-mishra-bess-ipv4nlri-ipv6nh-use-cases-00.html#rfc.section.3
+	switch mp.NextHopAddressLength {
+	case 16:
+		fallthrough
+	case 32:
+		fallthrough
+	case 24:
+		fallthrough
+	case 48:
+		return true
+	default:
+		return false
+	}
 }
 
 // GetNextHop return a string representation of the next hop ip address.
 func (mp *MPReachNLRI) GetNextHop() string {
+	// https://tools.ietf.org/id/draft-mishra-bess-ipv4nlri-ipv6nh-use-cases-00.html#rfc.section.3
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 128 {
 		// In case of L3VPN AFI 1/2 SAFI 128, next hop is encoded as RD (Always 0, 8 bytes) + ipv4 address
 		return net.IP(mp.NextHopAddress[mp.NextHopAddressLength-4:]).To4().String()
 	}
-	if mp.NextHopAddressLength == 4 {
+	switch mp.NextHopAddressLength {
+	case 4:
 		return net.IP(mp.NextHopAddress).To4().String()
-	} else if mp.NextHopAddressLength == 16 {
+	case 16:
 		return net.IP(mp.NextHopAddress).To16().String()
+	case 32:
+		// https://tools.ietf.org/html/rfc2545#section-3
+		return net.IP(mp.NextHopAddress).To16().String() + "," + net.IP(mp.NextHopAddress[16:]).To16().String()
 	}
+
 	return "invalid"
 }
 
