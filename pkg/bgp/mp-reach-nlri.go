@@ -21,6 +21,9 @@ type MPReachNLRI struct {
 	NextHopAddressLength uint8
 	NextHopAddress       []byte
 	NLRI                 []byte
+	// When BGP update carries Prefix SID attribute 40, the processing of some AFI/SAFI NLRIs
+	// may differ from the standard processing.
+	SRv6 bool
 }
 
 // GetAFISAFIType returns underlaying NLRI's type based on AFI/SAFI
@@ -111,7 +114,7 @@ func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 // GetNLRIL3VPN check for presense of NLRI L3VPN AFI 1 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
 func (mp *MPReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 128 {
-		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.NLRI)
+		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.NLRI, mp.SRv6)
 		if err != nil {
 			return nil, err
 		}
@@ -165,12 +168,14 @@ func (mp *MPReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 }
 
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes
-func UnmarshalMPReachNLRI(b []byte) (MPNLRI, error) {
+func UnmarshalMPReachNLRI(b []byte, srv6 bool) (MPNLRI, error) {
 	glog.V(6).Infof("MPReachNLRI Raw: %s", tools.MessageHex(b))
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
-	mp := MPReachNLRI{}
+	mp := MPReachNLRI{
+		SRv6: srv6,
+	}
 	p := 0
 	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2

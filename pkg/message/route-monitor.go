@@ -37,7 +37,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	// Using first attribute type to select which nlri processor to call
 	switch routeMonitorMsg.Update.PathAttributes[0].AttributeType {
 	case 14:
-		nlri, err := bgp.UnmarshalMPReachNLRI(routeMonitorMsg.Update.PathAttributes[0].Attribute)
+		nlri, err := bgp.UnmarshalMPReachNLRI(routeMonitorMsg.Update.PathAttributes[0].Attribute, routeMonitorMsg.Update.HasPrefixSID())
 		if err != nil {
 			glog.Errorf("failed to process MP_REACH_NLRI with error: %+v", err)
 		}

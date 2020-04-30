@@ -23,28 +23,6 @@ type Update struct {
 	BaseAttributes           *BaseAttributes
 }
 
-func (up *Update) String() string {
-	var s string
-	s += fmt.Sprintf("Withdrawn Routes Length: %d\n", up.WithdrawnRoutesLength)
-	if up.WithdrawnRoutesLength != 0 {
-		for _, wr := range up.WithdrawnRoutes {
-			s += wr.String()
-		}
-	}
-	s += fmt.Sprintf("Total Path Attribute Length: %d\n", up.TotalPathAttributeLength)
-	if up.TotalPathAttributeLength != 0 {
-		for _, pa := range up.PathAttributes {
-			s += pa.String()
-		}
-	}
-	s += "NLRI: "
-	// TODO fix it
-	//	s += tools.MessageHex(up.NLRI)
-	s += "\n"
-
-	return s
-}
-
 // GetAllAttributeID return a slixe of int with all attributes found in BGP Update
 func (up *Update) GetAllAttributeID() []uint8 {
 	attrs := make([]uint8, 0)
@@ -354,6 +332,17 @@ func (up *Update) GetAttrPrefixSID() (*prefixsid.PSid, error) {
 	}
 	// TODO return new type of errors to be able to check for the code
 	return nil, fmt.Errorf("not found")
+}
+
+// HasPrefixSID check for presense of BGP Attribute Prefix SID (40) and returns true is found
+func (up *Update) HasPrefixSID() bool {
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 40 {
+			return true
+		}
+	}
+
+	return false
 }
 
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
