@@ -11,7 +11,7 @@ import (
 )
 
 // SIDNLRI defines SRv6 SID NLRI onject
-// Mp RFC yet
+// no RFC yet
 type SIDNLRI struct {
 	ProtocolID    uint8
 	Identifier    uint64
