@@ -13,6 +13,7 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 		input  []byte
 		expect *base.MPNLRI
 		fail   bool
+		srv6   bool
 	}{
 		{
 			name:  "nlri 1",
@@ -146,10 +147,35 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 			},
 			fail: false,
 		},
+		{
+			name:  "srv6 based l3vpn",
+			input: []byte{0x76, 0x00, 0x42, 0x00, 0x00, 0x00, 0x13, 0xce, 0x00, 0x00, 0xfe, 0x0a, 0x18, 0x18, 0x18, 0x00},
+			expect: &base.MPNLRI{
+				NLRI: []base.Route{
+					{
+						Length: 32,
+						Label: []*base.Label{
+							{
+								Value: 1056,
+								Exp:   0,
+								BoS:   false,
+							},
+						},
+						RD: &base.RD{
+							Type:  0,
+							Value: []byte{0x13, 0xce, 0x00, 0x00, 0xfe, 0x0a},
+						},
+						Prefix: []byte{0x18, 0x18, 0x18, 0x00},
+					},
+				},
+			},
+			fail: false,
+			srv6: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := UnmarshalL3VPNNLRI(tt.input)
+			got, err := UnmarshalL3VPNNLRI(tt.input, tt.srv6)
 			if err != nil && !tt.fail {
 				t.Fatalf("expected to succeed but failed with error: %+v", err)
 			}

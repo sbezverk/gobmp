@@ -11,12 +11,15 @@ import (
 )
 
 // UnmarshalL3VPNNLRI instantiates a L3 VPN NLRI object
-func UnmarshalL3VPNNLRI(b []byte) (*base.MPNLRI, error) {
+func UnmarshalL3VPNNLRI(b []byte, srv6 ...bool) (*base.MPNLRI, error) {
 	glog.V(6).Infof("L3VPN NLRI Raw: %s", tools.MessageHex(b))
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
-
+	srv6Flag := false
+	if len(srv6) == 1 {
+		srv6Flag = srv6[0]
+	}
 	mpnlri := base.MPNLRI{
 		NLRI: make([]base.Route, 0),
 	}
@@ -24,7 +27,7 @@ func UnmarshalL3VPNNLRI(b []byte) (*base.MPNLRI, error) {
 		up := base.Route{
 			Label: make([]*base.Label, 0),
 		}
-		if b[p] == 0x0 && len(b) != 1 {
+		if b[p] == 0x0 && len(b) > 4 {
 			up.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 		}
@@ -49,6 +52,11 @@ func UnmarshalL3VPNNLRI(b []byte) (*base.MPNLRI, error) {
 				up.Label = append(up.Label, l)
 				p += 3
 				bos = l.BoS
+				if srv6Flag {
+					// When srv6Flag is set, it means 3 bytes of label is not really a label
+					// but a part of Prefix SID, as such, BoS does not exists.
+					bos = true
+				}
 			}
 		}
 		rd, err := base.MakeRD(b[p : p+8])

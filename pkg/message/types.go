@@ -181,6 +181,7 @@ type L3VPNPrefix struct {
 	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
 	VPNRD          string              `json:"vpn_rd,omitempty"`
 	VPNRDType      uint16              `json:"vpn_rd_type"`
+	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
 }
 
 // LSPrefix defines a structure of LS Prefix message

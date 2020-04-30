@@ -13,13 +13,6 @@ type RouteMonitor struct {
 	Update *bgp.Update
 }
 
-func (rm *RouteMonitor) String() string {
-	var s string
-	s += rm.Update.String()
-
-	return s
-}
-
 // UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
 func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 	glog.V(6).Infof("BMP Route Monitor Message Raw: %s", tools.MessageHex(b))
