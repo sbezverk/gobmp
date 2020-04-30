@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/srv6"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -37,6 +38,8 @@ type OriginatorSRGBTLV struct {
 type PSid struct {
 	LabelIndex     *LabelIndexTLV     `json:"label_index,omitempty"`
 	OriginatorSRGB *OriginatorSRGBTLV `json:"originator_srgb,omitempty"`
+	SRv6L3Service  *srv6.L3Service    `json:"srv6_l3_service,omitempty"`
+	SRv6L2Service  *srv6.L2Service    `json:"srv6_l2_service,omitempty"`
 }
 
 // UnmarshalBGPAttrPrefixSID instantiates a prefix sid object

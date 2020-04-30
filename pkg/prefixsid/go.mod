@@ -20,5 +20,5 @@ replace (
 
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/sbezverk/gobmp/pkg/tools v0.0.0-20200427224151-df8fa9efd730 // indirect
+	github.com/sbezverk/gobmp/pkg/tools v0.0.0-20200427224151-df8fa9efd730
 )
