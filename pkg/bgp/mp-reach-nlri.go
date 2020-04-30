@@ -95,7 +95,7 @@ func (mp *MPReachNLRI) GetNextHop() string {
 	case 32:
 		// IPv6 + Link Local IPv6
 		// https://tools.ietf.org/html/rfc2545#section-3
-		return net.IP(mp.NextHopAddress).To16().String() + "," + net.IP(mp.NextHopAddress[16:]).To16().String()
+		return net.IP(mp.NextHopAddress[:16]).To16().String() + "," + net.IP(mp.NextHopAddress[16:]).To16().String()
 	}
 
 	return "invalid"
