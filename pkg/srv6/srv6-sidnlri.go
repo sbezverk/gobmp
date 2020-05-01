@@ -81,7 +81,7 @@ func (sr *SIDNLRI) GetSRv6SID() []string {
 
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object
 func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
-	glog.V(5).Infof("SRv6 SID NLRI Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("SRv6 SID NLRI Raw: %s", tools.MessageHex(b))
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
