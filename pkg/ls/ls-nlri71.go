@@ -2,6 +2,7 @@ package ls
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -102,30 +103,40 @@ func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 				return nil, err
 			}
 			el.LS = n
+			r, _ := json.Marshal(n)
+			glog.Infof(" ><SB> Node NLRI v6: %s", string(r))
 		case 2:
 			n, err := base.UnmarshalLinkNLRI(b[p : p+int(el.Length)])
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
+			r, _ := json.Marshal(n)
+			glog.Infof(" ><SB> Link NLRI v6: %s", string(r))
 		case 3:
 			n, err := base.UnmarshalPrefixNLRI(b[p:p+int(el.Length)], true)
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
+			r, _ := json.Marshal(n)
+			glog.Infof(" ><SB> Prefix NLRI v4: %s", string(r))
 		case 4:
 			n, err := base.UnmarshalPrefixNLRI(b[p:p+int(el.Length)], false)
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
+			r, _ := json.Marshal(n)
+			glog.Infof(" ><SB> Prefix NLRI v6: %s", string(r))
 		case 6:
 			n, err := srv6.UnmarshalSRv6SIDNLRI(b[p : p+int(el.Length)])
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
+			r, _ := json.Marshal(n)
+			glog.Infof(" ><SB> SID NLRI v6: %s", string(r))
 		default:
 			el.LS = make([]byte, el.Length)
 			if p+int(el.Length) <= len(b) {
