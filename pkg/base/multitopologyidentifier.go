@@ -2,7 +2,6 @@ package base
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -15,15 +14,6 @@ type MultiTopologyIdentifier uint16
 // RFC7752
 type MultiTopologyIdentifierTLV struct {
 	MTI []MultiTopologyIdentifier
-}
-
-func (mti *MultiTopologyIdentifierTLV) String() string {
-	var s string
-	s += "   Multi-Topology Identifiers:" + "\n"
-	for _, id := range mti.MTI {
-		s += fmt.Sprintf("      Identifier: %d\n", 0x0fff&id)
-	}
-	return s
 }
 
 // GetMTID returns a slice of MTI found in Multi Topology Identifier object

@@ -2,7 +2,6 @@ package base
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -14,39 +13,6 @@ type PrefixDescriptorTLV struct {
 	Type   uint16
 	Length uint16
 	Value  []byte
-}
-
-func (tlv *PrefixDescriptorTLV) String() string {
-	var s string
-	switch tlv.Type {
-	case 263:
-		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d (Multi-Topology Identifier)\n", tlv.Type)
-		mit, err := UnmarshalMultiTopologyIdentifierTLV(tlv.Value)
-		if err != nil {
-			s += err.Error() + "\n"
-			break
-		}
-		s += mit.String()
-	case 264:
-		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d (OSPF Route Type)\n", tlv.Type)
-		s += fmt.Sprintf("      OSPF Route Type: %d\n", tlv.Value)
-	case 265:
-		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d (IP Reachability Information)\n", tlv.Type)
-		ipr, err := UnmarshalIPReachabilityInformation(tlv.Value)
-		if err != nil {
-			s += err.Error() + "\n"
-			break
-		}
-		s += ipr.String()
-	default:
-		s += fmt.Sprintf("   Prefix Descriptor TLV Type: %d\n", tlv.Type)
-		s += fmt.Sprintf("   Prefix Descriptor TLV Length: %d\n", tlv.Length)
-		s += "      Value: "
-		s += tools.MessageHex(tlv.Value)
-		s += "\n"
-	}
-
-	return s
 }
 
 // UnmarshalPrefixDescriptorTLV builds Prefix Descriptor Sub TLVs object

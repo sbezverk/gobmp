@@ -11,16 +11,6 @@ type NodeMSD struct {
 	MSD []MSDTV
 }
 
-func (msd *NodeMSD) String() string {
-	var s string
-	s += "Node MSD TVs:" + "\n"
-	for _, tv := range msd.MSD {
-		s += tv.String()
-	}
-
-	return s
-}
-
 // UnmarshalNodeMSD build Link MSD object
 func UnmarshalNodeMSD(b []byte) (*NodeMSD, error) {
 	glog.V(6).Infof("Node MSD Raw: %s", tools.MessageHex(b))

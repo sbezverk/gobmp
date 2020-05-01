@@ -2,7 +2,6 @@ package srv6
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -13,15 +12,6 @@ import (
 type CapabilityTLV struct {
 	Flag     uint16
 	Reserved uint16
-}
-
-func (cap *CapabilityTLV) String() string {
-	var s string
-
-	s += "SRv6 Capability TLV:" + "\n"
-	s += fmt.Sprintf("Flag: %02x\n", cap.Flag)
-
-	return s
 }
 
 // UnmarshalSRv6CapabilityTLV builds SRv6 Capability TLV object

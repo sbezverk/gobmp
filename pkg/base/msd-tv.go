@@ -1,8 +1,6 @@
 package base
 
 import (
-	"fmt"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
@@ -11,14 +9,6 @@ import (
 type MSDTV struct {
 	Type  uint8
 	Value uint8
-}
-
-func (tv *MSDTV) String() string {
-	var s string
-	s += fmt.Sprintf("   MSD Type: %d\n", tv.Type)
-	s += fmt.Sprintf("   MSD Value: %d\n", tv.Value)
-
-	return s
 }
 
 // UnmarshalMSDTV builds slice of MSD Type Value tuples

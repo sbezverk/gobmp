@@ -2,7 +2,6 @@ package base
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -22,15 +21,6 @@ type Route struct {
 	// Used in Labeled L3VPN NLRI
 	RD     *RD
 	Prefix []byte
-}
-
-func (r *Route) String() string {
-	var s string
-	s += fmt.Sprintf("prefix length: %d\n", r.Length)
-	s += tools.MessageHex(r.Prefix)
-	s += "\n"
-
-	return s
 }
 
 // UnmarshalRoutes builds BGP Withdrawn routes object

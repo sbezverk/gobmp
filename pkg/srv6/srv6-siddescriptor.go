@@ -15,21 +15,6 @@ type SIDDescriptor struct {
 	MultiTopologyIdentifier *base.MultiTopologyIdentifierTLV
 }
 
-func (srd *SIDDescriptor) String() string {
-	var s string
-	s += "SRv6 SID Descriptor Object:" + "\n"
-	if srd.TLV != nil {
-		for _, tlv := range srd.TLV {
-			s += tlv.String()
-		}
-	}
-	if srd.MultiTopologyIdentifier != nil {
-		s += srd.MultiTopologyIdentifier.String()
-	}
-
-	return s
-}
-
 // UnmarshalSRv6SIDDescriptor build SRv6 Descriptor Object
 func UnmarshalSRv6SIDDescriptor(b []byte) (*SIDDescriptor, error) {
 	glog.V(6).Infof("SRv6 SID Descriptor Raw: %s", tools.MessageHex(b))

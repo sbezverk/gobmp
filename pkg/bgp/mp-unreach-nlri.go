@@ -25,14 +25,6 @@ func (mp *MPUnReachNLRI) GetAFISAFIType() int {
 	return getNLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)
 }
 
-func (mp *MPUnReachNLRI) String() string {
-	var s string
-	s += fmt.Sprintf("Address Family ID: %d\n", mp.AddressFamilyID)
-	s += fmt.Sprintf("Subsequent Address Family ID: %d\n", mp.SubAddressFamilyID)
-
-	return s
-}
-
 // IsIPv6NLRI return true if NLRI is for IPv6 address family
 func (mp *MPUnReachNLRI) IsIPv6NLRI() bool {
 	return mp.AddressFamilyID == 2

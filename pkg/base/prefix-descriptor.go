@@ -14,16 +14,6 @@ type PrefixDescriptor struct {
 	PrefixTLV []PrefixDescriptorTLV
 }
 
-func (pd *PrefixDescriptor) String() string {
-	var s string
-	s += "Prefix Descriptor TLVs:" + "\n"
-	for _, stlv := range pd.PrefixTLV {
-		s += stlv.String()
-	}
-
-	return s
-}
-
 // GetPrefixMTID returns Multi-Topology identifiers
 func (pd *PrefixDescriptor) GetPrefixMTID() []uint16 {
 	for _, tlv := range pd.PrefixTLV {

@@ -1,8 +1,6 @@
 package srv6
 
 import (
-	"fmt"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
@@ -14,17 +12,6 @@ type SIDStructure struct {
 	LNLength  uint8
 	FunLength uint8
 	ArgLength uint8
-}
-
-func (st *SIDStructure) String() string {
-	var s string
-	s += "SRv6 SID Structure TLV:" + "\n"
-	s += fmt.Sprintf("Locator Block length: %d\n", st.LBLength)
-	s += fmt.Sprintf("Locator Node length: %d\n", st.LNLength)
-	s += fmt.Sprintf("SID Function length: %d\n", st.FunLength)
-	s += fmt.Sprintf("SID Argument length: %d\n", st.ArgLength)
-
-	return s
 }
 
 // UnmarshalSRv6SIDStructureTLV builds SRv6 SID Structure TLV object

@@ -8,19 +8,11 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
-// CapabilityTLV defines SR Capability TLV object
+// LocalBlockTLV defines Local Block TLV object
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.1.4
 type LocalBlockTLV struct {
 	SubRange uint32
 	SID      *SIDTLV
-}
-
-func (tlv *LocalBlockTLV) String() string {
-	var s string
-
-	s += "SR Local Block TLV:" + "\n"
-
-	return s
 }
 
 // UnmarshalSRLocalBlockTLV builds SR LocalBlock TLV object

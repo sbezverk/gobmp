@@ -11,16 +11,6 @@ type LinkDescriptor struct {
 	LinkTLV []LinkDescriptorTLV
 }
 
-func (ld *LinkDescriptor) String() string {
-	var s string
-	s += "Link Desriptor TLVs:" + "\n"
-	for _, stlv := range ld.LinkTLV {
-		s += stlv.String()
-	}
-
-	return s
-}
-
 // UnmarshalLinkDescriptor build Link Descriptor object
 func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
 	glog.V(6).Infof("LinkDescriptor Raw: %s", tools.MessageHex(b))

@@ -1,8 +1,6 @@
 package base
 
 import (
-	"fmt"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
@@ -12,14 +10,6 @@ import (
 type IPReachabilityInformation struct {
 	LengthInBits uint8
 	Prefix       []byte
-}
-
-func (ipr *IPReachabilityInformation) String() string {
-	var s string
-	s += "   IP Reachability Information:" + "\n"
-	s += fmt.Sprintf("      Prefix length in bits: %d\n", ipr.LengthInBits)
-
-	return s
 }
 
 // UnmarshalIPReachabilityInformation builds IP Reachability Information TLV object

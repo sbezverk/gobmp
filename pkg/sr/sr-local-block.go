@@ -1,8 +1,6 @@
 package sr
 
 import (
-	"fmt"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
@@ -12,15 +10,6 @@ import (
 type LocalBlock struct {
 	Flags uint8
 	TLV   []LocalBlockTLV
-}
-
-func (lb *LocalBlock) String() string {
-	var s string
-
-	s += "SR Local Block TLV:" + "\n"
-	s += fmt.Sprintf("Flag: %02x\n", lb.Flags)
-
-	return s
 }
 
 // UnmarshalSRLocalBlock builds SR Local Block object

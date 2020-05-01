@@ -15,14 +15,6 @@ type CapabilityTLV struct {
 	SID   *SIDTLV `json:"sid_tlv,omitempty"`
 }
 
-func (cap *CapabilityTLV) String() string {
-	var s string
-
-	s += "SR Capability TLV:" + "\n"
-
-	return s
-}
-
 // UnmarshalSRCapabilityTLV builds SR Capability TLV object
 func UnmarshalSRCapabilityTLV(b []byte) ([]CapabilityTLV, error) {
 	glog.V(6).Infof("SR Capability TLV Raw: %s", tools.MessageHex(b))
