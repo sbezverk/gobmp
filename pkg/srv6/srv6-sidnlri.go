@@ -68,15 +68,12 @@ func (sr *SIDNLRI) GetSRv6SIDMTID() []uint16 {
 
 // GetSRv6SID returns a slice of SIDs
 func (sr *SIDNLRI) GetSRv6SID() []string {
+	sids := make([]string, 0)
+	for _, sid := range sr.SRv6SID.TLV {
+		sids = append(sids, net.IP(sid.SID).To16().String())
+	}
 
-	// TODO Figure out multiple SIDs case
-	//	sids := make([]string, 0)
-	//	for _, sid := range sr.SRv6SID.TLV {
-	//		sids = append(sids, net.IP(sid.SID).To16().String())
-	//	}
-
-	// Temporary Workaround
-	return []string{net.IP(sr.SRv6SID.GetSID()).To16().String()}
+	return sids
 }
 
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object
