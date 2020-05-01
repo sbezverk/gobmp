@@ -16,6 +16,17 @@ type PeerDistinguisher struct {
 	pd []byte
 }
 
+func (pd *PeerDistinguisher) String() string {
+	var s string
+	v := binary.BigEndian.Uint64(pd.pd)
+	if v == 0 {
+		return "0:0"
+	}
+	s = "not implemented"
+
+	return s
+}
+
 func (pd *PeerDistinguisher) copy(b []byte) {
 	if pd.pd == nil || len(pd.pd) == 0 {
 		return
