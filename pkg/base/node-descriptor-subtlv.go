@@ -2,7 +2,6 @@ package base
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -16,48 +15,13 @@ type NodeDescriptorSubTLV struct {
 	Value  []byte
 }
 
-func (stlv *NodeDescriptorSubTLV) String() string {
-	var s string
-	switch stlv.Type {
-	case 512:
-		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (Autonomous System)\n", stlv.Type)
-		s += fmt.Sprintf("         Autonomous System: %d\n", binary.BigEndian.Uint32(stlv.Value))
-	case 513:
-		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (BGP-LS Identifier)\n", stlv.Type)
-		s += fmt.Sprintf("         BGP-LS Identifier: %s\n", tools.MessageHex(stlv.Value))
-	case 514:
-		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (OSPF Area-ID)\n", stlv.Type)
-		s += fmt.Sprintf("         OSPF Area-ID: %s\n", tools.MessageHex(stlv.Value))
-	case 515:
-		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d (IGP Router-ID)\n", stlv.Type)
-		s += fmt.Sprintf("         IGP Router-ID: %s\n", tools.MessageHex(stlv.Value))
-	default:
-		s += fmt.Sprintf("      Node Descriptor Sub TLV Type: %d\n", stlv.Type)
-		s += fmt.Sprintf("      Node Descriptor Sub TLV Length: %d\n", stlv.Length)
-		s += "         Value: "
-		s += tools.MessageHex(stlv.Value)
-		s += "\n"
-	}
-
-	return s
-}
-
 // UnmarshalNodeDescriptorSubTLV builds Node Descriptor Sub TLVs object
 func UnmarshalNodeDescriptorSubTLV(b []byte) ([]NodeDescriptorSubTLV, error) {
 	glog.V(6).Infof("NodeDescriptorSubTLV Raw: %s", tools.MessageHex(b))
 	stlvs := make([]NodeDescriptorSubTLV, 0)
 	for p := 0; p < len(b); {
 		stlv := NodeDescriptorSubTLV{}
-		t := binary.BigEndian.Uint16(b[p : p+2])
-		switch t {
-		case 512:
-		case 513:
-		case 514:
-		case 515:
-		default:
-			return nil, fmt.Errorf("invalid Node Descriptor Sub TLV type %d", t)
-		}
-		stlv.Type = t
+		stlv.Type = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		stlv.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2

@@ -16,15 +16,6 @@ type NodeNLRI struct {
 	LocalNode  *NodeDescriptor
 }
 
-func (n *NodeNLRI) String() string {
-	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(n.ProtocolID))
-	s += fmt.Sprintf("Identifier: %s\n", tools.MessageHex(n.Identifier))
-	s += n.LocalNode.String()
-
-	return s
-}
-
 // GetAllAttribute returns a slice with all attribute types found in Node NLRI object
 func (n *NodeNLRI) GetAllAttribute() []uint16 {
 	attrs := make([]uint16, 0)

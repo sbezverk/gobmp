@@ -20,20 +20,6 @@ type SIDNLRI struct {
 	LocalNodeHash string
 }
 
-func (sr *SIDNLRI) String() string {
-	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(sr.ProtocolID))
-	s += fmt.Sprintf("Identifier: %d\n", sr.Identifier)
-	if sr.LocalNode != nil {
-		s += sr.LocalNode.String()
-	}
-	if sr.SRv6SID != nil {
-		s += sr.SRv6SID.String()
-	}
-
-	return s
-}
-
 // GetAllAttribute returns a slice with all attribute types found in SRv6 SID NLRI object
 func (sr *SIDNLRI) GetAllAttribute() []uint16 {
 	attrs := make([]uint16, 0)

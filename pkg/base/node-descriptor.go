@@ -17,26 +17,6 @@ type NodeDescriptor struct {
 	SubTLV []NodeDescriptorSubTLV
 }
 
-func (nd *NodeDescriptor) String() string {
-	var s string
-
-	s += "Node Descriptor TLVs:" + "\n"
-	switch nd.Type {
-	case 256:
-		s += fmt.Sprintf("   Node Descriptor Type: %d (Local Node Descriptors)\n", nd.Type)
-	case 257:
-		s += fmt.Sprintf("   Node Descriptor Type: %d (Remote Node Descriptors)\n", nd.Type)
-	default:
-		s += fmt.Sprintf("   Node Descriptor Type: %d\n", nd.Type)
-		s += fmt.Sprintf("   Node Descriptor Length: %d\n", nd.Length)
-	}
-	for _, stlv := range nd.SubTLV {
-		s += stlv.String()
-	}
-
-	return s
-}
-
 // GetASN returns Autonomous System Number used to uniqely identify BGP-LS domain
 func (nd *NodeDescriptor) GetASN() uint32 {
 	for _, tlv := range nd.SubTLV {
@@ -95,6 +75,12 @@ func (nd *NodeDescriptor) GetIGPRouterID() string {
 
 	return s
 }
+
+// TODO
+// https://tools.ietf.org/id/draft-ietf-idr-bgpls-segment-routing-epe-14.html#rfc.section.4.1
+// Add new Node Descriptor's TLV:
+// 516 BGP Router Identifier (BGP Router-ID)
+// 517 Confederation Member ASN (Member-ASN
 
 // UnmarshalNodeDescriptor build Node Descriptor object
 func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {

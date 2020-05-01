@@ -19,16 +19,6 @@ type PrefixNLRI struct {
 	IsPv4         bool
 }
 
-func (p *PrefixNLRI) String() string {
-	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(p.ProtocolID))
-	s += fmt.Sprintf("Identifier: %d\n", p.Identifier)
-	s += p.LocalNode.String()
-	s += p.Prefix.String()
-
-	return s
-}
-
 // GetAllAttribute returns a slice with all attribute types found in Prefix NLRI object
 func (p *PrefixNLRI) GetAllAttribute() []uint16 {
 	attrs := make([]uint16, 0)

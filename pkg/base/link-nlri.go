@@ -23,17 +23,6 @@ type LinkNLRI struct {
 	LinkHash       string
 }
 
-func (l *LinkNLRI) String() string {
-	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(l.ProtocolID))
-	s += fmt.Sprintf("Identifier: %d\n", l.Identifier)
-	s += l.LocalNode.String()
-	s += l.RemoteNode.String()
-	s += l.Link.String()
-
-	return s
-}
-
 // GetAllAttribute returns a slice with all attribute types found in Link NLRI object
 func (l *LinkNLRI) GetAllAttribute() []uint16 {
 	attrs := make([]uint16, 0)
