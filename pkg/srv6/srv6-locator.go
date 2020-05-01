@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -14,7 +15,7 @@ type LocatorTLV struct {
 	Algorithm uint8
 	Reserved  uint16
 	Metric    uint32
-	SubTLV    []SubTLV
+	SubTLV    map[uint16]base.TLV
 }
 
 // UnmarshalSRv6LocatorTLV builds SRv6 Locator TLV object
@@ -32,7 +33,7 @@ func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
 	p += 4
 
 	if len(b) > p {
-		stlvs, err := UnmarshalSRv6SubTLV(b[p:])
+		stlvs, err := base.UnmarshalTLV(b[p:])
 		if err != nil {
 			return nil, err
 		}

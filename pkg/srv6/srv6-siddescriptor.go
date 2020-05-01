@@ -11,8 +11,16 @@ import (
 
 // SIDDescriptor defines SRv6 SID Descriptor Object
 type SIDDescriptor struct {
-	TLV                     []SIDInformationTLV
+	TLV                     map[uint16]base.TLV
 	MultiTopologyIdentifier *base.MultiTopologyIdentifierTLV
+}
+
+// GetSID returns SID stored as TLV attribute
+func (s *SIDDescriptor) GetSID() []byte {
+	if tlv, ok := s.TLV[518]; ok {
+		return tlv.Value
+	}
+	return nil
 }
 
 // UnmarshalSRv6SIDDescriptor build SRv6 Descriptor Object
@@ -25,7 +33,7 @@ func UnmarshalSRv6SIDDescriptor(b []byte) (*SIDDescriptor, error) {
 		switch t {
 		case 518:
 			l = binary.BigEndian.Uint16(b[p+2 : p+4])
-			inf, err := UnmarshalSRv6SIDInformationTLV(b[p : p+int(l)])
+			inf, err := base.UnmarshalTLV(b[p : p+int(l)])
 			if err != nil {
 				return nil, err
 			}

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -16,7 +17,7 @@ type EndXSIDTLV struct {
 	Weight           uint8
 	Reserved         uint8
 	SID              []byte
-	SubTLV           []SubTLV
+	SubTLV           map[uint16]base.TLV
 }
 
 // UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object
@@ -39,7 +40,7 @@ func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
 	copy(endx.SID, b[p:p+16])
 	p += 16
 	if len(b) > p {
-		stlvs, err := UnmarshalSRv6SubTLV(b[p:])
+		stlvs, err := base.UnmarshalTLV(b[p:])
 		if err != nil {
 			return nil, err
 		}
