@@ -14,7 +14,7 @@ import (
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type LinkNLRI struct {
 	ProtocolID     uint8
-	Identifier     uint64
+	Identifier     []byte
 	LocalNode      *NodeDescriptor
 	RemoteNode     *NodeDescriptor
 	Link           *LinkDescriptor
@@ -167,7 +167,8 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	p++
 	// Skip 3 reserved bytes
 	//	p += 3
-	l.Identifier = binary.BigEndian.Uint64(b[p : p+8])
+	l.Identifier = make([]byte, 8)
+	copy(l.Identifier, b[p:p+8])
 	p += 8
 	// Local Node Descriptor
 	// Get Node Descriptor's length, skip Node Descriptor Type

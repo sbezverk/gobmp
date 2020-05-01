@@ -8,7 +8,7 @@ import (
 // LinkDescriptor defines Link Descriptor object
 // https://tools.ietf.org/html/rfc7752#section-3.2.2
 type LinkDescriptor struct {
-	LinkTLV []LinkDescriptorTLV
+	LinkTLV map[uint16]TLV
 }
 
 // UnmarshalLinkDescriptor build Link Descriptor object
@@ -16,7 +16,7 @@ func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
 	glog.V(6).Infof("LinkDescriptor Raw: %s", tools.MessageHex(b))
 	ld := LinkDescriptor{}
 	p := 0
-	ltlv, err := UnmarshalLinkDescriptorTLV(b[p : p+len(b)])
+	ltlv, err := UnmarshalTLV(b[p : p+len(b)])
 	if err != nil {
 		return nil, err
 	}
