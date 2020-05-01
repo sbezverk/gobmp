@@ -2,7 +2,6 @@ package srv6
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -18,25 +17,6 @@ type EndXSIDTLV struct {
 	Reserved         uint8
 	SID              []byte
 	SubTLV           []SubTLV
-}
-
-func (x *EndXSIDTLV) String() string {
-	var s string
-
-	s += "SRv6 End.X SID TLV:" + "\n"
-
-	s += fmt.Sprintf("Endpoint Behavior: %d\n", x.EndpointBehavior)
-	s += fmt.Sprintf("Flag: %02x\n", x.Flag)
-	s += fmt.Sprintf("Algorithm: %d\n", x.Algorithm)
-	s += fmt.Sprintf("Weight: %d\n", x.Weight)
-	s += fmt.Sprintf("SID: %s\n", tools.MessageHex(x.SID))
-	if x.SubTLV != nil {
-		for _, stlv := range x.SubTLV {
-			s += stlv.String()
-		}
-	}
-
-	return s
 }
 
 // UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object

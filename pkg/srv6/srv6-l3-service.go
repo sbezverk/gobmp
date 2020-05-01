@@ -3,14 +3,14 @@ package srv6
 // SIDStructureSubSubTLV defines a structure of SID's Structure Sub Sub TLV
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2.1.2.1
 type SIDStructureSubSubTLV struct {
-	Type                uint8
-	Length              uint16
-	LocalBlockLength    uint8
-	LocatorNodeLength   uint8
-	FunctionLength      uint8
-	ArgumentLength      uint8
-	TranspositionLength uint8
-	TranspositionOffset uint8
+	Type                uint8  `json:"-"`
+	Length              uint16 `json:"-"`
+	LocalBlockLength    uint8  `json:"local_block_length,omitempty"`
+	LocatorNodeLength   uint8  `json:"locator_node_length,omitempty"`
+	FunctionLength      uint8  `json:"function_length,omitempty"`
+	ArgumentLength      uint8  `json:"argument_length,omitempty"`
+	TranspositionLength uint8  `json:"transposition_length,omitempty"`
+	TranspositionOffset uint8  `json:"transposition_offset,omitempty"`
 }
 
 // ServiceSubSubTLV defines the structure of Service's Sib Sub Service TLV

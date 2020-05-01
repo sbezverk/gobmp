@@ -31,30 +31,6 @@ func (mp *MPReachNLRI) GetAFISAFIType() int {
 	return getNLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)
 }
 
-func (mp *MPReachNLRI) String() string {
-	var s string
-	s += fmt.Sprintf("Address Family ID: %d\n", mp.AddressFamilyID)
-	s += fmt.Sprintf("Subsequent Address Family ID: %d\n", mp.SubAddressFamilyID)
-	if mp.NextHopAddressLength == 4 {
-		s += fmt.Sprintf("Next Hop Network Address: %s\n", net.IP(mp.NextHopAddress).To4().String())
-	} else if mp.NextHopAddressLength == 16 {
-		s += fmt.Sprintf("Next Hop Network Address: %s\n", net.IP(mp.NextHopAddress).To16().String())
-	}
-	switch mp.SubAddressFamilyID {
-	case 71:
-		nlri, err := ls.UnmarshalLSNLRI71(mp.NLRI)
-		if err != nil {
-			s += err.Error()
-		} else {
-			s += nlri.String()
-		}
-	default:
-		s += fmt.Sprintf("NLRI: %s\n", tools.MessageHex(mp.NLRI))
-	}
-
-	return s
-}
-
 // IsIPv6NLRI return true if NLRI is for IPv6 address family
 func (mp *MPReachNLRI) IsIPv6NLRI() bool {
 	return mp.AddressFamilyID == 2

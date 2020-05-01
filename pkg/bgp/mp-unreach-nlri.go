@@ -121,7 +121,7 @@ func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 
 // UnmarshalMPUnReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPUnReachNLRI(b []byte) (MPNLRI, error) {
-	glog.V(5).Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
@@ -131,7 +131,6 @@ func UnmarshalMPUnReachNLRI(b []byte) (MPNLRI, error) {
 	p += 2
 	mp.SubAddressFamilyID = uint8(b[p])
 	p++
-	glog.Infof("MP_UNREACH_NLRI for AFI: %d SAFI: %d", mp.AddressFamilyID, mp.SubAddressFamilyID)
 	mp.WithdrawnRoutes = make([]byte, len(b[p:]))
 	copy(mp.WithdrawnRoutes, b[p:])
 

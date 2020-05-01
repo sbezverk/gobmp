@@ -2,8 +2,10 @@ package message
 
 import (
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/srv6"
 )
 
 func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
@@ -90,52 +92,74 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		glog.Errorf("failed to NLRI 71 with error: %+v", err)
 		return
 	}
-	t := ls.GetSubType()
-	switch t {
-	case 32:
-		msg, err := p.lsNode(nlri, operation, ph, update)
-		if err != nil {
-			glog.Errorf("failed to produce ls_node message with error: %+v", err)
-			return
+	for _, e := range ls.NLRI {
+		switch e.Type {
+		case 1:
+			n, ok := e.LS.(*base.NodeNLRI)
+			if !ok {
+				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				continue
+			}
+			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update)
+			if err != nil {
+				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				continue
+			}
+			if err := p.marshalAndPublish(&msg, bmp.LSNodeMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process LSNode message with error: %+v", err)
+				continue
+			}
+		case 2:
+			l, ok := e.LS.(*base.LinkNLRI)
+			if !ok {
+				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				continue
+			}
+			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update)
+			if err != nil {
+				glog.Errorf("failed to produce ls_link message with error: %+v", err)
+				continue
+			}
+			if err := p.marshalAndPublish(&msg, bmp.LSLinkMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process LSLink message with error: %+v", err)
+				continue
+			}
+		case 3:
+			ipv4Flag = true
+			fallthrough
+		case 4:
+			prfx, ok := e.LS.(*base.PrefixNLRI)
+			if !ok {
+				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				continue
+			}
+			msg, err := p.lsPrefix(prfx, nlri.GetNextHop(), operation, ph, update, ipv4Flag)
+			if err != nil {
+				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
+				continue
+			}
+			if err := p.marshalAndPublish(&msg, bmp.LSPrefixMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process LSPrefix message with error: %+v", err)
+				continue
+			}
+		case 6:
+			s, ok := e.LS.(*srv6.SIDNLRI)
+			if !ok {
+				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				continue
+			}
+			msg, err := p.lsSRv6SID(s, nlri.GetNextHop(), operation, ph, update)
+			if err != nil {
+				glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
+				continue
+			}
+			if err := p.marshalAndPublish(&msg, bmp.LSSRv6SIDMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
+				continue
+			}
+		default:
+			glog.Warningf("Unknown NLRI 71 Sub type %d", e.Type)
 		}
-		if err := p.marshalAndPublish(&msg, bmp.LSNodeMsg, []byte(msg.RouterHash), false); err != nil {
-			glog.Errorf("failed to process LSNode message with error: %+v", err)
-			return
-		}
-	case 33:
-		msg, err := p.lsLink(nlri, operation, ph, update)
-		if err != nil {
-			glog.Errorf("failed to produce ls_link message with error: %+v", err)
-			return
-		}
-		if err := p.marshalAndPublish(&msg, bmp.LSLinkMsg, []byte(msg.RouterHash), false); err != nil {
-			glog.Errorf("failed to process LSLink message with error: %+v", err)
-			return
-		}
-	case 34:
-		ipv4Flag = true
-		fallthrough
-	case 35:
-		msg, err := p.lsPrefix(nlri, operation, ph, update, ipv4Flag)
-		if err != nil {
-			glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
-			return
-		}
-		if err := p.marshalAndPublish(&msg, bmp.LSPrefixMsg, []byte(msg.RouterHash), false); err != nil {
-			glog.Errorf("failed to process LSPrefix message with error: %+v", err)
-			return
-		}
-	case 36:
-		msg, err := p.lsSRv6SID(nlri, operation, ph, update)
-		if err != nil {
-			glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
-			return
-		}
-		if err := p.marshalAndPublish(&msg, bmp.LSSRv6SIDMsg, []byte(msg.RouterHash), false); err != nil {
-			glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
-			return
-		}
-	default:
-		glog.Warningf("Unknown NLRI 71 Sub type %d", t)
+
 	}
 }

@@ -10,14 +10,9 @@ import (
 // SubTLV defines SRv6 Sub TLV object
 // No RFC yet
 type SubTLV struct {
-	Type   uint16
-	Length uint16
-	Value  []byte
-}
-
-func (stlv *SubTLV) String() string {
-	var s string
-	return s
+	Type   uint16 `json:"subtlv_type,omitempty"`
+	Length uint16 `json:"subtlv_length,omitempty"`
+	Value  []byte `json:"subtlv_value,omitempty"`
 }
 
 // UnmarshalSRv6SubTLV builds a collection of SRv6 Sub TLV

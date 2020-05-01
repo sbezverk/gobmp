@@ -6,13 +6,10 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/srv6"
 )
 
-func (p *producer) lsSRv6SID(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSSRv6SID, error) {
-	nlri71, err := nlri.GetNLRI71()
-	if err != nil {
-		return nil, err
-	}
+func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSSRv6SID, error) {
 	var operation string
 	switch op {
 	case 0:
@@ -31,20 +28,20 @@ func (p *producer) lsSRv6SID(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 		Timestamp:      ph.PeerTimestamp,
 		BaseAttributes: update.BaseAttributes,
 	}
-	msg.Nexthop = nlri.GetNextHop()
+	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
 	// Processing other nlri and attributes, since they are optional, processing only if they exist
-	nlri6, err := nlri71.GetSRv6SIDNLRI()
-	if err == nil {
-		glog.V(6).Infof("nlri6 attributes: %+v", nlri6.GetAllAttribute())
-		msg.Protocol = nlri6.GetSRv6SIDProtocolID()
-		msg.LocalNodeHash = nlri6.LocalNodeHash
-		msg.LSID = nlri6.GetSRv6SIDLSID()
-		msg.IGPRouterID = nlri6.GetSRv6SIDIGPRouterID()
-		msg.LocalNodeASN = nlri6.GetSRv6SIDASN()
-		msg.MTID = nlri6.GetSRv6SIDMTID()
-		msg.SRv6SID = nlri6.GetSRv6SID()
-	}
+	// 	nlri6, err := nlri71.GetSRv6SIDNLRI()
+	//	if err == nil {
+	glog.V(6).Infof("nlri6 attributes: %+v", nlri6.GetAllAttribute())
+	msg.Protocol = nlri6.GetSRv6SIDProtocolID()
+	msg.LocalNodeHash = nlri6.LocalNodeHash
+	msg.LSID = nlri6.GetSRv6SIDLSID()
+	msg.IGPRouterID = nlri6.GetSRv6SIDIGPRouterID()
+	msg.LocalNodeASN = nlri6.GetSRv6SIDASN()
+	msg.MTID = nlri6.GetSRv6SIDMTID()
+	msg.SRv6SID = nlri6.GetSRv6SID()
+	//	}
 	ls, err := update.GetNLRI29()
 	if err == nil {
 		glog.V(6).Infof("nlri29 attributes: %+v", ls.GetAllAttribute())

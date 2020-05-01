@@ -17,7 +17,6 @@ type MPNLRI interface {
 	GetNextHop() string
 	IsIPv6NLRI() bool
 	IsNextHopIPv6() bool
-	String() string
 }
 
 func getNLRIMessageType(afi uint16, safi uint8) int {
