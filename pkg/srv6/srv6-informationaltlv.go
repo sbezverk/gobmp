@@ -2,7 +2,6 @@ package srv6
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -13,14 +12,6 @@ type SIDInformationTLV struct {
 	Type   uint16
 	Length uint16
 	SID    []byte
-}
-
-func (tlv *SIDInformationTLV) String() string {
-	var s string
-	s += fmt.Sprintf("   SRv6 SID Information TLV Type: %d\n", tlv.Type)
-	s += fmt.Sprintf("      SID: %s\n", tools.MessageHex(tlv.SID))
-
-	return s
 }
 
 // UnmarshalSRv6SIDInformationTLV builds SRv6 SID Information TLV slice

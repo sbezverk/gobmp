@@ -46,7 +46,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// MP_UNREACH_NLRI
 		nlri, err := bgp.UnmarshalMPUnReachNLRI(routeMonitorMsg.Update.PathAttributes[0].Attribute)
 		if err != nil {
-			glog.Errorf("failed to process MP_REACH_NLRI with error: %+v", err)
+			glog.Errorf("failed to process MP_UNREACH_NLRI with error: %+v", err)
 		}
 		p.processMPUpdate(nlri, DelPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 	default:

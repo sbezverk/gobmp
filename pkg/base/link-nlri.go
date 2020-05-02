@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"fmt"
-	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -14,24 +13,13 @@ import (
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type LinkNLRI struct {
 	ProtocolID     uint8
-	Identifier     uint64
+	Identifier     []byte
 	LocalNode      *NodeDescriptor
 	RemoteNode     *NodeDescriptor
 	Link           *LinkDescriptor
 	LocalNodeHash  string
 	RemoteNodeHash string
 	LinkHash       string
-}
-
-func (l *LinkNLRI) String() string {
-	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(l.ProtocolID))
-	s += fmt.Sprintf("Identifier: %d\n", l.Identifier)
-	s += l.LocalNode.String()
-	s += l.RemoteNode.String()
-	s += l.Link.String()
-
-	return s
 }
 
 // GetAllAttribute returns a slice with all attribute types found in Link NLRI object
@@ -81,69 +69,33 @@ func (l *LinkNLRI) GetLinkOSPFAreaID(local bool) string {
 
 // GetLinkID returns Local or Remote Link ID as a string, depending on passed parameter
 func (l *LinkNLRI) GetLinkID(local bool) string {
-	for _, tlv := range l.Link.LinkTLV {
-		if tlv.Type != 258 {
-			continue
-		}
-		id, err := UnmarshalLocalRemoteIdentifierTLV(tlv.Value)
-		if err != nil {
-			return ""
-		}
-		if id == nil {
-			return ""
-		}
-		return id.GetLinkID(local)
-	}
-
-	return ""
+	return l.Link.GetLinkID(local)
 }
 
-// GetLinkIPv4InterfaceAddr returns Link Interface IPv4 address as a string
-func (l *LinkNLRI) GetLinkIPv4InterfaceAddr() string {
-	for _, tlv := range l.Link.LinkTLV {
-		if tlv.Type != 259 {
-			continue
+// GetLinkInterfaceAddr returns Link Interface IPv4 address as a string
+func (l *LinkNLRI) GetLinkInterfaceAddr() string {
+	ipv4 := l.Link.GetLinkIPv4InterfaceAddr()
+	ipv6 := l.Link.GetLinkIPv6InterfaceAddr()
+	if ipv4 != "" {
+		if ipv6 != "" {
+			return ipv4 + "," + ipv6
 		}
-		return net.IP(tlv.Value).To4().String()
+		return ipv4
 	}
-
-	return ""
+	return ipv6
 }
 
-// GetLinkIPv4NeighborAddr returns Link's neighbor IPv4 address as a string
-func (l *LinkNLRI) GetLinkIPv4NeighborAddr() string {
-	for _, tlv := range l.Link.LinkTLV {
-		if tlv.Type != 260 {
-			continue
+// GetLinkNeighborAddr returns Link's neighbor IPv4 address as a string
+func (l *LinkNLRI) GetLinkNeighborAddr() string {
+	ipv4 := l.Link.GetLinkIPv4NeighborAddr()
+	ipv6 := l.Link.GetLinkIPv6NeighborAddr()
+	if ipv4 != "" {
+		if ipv6 != "" {
+			return ipv4 + "," + ipv6
 		}
-		return net.IP(tlv.Value).To4().String()
+		return ipv4
 	}
-
-	return ""
-}
-
-// GetLinkIPv6InterfaceAddr returns Link Interface IPv6 address as a string
-func (l *LinkNLRI) GetLinkIPv6InterfaceAddr() string {
-	for _, tlv := range l.Link.LinkTLV {
-		if tlv.Type != 261 {
-			continue
-		}
-		return net.IP(tlv.Value).To16().String()
-	}
-
-	return ""
-}
-
-// GetLinkIPv6NeighborAddr returns Link's neighbor IPv6 address as a string
-func (l *LinkNLRI) GetLinkIPv6NeighborAddr() string {
-	for _, tlv := range l.Link.LinkTLV {
-		if tlv.Type != 262 {
-			continue
-		}
-		return net.IP(tlv.Value).To16().String()
-	}
-
-	return ""
+	return ipv6
 }
 
 // GetLocalASN returns value of Local Node's ASN
@@ -178,7 +130,8 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	p++
 	// Skip 3 reserved bytes
 	//	p += 3
-	l.Identifier = binary.BigEndian.Uint64(b[p : p+8])
+	l.Identifier = make([]byte, 8)
+	copy(l.Identifier, b[p:p+8])
 	p += 8
 	// Local Node Descriptor
 	// Get Node Descriptor's length, skip Node Descriptor Type

@@ -18,8 +18,8 @@ func TestGetPrefixIPReachability(t *testing.T) {
 		{
 			name: "ipv4",
 			input: &PrefixDescriptor{
-				PrefixTLV: []PrefixDescriptorTLV{
-					{
+				PrefixTLV: map[uint16]TLV{
+					265: {
 						Type:   265,
 						Length: 5,
 						Value:  []byte{32, 192, 168, 8, 8},
@@ -32,8 +32,8 @@ func TestGetPrefixIPReachability(t *testing.T) {
 		{
 			name: "ipv6",
 			input: &PrefixDescriptor{
-				PrefixTLV: []PrefixDescriptorTLV{
-					{
+				PrefixTLV: map[uint16]TLV{
+					265: {
 						Type:   265,
 						Length: 16,
 						Value:  []byte{120, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},

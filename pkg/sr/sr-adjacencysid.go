@@ -1,8 +1,6 @@
 package sr
 
 import (
-	"fmt"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
@@ -13,15 +11,6 @@ type AdjacencySIDTLV struct {
 	Flags  uint8  `json:"flags,omitempty"`
 	Weight uint8  `json:"weight"`
 	SID    []byte `json:"sid,omitempty"`
-}
-
-func (asid *AdjacencySIDTLV) String() string {
-	var s string
-	s += fmt.Sprintf("   Flags: %02x\n", asid.Flags)
-	s += fmt.Sprintf("   Weight: %d\n", asid.Weight)
-	s += fmt.Sprintf("   SID: %s\n", tools.MessageHex(asid.SID))
-
-	return s
 }
 
 // UnmarshalAdjacencySIDTLV builds Adjacency SID TLV Object

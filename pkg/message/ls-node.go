@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) lsNode(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, error) {
-	nlri71, err := nlri.GetNLRI71()
-	if err != nil {
-		return nil, err
-	}
+func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, error) {
+	// nlri71, err := nlri.GetNLRI71()
+	// if err != nil {
+	// 	return nil, err
+	// }
 	var operation string
 	switch op {
 	case 0:
@@ -31,7 +32,7 @@ func (p *producer) lsNode(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 		Timestamp:      ph.PeerTimestamp,
 		BaseAttributes: update.BaseAttributes,
 	}
-	msg.Nexthop = nlri.GetNextHop()
+	msg.Nexthop = nextHop
 	if ph.FlagV {
 		// IPv6 specific conversions
 		msg.PeerIP = net.IP(ph.PeerAddress).To16().String()
@@ -40,14 +41,14 @@ func (p *producer) lsNode(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 	}
 	// Processing other nlri and attributes, since they are optional, processing only if they exist
-	node, err := nlri71.GetNodeNLRI()
-	if err == nil {
-		msg.Protocol = node.GetNodeProtocolID()
-		msg.IGPRouterID = node.GetNodeIGPRouterID()
-		msg.LSID = node.GetNodeLSID()
-		msg.ASN = node.GetNodeASN()
-		msg.OSPFAreaID = node.GetNodeOSPFAreaID()
-	}
+	//	node, err := nlri71.GetNodeNLRI()
+	//	if err == nil {
+	msg.Protocol = node.GetNodeProtocolID()
+	msg.IGPRouterID = node.GetNodeIGPRouterID()
+	msg.LSID = node.GetNodeLSID()
+	msg.ASN = node.GetNodeASN()
+	msg.OSPFAreaID = node.GetNodeOSPFAreaID()
+	//	}
 
 	lsnode, err := update.GetNLRI29()
 	if err == nil {

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/srv6"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -37,6 +38,8 @@ type OriginatorSRGBTLV struct {
 type PSid struct {
 	LabelIndex     *LabelIndexTLV     `json:"label_index,omitempty"`
 	OriginatorSRGB *OriginatorSRGBTLV `json:"originator_srgb,omitempty"`
+	SRv6L3Service  *srv6.L3Service    `json:"srv6_l3_service,omitempty"`
+	SRv6L2Service  *srv6.L2Service    `json:"srv6_l2_service,omitempty"`
 }
 
 // UnmarshalBGPAttrPrefixSID instantiates a prefix sid object
@@ -84,6 +87,16 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 				p += 3
 				psid.OriginatorSRGB.SRGB = append(psid.OriginatorSRGB.SRGB, srgb)
 			}
+		case 5:
+			p++
+			l := binary.BigEndian.Uint16(b[p : p+2])
+			p += 2
+			l3, err := srv6.UnmarshalSRv6L3Service(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			psid.SRv6L3Service = l3
+			p += int(l)
 		default:
 			// Skip unknown type, length 2 bytes and the value
 			p++

@@ -1,6 +1,7 @@
 package base
 
 import (
+	"crypto/md5"
 	"encoding/binary"
 	"fmt"
 
@@ -12,21 +13,11 @@ import (
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type PrefixNLRI struct {
 	ProtocolID    uint8
-	Identifier    uint64
+	Identifier    []byte
 	LocalNode     *NodeDescriptor
 	Prefix        *PrefixDescriptor
 	LocalNodeHash string
-	IsPv4         bool
-}
-
-func (p *PrefixNLRI) String() string {
-	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(p.ProtocolID))
-	s += fmt.Sprintf("Identifier: %d\n", p.Identifier)
-	s += p.LocalNode.String()
-	s += p.Prefix.String()
-
-	return s
+	IsIPv4        bool
 }
 
 // GetAllAttribute returns a slice with all attribute types found in Prefix NLRI object
@@ -80,13 +71,15 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
 	pr := PrefixNLRI{
-		IsPv4: ipv4,
+		IsIPv4: ipv4,
 	}
 	p := 0
 	pr.ProtocolID = b[p]
 	p++
-	pr.Identifier = binary.BigEndian.Uint64(b[p : p+8])
+	pr.Identifier = make([]byte, 8)
+	copy(pr.Identifier, b[p:p+8])
 	p += 8
+
 	// Get Node Descriptor's length, skip Node Descriptor Type
 	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
 	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
@@ -94,6 +87,7 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 		return nil, err
 	}
 	pr.LocalNode = ln
+	pr.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)]))
 	// Skip Node Descriptor Type and Length 4 bytes
 	p += 4
 	p += int(ndl)

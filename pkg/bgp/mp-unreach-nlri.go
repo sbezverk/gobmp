@@ -25,14 +25,6 @@ func (mp *MPUnReachNLRI) GetAFISAFIType() int {
 	return getNLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)
 }
 
-func (mp *MPUnReachNLRI) String() string {
-	var s string
-	s += fmt.Sprintf("Address Family ID: %d\n", mp.AddressFamilyID)
-	s += fmt.Sprintf("Subsequent Address Family ID: %d\n", mp.SubAddressFamilyID)
-
-	return s
-}
-
 // IsIPv6NLRI return true if NLRI is for IPv6 address family
 func (mp *MPUnReachNLRI) IsIPv6NLRI() bool {
 	return mp.AddressFamilyID == 2
@@ -121,7 +113,7 @@ func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 
 // UnmarshalMPUnReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPUnReachNLRI(b []byte) (MPNLRI, error) {
-	glog.V(5).Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
+	glog.V(6).Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
@@ -131,7 +123,6 @@ func UnmarshalMPUnReachNLRI(b []byte) (MPNLRI, error) {
 	p += 2
 	mp.SubAddressFamilyID = uint8(b[p])
 	p++
-	glog.Infof("MP_UNREACH_NLRI for AFI: %d SAFI: %d", mp.AddressFamilyID, mp.SubAddressFamilyID)
 	mp.WithdrawnRoutes = make([]byte, len(b[p:]))
 	copy(mp.WithdrawnRoutes, b[p:])
 

@@ -19,12 +19,6 @@ type Capability struct {
 	Description string
 }
 
-func (c *Capability) String() string {
-	var s string
-
-	return s
-}
-
 // UnmarshalBGPInformationalTLVCapability builds BGP Capability Information TLV object
 func UnmarshalBGPInformationalTLVCapability(b []byte) ([]Capability, error) {
 	caps := make([]Capability, 0)

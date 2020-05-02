@@ -2,7 +2,6 @@ package srv6
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -15,18 +14,6 @@ type BGPPeerNodeSID struct {
 	Weight  uint8
 	PeerASN uint32
 	PeerID  []byte
-}
-
-func (b *BGPPeerNodeSID) String() string {
-	var s string
-
-	s += "SRv6 BGP Peer Node SID TLV:" + "\n"
-	s += fmt.Sprintf("Flag: %02x\n", b.Flag)
-	s += fmt.Sprintf("Weight: %d\n", b.Weight)
-	s += fmt.Sprintf("Peer ASN: %d\n", b.PeerASN)
-	s += fmt.Sprintf("Peer ID: %s\n", tools.MessageHex(b.PeerID))
-
-	return s
 }
 
 // UnmarshalSRv6BGPPeerNodeSIDTLV builds SRv6 BGP Peer Node SID TLV object

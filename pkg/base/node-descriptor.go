@@ -12,37 +12,12 @@ import (
 // NodeDescriptor defines Node Descriptor object
 // https://tools.ietf.org/html/rfc7752#section-3.2.1
 type NodeDescriptor struct {
-	Type   uint16
-	Length uint16
-	SubTLV []NodeDescriptorSubTLV
-}
-
-func (nd *NodeDescriptor) String() string {
-	var s string
-
-	s += "Node Descriptor TLVs:" + "\n"
-	switch nd.Type {
-	case 256:
-		s += fmt.Sprintf("   Node Descriptor Type: %d (Local Node Descriptors)\n", nd.Type)
-	case 257:
-		s += fmt.Sprintf("   Node Descriptor Type: %d (Remote Node Descriptors)\n", nd.Type)
-	default:
-		s += fmt.Sprintf("   Node Descriptor Type: %d\n", nd.Type)
-		s += fmt.Sprintf("   Node Descriptor Length: %d\n", nd.Length)
-	}
-	for _, stlv := range nd.SubTLV {
-		s += stlv.String()
-	}
-
-	return s
+	SubTLV map[uint16]TLV
 }
 
 // GetASN returns Autonomous System Number used to uniqely identify BGP-LS domain
 func (nd *NodeDescriptor) GetASN() uint32 {
-	for _, tlv := range nd.SubTLV {
-		if tlv.Type != 512 {
-			continue
-		}
+	if tlv, ok := nd.SubTLV[512]; ok {
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
 	return 0
@@ -50,10 +25,7 @@ func (nd *NodeDescriptor) GetASN() uint32 {
 
 // GetLSID returns BGP-LS Identifier found in Node Descriptor sub tlv
 func (nd *NodeDescriptor) GetLSID() uint32 {
-	for _, tlv := range nd.SubTLV {
-		if tlv.Type != 513 {
-			continue
-		}
+	if tlv, ok := nd.SubTLV[513]; ok {
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
 	return 0
@@ -61,10 +33,7 @@ func (nd *NodeDescriptor) GetLSID() uint32 {
 
 // GetOSPFAreaID returns OSPF Area-ID found in Node Descriptor sub tlv
 func (nd *NodeDescriptor) GetOSPFAreaID() string {
-	for _, tlv := range nd.SubTLV {
-		if tlv.Type != 514 {
-			continue
-		}
+	if tlv, ok := nd.SubTLV[514]; ok {
 		return net.IP(tlv.Value).To4().String()
 	}
 	return ""
@@ -74,10 +43,7 @@ func (nd *NodeDescriptor) GetOSPFAreaID() string {
 func (nd *NodeDescriptor) GetIGPRouterID() string {
 	var s string
 	i := 0
-	for _, tlv := range nd.SubTLV {
-		if tlv.Type != 515 {
-			continue
-		}
+	if tlv, ok := nd.SubTLV[515]; ok {
 		if tlv.Length == 4 {
 			return net.IP(tlv.Value).To4().String()
 		}
@@ -92,8 +58,23 @@ func (nd *NodeDescriptor) GetIGPRouterID() string {
 		}
 		return s
 	}
-
 	return s
+}
+
+//GetBGPRouterID returns BGP Router ID found in Node Descriptor sub tlv
+func (nd *NodeDescriptor) GetBGPRouterID() string {
+	if tlv, ok := nd.SubTLV[516]; ok {
+		return net.IP(tlv.Value).To4().String()
+	}
+	return ""
+}
+
+// GetConfedMemberASN returns Confederation Member ASN (Member-ASN)
+func (nd *NodeDescriptor) GetConfedMemberASN() uint32 {
+	if tlv, ok := nd.SubTLV[517]; ok {
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+	return 0
 }
 
 // UnmarshalNodeDescriptor build Node Descriptor object
@@ -101,11 +82,11 @@ func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {
 	glog.V(6).Infof("NodeDescriptor Raw: %s", tools.MessageHex(b))
 	nd := NodeDescriptor{}
 	p := 0
-	nd.Type = binary.BigEndian.Uint16(b[p : p+2])
+	//	nd.Type = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	nd.Length = binary.BigEndian.Uint16(b[p : p+2])
+	//	nd.Length = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	stlv, err := UnmarshalNodeDescriptorSubTLV(b[p : p+len(b)])
+	stlv, err := UnmarshalTLV(b[p : p+len(b)])
 	if err != nil {
 		return nil, err
 	}

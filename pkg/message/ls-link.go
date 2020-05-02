@@ -4,15 +4,12 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) lsLink(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSLink, error) {
-	nlri71, err := nlri.GetNLRI71()
-	if err != nil {
-		return nil, err
-	}
+func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSLink, error) {
 	var operation string
 	switch op {
 	case 0:
@@ -31,7 +28,7 @@ func (p *producer) lsLink(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 		Timestamp:      ph.PeerTimestamp,
 		BaseAttributes: update.BaseAttributes,
 	}
-	msg.Nexthop = nlri.GetNextHop()
+	msg.Nexthop = nextHop
 	if ph.FlagV {
 		// IPv6 specific conversions
 		msg.PeerIP = net.IP(ph.PeerAddress).To16().String()
@@ -39,28 +36,20 @@ func (p *producer) lsLink(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update
 		// IPv4 specific conversions
 		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 	}
-	// Processing other nlri and attributes, since they are optional, processing only if they exist
-	link, err := nlri71.GetLinkNLRI()
-	if err == nil {
-		msg.Protocol = link.GetLinkProtocolID()
-		msg.LSID = link.GetLinkLSID(true)
-		msg.OSPFAreaID = link.GetLinkOSPFAreaID(true)
-		msg.LocalLinkID = link.GetLinkID(true)
-		msg.RemoteLinkID = link.GetLinkID(false)
-		if ph.FlagV {
-			msg.InterfaceIP = link.GetLinkIPv6InterfaceAddr()
-			msg.NeighborIP = link.GetLinkIPv6NeighborAddr()
-		} else {
-			msg.InterfaceIP = link.GetLinkIPv4InterfaceAddr()
-			msg.NeighborIP = link.GetLinkIPv4NeighborAddr()
-		}
-		msg.LocalNodeHash = link.LocalNodeHash
-		msg.RemoteNodeHash = link.RemoteNodeHash
-		msg.LocalNodeASN = link.GetLocalASN()
-		msg.RemoteNodeASN = link.GetRemoteASN()
-		msg.RemoteIGPRouterID = link.GetRemoteIGPRouterID()
-		msg.IGPRouterID = link.GetLocalIGPRouterID()
-	}
+	msg.Protocol = link.GetLinkProtocolID()
+	msg.LSID = link.GetLinkLSID(true)
+	msg.OSPFAreaID = link.GetLinkOSPFAreaID(true)
+	msg.LocalLinkID = link.GetLinkID(true)
+	msg.RemoteLinkID = link.GetLinkID(false)
+	msg.InterfaceIP = link.GetLinkInterfaceAddr()
+	msg.NeighborIP = link.GetLinkNeighborAddr()
+	msg.LocalNodeHash = link.LocalNodeHash
+	msg.RemoteNodeHash = link.RemoteNodeHash
+	msg.LocalNodeASN = link.GetLocalASN()
+	msg.RemoteNodeASN = link.GetRemoteASN()
+	msg.RemoteIGPRouterID = link.GetRemoteIGPRouterID()
+	msg.IGPRouterID = link.GetLocalIGPRouterID()
+
 	lslink, err := update.GetNLRI29()
 	if err == nil {
 		if ph.FlagV {

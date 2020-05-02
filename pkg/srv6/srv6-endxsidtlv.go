@@ -2,9 +2,9 @@ package srv6
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -17,26 +17,7 @@ type EndXSIDTLV struct {
 	Weight           uint8
 	Reserved         uint8
 	SID              []byte
-	SubTLV           []SubTLV
-}
-
-func (x *EndXSIDTLV) String() string {
-	var s string
-
-	s += "SRv6 End.X SID TLV:" + "\n"
-
-	s += fmt.Sprintf("Endpoint Behavior: %d\n", x.EndpointBehavior)
-	s += fmt.Sprintf("Flag: %02x\n", x.Flag)
-	s += fmt.Sprintf("Algorithm: %d\n", x.Algorithm)
-	s += fmt.Sprintf("Weight: %d\n", x.Weight)
-	s += fmt.Sprintf("SID: %s\n", tools.MessageHex(x.SID))
-	if x.SubTLV != nil {
-		for _, stlv := range x.SubTLV {
-			s += stlv.String()
-		}
-	}
-
-	return s
+	SubTLV           map[uint16]base.TLV
 }
 
 // UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object
@@ -59,7 +40,7 @@ func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
 	copy(endx.SID, b[p:p+16])
 	p += 16
 	if len(b) > p {
-		stlvs, err := UnmarshalSRv6SubTLV(b[p:])
+		stlvs, err := base.UnmarshalTLV(b[p:])
 		if err != nil {
 			return nil, err
 		}

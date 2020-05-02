@@ -18,17 +18,6 @@ type NLRI struct {
 	LS []TLV
 }
 
-func (ls *NLRI) String() string {
-	var s string
-
-	s += "BGP-LS TLVs:" + "\n"
-	for _, tlv := range ls.LS {
-		s += tlv.String()
-	}
-
-	return s
-}
-
 // GetMTID returns string of MT-ID TLV containing the array of MT-IDs of all
 // topologies where the node is reachable is allowed
 func (ls *NLRI) GetMTID() []uint16 {

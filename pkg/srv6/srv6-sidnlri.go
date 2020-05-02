@@ -1,6 +1,7 @@
 package srv6
 
 import (
+	"crypto/md5"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -11,27 +12,13 @@ import (
 )
 
 // SIDNLRI defines SRv6 SID NLRI onject
-// Mp RFC yet
+// no RFC yet
 type SIDNLRI struct {
 	ProtocolID    uint8
-	Identifier    uint64
+	Identifier    []byte
 	LocalNode     *base.NodeDescriptor
 	SRv6SID       *SIDDescriptor
 	LocalNodeHash string
-}
-
-func (sr *SIDNLRI) String() string {
-	var s string
-	s += fmt.Sprintf("Protocol ID: %s\n", tools.ProtocolIDString(sr.ProtocolID))
-	s += fmt.Sprintf("Identifier: %d\n", sr.Identifier)
-	if sr.LocalNode != nil {
-		s += sr.LocalNode.String()
-	}
-	if sr.SRv6SID != nil {
-		s += sr.SRv6SID.String()
-	}
-
-	return s
 }
 
 // GetAllAttribute returns a slice with all attribute types found in SRv6 SID NLRI object
@@ -101,7 +88,8 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 	p++
 	// Skip reserved bytes
 	//	p += 3
-	sr.Identifier = binary.BigEndian.Uint64(b[p : p+8])
+	sr.Identifier = make([]byte, 8)
+	copy(sr.Identifier, b[p:p+8])
 	p += 8
 	// Get Node Descriptor's length, skip Node Descriptor Type
 	l := binary.BigEndian.Uint16(b[p+2 : p+4])
@@ -110,6 +98,7 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 		return nil, err
 	}
 	sr.LocalNode = ln
+	sr.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(l)]))
 	// Skip Node Descriptor Type and Length 4 bytes
 	p += 4
 	p += int(l)
