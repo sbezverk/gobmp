@@ -10,10 +10,6 @@ import (
 )
 
 func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, error) {
-	// nlri71, err := nlri.GetNLRI71()
-	// if err != nil {
-	// 	return nil, err
-	// }
 	var operation string
 	switch op {
 	case 0:
@@ -40,16 +36,11 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		// IPv4 specific conversions
 		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 	}
-	// Processing other nlri and attributes, since they are optional, processing only if they exist
-	//	node, err := nlri71.GetNodeNLRI()
-	//	if err == nil {
 	msg.Protocol = node.GetNodeProtocolID()
 	msg.IGPRouterID = node.GetNodeIGPRouterID()
 	msg.LSID = node.GetNodeLSID()
 	msg.ASN = node.GetNodeASN()
 	msg.OSPFAreaID = node.GetNodeOSPFAreaID()
-	//	}
-
 	lsnode, err := update.GetNLRI29()
 	if err == nil {
 		msg.Flags = lsnode.GetNodeFlags()

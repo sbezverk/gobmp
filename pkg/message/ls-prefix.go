@@ -30,9 +30,6 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
-	// Processing other nlri and attributes, since they are optional, processing only if they exist
-	//	prfx, err := nlri71.GetPrefixNLRI(ipv4)
-	//	if err == nil {
 	msg.Protocol = prfx.GetPrefixProtocolID()
 	msg.LSID = prfx.GetPrefixLSID()
 	msg.OSPFAreaID = prfx.GetPrefixOSPFAreaID()
@@ -47,7 +44,6 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	} else {
 		msg.Prefix = net.IP(pr).To4().String()
 	}
-	//	}
 	lsprefix, err := update.GetNLRI29()
 	if err == nil {
 		if ph.FlagV {
