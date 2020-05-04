@@ -30,10 +30,6 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
-	// Processing other nlri and attributes, since they are optional, processing only if they exist
-	// 	nlri6, err := nlri71.GetSRv6SIDNLRI()
-	//	if err == nil {
-	glog.V(6).Infof("nlri6 attributes: %+v", nlri6.GetAllAttribute())
 	msg.Protocol = nlri6.GetSRv6SIDProtocolID()
 	msg.LocalNodeHash = nlri6.LocalNodeHash
 	msg.LSID = nlri6.GetSRv6SIDLSID()
@@ -41,7 +37,6 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 	msg.LocalNodeASN = nlri6.GetSRv6SIDASN()
 	msg.MTID = nlri6.GetSRv6SIDMTID()
 	msg.SRv6SID = nlri6.GetSRv6SID()
-	//	}
 	ls, err := update.GetNLRI29()
 	if err == nil {
 		glog.V(6).Infof("nlri29 attributes: %+v", ls.GetAllAttribute())
