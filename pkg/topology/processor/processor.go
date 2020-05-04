@@ -86,12 +86,11 @@ func (p *processor) msgProcessor() {
 }
 
 func (p *processor) procWorker(m *queueMsg) {
-	// var obj interface{}
 	switch m.msgType {
 	case bmp.PeerStateChangeMsg:
 		var o message.PeerStateChange
 		if err := json.Unmarshal(m.msgData, &o); err != nil {
-			glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
+			glog.Errorf("failed to unmarshal message of type %d with error: %+v", m.msgType, err)
 			return
 		}
 		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
@@ -101,7 +100,7 @@ func (p *processor) procWorker(m *queueMsg) {
 	case bmp.UnicastPrefixMsg:
 		var o message.UnicastPrefix
 		if err := json.Unmarshal(m.msgData, &o); err != nil {
-			glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
+			glog.Errorf("failed to unmarshal message of type %d with error: %+v", m.msgType, err)
 			return
 		}
 		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
@@ -111,7 +110,7 @@ func (p *processor) procWorker(m *queueMsg) {
 	case bmp.LSNodeMsg:
 		var o message.LSNode
 		if err := json.Unmarshal(m.msgData, &o); err != nil {
-			glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
+			glog.Errorf("failed to unmarshal message of type %d with error: %+v", m.msgType, err)
 			return
 		}
 		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
@@ -121,7 +120,17 @@ func (p *processor) procWorker(m *queueMsg) {
 	case bmp.LSLinkMsg:
 		var o message.LSLink
 		if err := json.Unmarshal(m.msgData, &o); err != nil {
-			glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
+			glog.Errorf("failed to unmarshal message of type %d with error: %+v", m.msgType, err)
+			return
+		}
+		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
+			glog.Errorf("failed to store message of type: %d in the database with error: %+v", m.msgType, err)
+			return
+		}
+	case bmp.LSPrefixMsg:
+		var o message.LSPrefix
+		if err := json.Unmarshal(m.msgData, &o); err != nil {
+			glog.Errorf("failed to unmarshal message of type %d with error: %+v", m.msgType, err)
 			return
 		}
 		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
@@ -131,7 +140,17 @@ func (p *processor) procWorker(m *queueMsg) {
 	case bmp.L3VPNMsg:
 		var o message.L3VPNPrefix
 		if err := json.Unmarshal(m.msgData, &o); err != nil {
-			glog.Errorf("failed to unmarshal message of type %d with error: %+v", err)
+			glog.Errorf("failed to unmarshal message of type %d with error: %+v", m.msgType, err)
+			return
+		}
+		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
+			glog.Errorf("failed to store message of type: %d in the database with error: %+v", m.msgType, err)
+			return
+		}
+	case bmp.EVPNMsg:
+		var o message.EVPNPrefix
+		if err := json.Unmarshal(m.msgData, &o); err != nil {
+			glog.Errorf("failed to unmarshal message of type %d with error: %+v", m.msgType, err)
 			return
 		}
 		if err := p.db.StoreMessage(m.msgType, &o); err != nil {
@@ -140,5 +159,5 @@ func (p *processor) procWorker(m *queueMsg) {
 		}
 	}
 
-	glog.Infof("message of type %d was stored in the database", m.msgType)
+	glog.V(5).Infof("message of type %d was stored in the database", m.msgType)
 }
