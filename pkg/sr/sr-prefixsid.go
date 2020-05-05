@@ -23,8 +23,8 @@ type Flags struct {
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.3.1
 type PrefixSIDTLV struct {
 	Flags     *Flags `json:"flags,omitempty"`
-	Algorithm uint8  `json:"algo,omitempty"`
-	SID       []byte `json:"sid,omitempty"`
+	Algorithm uint8  `json:"algo"`
+	SID       []byte `json:"prefix_sid,omitempty"`
 }
 
 // UnmarshalPrefixSIDTLV builds Prefix SID TLV Object
@@ -34,12 +34,12 @@ func UnmarshalPrefixSIDTLV(b []byte) (*PrefixSIDTLV, error) {
 		Flags: &Flags{},
 	}
 	p := 0
-	psid.Flags.R = b[p]&128 == 1
-	psid.Flags.N = b[p]&64 == 1
-	psid.Flags.P = b[p]&32 == 1
-	psid.Flags.E = b[p]&16 == 1
-	psid.Flags.V = b[p]&8 == 1
-	psid.Flags.L = b[p]&4 == 1
+	psid.Flags.R = b[p]&0x80 == 0x80
+	psid.Flags.N = b[p]&0x40 == 0x40
+	psid.Flags.P = b[p]&0x20 == 0x20
+	psid.Flags.E = b[p]&0x10 == 0x10
+	psid.Flags.V = b[p]&0x8 == 0x8
+	psid.Flags.L = b[p]&0x4 == 0x4
 	p++
 	psid.Algorithm = b[p]
 	p++
