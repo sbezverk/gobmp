@@ -9,3 +9,6 @@ replace (
 	github.com/sbezverk/gobmp/pkg/topology/mockdb => ../mockdb
 	github.com/sbezverk/gobmp/pkg/topology/mockmessenger => ../mockmessenger
 )
+require (
+
+)
