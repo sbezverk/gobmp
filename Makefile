@@ -12,8 +12,9 @@ endif
 all: gobmp
 
 gobmp:
-	mkdir -p ./cmd/bin
-	CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -ldflags '-extldflags "-static"' -o ./cmd/bin/gobmp ./cmd/gobmp/gobmp.go
+	mkdir -p bin
+	$(MAKE) -C ./cmd/gobmp compile-gobmp
+#	CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -ldflags '-extldflags "-static"' -o ./cmd/bin/gobmp ./cmd/gobmp/gobmp.go
 
 topology:
 	mkdir -p bin
