@@ -1,7 +1,6 @@
-module github.com/sbezverk/gobmp/pkg/bmp 
+module github.com/sbezverk/gobmp/pkg/bmp
 
 go 1.13
-
 
 replace (
 	github.com/sbezverk/gobmp/pkg/base => ../base
@@ -17,4 +16,10 @@ replace (
 	github.com/sbezverk/gobmp/pkg/sr => ../sr
 	github.com/sbezverk/gobmp/pkg/srv6 => ../srv6
 	github.com/sbezverk/gobmp/pkg/tools => ../tools
+)
+
+require (
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/tools v0.0.0-20200505182324-42790423b6c7
 )

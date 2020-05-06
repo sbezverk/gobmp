@@ -21,4 +21,6 @@ replace (
 require (
 	github.com/go-test/deep v1.0.5
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/sbezverk/gobmp/pkg/base v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/tools v0.0.0-20200505182324-42790423b6c7
 )
