@@ -18,8 +18,12 @@ github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200506032342-04944823ac3f h1:Tq9Ks0jolzUv96Wlw8mGAOkTnqQ92YtIUbUuaxDXqdM=
 github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200506032342-04944823ac3f/go.mod h1:y1jynFoGJheg5YIPxk2VmI18DUbYJLMSD2rbWvsHE7o=
+github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200506204513-5d750be958f3 h1:VgeL2mvFIYeEuyW1GjNxUVD7Agx8j5RqUNKah87Lkg8=
+github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200506204513-5d750be958f3/go.mod h1:EfT0MR8C+7LNy0cdFwf772NBIKCVqcy7aq6/bA8b5nY=
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200506032342-04944823ac3f h1:0s6iWXy++WEojB2wYyKfuVolZB8BkyNPD07RlhT414A=
 github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200506032342-04944823ac3f/go.mod h1:emTQvRWuK805mF3x8TX/i4ZlzUya1E9cCx+NLaSHULc=
+github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200506204513-5d750be958f3 h1:txokBaGcA9YtU/mZLnVluaKPLNF7TsHl/otHsgFAQiE=
+github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200506204513-5d750be958f3/go.mod h1:ix9bRavdUrZ+L58XQqtkqQD3h4HR2j2iJZnTMEHj5CE=
 github.com/segmentio/kafka-go v0.3.6 h1:+JauPDvHurc4XSJVGniNwFuv4NmRLr1CxWvhWkRAtXA=
 github.com/segmentio/kafka-go v0.3.6/go.mod h1:8rEphJEczp+yDE/R5vwmaqZgF1wllrl4ioQcNKB8wVA=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
