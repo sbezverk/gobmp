@@ -5,24 +5,22 @@ go 1.14
 require (
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/sbezverk/gobmp/pkg/base v0.0.0-20200428022130-cb7ea42522ed // indirect
-	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-20200428022130-cb7ea42522ed
-	github.com/sbezverk/gobmp/pkg/bgpls v0.0.0-20200428022130-cb7ea42522ed // indirect
-	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200428022130-cb7ea42522ed
+	github.com/sbezverk/gobmp/pkg/base v0.0.0-20200505182324-42790423b6c7 // indirect
+	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/bgpls v0.0.0-20200505182324-42790423b6c7 // indirect
+	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200505182324-42790423b6c7
 	github.com/sbezverk/gobmp/pkg/dumper v0.0.0-20200428022130-cb7ea42522ed
-	github.com/sbezverk/gobmp/pkg/evpn v0.0.0-20200428022130-cb7ea42522ed // indirect
+	github.com/sbezverk/gobmp/pkg/evpn v0.0.0-20200505182324-42790423b6c7 // indirect
 	github.com/sbezverk/gobmp/pkg/gobmpsrv v0.0.0-20200428022130-cb7ea42522ed
 	github.com/sbezverk/gobmp/pkg/kafka v0.0.0-20200428022130-cb7ea42522ed
-	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-20200428022130-cb7ea42522ed // indirect
-	github.com/sbezverk/gobmp/pkg/ls v0.0.0-20200428022130-cb7ea42522ed // indirect
-	github.com/sbezverk/gobmp/pkg/message v0.0.0-20200428022130-cb7ea42522ed // indirect
-	github.com/sbezverk/gobmp/pkg/parser v0.0.0-20200428022130-cb7ea42522ed // indirect
-	github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200428022130-cb7ea42522ed // indirect
-	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200428022130-cb7ea42522ed
-	github.com/sbezverk/gobmp/pkg/sr v0.0.0-20200428022130-cb7ea42522ed // indirect
-	github.com/sbezverk/gobmp/pkg/srv6 v0.0.0-20200428022130-cb7ea42522ed // indirect
-	github.com/sbezverk/gobmp/pkg/tools v0.0.0-20200428022130-cb7ea42522ed // indirect
-	github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200428022130-cb7ea42522ed // indirect
+	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-20200505182324-42790423b6c7 // indirect
+	github.com/sbezverk/gobmp/pkg/ls v0.0.0-20200505182324-42790423b6c7 // indirect
+	github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200505182324-42790423b6c7 // indirect
+	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/sr v0.0.0-20200505182324-42790423b6c7 // indirect
+	github.com/sbezverk/gobmp/pkg/srv6 v0.0.0-20200505182324-42790423b6c7 // indirect
+	github.com/sbezverk/gobmp/pkg/tools v0.0.0-20200505182324-42790423b6c7 // indirect
+	github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200505182324-42790423b6c7 // indirect
 	github.com/segmentio/kafka-go v0.3.6 // indirect
 )
 

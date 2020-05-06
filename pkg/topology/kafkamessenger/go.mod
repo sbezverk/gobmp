@@ -10,3 +10,7 @@ replace (
 	github.com/sbezverk/gobmp/pkg/topology/mockdb => ../mockdb
 	github.com/sbezverk/gobmp/pkg/topology/mockmessenger => ../mockmessenger
 )
+require (
+github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200505182324-42790423b6c7
+github.com/sbezverk/gobmp/pkg/base v0.0.0-20200505182324-42790423b6c7
+)

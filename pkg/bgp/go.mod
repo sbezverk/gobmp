@@ -23,14 +23,14 @@ replace (
 
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/sbezverk/gobmp/pkg/base v0.0.0-20200428011349-6c4ffcfd76f3
-	github.com/sbezverk/gobmp/pkg/bgpls v0.0.0-20200428011349-6c4ffcfd76f3
-	github.com/sbezverk/gobmp/pkg/evpn v0.0.0-20200428011349-6c4ffcfd76f3
-	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-20200428014347-511952572d3d
-	github.com/sbezverk/gobmp/pkg/ls v0.0.0-20200428011349-6c4ffcfd76f3
-	github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200428011349-6c4ffcfd76f3
-	github.com/sbezverk/gobmp/pkg/sr v0.0.0-20200428011349-6c4ffcfd76f3 // indirect
-	github.com/sbezverk/gobmp/pkg/srv6 v0.0.0-20200428011349-6c4ffcfd76f3 // indirect
-	github.com/sbezverk/gobmp/pkg/tools v0.0.0-20200428011349-6c4ffcfd76f3
-	github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200428011349-6c4ffcfd76f3
+	github.com/sbezverk/gobmp/pkg/base v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/bgpls v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/evpn v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/l3vpn v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/ls v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/prefixsid v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/sr v0.0.0-20200505182324-42790423b6c7 // indirect
+	github.com/sbezverk/gobmp/pkg/srv6 v0.0.0-20200505182324-42790423b6c7 // indirect
+	github.com/sbezverk/gobmp/pkg/tools v0.0.0-20200505182324-42790423b6c7
+	github.com/sbezverk/gobmp/pkg/unicast v0.0.0-20200505182324-42790423b6c7
 )

@@ -1,0 +1,4 @@
+github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200420214652-390271d2c7c6 h1:fAZy1GL30zNMFcowdaBcuWqToK5SiaM+2PFtdxZPygI=
+github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200420214652-390271d2c7c6/go.mod h1:K10XxuL+kMOgfDvE6MDIqXPVwCVNFrG8iTwrV6KxORs=
+github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200505182324-42790423b6c7 h1:45yWA+sk7IXfcLBSA5jqv5SrFCQlznn40eGH9zSDaeE=
+github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200505182324-42790423b6c7/go.mod h1:K10XxuL+kMOgfDvE6MDIqXPVwCVNFrG8iTwrV6KxORs=
