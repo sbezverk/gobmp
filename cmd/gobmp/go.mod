@@ -5,12 +5,12 @@ go 1.14
 require (
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-20200506032342-04944823ac3f
-	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200506032342-04944823ac3f
-	github.com/sbezverk/gobmp/pkg/dumper v0.0.0-20200506032342-04944823ac3f
-	github.com/sbezverk/gobmp/pkg/gobmpsrv v0.0.0-20200506032342-04944823ac3f
-	github.com/sbezverk/gobmp/pkg/kafka v0.0.0-20200506032342-04944823ac3f
-	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200506032342-04944823ac3f
+	github.com/sbezverk/gobmp/pkg/bgp v0.0.0-20200506204513-5d750be958f3
+	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200506204513-5d750be958f3
+	github.com/sbezverk/gobmp/pkg/dumper v0.0.0-20200506204513-5d750be958f3
+	github.com/sbezverk/gobmp/pkg/gobmpsrv v0.0.0-20200506204513-5d750be958f3
+	github.com/sbezverk/gobmp/pkg/kafka v0.0.0-20200506204513-5d750be958f3
+	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200506204513-5d750be958f3
 	github.com/segmentio/kafka-go v0.3.6 // indirect
 )
 
