@@ -20,7 +20,7 @@ replace (
 
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200506204513-5d750be958f3
-	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200506204513-5d750be958f3
+	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200506222259-57521a093f5d
+	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200506222259-57521a093f5d
 	github.com/segmentio/kafka-go v0.3.6
 )

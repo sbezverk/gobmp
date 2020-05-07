@@ -32,14 +32,13 @@ require (
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/arangodb/go-driver v0.0.0-20200403100147-ca5dd87ffe93 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/sbezverk/gobmp/pkg/message v0.0.0-20200506204513-5d750be958f3 // indirect
-	github.com/sbezverk/gobmp/pkg/topology/arangodb v0.0.0-20200506204513-5d750be958f3
-	github.com/sbezverk/gobmp/pkg/topology/database v0.0.0-20200506204513-5d750be958f3 // indirect
-	github.com/sbezverk/gobmp/pkg/topology/dbclient v0.0.0-20200506204513-5d750be958f3
-	github.com/sbezverk/gobmp/pkg/topology/kafkamessenger v0.0.0-20200506204513-5d750be958f3
-	github.com/sbezverk/gobmp/pkg/topology/messenger v0.0.0-20200506204513-5d750be958f3
-	github.com/sbezverk/gobmp/pkg/topology/mockdb v0.0.0-20200506204513-5d750be958f3
-	github.com/sbezverk/gobmp/pkg/topology/mockmessenger v0.0.0-20200506204513-5d750be958f3
-	github.com/sbezverk/gobmp/pkg/topology/processor v0.0.0-20200506204513-5d750be958f3
+	github.com/sbezverk/gobmp/pkg/topology/arangodb v0.0.0-20200506222259-57521a093f5d
+	github.com/sbezverk/gobmp/pkg/topology/database v0.0.0-20200506222259-57521a093f5d // indirect
+	github.com/sbezverk/gobmp/pkg/topology/dbclient v0.0.0-20200506222259-57521a093f5d
+	github.com/sbezverk/gobmp/pkg/topology/kafkamessenger v0.0.0-20200506222259-57521a093f5d
+	github.com/sbezverk/gobmp/pkg/topology/messenger v0.0.0-20200506222259-57521a093f5d
+	github.com/sbezverk/gobmp/pkg/topology/mockdb v0.0.0-20200506222259-57521a093f5d
+	github.com/sbezverk/gobmp/pkg/topology/mockmessenger v0.0.0-20200506222259-57521a093f5d
+	github.com/sbezverk/gobmp/pkg/topology/processor v0.0.0-20200506222259-57521a093f5d
 	github.com/segmentio/kafka-go v0.3.6 // indirect
 )

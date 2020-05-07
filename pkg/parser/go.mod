@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200506204513-5d750be958f3
+	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200506222259-57521a093f5d
 )
 
 replace (
