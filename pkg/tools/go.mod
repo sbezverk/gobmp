@@ -1,6 +1,6 @@
 module github.com/sbezverk/gobmp/pkg/tools
 
-go 1.13
+go 1.14
 
 require (
 	github.com/go-test/deep v1.0.5

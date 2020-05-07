@@ -20,8 +20,8 @@ replace (
 
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200506222259-57521a093f5d
-	github.com/sbezverk/gobmp/pkg/message v0.0.0-20200506222259-57521a093f5d
-	github.com/sbezverk/gobmp/pkg/parser v0.0.0-20200506222259-57521a093f5d
-	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200506222259-57521a093f5d
+	github.com/sbezverk/gobmp/pkg/bmp v0.0.0-20200507012955-3207954567bb
+	github.com/sbezverk/gobmp/pkg/message v0.0.0-20200507012955-3207954567bb
+	github.com/sbezverk/gobmp/pkg/parser v0.0.0-20200507012955-3207954567bb
+	github.com/sbezverk/gobmp/pkg/pub v0.0.0-20200507012955-3207954567bb
 )
