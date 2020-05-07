@@ -75,13 +75,13 @@ func (up *Update) GetAttrASPath() []uint32 {
 			// Skipping type
 			p++
 			// Length of path segment in 2 bytes
-			l := attr.Attribute[p]
+			l := int(attr.Attribute[p])
 			p++
 			as4 := false
-			if int(l)*4 == len(attr.Attribute)-p {
+			if l*4 == len(attr.Attribute)-p {
 				as4 = true
 			}
-			for p < len(attr.Attribute) {
+			for i := 0; i < l && p < len(attr.Attribute); i++ {
 				if as4 {
 					as := binary.BigEndian.Uint32(attr.Attribute[p : p+4])
 					p += 4

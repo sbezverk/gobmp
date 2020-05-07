@@ -13,4 +13,4 @@ script:
   - "gosrc=$(find . -name '*.go' | tr '\\n' ' '); [ $(gofmt -l $gosrc 2>&- | wc -l) -eq 0 ] || (echo 'gofmt was not run on these files:'; gofmt -l $gosrc 2>&-; false)"
   - make gobmp
   - make topology 
-  - "top=`pwd`; for d in $(find ./pkg -type d); do cd ${d};  go test ; cd ${top} ;  done"
+  - 'top=`pwd`; for d in $(find ./pkg -type d); do cd ${d};  if [[ -f "go.mod" ]]; then go test; fi; cd ${top} ;  done'
