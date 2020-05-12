@@ -171,6 +171,9 @@ func initTopic(conn *kafka.Conn) (map[string]*topicConnection, error) {
 
 		leaderAddr := fmt.Sprintf("%s:%d", p[0].Leader.Host, p[0].Leader.Port)
 		kafkaConn, err := kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, p[0].Topic, p[0].Leader.ID)
+		if err != nil {
+			return nil, err
+		}
 		// Adding topic and its connection properties into the map
 		topics[tn] = &topicConnection{
 			// TODO kafkaConn represents connection to the topic leader at the time of initialization

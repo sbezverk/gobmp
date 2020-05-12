@@ -13,7 +13,7 @@ type TLV struct {
 
 // UnmarshalTLV builds a map of TLVs elements
 func UnmarshalTLV(b []byte) (map[uint16]TLV, error) {
-	stlvs := make(map[uint16]TLV, 0)
+	stlvs := make(map[uint16]TLV)
 	for p := 0; p < len(b); {
 		stlv := TLV{}
 		stlv.Type = binary.BigEndian.Uint16(b[p : p+2])

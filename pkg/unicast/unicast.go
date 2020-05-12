@@ -60,7 +60,7 @@ func UnmarshalLUNLRI(b []byte) (*base.MPNLRI, error) {
 		// Next 3 bytes are a part of Compatibility field 0x800000
 		// then it is MP_UNREACH_NLRI and no Label information is present
 		compatibilityField := 0
-		if bytes.Compare([]byte{0x80, 0x00, 0x00}, b[p:p+3]) == 0 {
+		if bytes.Equal([]byte{0x80, 0x00, 0x00}, b[p:p+3]) {
 			up.Label = nil
 			compatibilityField = 3
 			p += 3

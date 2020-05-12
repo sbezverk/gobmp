@@ -165,11 +165,7 @@ func isASPath4(b []byte) bool {
 		s++
 	}
 
-	if l+s*2 == len(b) {
-		return true
-	}
-
-	return false
+	return l+s*2 == len(b)
 }
 
 // unmarshalAttrNextHop returns the value of Next Hop attribute

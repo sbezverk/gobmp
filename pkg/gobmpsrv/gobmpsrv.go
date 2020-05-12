@@ -21,7 +21,6 @@ type BMPServer interface {
 type bmpServer struct {
 	intercept       bool
 	publisher       pub.Publisher
-	producer        message.Producer
 	sourcePort      int
 	destinationPort int
 	incoming        net.Listener
@@ -37,7 +36,6 @@ func (srv *bmpServer) Start() {
 func (srv *bmpServer) Stop() {
 	glog.Infof("Stopping gobmp server\n")
 	close(srv.stop)
-	return
 }
 
 func (srv *bmpServer) server() {

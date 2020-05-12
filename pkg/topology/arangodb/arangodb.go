@@ -2,7 +2,6 @@ package arangodb
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -10,10 +9,6 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 	"github.com/sbezverk/gobmp/pkg/topology/database"
 	"github.com/sbezverk/gobmp/pkg/topology/dbclient"
-)
-
-var (
-	arangoDBConnectTimeout = time.Duration(time.Second * 10)
 )
 
 type arangoDB struct {
