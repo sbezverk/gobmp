@@ -2,6 +2,7 @@ package srv6
 
 import (
 	"encoding/binary"
+	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -41,10 +42,10 @@ func UnmarshalSIDStructureSubSubTLV(b []byte) (*SIDStructureSubSubTLV, error) {
 // InformationSubTLV defines a structure of SRv6 Information Sub TLV (type 1)
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2.1.1
 type InformationSubTLV struct {
-	SID              []byte                   `json:"information_sub_tlv_sid,omitempty"`
-	Flags            uint8                    `json:"information_sub_tlv_flags,omitempty"`
-	EndpointBehavior uint16                   `json:"information_sub_tlv_endpoint_behavior,omitempty"`
-	SubSubTLV        map[uint8]*ServiceSubTLV `json:"sub_sub_tlv,omitempty"`
+	SID              string                    `json:"information_sub_tlv_sid,omitempty"`
+	Flags            uint8                     `json:"information_sub_tlv_flags,omitempty"`
+	EndpointBehavior uint16                    `json:"information_sub_tlv_endpoint_behavior,omitempty"`
+	SubSubTLV        map[uint8][]ServiceSubTLV `json:"sub_sub_tlv,omitempty"`
 }
 
 // UnmarshalInformationSubTLV instantiates Information SubT LV
@@ -52,8 +53,7 @@ func UnmarshalInformationSubTLV(b []byte) (*InformationSubTLV, error) {
 	// Skip Resrved byte
 	p := 1
 	tlv := &InformationSubTLV{}
-	tlv.SID = make([]byte, 16)
-	copy(tlv.SID, b[p:p+16])
+	tlv.SID = net.IP(b[p : p+16]).To16().String()
 	p += 16
 	tlv.Flags = b[p]
 	p++
@@ -79,14 +79,14 @@ type ServiceSubTLV struct {
 // L3Service defines SRv6 L3 Service message structure
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2
 type L3Service struct {
-	ServiceSubTLV map[uint8]*ServiceSubTLV `json:"service_sub_tlv,omitempty"`
+	ServiceSubTLV map[uint8][]ServiceSubTLV `json:"service_sub_tlv,omitempty"`
 }
 
 // UnmarshalSRv6L3Service instantiate from the slice of byte SRv6 L3 Service Object
 func UnmarshalSRv6L3Service(b []byte) (*L3Service, error) {
 	glog.V(6).Infof("SRv6 L3 Service Raw: %s", tools.MessageHex(b))
 	l3 := L3Service{
-		ServiceSubTLV: make(map[uint8]*ServiceSubTLV),
+		ServiceSubTLV: make(map[uint8][]ServiceSubTLV),
 	}
 	// Skipping reserved byte
 	stlv, err := UnmarshalSRv6L3ServiceSubTLV(b[1:])
@@ -99,8 +99,8 @@ func UnmarshalSRv6L3Service(b []byte) (*L3Service, error) {
 }
 
 // UnmarshalSRv6L3ServiceSubTLV instantiates L3 Service Sub TLV
-func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8]*ServiceSubTLV, error) {
-	m := make(map[uint8]*ServiceSubTLV)
+func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]ServiceSubTLV, error) {
+	m := make(map[uint8][]ServiceSubTLV)
 	for p := 0; p < len(b); {
 		t := b[p]
 		p++
@@ -119,15 +119,21 @@ func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8]*ServiceSubTLV, error) {
 			s.Value = make([]byte, l)
 			copy(s.Value.([]byte), b[p:p+int(l)])
 		}
-		m[t] = &s
+		stlv, ok := m[t]
+		if !ok {
+			stlv = make([]ServiceSubTLV, 0)
+			m[t] = stlv
+		}
+		stlv = append(stlv, s)
+		m[t] = stlv
 		p += int(l)
 	}
 	return m, nil
 }
 
 // UnmarshalSRv6L3ServiceSubSubTLV instantiates L3 Service Sub TLV
-func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8]*ServiceSubTLV, error) {
-	m := make(map[uint8]*ServiceSubTLV)
+func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8][]ServiceSubTLV, error) {
+	m := make(map[uint8][]ServiceSubTLV)
 	for p := 1; p < len(b); {
 		t := b[p]
 		p++
@@ -146,7 +152,13 @@ func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8]*ServiceSubTLV, error)
 			s.Value = make([]byte, l)
 			copy(s.Value.([]byte), b[p:p+int(l)])
 		}
-		m[t] = &s
+		stlv, ok := m[t]
+		if !ok {
+			stlv = make([]ServiceSubTLV, 0)
+			m[t] = stlv
+		}
+		stlv = append(stlv, s)
+		m[t] = stlv
 		p += int(l)
 	}
 	return m, nil
