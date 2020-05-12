@@ -122,7 +122,6 @@ func (m *mockMessenger) messenger() {
 			//		}
 		case <-m.stop:
 			return
-		default:
 		}
 	}
 }

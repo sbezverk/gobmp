@@ -70,8 +70,6 @@ func (p *processor) SendMessage(msgType int, msg []byte) {
 		msgType: msgType,
 		msgData: msg,
 	}
-
-	return
 }
 
 func (p *processor) msgProcessor() {

@@ -47,10 +47,10 @@ func TestGetPrefixIPReachability(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			route := tt.input.GetPrefixIPReachability(tt.ipv4)
+			var rs string
 			if route == nil {
 				t.Errorf("failed, no routes reterned")
 			}
-			var rs string
 			if len(route.Prefix) == 16 {
 				rs = net.IP(route.Prefix).To16().String()
 			} else {
