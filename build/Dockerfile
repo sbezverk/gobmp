@@ -1,5 +1,5 @@
 FROM scratch
 
 ENV GOMAXPROCS=1
-COPY ./cmd/bin/gobmp /gobmp
+COPY ./bin/gobmp /gobmp
 ENTRYPOINT ["/gobmp"]
