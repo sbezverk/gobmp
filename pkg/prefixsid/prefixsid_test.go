@@ -32,29 +32,21 @@ func TestUnmarshalBGPAttrPrefixSID(t *testing.T) {
 			input: []byte{0x05, 0x00, 0x22, 0x00, 0x01, 0x00, 0x1e, 0x00, 0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x00, 0x01, 0x00, 0x06, 0x28, 0x18, 0x10, 0x00, 0x10, 0x40},
 			expect: &PSid{
 				SRv6L3Service: &srv6.L3Service{
-					ServiceSubTLVs: map[uint8][]srv6.ServiceSubTLV{
-						1: []srv6.ServiceSubTLV{
-							{
-								Type:   1,
-								Length: 30,
-								Value: &srv6.InformationSubTLV{
-									SID:              net.IP([]byte{0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}).To16().String(),
-									Flags:            0,
-									EndpointBehavior: 17,
-									SubSubTLV: map[uint8][]srv6.ServiceSubTLV{
-										1: []srv6.ServiceSubTLV{
-											{
-												Type:   1,
-												Length: 6,
-												Value: &srv6.SIDStructureSubSubTLV{
-													LocalBlockLength:    0x28,
-													LocatorNodeLength:   0x18,
-													FunctionLength:      0x10,
-													ArgumentLength:      0,
-													TranspositionLength: 0x10,
-													TranspositionOffset: 0x40,
-												},
-											},
+					SubTLVs: map[uint8][]srv6.SubTLV{
+						1: {
+							&srv6.InformationSubTLV{
+								SID:              net.IP([]byte{0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}).To16().String(),
+								Flags:            0,
+								EndpointBehavior: 17,
+								SubSubTLVs: map[uint8][]srv6.SubSubTLV{
+									1: {
+										&srv6.SIDStructureSubSubTLV{
+											LocalBlockLength:    0x28,
+											LocatorNodeLength:   0x18,
+											FunctionLength:      0x10,
+											ArgumentLength:      0,
+											TranspositionLength: 0x10,
+											TranspositionOffset: 0x40,
 										},
 									},
 								},

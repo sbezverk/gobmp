@@ -18,29 +18,21 @@ func TestUnmarshalSRv6L3Service(t *testing.T) {
 			name:  "SRv6 L3 Service 1",
 			input: []byte{0x00, 0x01, 0x00, 0x1e, 0x00, 0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x00, 0x01, 0x00, 0x06, 0x28, 0x18, 0x10, 0x00, 0x10, 0x40},
 			expect: &L3Service{
-				ServiceSubTLVs: map[uint8][]ServiceSubTLV{
-					1: []ServiceSubTLV{
-						{
-							Type:   1,
-							Length: 30,
-							Value: &InformationSubTLV{
-								SID:              net.IP([]byte{0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}).To16().String(),
-								Flags:            0,
-								EndpointBehavior: 19,
-								SubSubTLV: map[uint8][]ServiceSubTLV{
-									1: []ServiceSubTLV{
-										{
-											Type:   1,
-											Length: 6,
-											Value: &SIDStructureSubSubTLV{
-												LocalBlockLength:    0x28,
-												LocatorNodeLength:   0x18,
-												FunctionLength:      0x10,
-												ArgumentLength:      0,
-												TranspositionLength: 0x10,
-												TranspositionOffset: 0x40,
-											},
-										},
+				SubTLVs: map[uint8][]SubTLV{
+					1: {
+						&InformationSubTLV{
+							SID:              net.IP([]byte{0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}).To16().String(),
+							Flags:            0,
+							EndpointBehavior: 19,
+							SubSubTLVs: map[uint8][]SubSubTLV{
+								1: {
+									&SIDStructureSubSubTLV{
+										LocalBlockLength:    0x28,
+										LocatorNodeLength:   0x18,
+										FunctionLength:      0x10,
+										ArgumentLength:      0,
+										TranspositionLength: 0x10,
+										TranspositionOffset: 0x40,
 									},
 								},
 							},
