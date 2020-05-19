@@ -79,21 +79,21 @@ type ServiceSubTLV struct {
 // L3Service defines SRv6 L3 Service message structure
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2
 type L3Service struct {
-	ServiceSubTLV map[uint8][]ServiceSubTLV `json:"service_sub_tlv,omitempty"`
+	ServiceSubTLVs map[uint8][]ServiceSubTLV `json:"service_sub_tlvs,omitempty"`
 }
 
 // UnmarshalSRv6L3Service instantiate from the slice of byte SRv6 L3 Service Object
 func UnmarshalSRv6L3Service(b []byte) (*L3Service, error) {
 	glog.V(6).Infof("SRv6 L3 Service Raw: %s", tools.MessageHex(b))
 	l3 := L3Service{
-		ServiceSubTLV: make(map[uint8][]ServiceSubTLV),
+		ServiceSubTLVs: make(map[uint8][]ServiceSubTLV),
 	}
 	// Skipping reserved byte
 	stlv, err := UnmarshalSRv6L3ServiceSubTLV(b[1:])
 	if err != nil {
 		return nil, err
 	}
-	l3.ServiceSubTLV = stlv
+	l3.ServiceSubTLVs = stlv
 
 	return &l3, nil
 }
