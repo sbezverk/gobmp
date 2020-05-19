@@ -42,10 +42,10 @@ func UnmarshalSIDStructureSubSubTLV(b []byte) (*SIDStructureSubSubTLV, error) {
 // InformationSubTLV defines a structure of SRv6 Information Sub TLV (type 1)
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2.1.1
 type InformationSubTLV struct {
-	SID              string                    `json:"information_sub_tlv_sid,omitempty"`
-	Flags            uint8                     `json:"information_sub_tlv_flags,omitempty"`
-	EndpointBehavior uint16                    `json:"information_sub_tlv_endpoint_behavior,omitempty"`
-	SubSubTLV        map[uint8][]ServiceSubTLV `json:"sub_sub_tlv,omitempty"`
+	SID              string                `json:"information_sub_tlv_sid,omitempty"`
+	Flags            uint8                 `json:"information_sub_tlv_flags,omitempty"`
+	EndpointBehavior uint16                `json:"information_sub_tlv_endpoint_behavior,omitempty"`
+	SubSubTLVs       map[uint8][]SubSubTLV `json:"sub_sub_tlv,omitempty"`
 }
 
 // UnmarshalInformationSubTLV instantiates Information SubT LV
@@ -64,64 +64,61 @@ func UnmarshalInformationSubTLV(b []byte) (*InformationSubTLV, error) {
 		if err != nil {
 			return nil, err
 		}
-		tlv.SubSubTLV = stlv
+		tlv.SubSubTLVs = stlv
 	}
 	return tlv, nil
 }
 
-// ServiceSubTLV defines SRv6 Service's TLV object, it is used as Service Sub TLV and Sub Sub TLV
-type ServiceSubTLV struct {
-	Type   uint8       `json:"-"`
-	Length uint16      `json:"-"`
-	Value  interface{} `json:"key_value,omitempty"`
-}
+// SubTLV defines SRv6 Service's Sub TLV object
+type SubTLV interface{}
+
+// SubSubTLV defines SRv6 Service's Sub Sub TLV object
+type SubSubTLV interface{}
 
 // L3Service defines SRv6 L3 Service message structure
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2
 type L3Service struct {
-	ServiceSubTLVs map[uint8][]ServiceSubTLV `json:"service_sub_tlvs,omitempty"`
+	SubTLVs map[uint8][]SubTLV `json:"service_sub_tlvs,omitempty"`
 }
 
 // UnmarshalSRv6L3Service instantiate from the slice of byte SRv6 L3 Service Object
 func UnmarshalSRv6L3Service(b []byte) (*L3Service, error) {
 	glog.V(6).Infof("SRv6 L3 Service Raw: %s", tools.MessageHex(b))
 	l3 := L3Service{
-		ServiceSubTLVs: make(map[uint8][]ServiceSubTLV),
+		SubTLVs: make(map[uint8][]SubTLV),
 	}
 	// Skipping reserved byte
 	stlv, err := UnmarshalSRv6L3ServiceSubTLV(b[1:])
 	if err != nil {
 		return nil, err
 	}
-	l3.ServiceSubTLVs = stlv
+	l3.SubTLVs = stlv
 
 	return &l3, nil
 }
 
 // UnmarshalSRv6L3ServiceSubTLV instantiates L3 Service Sub TLV
-func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]ServiceSubTLV, error) {
-	m := make(map[uint8][]ServiceSubTLV)
+func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]SubTLV, error) {
+	m := make(map[uint8][]SubTLV)
+	var err error
 	for p := 0; p < len(b); {
 		t := b[p]
 		p++
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		s := ServiceSubTLV{
-			Type:   t,
-			Length: l,
-		}
+		var s SubTLV
 		switch t {
 		case 1:
-			if stlv, err := UnmarshalInformationSubTLV(b[p : p+int(l)]); err == nil {
-				s.Value = stlv
+			if s, err = UnmarshalInformationSubTLV(b[p : p+int(l)]); err != nil {
+				return nil, err
 			}
 		default:
-			s.Value = make([]byte, l)
-			copy(s.Value.([]byte), b[p:p+int(l)])
+			s = make([]byte, l)
+			copy(s.([]byte), b[p:p+int(l)])
 		}
 		stlv, ok := m[t]
 		if !ok {
-			stlv = make([]ServiceSubTLV, 0)
+			stlv = make([]SubTLV, 0)
 			m[t] = stlv
 		}
 		stlv = append(stlv, s)
@@ -132,29 +129,26 @@ func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]ServiceSubTLV, error) {
 }
 
 // UnmarshalSRv6L3ServiceSubSubTLV instantiates L3 Service Sub TLV
-func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8][]ServiceSubTLV, error) {
-	m := make(map[uint8][]ServiceSubTLV)
+func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8][]SubSubTLV, error) {
+	var err error
+	m := make(map[uint8][]SubSubTLV)
 	for p := 1; p < len(b); {
 		t := b[p]
 		p++
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		s := ServiceSubTLV{
-			Type:   t,
-			Length: l,
-		}
+		var s SubSubTLV
 		switch t {
 		case 1:
-			if stlv, err := UnmarshalSIDStructureSubSubTLV(b[p : p+int(l)]); err == nil {
-				s.Value = stlv
+			if s, err = UnmarshalSIDStructureSubSubTLV(b[p : p+int(l)]); err != nil {
 			}
 		default:
-			s.Value = make([]byte, l)
-			copy(s.Value.([]byte), b[p:p+int(l)])
+			s = make([]byte, l)
+			copy(s.([]byte), b[p:p+int(l)])
 		}
 		stlv, ok := m[t]
 		if !ok {
-			stlv = make([]ServiceSubTLV, 0)
+			stlv = make([]SubSubTLV, 0)
 			m[t] = stlv
 		}
 		stlv = append(stlv, s)
