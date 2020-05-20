@@ -18,6 +18,7 @@ unicast_prefix
 ls_node
 ls_link
 ls_prefix
+ls_srv6_sid
 l3vpn
 evpn
 ```
@@ -319,7 +320,19 @@ BGP-LS TLV:
 
 SRv6 items 
 
-End.X SID TLV: https://tools.ietf.org/html/draft-ietf-idr-bgpls-srv6-ext-02#section-4.1
+   BGP-LS TLV Type: 1106 (SRv6 End.X SID TLV)
+      SRv6 End.X SID TLV:
+         Endpoint Behavior: 6
+         Flag: 00
+         Algorithm: 0
+         Weight: 0
+         SID: [ 01 92 01 68 00 08 00 00 00 40 00 00 00 00 00 00  ]
+         
+Bonus item (OpenBMP never carried remote node router ID field, which would be very nice to add):
+
+   BGP-LS TLV Type: 1030 (IPv4 Router-ID of Remote Node)
+      IPv4 Router-ID of Remote Node: 192.168.9.9
+
 
 // delete ls_link
 
