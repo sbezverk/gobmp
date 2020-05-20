@@ -2,7 +2,10 @@ package srv6
 
 import (
 	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -48,6 +51,49 @@ type InformationSubTLV struct {
 	SubSubTLVs       map[uint8][]SubSubTLV `json:"sub_sub_tlvs,omitempty"`
 }
 
+func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
+	type informationSubTLV InformationSubTLV
+	if err := json.Unmarshal(b, (*informationSubTLV)(istlv)); err != nil {
+		return err
+	}
+	istlv.SubSubTLVs = make(map[uint8][]SubSubTLV)
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	var subsubtlvs map[string]json.RawMessage
+	if err := json.Unmarshal(objmap["sub_sub_tlvs"], &subsubtlvs); err != nil {
+		return nil
+	}
+	for subsubtlvType, subsubtlvValue := range subsubtlvs {
+		t, err := strconv.Atoi(subsubtlvType)
+		if err != nil {
+			return err
+		}
+		sstlvs, ok := istlv.SubSubTLVs[uint8(t)]
+		if !ok {
+			istlv.SubSubTLVs[uint8(t)] = make([]SubSubTLV, 0)
+		}
+		switch t {
+		case 1:
+			istlvs := make([]SIDStructureSubSubTLV, 0)
+			if err := json.Unmarshal(subsubtlvValue, &istlvs); err != nil {
+				return err
+			}
+			for _, e := range istlvs {
+				var s SubTLV
+				s = e
+				sstlvs = append(sstlvs, s)
+			}
+		default:
+			return fmt.Errorf("unknown SRv6 L3 Service Sub TLV type %d", t)
+		}
+		istlv.SubSubTLVs[uint8(t)] = sstlvs
+	}
+
+	return nil
+}
+
 // UnmarshalInformationSubTLV instantiates Information SubT LV
 func UnmarshalInformationSubTLV(b []byte) (*InformationSubTLV, error) {
 	// Skip Resrved byte
@@ -79,6 +125,46 @@ type SubSubTLV interface{}
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2
 type L3Service struct {
 	SubTLVs map[uint8][]SubTLV `json:"sub_tlvs,omitempty"`
+}
+
+// UnmarshalJSON unmarshals a slice of byte into L3Service object
+func (l3s *L3Service) UnmarshalJSON(b []byte) error {
+	l3s.SubTLVs = make(map[uint8][]SubTLV)
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	var subtlvs map[string]json.RawMessage
+	if err := json.Unmarshal(objmap["sub_tlvs"], &subtlvs); err != nil {
+		return err
+	}
+	for subtlvType, subtlvValue := range subtlvs {
+		t, err := strconv.Atoi(subtlvType)
+		if err != nil {
+			return err
+		}
+		stlvs, ok := l3s.SubTLVs[uint8(t)]
+		if !ok {
+			l3s.SubTLVs[uint8(t)] = make([]SubTLV, 0)
+		}
+		switch t {
+		case 1:
+			istlvs := make([]InformationSubTLV, 0)
+			if err := json.Unmarshal(subtlvValue, &istlvs); err != nil {
+				return err
+			}
+			for _, e := range istlvs {
+				var s SubTLV
+				s = e
+				stlvs = append(stlvs, s)
+			}
+		default:
+			return fmt.Errorf("unknown SRv6 L3 Service Sub TLV type %d", t)
+		}
+		l3s.SubTLVs[uint8(t)] = stlvs
+	}
+
+	return nil
 }
 
 // UnmarshalSRv6L3Service instantiate from the slice of byte SRv6 L3 Service Object
