@@ -45,7 +45,7 @@ type InformationSubTLV struct {
 	SID              string                `json:"information_sub_tlv_sid,omitempty"`
 	Flags            uint8                 `json:"information_sub_tlv_flags,omitempty"`
 	EndpointBehavior uint16                `json:"information_sub_tlv_endpoint_behavior,omitempty"`
-	SubSubTLVs       map[uint8][]SubSubTLV `json:"sub_sub_tlv,omitempty"`
+	SubSubTLVs       map[uint8][]SubSubTLV `json:"sub_sub_tlvs,omitempty"`
 }
 
 // UnmarshalInformationSubTLV instantiates Information SubT LV
@@ -78,7 +78,7 @@ type SubSubTLV interface{}
 // L3Service defines SRv6 L3 Service message structure
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2
 type L3Service struct {
-	SubTLVs map[uint8][]SubTLV `json:"service_sub_tlvs,omitempty"`
+	SubTLVs map[uint8][]SubTLV `json:"sub_tlvs,omitempty"`
 }
 
 // UnmarshalSRv6L3Service instantiate from the slice of byte SRv6 L3 Service Object
