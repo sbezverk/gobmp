@@ -27,8 +27,8 @@ func TestUnmarshalSRv6L3Service(t *testing.T) {
 							SubSubTLVs: map[uint8][]SubSubTLV{
 								1: {
 									&SIDStructureSubSubTLV{
-										LocatorBlockLength:  0x28,
-										LocatorNodeLength:   0x18,
+										LocalBlockLength:    0x28,
+										LocalNodeLength:     0x18,
 										FunctionLength:      0x10,
 										ArgumentLength:      0,
 										TranspositionLength: 0x10,

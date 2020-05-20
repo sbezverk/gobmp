@@ -14,8 +14,8 @@ import (
 // SIDStructureSubSubTLV defines a structure of SID's Structure Sub Sub TLV
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2.1.2.1
 type SIDStructureSubSubTLV struct {
-	LocatorBlockLength  uint8 `json:"locator_block_length,omitempty"`
-	LocatorNodeLength   uint8 `json:"locator_node_length,omitempty"`
+	LocalBlockLength    uint8 `json:"local_block_length,omitempty"`
+	LocalNodeLength     uint8 `json:"local_node_length,omitempty"`
 	FunctionLength      uint8 `json:"function_length,omitempty"`
 	ArgumentLength      uint8 `json:"argument_length,omitempty"`
 	TranspositionLength uint8 `json:"transposition_length,omitempty"`
@@ -27,9 +27,9 @@ func UnmarshalSIDStructureSubSubTLV(b []byte) (*SIDStructureSubSubTLV, error) {
 	// Skip Resrved byte
 	p := 0
 	tlv := &SIDStructureSubSubTLV{}
-	tlv.LocatorBlockLength = b[p]
+	tlv.LocalBlockLength = b[p]
 	p++
-	tlv.LocatorNodeLength = b[p]
+	tlv.LocalNodeLength = b[p]
 	p++
 	tlv.FunctionLength = b[p]
 	p++
