@@ -45,9 +45,9 @@ func UnmarshalSIDStructureSubSubTLV(b []byte) (*SIDStructureSubSubTLV, error) {
 // InformationSubTLV defines a structure of SRv6 Information Sub TLV (type 1)
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2.1.1
 type InformationSubTLV struct {
-	SID              string                `json:"information_sub_tlv_sid,omitempty"`
-	Flags            uint8                 `json:"information_sub_tlv_flags,omitempty"`
-	EndpointBehavior uint16                `json:"information_sub_tlv_endpoint_behavior,omitempty"`
+	SID              string                `json:"sid,omitempty"`
+	Flags            uint8                 `json:"flags,omitempty"`
+	EndpointBehavior uint16                `json:"endpoint_behavior,omitempty"`
 	SubSubTLVs       map[uint8][]SubSubTLV `json:"sub_sub_tlvs,omitempty"`
 }
 
