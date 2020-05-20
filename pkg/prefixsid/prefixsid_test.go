@@ -41,7 +41,7 @@ func TestUnmarshalBGPAttrPrefixSID(t *testing.T) {
 								SubSubTLVs: map[uint8][]srv6.SubSubTLV{
 									1: {
 										&srv6.SIDStructureSubSubTLV{
-											LocalBlockLength:    0x28,
+											LocatorBlockLength:  0x28,
 											LocatorNodeLength:   0x18,
 											FunctionLength:      0x10,
 											ArgumentLength:      0,

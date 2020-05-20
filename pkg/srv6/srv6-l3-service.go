@@ -14,7 +14,7 @@ import (
 // SIDStructureSubSubTLV defines a structure of SID's Structure Sub Sub TLV
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2.1.2.1
 type SIDStructureSubSubTLV struct {
-	LocalBlockLength    uint8 `json:"local_block_length,omitempty"`
+	LocatorBlockLength  uint8 `json:"locator_block_length,omitempty"`
 	LocatorNodeLength   uint8 `json:"locator_node_length,omitempty"`
 	FunctionLength      uint8 `json:"function_length,omitempty"`
 	ArgumentLength      uint8 `json:"argument_length,omitempty"`
@@ -27,7 +27,7 @@ func UnmarshalSIDStructureSubSubTLV(b []byte) (*SIDStructureSubSubTLV, error) {
 	// Skip Resrved byte
 	p := 0
 	tlv := &SIDStructureSubSubTLV{}
-	tlv.LocalBlockLength = b[p]
+	tlv.LocatorBlockLength = b[p]
 	p++
 	tlv.LocatorNodeLength = b[p]
 	p++
@@ -51,6 +51,7 @@ type InformationSubTLV struct {
 	SubSubTLVs       map[uint8][]SubSubTLV `json:"sub_sub_tlvs,omitempty"`
 }
 
+// UnmarshalJSON unmarshals a slice of byte into SRv6 InformationSubTLV object
 func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
 	type informationSubTLV InformationSubTLV
 	if err := json.Unmarshal(b, (*informationSubTLV)(istlv)); err != nil {
@@ -76,7 +77,7 @@ func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
 		}
 		switch t {
 		case 1:
-			istlvs := make([]SIDStructureSubSubTLV, 0)
+			istlvs := make([]*SIDStructureSubSubTLV, 0)
 			if err := json.Unmarshal(subsubtlvValue, &istlvs); err != nil {
 				return err
 			}
@@ -86,7 +87,7 @@ func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
 				sstlvs = append(sstlvs, s)
 			}
 		default:
-			return fmt.Errorf("unknown SRv6 L3 Service Sub TLV type %d", t)
+			return fmt.Errorf("unknown SRv6 L3 Service Sub Sub TLV type %d", t)
 		}
 		istlv.SubSubTLVs[uint8(t)] = sstlvs
 	}
@@ -149,7 +150,7 @@ func (l3s *L3Service) UnmarshalJSON(b []byte) error {
 		}
 		switch t {
 		case 1:
-			istlvs := make([]InformationSubTLV, 0)
+			istlvs := make([]*InformationSubTLV, 0)
 			if err := json.Unmarshal(subtlvValue, &istlvs); err != nil {
 				return err
 			}
