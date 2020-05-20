@@ -211,6 +211,17 @@ BGP-LS TLV Type: 1036 (SR Local Block) - might arrive as a pair of integers
 BGP-LS TLV Type: 1038 (SRv6 Capabilities TLV) - string
 BGP-LS TLV Type: 266 (Node MSD) 
 
+Future:
+     +----------+------------------------------+
+     | MSD Type |    Description               |
+     +----------+------------------------------+
+     |   TBD    | Maximum Segments Left        |
+     |   TBD    | Maximum End Pop              |
+     |   TBD    | Maximum T.Insert             |
+     |   TBD    | Maximum T.Encaps             |
+     |   TBD    | Maximum End D                |
+     +----------+------------------------------+
+
 // delete ls_node
 
 1: (action): del
@@ -293,7 +304,7 @@ BGP-LS TLV Type: 266 (Node MSD)
 45: (is_adj_rib_in): 1
 46: (ls_adjacency_sid): BVL 0 24004, VL 0 24005
 
-Additional segment routing and SRv6 items not accounted for by OpenBMP:
+Additional segment routing not accounted for by OpenBMP:
 
 BGP-LS TLV Type: 267 (Link MSD)
 per https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-16#section-2.3.2:
@@ -304,7 +315,11 @@ BGP-LS TLV:
    |     1117    | Unidirectional packet loss        
    |     1118    | Unidirectional residual bandwidth  
    |     1119    | Unidirectional available bandwidth 
-   |     1120    | Unidirectional bandwidth utilization           
+   |     1120    | Unidirectional bandwidth utilization      
+
+SRv6 items 
+
+End.X SID TLV: https://tools.ietf.org/html/draft-ietf-idr-bgpls-srv6-ext-02#section-4.1
 
 // delete ls_link
 
