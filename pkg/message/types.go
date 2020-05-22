@@ -143,6 +143,7 @@ type LSLink struct {
 	LocalNodeASN          uint32                `json:"local_node_asn,omitempty"`
 	RemoteNodeASN         uint32                `json:"remote_node_asn,omitempty"`
 	SRv6BGPPeerNodeSID    *srv6.BGPPeerNodeSID  `json:"srv6_bgp_peer_node_sid,omitempty"`
+	SRv6ENDXSID           *srv6.EndXSIDTLV      `json:"srv6_endx_sid,omitempty"`
 	IsPrepolicy           bool                  `json:"isprepolicy"`
 	IsAdjRIBIn            bool                  `json:"is_adj_rib_in"`
 	LSAdjacencySID        []*sr.AdjacencySIDTLV `json:"ls_adjacency_sid,omitempty"`
