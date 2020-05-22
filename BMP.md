@@ -18,6 +18,7 @@ unicast_prefix
 ls_node
 ls_link
 ls_prefix
+ls_srv6_sid
 l3vpn
 evpn
 ```
@@ -211,6 +212,17 @@ BGP-LS TLV Type: 1036 (SR Local Block) - might arrive as a pair of integers
 BGP-LS TLV Type: 1038 (SRv6 Capabilities TLV) - string
 BGP-LS TLV Type: 266 (Node MSD) 
 
+Future:
+     +----------+------------------------------+
+     | MSD Type |    Description               |
+     +----------+------------------------------+
+     |   TBD    | Maximum Segments Left        |
+     |   TBD    | Maximum End Pop              |
+     |   TBD    | Maximum T.Insert             |
+     |   TBD    | Maximum T.Encaps             |
+     |   TBD    | Maximum End D                |
+     +----------+------------------------------+
+
 // delete ls_node
 
 1: (action): del
@@ -293,7 +305,7 @@ BGP-LS TLV Type: 266 (Node MSD)
 45: (is_adj_rib_in): 1
 46: (ls_adjacency_sid): BVL 0 24004, VL 0 24005
 
-Additional segment routing and SRv6 items not accounted for by OpenBMP:
+Additional segment routing not accounted for by OpenBMP:
 
 BGP-LS TLV Type: 267 (Link MSD)
 per https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-16#section-2.3.2:
@@ -304,7 +316,23 @@ BGP-LS TLV:
    |     1117    | Unidirectional packet loss        
    |     1118    | Unidirectional residual bandwidth  
    |     1119    | Unidirectional available bandwidth 
-   |     1120    | Unidirectional bandwidth utilization           
+   |     1120    | Unidirectional bandwidth utilization      
+
+SRv6 items 
+
+   BGP-LS TLV Type: 1106 (SRv6 End.X SID TLV)
+      SRv6 End.X SID TLV:
+         Endpoint Behavior: 6
+         Flag: 00
+         Algorithm: 0
+         Weight: 0
+         SID: [ 01 92 01 68 00 08 00 00 00 40 00 00 00 00 00 00  ]
+         
+Bonus item (OpenBMP never carried remote node router ID field, which would be very nice to add):
+
+   BGP-LS TLV Type: 1030 (IPv4 Router-ID of Remote Node)
+      IPv4 Router-ID of Remote Node: 192.168.9.9
+
 
 // delete ls_link
 
