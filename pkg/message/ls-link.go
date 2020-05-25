@@ -50,8 +50,7 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	msg.RemoteIGPRouterID = link.GetRemoteIGPRouterID()
 	msg.IGPRouterID = link.GetLocalIGPRouterID()
 
-	lslink, err := update.GetNLRI29()
-	if err == nil {
+	if lslink, err := update.GetNLRI29(); err == nil {
 		if ph.FlagV {
 			msg.RouterID = lslink.GetLocalIPv6RouterID()
 			msg.RemoteRouterID = lslink.GetRemoteIPv6RouterID()
@@ -74,6 +73,9 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.SRLG = lslink.GetSRLG()
 		msg.LinkName = lslink.GetLinkName()
 		msg.SRv6BGPPeerNodeSID = lslink.GetSRv6BGPPeerNodeSID()
+		if sid, err := lslink.GetLSSRv6ENDXSID(); err == nil {
+			msg.SRv6ENDXSID = sid
+		}
 		msg.UnidirAvailableBW = lslink.GetUnidirAvailableBandwidth()
 		msg.UnidirBWUtilization = lslink.GetUnidirUtilizedBandwidth()
 		msg.UnidirDelayVariation = lslink.GetUnidirDelayVariation()

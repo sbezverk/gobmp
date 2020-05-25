@@ -251,6 +251,17 @@ func (ls *NLRI) GetLSPrefixSID() (*sr.PrefixSIDTLV, error) {
 	return nil, fmt.Errorf("not found")
 }
 
+// GetLSSRv6ENDXSID returns SRv6 END.X SID TLV
+func (ls *NLRI) GetLSSRv6ENDXSID() (*srv6.EndXSIDTLV, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1106 {
+			continue
+		}
+		return srv6.UnmarshalSRv6EndXSIDTLV(tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
 // GetNodeSRv6CapabilitiesTLV returns string representation of SRv6 Capabilities TLV
 func (ls *NLRI) GetNodeSRv6CapabilitiesTLV() string {
 	var s string
