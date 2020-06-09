@@ -3,6 +3,8 @@ package sr
 import (
 	"reflect"
 	"testing"
+
+	"github.com/go-test/deep"
 )
 
 func TestUnmarshalSRCapabilities(t *testing.T) {
@@ -42,6 +44,10 @@ func TestUnmarshalSRCapabilities(t *testing.T) {
 	}
 }
 
+func pUint32(n uint32) *uint32 {
+	return &n
+}
+
 func TestUnmarshalSRLocalBlock(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -56,11 +62,7 @@ func TestUnmarshalSRLocalBlock(t *testing.T) {
 				TLV: []LocalBlockTLV{
 					{
 						SubRange: 1000,
-						SID: &SIDTLV{
-							Type:   1161,
-							Length: 3,
-							Value:  []byte{0x00, 0x3a, 0x98},
-						},
+						Label:    pUint32(15000),
 					},
 				},
 			},
@@ -72,8 +74,8 @@ func TestUnmarshalSRLocalBlock(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed with error: %+v", err)
 			}
-			if !reflect.DeepEqual(got, tt.expected) {
-				t.Errorf("expected %+v and got %+v do not match", tt.expected, got)
+			if diff := deep.Equal(got, tt.expected); len(diff) != 0 {
+				t.Errorf("expected and actual sr local block do not match, differences: %+v", diff)
 			}
 		})
 	}

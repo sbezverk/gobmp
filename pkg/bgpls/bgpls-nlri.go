@@ -213,31 +213,20 @@ func (ls *NLRI) GetSRAlgorithm() []int {
 	return a
 }
 
-// GetNodeSRLocalBlock returns string representation of SR LocalBlock
-func (ls *NLRI) GetNodeSRLocalBlock() string {
-	var s string
+// GetNodeSRLocalBlock returns SR LocalBlock object
+func (ls *NLRI) GetNodeSRLocalBlock() *sr.LocalBlock {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1036 {
 			continue
 		}
 		lb, err := sr.UnmarshalSRLocalBlock(tlv.Value)
 		if err != nil {
-			return s
+			return nil
 		}
-		if lb == nil {
-			return s
-		}
-		s += fmt.Sprintf("%02x ", lb.Flags)
-		for _, tlv := range lb.TLV {
-			if tlv.SID == nil {
-				continue
-			}
-			s += fmt.Sprintf("%d:%d ", tlv.SubRange, tlv.SID.Value)
-		}
-		break
+		return lb
 	}
 
-	return s
+	return nil
 }
 
 // GetLSPrefixSID returns a string representation of Prefix SID TLV
