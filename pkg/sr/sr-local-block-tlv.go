@@ -11,8 +11,9 @@ import (
 // LocalBlockTLV defines Local Block TLV object
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.1.4
 type LocalBlockTLV struct {
-	SubRange uint32
-	SID      *SIDTLV
+	SubRange uint32  `json:"range_size,omitempty"`
+	Label    *uint32 `json:"label,omitempty"`
+	Index    *uint32 `json:"index,omitempty"`
 }
 
 // UnmarshalSRLocalBlockTLV builds SR LocalBlock TLV object
@@ -31,16 +32,25 @@ func UnmarshalSRLocalBlockTLV(b []byte) ([]LocalBlockTLV, error) {
 		p += 2
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		v := make([]byte, l)
-		copy(v, b[p:p+int(l)])
+		v := make([]byte, 4)
+		if l == 3 {
+			copy(v[1:], b[p:p+int(l)])
+		} else {
+			copy(v, b[p:p+int(l)])
+		}
+		s := binary.BigEndian.Uint32(v)
 		p += int(l)
 		switch t {
 		case 1161:
 			// SID Subtlv
-			tlv.SID = &SIDTLV{
-				Type:   t,
-				Length: l,
-				Value:  v,
+			switch l {
+			case 3:
+				// Length 3 indicates a label, only 20 rightmost bits are used
+				s &= 0x000fffff
+				tlv.Label = &s
+			case 4:
+				// Length 4 indicates an index
+				tlv.Index = &s
 			}
 		default:
 			return nil, fmt.Errorf("unknown SR LocalBLock tlv %d", t)

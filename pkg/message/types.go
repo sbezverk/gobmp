@@ -94,7 +94,7 @@ type LSNode struct {
 	Name                string              `json:"name,omitempty"`
 	SRCapabilities      *sr.Capability      `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         []int               `json:"sr_algorithm,omitempty"`
-	SRLocalBlock        string              `json:"sr_local_block,omitempty"`
+	SRLocalBlock        *sr.LocalBlock      `json:"sr_local_block,omitempty"`
 	SRv6CapabilitiesTLV string              `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             string              `json:"node_msd,omitempty"`
 	IsPrepolicy         bool                `json:"isprepolicy"`
