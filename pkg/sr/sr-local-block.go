@@ -8,7 +8,7 @@ import (
 // LocalBlock defines SR Local Block TLV object
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.1.4
 type LocalBlock struct {
-	Flags uint8           `json:"flags,omitempty"`
+	Flags uint8           `json:"flags"`
 	TLV   []LocalBlockTLV `json:"subranges,omitempty"`
 }
 

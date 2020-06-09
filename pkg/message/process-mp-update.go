@@ -84,8 +84,6 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 }
 
 func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
-	// ipv4Flag used to differentiate between IPv4 and IPv6 Prefix NLRI messages
-	ipv4Flag := false
 	// NLRI 71 carries 6 known sub type
 	ls, err := nlri.GetNLRI71()
 	if err != nil {
@@ -93,6 +91,8 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		return
 	}
 	for _, e := range ls.NLRI {
+		// ipv4Flag used to differentiate between IPv4 and IPv6 Prefix NLRI messages
+		ipv4Flag := false
 		switch e.Type {
 		case 1:
 			n, ok := e.LS.(*base.NodeNLRI)
