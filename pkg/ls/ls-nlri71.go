@@ -27,57 +27,6 @@ type NLRI71 struct {
 	NLRI   []Element
 }
 
-// GetNodeNLRI instantiates Node NLRI object if one exists
-// func (ls *NLRI71) GetNodeNLRI() (*base.NodeNLRI, error) {
-// 	if ls.Type != 1 {
-// 		return nil, fmt.Errorf("not found")
-// 	}
-// 	n, err := base.UnmarshalNodeNLRI(ls.LS)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return n, nil
-// }
-
-// GetLinkNLRI instantiates Link NLRI object if one exists
-// func (ls *NLRI71) GetLinkNLRI() (*base.LinkNLRI, error) {
-// 	if ls.Type != 2 {
-// 		return nil, fmt.Errorf("not found")
-// 	}
-// 	l, err := base.UnmarshalLinkNLRI(ls.LS)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return l, nil
-// }
-
-// GetPrefixNLRI instantiates IPv4 or IPv6 Prefix NLRI object if one exists
-// func (ls *NLRI71) GetPrefixNLRI() (*base.PrefixNLRI, error) {
-// 	if ls.Type != 3 && ls.Type != 4 {
-// 		return nil, fmt.Errorf("not found")
-// 	}
-// 	if ls.Type == 3 {
-// 		return base.UnmarshalPrefixNLRI(ls.LS, true)
-// 	} else {
-// 		return base.UnmarshalPrefixNLRI(ls.LS, false)
-// 	}
-// }
-
-// GetSRv6SIDNLRI instantiates SRv6 SID NLRI object if one exists
-// func (ls *NLRI71) GetSRv6SIDNLRI() (*srv6.SIDNLRI, error) {
-// 	if ls.Type != 6 {
-// 		return nil, fmt.Errorf("not found")
-// 	}
-// 	s, err := srv6.UnmarshalSRv6SIDNLRI(ls.LS)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return s, nil
-// }
-
 // UnmarshalLSNLRI71 builds Link State NLRI object ofor SAFI 71
 func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 	glog.V(6).Infof("LSNLRI71 Raw: %s ", tools.MessageHex(b))
