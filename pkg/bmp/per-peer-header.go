@@ -8,37 +8,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
-
-// PeerDistinguisher defines an object for Peer's Distinguisher manipulations
-type PeerDistinguisher struct {
-	pd []byte
-}
-
-func (pd *PeerDistinguisher) String() string {
-	var s string
-	v := binary.BigEndian.Uint64(pd.pd)
-	if v == 0 {
-		return "0:0"
-	}
-	s = "not implemented"
-
-	return s
-}
-
-func (pd *PeerDistinguisher) copy(b []byte) {
-	if pd.pd == nil || len(pd.pd) == 0 {
-		return
-	}
-	copy(pd.pd, b[:len(pd.pd)-1])
-}
-
-func newPeerDistinguisher() *PeerDistinguisher {
-	return &PeerDistinguisher{
-		pd: make([]byte, 8),
-	}
-}
 
 // PerPeerHeader defines BMP Per-Peer Header per rfc7854
 type PerPeerHeader struct {
@@ -46,7 +18,7 @@ type PerPeerHeader struct {
 	FlagV             bool
 	FlagL             bool
 	FlagA             bool
-	PeerDistinguisher *PeerDistinguisher
+	PeerDistinguisher []byte // *PeerDistinguisher
 	PeerAddress       []byte
 	PeerAS            int32
 	PeerBGPID         []byte
@@ -57,7 +29,7 @@ type PerPeerHeader struct {
 func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	glog.V(6).Infof("BMP Per Peer Header Raw: %s", tools.MessageHex(b))
 	pph := &PerPeerHeader{
-		PeerDistinguisher: newPeerDistinguisher(),
+		PeerDistinguisher: make([]byte, 8), // newPeerDistinguisher(),
 		PeerAddress:       make([]byte, 16),
 		PeerBGPID:         make([]byte, 4),
 	}
@@ -72,19 +44,27 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	default:
 		return nil, fmt.Errorf("invalid peer type, expected between 0 and 2 found %d", b[0])
 	}
-	pph.PeerType = b[0]
-	pph.FlagV = b[1]&0x80 == 0x80
-	pph.FlagL = b[1]&0x40 == 0x40
-	pph.FlagA = b[1]&0x20 == 0x20
+	p := 0
+	pph.PeerType = b[p]
+	p++
+	pph.FlagV = b[p]&0x80 == 0x80
+	pph.FlagL = b[p]&0x40 == 0x40
+	pph.FlagA = b[p]&0x20 == 0x20
+	p++
 	// RD 8 bytes
-	pph.PeerDistinguisher.copy(b[2:10])
+	copy(pph.PeerDistinguisher, b[p:p+8])
+	p += 8
 	// Peer Address 16 bytes but for IPv4 case only last 4 bytes needed
-	copy(pph.PeerAddress, b[10:26])
-	pph.PeerAS = int32(binary.BigEndian.Uint32(b[26:30]))
-	copy(pph.PeerBGPID, b[30:34])
+	copy(pph.PeerAddress, b[p:p+16])
+	p += 16
+	pph.PeerAS = int32(binary.BigEndian.Uint32(b[p : p+4]))
+	p += 4
+	copy(pph.PeerBGPID, b[p:p+4])
+	p += 4
 	t := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
-	ts := time.Second * time.Duration(binary.BigEndian.Uint32(b[34:38]))
-	tms := time.Duration(int(binary.BigEndian.Uint32(b[38:42])))
+	ts := time.Second * time.Duration(binary.BigEndian.Uint32(b[p:p+4]))
+	p += 4
+	tms := time.Duration(int(binary.BigEndian.Uint32(b[p : p+4])))
 	t = t.Add(ts)
 	t = t.Add(tms)
 	pph.PeerTimestamp = t.Format(time.StampMicro)
@@ -95,6 +75,7 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 // GetPeerHash calculates Peer Hash and returns as a hex string
 func (p *PerPeerHeader) GetPeerHash() string {
 	data := []byte{}
+	data = append(data, p.PeerDistinguisher...)
 	data = append(data, p.PeerAddress...)
 	data = append(data, []byte(fmt.Sprintf("%d", p.PeerAS))...)
 	data = append(data, p.PeerBGPID...)
@@ -110,4 +91,25 @@ func (p *PerPeerHeader) GetPeerAddrString() string {
 	}
 	// IPv4 specific conversions
 	return net.IP(p.PeerAddress[12:]).To4().String()
+}
+
+// GetPeerDistinguisherString returns string representation of Peer's distinguisher
+// depending on the peer's type.
+func (p *PerPeerHeader) GetPeerDistinguisherString() string {
+	var s string
+	switch p.PeerType {
+	case 0:
+		s += "0:0"
+	case 1:
+		if rd, err := base.MakeRD(p.PeerDistinguisher); err != nil {
+			s += "0:0"
+			break
+		} else {
+			s += rd.String()
+		}
+	case 2:
+		s += fmt.Sprintf("%d", binary.BigEndian.Uint64(p.PeerDistinguisher))
+	}
+
+	return s
 }
