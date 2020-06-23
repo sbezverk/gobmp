@@ -30,7 +30,7 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m = PeerStateChange{
 			Action:         action,
 			RemoteASN:      msg.PeerHeader.PeerAS,
-			PeerRD:         msg.PeerHeader.PeerDistinguisher.String(),
+			PeerRD:         msg.PeerHeader.GetPeerDistinguisherString(),
 			RemotePort:     int(peerUpMsg.RemotePort),
 			Timestamp:      msg.PeerHeader.PeerTimestamp,
 			LocalPort:      int(peerUpMsg.LocalPort),
@@ -94,7 +94,7 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			RouterHash: p.speakerHash,
 			BMPReason:  int(peerDownMsg.Reason),
 			RemoteASN:  msg.PeerHeader.PeerAS,
-			PeerRD:     msg.PeerHeader.PeerDistinguisher.String(),
+			PeerRD:     msg.PeerHeader.GetPeerDistinguisherString(),
 			Timestamp:  msg.PeerHeader.PeerTimestamp,
 		}
 		if msg.PeerHeader.FlagV {
