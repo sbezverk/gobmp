@@ -223,6 +223,28 @@ func (up *Update) GetAttrClusterListID() []byte {
 	return l
 }
 
+// GetMPReachNLRI Instantiates MP_Reach NLRI if it exists in the update
+func (up *Update) GetMPReachNLRI() (MPNLRI, error) {
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 14 {
+			return UnmarshalMPReachNLRI(attr.Attribute, up.HasPrefixSID())
+		}
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
+// GetMPUnReachNLRI Instantiates MP_UNReach NLRI if it exists in the update
+func (up *Update) GetMPUnReachNLRI() (MPNLRI, error) {
+	for _, attr := range up.PathAttributes {
+		if attr.AttributeType == 15 {
+			return UnmarshalMPUnReachNLRI(attr.Attribute)
+		}
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
 // GetAttrExtCommunity returns a slice with all extended communities found in bgp update
 func (up *Update) GetAttrExtCommunity() ([]ExtCommunity, error) {
 	for _, attr := range up.PathAttributes {
