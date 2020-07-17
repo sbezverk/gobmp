@@ -14,10 +14,10 @@ import (
 // SIDStructureSubSubTLV defines a structure of SID's Structure Sub Sub TLV
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2.1.2.1
 type SIDStructureSubSubTLV struct {
-	LocalBlockLength    uint8 `json:"local_block_length,omitempty"`
-	LocalNodeLength     uint8 `json:"local_node_length,omitempty"`
+	LocalBlockLength    uint8 `json:"locator_block_length,omitempty"`
+	LocalNodeLength     uint8 `json:"locator_node_length,omitempty"`
 	FunctionLength      uint8 `json:"function_length,omitempty"`
-	ArgumentLength      uint8 `json:"argument_length,omitempty"`
+	ArgumentLength      uint8 `json:"argument_length"`
 	TranspositionLength uint8 `json:"transposition_length,omitempty"`
 	TranspositionOffset uint8 `json:"transposition_offset,omitempty"`
 }
