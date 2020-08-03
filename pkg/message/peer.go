@@ -111,7 +111,7 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 
 	}
 	if err := p.marshalAndPublish(&m, bmp.PeerStateChangeMsg, []byte(m.RouterHash), false); err != nil {
-		glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
+		glog.Errorf("failed to process peer message with error: %+v", err)
 		return
 	}
 }
