@@ -69,7 +69,9 @@ func main() {
 	if !dumpmessage {
 		publisher, err = kafka.NewKafkaPublisher(kafkaSrv)
 		if err != nil {
-			glog.Warningf("Kafka publisher is disabled, no Kafka server URL is provided.")
+			glog.Errorf("fail to initialize Kafka publisher with error: %+v", err)
+			glog.Errorf("restarting gobmp...")
+			os.Exit(1)
 		} else {
 			glog.V(6).Infof("Kafka publisher has been successfully initialized.")
 		}
@@ -80,7 +82,7 @@ func main() {
 	// Initializing bmp server
 	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, intercept, publisher)
 	if err != nil {
-		glog.Errorf("fail to setup new bmp server with error: %+v", err)
+		glog.Errorf("fail to setup new gobmp server with error: %+v", err)
 		os.Exit(1)
 	}
 	// Starting Interceptor server
