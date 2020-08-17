@@ -7,10 +7,12 @@ import (
 	"github.com/sbezverk/gobmp/pkg/pub"
 )
 
-type msgOut struct {
-	Type  int    `json:"type,omitempty"`
-	Key   []byte `json:"key,omitempty"`
-	Value []byte `json:"value,omitempty"`
+// MsgOut defines structure of the message stored in the file.
+type MsgOut struct {
+	Type  int       `json:"type,omitempty"`
+	Key   []byte    `json:"key,omitempty"`
+	Value []byte    `json:"value,omitempty"`
+	Time  time.Time `json:"timestamp,omitempty"`
 }
 
 type pubfiler struct {
@@ -18,7 +20,7 @@ type pubfiler struct {
 }
 
 func (p *pubfiler) PublishMessage(msgType int, msgHash []byte, msg []byte) error {
-	m := msgOut{
+	m := MsgOut{
 		Type:  msgType,
 		Key:   msgHash,
 		Value: msg,
