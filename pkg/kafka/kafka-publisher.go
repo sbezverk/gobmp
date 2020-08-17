@@ -104,6 +104,10 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 	return nil
 }
 
+func (p *publisher) Stop() {
+
+}
+
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
 func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 	glog.Infof("Initializing Kafka producer client")
