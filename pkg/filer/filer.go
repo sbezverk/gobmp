@@ -3,16 +3,14 @@ package filer
 import (
 	"encoding/json"
 	"os"
-	"time"
 
 	"github.com/sbezverk/gobmp/pkg/pub"
 )
 
 type msgOut struct {
-	Type  int       `json:"type,omitempty"`
-	Key   []byte    `json:"key,omitempty"`
-	Value []byte    `json:"value,omitempty"`
-	Time  time.Time `json:"timestamp,omitempty"`
+	Type  int    `json:"type,omitempty"`
+	Key   []byte `json:"key,omitempty"`
+	Value []byte `json:"value,omitempty"`
 }
 
 type pubfiler struct {
@@ -24,7 +22,6 @@ func (p *pubfiler) PublishMessage(msgType int, msgHash []byte, msg []byte) error
 		Type:  msgType,
 		Key:   msgHash,
 		Value: msg,
-		Time:  time.Now(),
 	}
 	b, err := json.Marshal(&m)
 	if err != nil {
