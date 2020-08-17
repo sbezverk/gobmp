@@ -30,6 +30,9 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		glog.Errorf("route monitor message is nil")
 		return
 	}
+	if routeMonitorMsg.Update == nil {
+		return
+	}
 	if len(routeMonitorMsg.Update.PathAttributes) == 0 {
 		// There is no Path Attributes, just return
 		return
