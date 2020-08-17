@@ -17,6 +17,7 @@ type RouteMonitor struct {
 func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 	glog.V(6).Infof("BMP Route Monitor Message Raw: %s", tools.MessageHex(b))
 	rm := RouteMonitor{}
+	// 16 bytes marker + 2 bytes update length + 1 byte of type
 	if len(b) < 19 {
 		return nil, fmt.Errorf("malformed route monitor message")
 	}
@@ -30,7 +31,7 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 	p++
 	switch t {
 	case 2:
-		// UPdate type
+		// Update type
 		u, err := bgp.UnmarshalBGPUpdate(b[p:])
 		if err != nil {
 			return nil, err
