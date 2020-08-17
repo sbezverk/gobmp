@@ -19,7 +19,7 @@ type pubfiler struct {
 	file *os.File
 }
 
-func (pf *pubfiler) PublishMessage(msgType int, msgHash []byte, msg []byte) error {
+func (p *pubfiler) PublishMessage(msgType int, msgHash []byte, msg []byte) error {
 	m := msgOut{
 		Type:  msgType,
 		Key:   msgHash,
@@ -30,12 +30,17 @@ func (pf *pubfiler) PublishMessage(msgType int, msgHash []byte, msg []byte) erro
 	if err != nil {
 		return err
 	}
-	_, err = pf.file.Write(b)
+	b = append(b, '\n')
+	_, err = p.file.Write(b)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (p *pubfiler) Stop() {
+	p.file.Close()
 }
 
 // NewFiler returns a new instance of message filer

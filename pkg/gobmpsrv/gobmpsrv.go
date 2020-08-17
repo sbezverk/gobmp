@@ -35,6 +35,9 @@ func (srv *bmpServer) Start() {
 
 func (srv *bmpServer) Stop() {
 	glog.Infof("Stopping gobmp server\n")
+	if srv.publisher != nil {
+		srv.publisher.Stop()
+	}
 	close(srv.stop)
 }
 

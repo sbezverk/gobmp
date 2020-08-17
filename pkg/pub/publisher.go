@@ -6,4 +6,5 @@ package pub
 // msg is json marshaled message of msgType
 type Publisher interface {
 	PublishMessage(msgType int, msgHash []byte, msg []byte) error
+	Stop()
 }

@@ -5,24 +5,27 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 
 	"net/http"
 	_ "net/http/pprof"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/dumper"
+	"github.com/sbezverk/gobmp/pkg/filer"
 	"github.com/sbezverk/gobmp/pkg/gobmpsrv"
 	"github.com/sbezverk/gobmp/pkg/kafka"
 	"github.com/sbezverk/gobmp/pkg/pub"
 )
 
 var (
-	dstPort     int
-	srcPort     int
-	perfPort    int
-	kafkaSrv    string
-	intercept   bool
-	dumpmessage bool
+	dstPort   int
+	srcPort   int
+	perfPort  int
+	kafkaSrv  string
+	intercept bool
+	dump      string
+	file      string
 )
 
 func init() {
@@ -31,8 +34,8 @@ func init() {
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
 	flag.BoolVar(&intercept, "intercept", false, "Mode of operation, in intercept mode, when intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
 	flag.IntVar(&perfPort, "performance-port", 56767, "port used for performance debugging")
-	flag.BoolVar(&dumpmessage, "dump-message", false, "Dump resulting messages to standard output")
-
+	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\" or to the standard output when \"dump=console\"")
+	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path anf file name to store messages when \"dump=file\"")
 }
 
 var (
@@ -59,24 +62,26 @@ func setupSignalHandler() (stopCh <-chan struct{}) {
 func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
-	// Initializing Kafka publisher
-	// other publishers sutisfying pub.Publisher interface can be used.
+	// Starting performance collecting http server
 	go func() {
 		glog.Info(http.ListenAndServe(fmt.Sprintf(":%d", perfPort), nil))
 	}()
+	// Initializing publisher
 	var publisher pub.Publisher
 	var err error
-	if !dumpmessage {
+	switch strings.ToLower(dump) {
+	case "file":
+		publisher = filer.NewFiler(file)
+	case "console":
+		publisher = dumper.NewDumper()
+	default:
 		publisher, err = kafka.NewKafkaPublisher(kafkaSrv)
 		if err != nil {
 			glog.Errorf("fail to initialize Kafka publisher with error: %+v", err)
 			glog.Errorf("restarting gobmp...")
 			os.Exit(1)
-		} else {
-			glog.V(6).Infof("Kafka publisher has been successfully initialized.")
 		}
-	} else {
-		publisher = dumper.NewDumper()
+		glog.V(6).Infof("Kafka publisher has been successfully initialized.")
 	}
 
 	// Initializing bmp server
