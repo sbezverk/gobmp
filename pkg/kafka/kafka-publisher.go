@@ -207,6 +207,3 @@ func validator(addr string) error {
 	}
 	return nil
 }
-
-func (p *publisher) Stop() {
-}
