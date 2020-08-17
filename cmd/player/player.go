@@ -5,6 +5,8 @@ import (
 	"flag"
 	"io"
 	"os"
+	"sync"
+	"time"
 
 	"encoding/json"
 
@@ -46,6 +48,9 @@ func main() {
 
 	msgs := bufio.NewReader(f)
 	done := false
+	start := time.Now()
+	records := 0
+	var wg sync.WaitGroup
 	for !done {
 		b, err := msgs.ReadBytes('\n')
 		if err != nil {
@@ -61,13 +66,17 @@ func main() {
 			glog.Errorf("fail to unmarshal message with error: %+v", err)
 			os.Exit(1)
 		}
-		glog.Infof("Recovered message of type: %d", msg.Type)
-		if err := publisher.PublishMessage(msg.Type, msg.Key, msg.Value); err != nil {
-			glog.Errorf("fail to publish message type: %d message key: %s with error: %+v", msg.Type, tools.MessageHex(msg.Key), err)
-			os.Exit(1)
-		}
+		wg.Add(1)
+		go func(msg *filer.MsgOut) {
+			defer wg.Done()
+			if err := publisher.PublishMessage(msg.Type, msg.Key, msg.Value); err != nil {
+				glog.Errorf("fail to publish message type: %d message key: %s with error: %+v", msg.Type, tools.MessageHex(msg.Key), err)
+			}
+		}(msg)
+		records++
 	}
-
+	wg.Wait()
+	glog.Infof("%3f seconds took to process %d records", time.Now().Sub(start).Seconds(), records)
 	publisher.Stop()
 
 	os.Exit(0)

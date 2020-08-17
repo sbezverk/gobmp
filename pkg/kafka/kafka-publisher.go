@@ -84,22 +84,31 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 	if !ok {
 		return fmt.Errorf("topic %s in not initialized", topic)
 	}
-	leaderAddr := fmt.Sprintf("%s:%d", t.partitions[0].Leader.Host, t.partitions[0].Leader.Port)
-	kafkaConn, err := kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, t.partitions[0].Topic, t.partitions[0].Leader.ID)
-	if err != nil {
-		glog.Errorf("Failed to connect to the topic %s's partition leader with error: %+v", topic, err)
-		return err
+	var kafkaConn *kafka.Conn
+	var err error
+	// Check the state of the connection to kafka's topic
+	if t.kafkaConn == nil {
+		leaderAddr := fmt.Sprintf("%s:%d", t.partitions[0].Leader.Host, t.partitions[0].Leader.Port)
+		kafkaConn, err = kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, t.partitions[0].Topic, t.partitions[0].Leader.ID)
+		if err != nil {
+			glog.Errorf("Failed to connect to the topic %s's partition leader with error: %+v", topic, err)
+			return err
+		}
+		t.kafkaConn = kafkaConn
 	}
-	n, err := kafkaConn.WriteMessages(kafka.Message{
+	n, err := t.kafkaConn.WriteMessages(kafka.Message{
 		Key:   key,
 		Value: msg,
 		Time:  time.Now(),
 	})
 	if err != nil {
+		// WriteMessage to kafka has failed, resetting topic's connection struct
+		// next attempt to write message to the failed topic, will trigger attemp to re-dial to the topic's leader.
+		t.kafkaConn = nil
 		glog.Errorf("Failed to write test message to the topic %s with error: %+v", topic, err)
 		return err
 	}
-	glog.V(5).Infof("Successfully wrote %d bytes to Kafka topic %s", n, topic)
+	glog.V(6).Infof("Successfully wrote %d bytes to Kafka topic %s", n, topic)
 
 	return nil
 }
