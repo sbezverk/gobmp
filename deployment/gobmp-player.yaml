@@ -1,0 +1,21 @@
+---
+apiVersion: batch/v1
+kind: Job
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - args:
+            - --v
+            - "5"
+            - --message-server
+            - "kafka:9092"
+            - --msg-file
+            - "/messages.json"
+          image: docker.io/sbezverk/gobmp-player:0.0.0
+          imagePullPolicy: Always
+          name: gobmp-player
+metadata:
+  name: gobmp-player
+  namespace: default
