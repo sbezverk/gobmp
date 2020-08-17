@@ -17,16 +17,20 @@ type pubwriter struct {
 	output *log.Logger
 }
 
-func (pw *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) error {
+func (p *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) error {
 	m := msgOut{
 		MsgType: msgType,
 		MsgHash: string(msgHash),
 		Msg:     string(msg),
 	}
 
-	pw.output.Printf("%+v", m)
+	p.output.Printf("%+v", m)
 
 	return nil
+}
+
+func (p *pubwriter) Stop() {
+	p.output.Printf("gobmp is stopping...")
 }
 
 // NewDumper returns a new instance of standard out  dumper
