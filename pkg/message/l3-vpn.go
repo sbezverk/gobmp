@@ -42,7 +42,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 
 		if ases := update.GetAttrASPath(); len(ases) != 0 {
 			// Last element in AS_PATH would be the AS of the origin
-			prfx.OriginAS = fmt.Sprintf("%d", ases[len(ases)-1])
+			prfx.OriginAS = int32(ases[len(ases)-1])
 		}
 		if nlri.IsIPv6NLRI() {
 			// IPv6 specific conversions
