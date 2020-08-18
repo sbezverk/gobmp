@@ -14,11 +14,14 @@ all: gobmp
 gobmp:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/gobmp compile-gobmp
-#	CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -ldflags '-extldflags "-static"' -o ./cmd/bin/gobmp ./cmd/gobmp/gobmp.go
 
 topology:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/topology compile-topology
+
+player:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/player compile-player
 
 container: gobmp
 	docker build -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile .
@@ -26,12 +29,18 @@ container: gobmp
 topology-container: topology
 	docker build -t $(REGISTRY_NAME)/gobmp-topology:$(IMAGE_VERSION) -f ./build/Dockerfile.topology .
 
+player-container: player
+	docker build -t $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION) -f ./build/Dockerfile.player .
+
 push: container
 	docker push $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION)
 
 topology-push: topology-container
 	docker push $(REGISTRY_NAME)/gobmp-topology:$(IMAGE_VERSION)
-	
+
+player-push: player-container
+	docker push $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION)
+
 clean:
 	rm -rf bin
 
