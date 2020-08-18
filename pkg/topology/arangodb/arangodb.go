@@ -100,9 +100,7 @@ func (a *arangoDB) StoreMessage(msgType int, msg interface{}) error {
 		if !ok {
 			return fmt.Errorf("malformed L3VPN message")
 		}
-		// Remove after the corresponding handler is added
-		glog.Infof("Object: %+v", l3)
-		// go a.l3vpnHandler(l3)
+		go a.l3vpnHandler(l3)
 	}
 
 	return nil

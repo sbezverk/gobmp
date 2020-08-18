@@ -157,5 +157,5 @@ func (p *processor) procWorker(m *queueMsg) {
 		}
 	}
 
-	glog.V(5).Infof("message of type %d was stored in the database", m.msgType)
+	glog.V(6).Infof("message of type %d was sent to the database for further processing", m.msgType)
 }
