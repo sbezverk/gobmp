@@ -58,7 +58,7 @@ type UnicastPrefix struct {
 	Prefix         string              `json:"prefix,omitempty"`
 	PrefixLen      int32               `json:"prefix_len,omitempty"`
 	IsIPv4         bool                `json:"is_ipv4"`
-	OriginAS       string              `json:"origin_as,omitempty"`
+	OriginAS       int32               `json:"origin_as,omitempty"`
 	Nexthop        string              `json:"nexthop,omitempty"`
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
 	PathID         int32               `json:"path_id,omitempty"`
@@ -172,7 +172,7 @@ type L3VPNPrefix struct {
 	Prefix         string              `json:"prefix,omitempty"`
 	PrefixLen      int32               `json:"prefix_len,omitempty"`
 	IsIPv4         bool                `json:"is_ipv4"`
-	OriginAS       string              `json:"origin_as,omitempty"`
+	OriginAS       int32               `json:"origin_as,omitempty"`
 	Nexthop        string              `json:"nexthop,omitempty"`
 	ClusterList    string              `json:"cluster_list,omitempty"`
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
@@ -272,7 +272,7 @@ type EVPNPrefix struct {
 	PeerASN        int32               `json:"peer_asn,omitempty"`
 	Timestamp      string              `json:"timestamp,omitempty"`
 	IsIPv4         bool                `json:"is_ipv4"`
-	OriginAS       string              `json:"origin_as,omitempty"`
+	OriginAS       int32               `json:"origin_as,omitempty"`
 	Nexthop        string              `json:"nexthop,omitempty"`
 	ClusterList    string              `json:"cluster_list,omitempty"`
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`

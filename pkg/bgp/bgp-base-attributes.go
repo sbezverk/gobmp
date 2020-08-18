@@ -27,7 +27,7 @@ type BaseAttributes struct {
 	CommunityList    string   `json:"community_list,omitempty"`
 	OriginatorID     string   `json:"originator_id,omitempty"`
 	ClusterList      string   `json:"cluster_list,omitempty"`
-	ExtCommunityList string   `json:"ext_community_list,omitempty"`
+	ExtCommunityList []string `json:"ext_community_list,omitempty"`
 	AS4Path          []uint32 `json:"as4_path,omitempty"`
 	AS4PathCount     int32    `json:"as4_path_count,omitempty"`
 	AS4Aggregator    []byte   `json:"as4_aggregator,omitempty"`
@@ -265,17 +265,14 @@ func unmarshalAttrClusterList(b []byte) string {
 }
 
 //  unmarshalAttrExtCommunity returns a slice with all extended communities found in bgp update
-func unmarshalAttrExtCommunity(b []byte) string {
+func unmarshalAttrExtCommunity(b []byte) []string {
 	ext, err := UnmarshalBGPExtCommunity(b)
 	if err != nil {
-		return ""
+		return nil
 	}
-	var s string
+	s := make([]string, len(ext))
 	for i, c := range ext {
-		s += c.String()
-		if i < len(ext)-1 {
-			s += ", "
-		}
+		s[i] += c.String()
 	}
 
 	return s
