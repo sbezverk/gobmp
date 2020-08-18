@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"strconv"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/topology/arangodb"
@@ -18,8 +19,8 @@ import (
 var (
 	msgSrvAddr string
 	dbSrvAddr  string
-	mockDB     bool
-	mockMsg    bool
+	mockDB     string
+	mockMsg    string
 	dbName     string
 	dbUser     string
 	dbPass     string
@@ -28,8 +29,8 @@ var (
 func init() {
 	flag.StringVar(&msgSrvAddr, "message-server", "", "URL to the messages supplying server")
 	flag.StringVar(&dbSrvAddr, "database-server", "", "{dns name}:port or X.X.X.X:port of the graph database")
-	flag.BoolVar(&mockDB, "mock-database", false, "when set to true, received messages are stored in the file")
-	flag.BoolVar(&mockMsg, "mock-messenger", false, "when set to true, message server is disabled.")
+	flag.StringVar(&mockDB, "mock-database", "false", "when set to true, received messages are stored in the file")
+	flag.StringVar(&mockMsg, "mock-messenger", "false", "when set to true, message server is disabled.")
 	flag.StringVar(&dbName, "database-name", "", "DB name")
 	flag.StringVar(&dbUser, "database-user", "", "DB User name")
 	flag.StringVar(&dbPass, "database-pass", "", "DB User's password")
@@ -63,7 +64,12 @@ func main() {
 	var dbSrv dbclient.Srv
 	var err error
 	// Initializing databse client
-	if !mockDB {
+	isMockDB, err := strconv.ParseBool(mockDB)
+	if err != nil {
+		glog.Errorf("invalid mock-database parameter: %s", mockDB)
+		os.Exit(1)
+	}
+	if !isMockDB {
 		dbSrv, err = arangodb.NewDBSrvClient(dbSrvAddr, dbUser, dbPass, dbName)
 		if err != nil {
 			glog.Errorf("failed to initialize databse client with error: %+v", err)
@@ -86,8 +92,13 @@ func main() {
 	processorSrv.Start()
 
 	// Initializing messenger process
+	isMockMsg, err := strconv.ParseBool(mockMsg)
+	if err != nil {
+		glog.Errorf("invalid mock-messenger parameter: %s", mockMsg)
+		os.Exit(1)
+	}
 	var msgSrv messenger.Srv
-	if !mockMsg {
+	if !isMockMsg {
 		msgSrv, err = kafkamessenger.NewKafkaMessenger(msgSrvAddr, processorSrv.GetInterface())
 		if err != nil {
 			glog.Errorf("failed to initialize message server with error: %+v", err)
