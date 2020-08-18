@@ -1,8 +1,6 @@
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata:
-  name: gobmp-topology
 spec:
   replicas: 1 
   selector:
@@ -15,12 +13,14 @@ spec:
     spec:
       containers:
         - args:
+          - --mock-database
+          - "true"
           - --v
           - "5"
           - --message-server
-          - "broker.jalapeno:9092"
+          - "kafka:9092"
           - --database-server
-          - "http://arangodb.jalapeno:8529"
+          - "http://arangodb.arangodb:28529"
           - --database-name
           - "jalapeno"
           - --database-user
