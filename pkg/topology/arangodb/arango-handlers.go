@@ -1,12 +1,13 @@
 package arangodb
 
 import (
+	"context"
 	"strconv"
 
+	driver "github.com/arangodb/go-driver"
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/srv6"
-	_ "github.com/sbezverk/gobmp/pkg/topology/database"
 )
 
 const (
@@ -37,7 +38,7 @@ type L3VPNRT struct {
 }
 
 func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
-	//	db := a.GetArangoDBInterface()
+	// adb := a.GetArangoDBInterface()
 	if obj == nil {
 		glog.Warning("L3 VPN Prefix object is nil")
 		return
@@ -60,5 +61,26 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 		r.SRv6SID = obj.PrefixSID.SRv6L3Service
 	}
 
-	glog.Infof("Resulting record: %+v", *r)
+	var c driver.Collection
+	var err error
+	ctx := context.TODO()
+	if c, err = a.ensureCollection(l3prefix); err != nil {
+		glog.Errorf("failed to ensure for collection %s with error: %+v", l3prefix, err)
+		return
+	}
+	ok, err := c.DocumentExists(ctx, k)
+	if err != nil {
+		glog.Errorf("failed to check for document %s with error: %+v", k, err)
+		return
+	}
+	if ok {
+		// Document by the key already exists, hence updating it
+		if _, err := c.UpdateDocument(ctx, k, &r); err != nil {
+			glog.Errorf("failed to update document %s with error: %+v", k, err)
+		}
+		return
+	}
+	if _, err := c.CreateDocument(ctx, &r); err != nil {
+		glog.Errorf("failed to create document %s with error: %+v", k, err)
+	}
 }

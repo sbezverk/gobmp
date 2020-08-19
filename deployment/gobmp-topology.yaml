@@ -14,7 +14,7 @@ spec:
       containers:
         - args:
           - --mock-database
-          - "true"
+          - "false"
           - --v
           - "5"
           - --message-server
