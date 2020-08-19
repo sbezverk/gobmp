@@ -7,14 +7,13 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/tools"
-	"github.com/sbezverk/gobmp/pkg/topology/database"
 	"github.com/sbezverk/gobmp/pkg/topology/dbclient"
 )
 
 type arangoDB struct {
 	stop chan struct{}
 	dbclient.DB
-	*database.ArangoConn
+	*ArangoConn
 }
 
 // NewDBSrvClient returns an instance of a DB server client process
@@ -22,7 +21,7 @@ func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) 
 	if err := tools.URLAddrValidation(arangoSrv); err != nil {
 		return nil, err
 	}
-	arangoConn, err := database.NewArango(database.ArangoConfig{
+	arangoConn, err := NewArango(ArangoConfig{
 		URL:      arangoSrv,
 		User:     user,
 		Password: pass,
@@ -57,7 +56,7 @@ func (a *arangoDB) GetInterface() dbclient.DB {
 	return a.DB
 }
 
-func (a *arangoDB) GetArangoDBInterface() *database.ArangoConn {
+func (a *arangoDB) GetArangoDBInterface() *ArangoConn {
 	return a.ArangoConn
 }
 

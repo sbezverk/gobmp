@@ -1,4 +1,4 @@
-package database
+package arangodb
 
 import (
 	"errors"
@@ -27,9 +27,4 @@ func GetID(i DBObject) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%s/%s", i.GetType(), k), nil
-}
-
-type EdgeObject interface {
-	//To, From
-	SetEdge(DBObject, DBObject)
 }
