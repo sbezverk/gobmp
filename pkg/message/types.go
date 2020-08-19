@@ -217,7 +217,7 @@ type LSPrefix struct {
 	PrefixLen      int32               `json:"prefix_len,omitempty"`
 	IsPrepolicy    bool                `json:"isprepolicy"`
 	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
-	LSPrefixSID    *sr.PrefixSIDTLV    `json:"ls_prefix_sid,omitempty"`
+	LSPrefixSID    []*sr.PrefixSIDTLV  `json:"ls_prefix_sid,omitempty"`
 }
 
 // LSSRv6SID defines a structure of LS SRv6 SID message
