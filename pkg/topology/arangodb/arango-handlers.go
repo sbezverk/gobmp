@@ -73,14 +73,24 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 		glog.Errorf("failed to check for document %s with error: %+v", k, err)
 		return
 	}
-	if ok {
-		// Document by the key already exists, hence updating it
-		if _, err := c.UpdateDocument(ctx, k, &r); err != nil {
-			glog.Errorf("failed to update document %s with error: %+v", k, err)
+	switch obj.Action {
+	case "add":
+		if ok {
+			// Document by the key already exists, hence updating it
+			if _, err := c.UpdateDocument(ctx, k, &r); err != nil {
+				glog.Errorf("failed to update document %s with error: %+v", k, err)
+			}
+			return
 		}
-		return
-	}
-	if _, err := c.CreateDocument(ctx, &r); err != nil {
-		glog.Errorf("failed to create document %s with error: %+v", k, err)
+		if _, err := c.CreateDocument(ctx, &r); err != nil {
+			glog.Errorf("failed to create document %s with error: %+v", k, err)
+		}
+	case "del":
+		if ok {
+			// Document by the key exists, hence delete it
+			if _, err := c.RemoveDocument(ctx, k); err != nil {
+				glog.Errorf("failed to delete document %s with error: %+v", k, err)
+			}
+		}
 	}
 }
