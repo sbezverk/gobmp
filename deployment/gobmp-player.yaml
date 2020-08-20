@@ -12,10 +12,18 @@ spec:
             - --message-server
             - "kafka:9092"
             - --msg-file
-            - "/messages.json"
+            - "/testdata/messages.json"
           image: docker.io/sbezverk/gobmp-player:0.0.0
           imagePullPolicy: Always
           name: gobmp-player
+          volumeMounts:
+          - mountPath: /testdata/messages.json
+            name: messages
+            subPath: messages.json
+      volumes:
+      - name: messages
+        hostPath:
+          path: /home/sbezverk/jalapeno/gobmp
 metadata:
   name: gobmp-player
   namespace: default
