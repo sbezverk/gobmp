@@ -23,11 +23,11 @@ func (ext *ExtCommunity) IsRouteTarget() bool {
 	} else {
 		subType = *ext.SubType
 	}
-	if ext.SubType != nil {
-		if subType == 2 {
-			return true
-		}
+	//	if ext.SubType != nil {
+	if subType == 2 {
+		return true
 	}
+	//	}
 
 	return false
 }
@@ -44,12 +44,12 @@ func (ext *ExtCommunity) String() string {
 	switch subType {
 	case 0x0:
 		prefix = "mmb="
-	case 0x01:
-		prefix = "lb="
 	case 0x02:
 		prefix = "rt="
 	case 0x03:
 		prefix = "ro="
+	case 0x04:
+		prefix = "lb="
 	case 0x05:
 		prefix = "odi="
 	case 0x06:
@@ -160,4 +160,49 @@ func UnmarshalBGPExtCommunity(b []byte) ([]ExtCommunity, error) {
 	}
 
 	return exts, nil
+}
+
+func (ext *ExtCommunity) StringV2() string {
+	var s string
+	// var prefix string
+	var subType uint8
+	if ext.SubType == nil {
+		subType = 0xff
+	} else {
+		subType = *ext.SubType
+	}
+	switch ext.Type {
+	case 0x0:
+	case 0x6:
+		// EVPN Extended Community
+		switch subType {
+		case 0x01:
+			// ESI Label Extended Community
+			s += "lec="
+			l := make([]byte, 4)
+			copy(l, ext.Value[3:])
+			s += fmt.Sprintf("%d:%d", ext.Value[0], binary.BigEndian.Uint32(l))
+		case 0x02:
+			// ES-Import Route Target
+			s += "irt="
+			for i, m := range ext.Value {
+				s += fmt.Sprintf("%02x", m)
+				if i < len(ext.Value)-1 {
+					s += ":"
+				}
+			}
+		case 0x00:
+			// MAC Mobility Extended Community
+			s += "mec="
+			s += fmt.Sprintf("%d:%d", ext.Value[0], binary.BigEndian.Uint32(ext.Value[2:]))
+		case 0x06:
+			// The DF Election Extended Community
+			s += "eec="
+			s += fmt.Sprintf("%d:0x%04x", ext.Value[0], binary.BigEndian.Uint16(ext.Value[1:]))
+		default:
+			s += fmt.Sprintf("%d=", subType)
+			s += fmt.Sprintf("%d", binary.BigEndian.Uint32(ext.Value[0:4]))
+		}
+	}
+	return s
 }
