@@ -25,11 +25,9 @@ func (ext *ExtCommunity) IsRouteTarget() bool {
 	} else {
 		subType = *ext.SubType
 	}
-	//	if ext.SubType != nil {
 	if subType == 2 {
 		return true
 	}
-	//	}
 
 	return false
 }
@@ -326,7 +324,7 @@ func (ext *ExtCommunity) String() string {
 	}
 	f := extComm[ext.Type]
 	if f == nil {
-		s += "unknown="
+		s = "unknown="
 		s += fmt.Sprintf("Type: %d Subtype: %d Value: %s", ext.Type, subType, tools.MessageHex(ext.Value))
 		return s
 	}
