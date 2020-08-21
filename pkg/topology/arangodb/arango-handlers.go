@@ -11,6 +11,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/srv6"
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -43,7 +44,12 @@ type L3VPNRT struct {
 	Prefixes map[string]string `json:"Prefixes,omitempty"`
 }
 
+var sem = semaphore.NewWeighted(int64(1))
+
 func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
+	ctx := context.TODO()
+	sem.Acquire(ctx, 1)
+	defer sem.Release(1)
 	// adb := a.GetArangoDBInterface()
 	if obj == nil {
 		glog.Warning("L3 VPN Prefix object is nil")
@@ -70,7 +76,6 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 	var prc driver.Collection
 	var rtc driver.Collection
 	var err error
-	ctx := context.TODO()
 	if prc, err = a.ensureCollection(l3prefix); err != nil {
 		glog.Errorf("failed to ensure for collection %s with error: %+v", l3prefix, err)
 		return
