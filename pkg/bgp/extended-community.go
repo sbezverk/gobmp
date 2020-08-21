@@ -307,11 +307,12 @@ func type40(subType uint8, value []byte) string {
 
 // extComm defines a map with Extended Community as a key, it return a function to process a type specific sub type.
 var extComm = map[uint8]func(uint8, []byte) string{
-	0x0: type0,
-	0x1: type1,
-	0x2: type2,
-	0x3: type3,
-	0x6: type6,
+	0x0:  type0,
+	0x1:  type1,
+	0x2:  type2,
+	0x3:  type3,
+	0x6:  type6,
+	0x40: type40,
 }
 
 func (ext *ExtCommunity) String() string {
