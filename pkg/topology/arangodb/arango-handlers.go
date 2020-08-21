@@ -110,6 +110,8 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 				glog.Errorf("failed to update the route target collection %s with reference to %s with error: %+v", rtc.Name(), k, err)
 				return
 			}
+			// All good, the document was updated and processRouteTargets succeeded, returning...
+			return
 		}
 		if _, err := prc.CreateDocument(ctx, r); err != nil {
 			glog.Errorf("failed to create document %s with error: %+v", k, err)

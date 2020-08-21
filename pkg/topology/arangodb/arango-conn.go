@@ -153,15 +153,17 @@ func (a *ArangoConn) checkCollection(name string) (driver.Collection, error) {
 	// Check if collection exists in the local store
 	if d, ok := a.collections.Check(name); ok {
 		// Collection exists in the local store, check if database has this collection
-		ok, err := a.db.CollectionExists(context.TODO(), name)
-		if err == nil && ok {
-			// Collection also exists in the database, returning drvier's Collection interface
-			return d, nil
-		}
+
+		//		ok, err := a.db.CollectionExists(context.TODO(), name)
+		//		if err == nil && ok {
+		// Collection also exists in the database, returning drvier's Collection interface
+		return d, nil
+		//		}
 		// In case of an error or the collection does not exist in return, removing collection for the local store
 		// for consistency
-		a.collections.Delete(name)
-		return nil, err
+
+		//		a.collections.Delete(name)
+		//		return nil, err
 	}
 
 	return nil, ErrCollectionNotFound

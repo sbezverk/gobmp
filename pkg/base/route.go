@@ -29,7 +29,7 @@ func UnmarshalRoutes(b []byte) ([]Route, error) {
 	if len(b) == 0 {
 		return nil, nil
 	}
-	glog.V(6).Infof("Routes Raw: %s", tools.MessageHex(b))
+	glog.V(5).Infof("Routes Raw: %s", tools.MessageHex(b))
 	for p := 0; p < len(b); {
 		route := Route{}
 		route.Length = b[p]
