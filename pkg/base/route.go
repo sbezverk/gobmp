@@ -37,6 +37,8 @@ func UnmarshalRoutes(b []byte) ([]Route, error) {
 		if b[p] == 0 && len(b) > 4 {
 			route.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
+			// Updating length
+			route.Length = b[p]
 		}
 		l := route.Length / 8
 		if route.Length%8 != 0 {
