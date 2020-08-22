@@ -79,6 +79,22 @@ func TestUnmarshalBaseNLRI(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "Panic_1",
+			input: []byte{0x00, 0x00, 0x00, 0x01, 0x18, 0x43, 0xd3, 0x35, 0x00, 0x00, 0x00, 0x01, 0x18, 0x2d, 0xa0, 0x00},
+			expect: []Route{
+				{
+					PathID: 1,
+					Length: 24,
+					Prefix: []byte{67, 211, 53},
+				},
+				{
+					PathID: 1,
+					Length: 24,
+					Prefix: []byte{45, 160, 0},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
