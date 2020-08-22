@@ -39,11 +39,8 @@ func (l *locker) Lock(key string) {
 		// Unlocking keys map so other go routine could access it
 		// Wait only if the key is already used, otherwise locked it and mark it as used.
 		if lock.used {
-			// glog.Infof("Locked key: %s", key)
-			//
 			lock.lock.Wait()
 		}
-		//lock.Lock()
 		lock.used = true
 		lock.Unlock()
 		return

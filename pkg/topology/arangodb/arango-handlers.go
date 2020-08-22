@@ -195,24 +195,21 @@ func processRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, i
 	rtr := &L3VPNRT{}
 	nctx := driver.WithWaitForSync(ctx)
 	if found {
-		// glog.Infof("route target: %s exists in rt collection %s", rt, rtc.Name())
 
 		mtx.Lock()
-		defer mtx.Unlock()
 		_, err := rtc.ReadDocument(nctx, rt, rtr)
-
+		mtx.Unlock()
 		if err != nil {
-			// glog.Errorf("read doc error: %+v", err)
 			return err
 		}
 		if _, ok := rtr.Prefixes[id]; ok {
 			return nil
 		}
-
+		mtx.Lock()
 		rtr.Prefixes[id] = key
 		_, err = rtc.UpdateDocument(nctx, rt, rtr)
+		mtx.Unlock()
 		if err != nil {
-			// glog.Errorf("update doc error: %+v", err)
 			return err
 		}
 		return nil
@@ -223,9 +220,7 @@ func processRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, i
 	rtr.Prefixes = map[string]string{
 		id: key,
 	}
-	// glog.V(5).Infof("route target: %s does not exist in rt collection %s id: %s", rt, rtc.Name(), rtr.ID)
 	if _, err := rtc.CreateDocument(nctx, rtr); err != nil {
-		// glog.Errorf("create doc error: %+v", err)
 		return err
 	}
 	return nil
