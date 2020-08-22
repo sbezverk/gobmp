@@ -1,8 +1,25 @@
 ---
+apiVersion: v1
+kind: Service
+spec:
+  ports:
+    - name: perf
+      port: 56768
+      protocol: TCP
+      targetPort: 56768
+  selector:
+    app: gobmp-topology
+  type: ClusterIP
+  externalIPs:
+    - 10.1.1.100
+metadata:
+  name: gobmp-topology
+  namespace: default
+---
 apiVersion: apps/v1
 kind: Deployment
 spec:
-  replicas: 1 
+  replicas: 1
   selector:
     matchLabels:
       app: gobmp-topology
@@ -13,23 +30,27 @@ spec:
     spec:
       containers:
         - args:
-          - --mock-database
-          - "false"
-          - --v
-          - "5"
-          - --message-server
-          - "kafka:9092"
-          - --database-server
-          - "http://arangodb.arangodb:28529"
-          - --database-name
-          - "jalapeno"
-          - --database-user
-          - "root"
-          - --database-pass
-          - "jalapeno"
+            - --mock-database
+            - "false"
+            - --v
+            - "5"
+            - --message-server
+            - "kafka:9092"
+            - --database-server
+            - "http://arangodb.arangodb:28529"
+            - --database-name
+            - "jalapeno"
+            - --database-user
+            - "root"
+            - --database-pass
+            - "jalapeno"
           image: docker.io/sbezverk/gobmp-topology:0.0.0
           imagePullPolicy: Always
           name: gobmp-topology
+          ports:
+            - containerPort: 56768
+              protocol: TCP
+              name: perf
 metadata:
   name: gobmp-topology
   namespace: default

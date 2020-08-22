@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"strconv"
@@ -14,6 +15,9 @@ import (
 	"github.com/sbezverk/gobmp/pkg/topology/mockdb"
 	"github.com/sbezverk/gobmp/pkg/topology/mockmessenger"
 	"github.com/sbezverk/gobmp/pkg/topology/processor"
+
+	"net/http"
+	_ "net/http/pprof"
 )
 
 var (
@@ -24,6 +28,7 @@ var (
 	dbName     string
 	dbUser     string
 	dbPass     string
+	perfPort   = 56768
 )
 
 func init() {
@@ -60,6 +65,12 @@ func setupSignalHandler() (stopCh <-chan struct{}) {
 func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
+
+	// Starting performance collecting http server
+	go func() {
+		glog.Infof("Starting performance debugging server on %d", perfPort)
+		glog.Info(http.ListenAndServe(fmt.Sprintf(":%d", perfPort), nil))
+	}()
 
 	var dbSrv dbclient.Srv
 	var err error
@@ -107,6 +118,7 @@ func main() {
 	} else {
 		msgSrv, _ = mockmessenger.NewMockMessenger(processorSrv.GetInterface())
 	}
+
 	msgSrv.Start()
 
 	stopCh := setupSignalHandler()

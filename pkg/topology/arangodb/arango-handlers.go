@@ -11,13 +11,15 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/srv6"
-	"golang.org/x/sync/semaphore"
+	"github.com/sbezverk/gobmp/pkg/topology/locker"
 )
 
 const (
 	l3prefix = "L3VPN_Prefix"
 	l3vpnrt  = "L3VPN_RT"
 )
+
+var lckr = locker.NewLocker()
 
 // L3VPNPrefix represents the database record structure for L3VPN Prefix collection
 type L3VPNPrefix struct {
@@ -44,12 +46,10 @@ type L3VPNRT struct {
 	Prefixes map[string]string `json:"Prefixes,omitempty"`
 }
 
-var sem = semaphore.NewWeighted(int64(1))
-
 func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 	ctx := context.TODO()
-	sem.Acquire(ctx, 1)
-	defer sem.Release(1)
+	//	sem.Acquire(ctx, 1)
+	//	defer sem.Release(1)
 	// adb := a.GetArangoDBInterface()
 	if obj == nil {
 		glog.Warning("L3 VPN Prefix object is nil")
@@ -89,24 +89,31 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 		glog.Errorf("failed to check for document %s with error: %+v", k, err)
 		return
 	}
-	var oldPrefix L3VPNPrefix
-	if ok {
-		_, err := prc.ReadDocument(ctx, k, &oldPrefix)
-		if err != nil {
-			glog.Errorf("failed to read existing document %s with error: %+v", k, err)
-			return
-		}
-	}
+	// var oldPrefix *L3VPNPrefix
+	//	if ok {
+	//		_, err := prc.ReadDocument(ctx, k, &oldPrefix)
+	//		if err != nil {
+	//			glog.Errorf("failed to read existing document %s with error: %+v", k, err)
+	//			return
+	//		}
+	//	}
 	switch obj.Action {
 	case "add":
 		if ok {
-			// Document by the key already exists, hence updating it
+			// Document by the key already exists, hence reading previous version of the document first
+			// and then updating it
+			var o L3VPNPrefix
+			_, err := prc.ReadDocument(ctx, k, &o)
+			if err != nil {
+				glog.Errorf("failed to read existing document %s with error: %+v", k, err)
+				return
+			}
 			if _, err := prc.UpdateDocument(ctx, k, r); err != nil {
 				glog.Errorf("failed to update document %s with error: %+v", k, err)
 				return
 			}
 			// Update route targets collection with references to the updated prefix
-			if err := processRouteTargets(ctx, rtc, &oldPrefix, r); err != nil {
+			if err := processRouteTargets(ctx, rtc, &o, r); err != nil {
 				glog.Errorf("failed to update the route target collection %s with reference to %s with error: %+v", rtc.Name(), k, err)
 				return
 			}
@@ -130,7 +137,7 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 				return
 			}
 			// Clean up route targets collection from references to the deleted prefix
-			if err := processRouteTargets(ctx, rtc, &oldPrefix, nil); err != nil {
+			if err := processRouteTargets(ctx, rtc, r, nil); err != nil {
 				glog.Errorf("failed to clean up the route target collection %s from references to %s with error: %+v", rtc.Name(), k, err)
 				return
 			}
@@ -166,46 +173,54 @@ func addPrefixRT(ctx context.Context, rtc driver.Collection, id, key string, ext
 			continue
 		}
 		rt := strings.TrimPrefix(ext, "rt=")
-		// glog.Infof("for prefix key: %s found route target: %s", key, rt)
-		found, err := rtc.DocumentExists(ctx, rt)
-		if err != nil {
+		if err := processRT(ctx, rtc, id, key, rt); err != nil {
 			return err
 		}
-		if found {
-			glog.Infof("route target: %s exists in rt collection %s", rt, rtc.Name())
-			rtr := &L3VPNRT{}
-			_, err := rtc.ReadDocument(ctx, rt, rtr)
-			if err != nil {
-				glog.Errorf("read doc error: %+v", err)
-				return err
-			}
-			if _, ok := rtr.Prefixes[id]; ok {
-				continue
-			}
 
-			rtr.Prefixes[id] = key
-			_, err = rtc.UpdateDocument(ctx, rt, rtr)
-			if err != nil {
-				glog.Errorf("update doc error: %+v", err)
-				return err
-			}
-			continue
-		}
-		rtr := &L3VPNRT{
-			ID:  rtc.Name() + "/" + rt,
-			Key: rt,
-			RT:  rt,
-			Prefixes: map[string]string{
-				id: key,
-			},
-		}
-		glog.V(5).Infof("route target: %s does not exist in rt collection %s id: %s", rt, rtc.Name(), rtr.ID)
-		if _, err := rtc.CreateDocument(ctx, rtr); err != nil {
-			glog.Errorf("create doc error: %+v", err)
-			return err
-		}
 	}
 
+	return nil
+}
+
+func processRT(ctx context.Context, rtc driver.Collection, id, key, rt string) error {
+	lckr.Lock(rt)
+	defer lckr.Unlock(rt)
+	found, err := rtc.DocumentExists(ctx, rt)
+	if err != nil {
+		return err
+	}
+	rtr := &L3VPNRT{}
+	if found {
+		glog.Infof("route target: %s exists in rt collection %s", rt, rtc.Name())
+
+		_, err := rtc.ReadDocument(ctx, rt, rtr)
+		if err != nil {
+			glog.Errorf("read doc error: %+v", err)
+			return err
+		}
+		if _, ok := rtr.Prefixes[id]; ok {
+			return nil
+		}
+
+		rtr.Prefixes[id] = key
+		_, err = rtc.UpdateDocument(ctx, rt, rtr)
+		if err != nil {
+			glog.Errorf("update doc error: %+v", err)
+			return err
+		}
+		return nil
+	}
+	rtr.ID = rtc.Name() + "/" + rt
+	rtr.Key = rt
+	rtr.RT = rt
+	rtr.Prefixes = map[string]string{
+		id: key,
+	}
+	glog.V(5).Infof("route target: %s does not exist in rt collection %s id: %s", rt, rtc.Name(), rtr.ID)
+	if _, err := rtc.CreateDocument(ctx, rtr); err != nil {
+		glog.Errorf("create doc error: %+v", err)
+		return err
+	}
 	return nil
 }
 
