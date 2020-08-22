@@ -19,7 +19,7 @@ const (
 	l3vpnrt  = "L3VPN_RT"
 )
 
-var lckr = locker.NewLocker()
+var mtx = sync.Mutex{}
 
 // L3VPNPrefix represents the database record structure for L3VPN Prefix collection
 type L3VPNPrefix struct {
@@ -113,7 +113,7 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 				return
 			}
 			// Update route targets collection with references to the updated prefix
-			if err := processRouteTargets(ctx, rtc, &o, r); err != nil {
+			if err := processRouteTargets(ctx, a.lckr, rtc, &o, r); err != nil {
 				glog.Errorf("failed to update the route target collection %s with reference to %s with error: %+v", rtc.Name(), k, err)
 				return
 			}
@@ -125,7 +125,7 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 			return
 		}
 		// Add route targets collection with references to the added prefix
-		if err := processRouteTargets(ctx, rtc, nil, r); err != nil {
+		if err := processRouteTargets(ctx, a.lckr, rtc, nil, r); err != nil {
 			glog.Errorf("failed to add to the route target collection %s references for %s with error: %+v", rtc.Name(), k, err)
 			return
 		}
@@ -137,7 +137,7 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 				return
 			}
 			// Clean up route targets collection from references to the deleted prefix
-			if err := processRouteTargets(ctx, rtc, r, nil); err != nil {
+			if err := processRouteTargets(ctx, a.lckr, rtc, r, nil); err != nil {
 				glog.Errorf("failed to clean up the route target collection %s from references to %s with error: %+v", rtc.Name(), k, err)
 				return
 			}
@@ -145,20 +145,20 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 	}
 }
 
-func processRouteTargets(ctx context.Context, rtc driver.Collection, o, n *L3VPNPrefix) error {
+func processRouteTargets(ctx context.Context, lckr locker.Locker, rtc driver.Collection, o, n *L3VPNPrefix) error {
 	if o == nil && n == nil {
 		return nil
 	}
 	if o == nil && n != nil {
 		// New prefix was added, adding references to its route targets if any
-		if err := addPrefixRT(ctx, rtc, n.ID, n.Key, n.ExtComm); err != nil {
+		if err := addPrefixRT(ctx, lckr, rtc, n.ID, n.Key, n.ExtComm); err != nil {
 			return err
 		}
 		return nil
 	}
 	if o != nil && n == nil {
 		// Existing prefix was delete, remove references from all route targets if any
-		if err := deletePrefixRT(ctx, rtc, o.ID, o.Key, o.ExtComm); err != nil {
+		if err := deletePrefixRT(ctx, lckr, rtc, o.ID, o.Key, o.ExtComm); err != nil {
 			return err
 		}
 		return nil
@@ -167,13 +167,13 @@ func processRouteTargets(ctx context.Context, rtc driver.Collection, o, n *L3VPN
 	return nil
 }
 
-func addPrefixRT(ctx context.Context, rtc driver.Collection, id, key string, extComm []string) error {
+func addPrefixRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, id, key string, extComm []string) error {
 	for _, ext := range extComm {
 		if !strings.HasPrefix(ext, "rt=") {
 			continue
 		}
 		rt := strings.TrimPrefix(ext, "rt=")
-		if err := processRT(ctx, rtc, id, key, rt); err != nil {
+		if err := processRT(ctx, lckr, rtc, id, key, rt); err != nil {
 			return err
 		}
 
@@ -182,20 +182,27 @@ func addPrefixRT(ctx context.Context, rtc driver.Collection, id, key string, ext
 	return nil
 }
 
-func processRT(ctx context.Context, rtc driver.Collection, id, key, rt string) error {
+func processRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, id, key, rt string) error {
 	lckr.Lock(rt)
-	defer lckr.Unlock(rt)
+	defer func() {
+		lckr.Unlock(rt)
+	}()
+
 	found, err := rtc.DocumentExists(ctx, rt)
 	if err != nil {
 		return err
 	}
 	rtr := &L3VPNRT{}
+	nctx := driver.WithWaitForSync(ctx)
 	if found {
-		glog.Infof("route target: %s exists in rt collection %s", rt, rtc.Name())
+		// glog.Infof("route target: %s exists in rt collection %s", rt, rtc.Name())
 
-		_, err := rtc.ReadDocument(ctx, rt, rtr)
+		mtx.Lock()
+		defer mtx.Unlock()
+		_, err := rtc.ReadDocument(nctx, rt, rtr)
+
 		if err != nil {
-			glog.Errorf("read doc error: %+v", err)
+			// glog.Errorf("read doc error: %+v", err)
 			return err
 		}
 		if _, ok := rtr.Prefixes[id]; ok {
@@ -203,9 +210,9 @@ func processRT(ctx context.Context, rtc driver.Collection, id, key, rt string) e
 		}
 
 		rtr.Prefixes[id] = key
-		_, err = rtc.UpdateDocument(ctx, rt, rtr)
+		_, err = rtc.UpdateDocument(nctx, rt, rtr)
 		if err != nil {
-			glog.Errorf("update doc error: %+v", err)
+			// glog.Errorf("update doc error: %+v", err)
 			return err
 		}
 		return nil
@@ -216,17 +223,15 @@ func processRT(ctx context.Context, rtc driver.Collection, id, key, rt string) e
 	rtr.Prefixes = map[string]string{
 		id: key,
 	}
-	glog.V(5).Infof("route target: %s does not exist in rt collection %s id: %s", rt, rtc.Name(), rtr.ID)
-	if _, err := rtc.CreateDocument(ctx, rtr); err != nil {
-		glog.Errorf("create doc error: %+v", err)
+	// glog.V(5).Infof("route target: %s does not exist in rt collection %s id: %s", rt, rtc.Name(), rtr.ID)
+	if _, err := rtc.CreateDocument(nctx, rtr); err != nil {
+		// glog.Errorf("create doc error: %+v", err)
 		return err
 	}
 	return nil
 }
 
-func deletePrefixRT(ctx context.Context, rtc driver.Collection, id, key string, extComm []string) error {
-	var mtx sync.Mutex
-	mtx.Lock()
+func deletePrefixRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, id, key string, extComm []string) error {
 	for _, ext := range extComm {
 		if !strings.HasPrefix(ext, "rt=") {
 			continue

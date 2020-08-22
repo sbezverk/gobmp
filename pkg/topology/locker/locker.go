@@ -1,7 +1,6 @@
 package locker
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -35,27 +34,26 @@ func (l *locker) Lock(key string) {
 	lock, ok := l.store[key]
 	l.mtx.Unlock()
 	if ok {
-		fmt.Printf("key exists: %s used: %t\n", key, lock.used)
+		lock.Lock()
+		// fmt.Printf("key exists: %s used: %t\n", key, lock.used)
 		// Unlocking keys map so other go routine could access it
 		// Wait only if the key is already used, otherwise locked it and mark it as used.
 		if lock.used {
-			fmt.Printf("key used: %s\n", key)
-			lock.Lock()
+			// glog.Infof("Locked key: %s", key)
+			//
 			lock.lock.Wait()
-			lock.used = true
-			lock.Unlock()
-		} else {
-			// lock.Lock()
-			lock.used = true
-			// lock.Unlock()
 		}
+		//lock.Lock()
+		lock.used = true
+		lock.Unlock()
 		return
 	}
 	l.mtx.Lock()
 	lock = newKey()
-	// lock.Lock()
+	lock.Lock()
 	lock.used = true
 	l.store[key] = lock
+	lock.Unlock()
 	l.mtx.Unlock()
 }
 

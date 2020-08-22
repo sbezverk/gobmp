@@ -8,12 +8,14 @@ import (
 	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/tools"
 	"github.com/sbezverk/gobmp/pkg/topology/dbclient"
+	"github.com/sbezverk/gobmp/pkg/topology/locker"
 )
 
 type arangoDB struct {
 	stop chan struct{}
 	dbclient.DB
 	*ArangoConn
+	lckr locker.Locker
 }
 
 // NewDBSrvClient returns an instance of a DB server client process
@@ -32,6 +34,7 @@ func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) 
 	}
 	arango := &arangoDB{
 		stop: make(chan struct{}),
+		lckr: locker.NewLocker(),
 	}
 	arango.DB = arango
 	arango.ArangoConn = arangoConn
