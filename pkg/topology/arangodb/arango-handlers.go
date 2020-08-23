@@ -2,7 +2,7 @@ package arangodb
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -48,9 +48,6 @@ type L3VPNRT struct {
 
 func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 	ctx := context.TODO()
-	//	sem.Acquire(ctx, 1)
-	//	defer sem.Release(1)
-	// adb := a.GetArangoDBInterface()
 	if obj == nil {
 		glog.Warning("L3 VPN Prefix object is nil")
 		return
@@ -89,17 +86,11 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 		glog.Errorf("failed to check for document %s with error: %+v", k, err)
 		return
 	}
-	// var oldPrefix *L3VPNPrefix
-	//	if ok {
-	//		_, err := prc.ReadDocument(ctx, k, &oldPrefix)
-	//		if err != nil {
-	//			glog.Errorf("failed to read existing document %s with error: %+v", k, err)
-	//			return
-	//		}
-	//	}
+
 	switch obj.Action {
 	case "add":
 		if ok {
+			glog.Infof("Add for existing prefix: %s", k)
 			// Document by the key already exists, hence reading previous version of the document first
 			// and then updating it
 			var o L3VPNPrefix
@@ -120,6 +111,7 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 			// All good, the document was updated and processRouteTargets succeeded, returning...
 			return
 		}
+		glog.Infof("Add for non-existing prefix: %s", k)
 		if _, err := prc.CreateDocument(ctx, r); err != nil {
 			glog.Errorf("failed to create document %s with error: %+v", k, err)
 			return
@@ -131,6 +123,7 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 		}
 	case "del":
 		if ok {
+			glog.Infof("Delete for existing prefix: %s", k)
 			// Document by the key exists, hence delete it
 			if _, err := prc.RemoveDocument(ctx, k); err != nil {
 				glog.Errorf("failed to delete document %s with error: %+v", k, err)
@@ -141,7 +134,9 @@ func (a *arangoDB) l3vpnHandler(obj *message.L3VPNPrefix) {
 				glog.Errorf("failed to clean up the route target collection %s from references to %s with error: %+v", rtc.Name(), k, err)
 				return
 			}
+			return
 		}
+		glog.Warningf("Delete for non-existing prefix: %s", k)
 	}
 }
 
@@ -173,7 +168,7 @@ func addPrefixRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection,
 			continue
 		}
 		rt := strings.TrimPrefix(ext, "rt=")
-		if err := processRT(ctx, lckr, rtc, id, key, rt); err != nil {
+		if err := processRTAdd(ctx, lckr, rtc, id, key, rt); err != nil {
 			return err
 		}
 
@@ -182,7 +177,22 @@ func addPrefixRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection,
 	return nil
 }
 
-func processRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, id, key, rt string) error {
+func deletePrefixRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, id, key string, extComm []string) error {
+	for _, ext := range extComm {
+		if !strings.HasPrefix(ext, "rt=") {
+			continue
+		}
+		rt := strings.TrimPrefix(ext, "rt=")
+		if err := processRTDel(ctx, lckr, rtc, id, key, rt); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func processRTAdd(ctx context.Context, lckr locker.Locker, rtc driver.Collection, id, key, rt string) error {
 	lckr.Lock(rt)
 	defer func() {
 		lckr.Unlock(rt)
@@ -226,47 +236,46 @@ func processRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, i
 	return nil
 }
 
-func deletePrefixRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, id, key string, extComm []string) error {
-	for _, ext := range extComm {
-		if !strings.HasPrefix(ext, "rt=") {
-			continue
-		}
-		rt := strings.TrimPrefix(ext, "rt=")
-		// glog.Infof("for prefix key: %s found route target: %s", key, rt)
-		found, err := rtc.DocumentExists(ctx, rt)
+func processRTDel(ctx context.Context, lckr locker.Locker, rtc driver.Collection, id, key, rt string) error {
+	lckr.Lock(rt)
+	defer func() {
+		lckr.Unlock(rt)
+	}()
+
+	found, err := rtc.DocumentExists(ctx, rt)
+	if err != nil {
+		return err
+	}
+	rtr := &L3VPNRT{}
+	nctx := driver.WithWaitForSync(ctx)
+	if found {
+		mtx.Lock()
+		_, err := rtc.ReadDocument(nctx, rt, rtr)
+		mtx.Unlock()
 		if err != nil {
 			return err
 		}
-		if found {
-			glog.Infof("route target: %s exists in rt collection %s", rt, rtc.Name())
-			rtr := &L3VPNRT{}
-			_, err := rtc.ReadDocument(ctx, rt, rtr)
+		if _, ok := rtr.Prefixes[id]; !ok {
+			return nil
+		}
+		delete(rtr.Prefixes, id)
+		// Check If route target document has any references to other prefixes, if no, then deleting
+		// Route Target document, otherwise updating it
+		if len(rtr.Prefixes) == 0 {
+			glog.Infof("RT with key %s has no more entries, deleting it...", rt)
+			mtx.Lock()
+			_, err := rtc.RemoveDocument(ctx, rt)
+			mtx.Unlock()
 			if err != nil {
-				glog.Errorf("read doc error: %+v", err)
+				return fmt.Errorf("failed to delete empty route target %s with error: %+v", rt, err)
 			}
-			if _, ok := rtr.Prefixes[id]; !ok {
-				continue
-			}
-			delete(rtr.Prefixes, id)
-			// Check If route target document has any references to other prefixes, if no, then deleting
-			// Route Target document, otherwise updating it
-			if len(rtr.Prefixes) == 0 {
-				_, err := rtc.RemoveDocument(ctx, rt)
-				if err != nil {
-					glog.Errorf("failed to delete empty route target %s with error: %+v", rt, err)
-				}
-				continue
-			}
-			b, err := json.Marshal(rtr)
-			if err != nil {
-				glog.Errorf("marshal error: %+v", err)
-				return err
-			}
-			glog.Infof("resulting RT record: %s", string(b))
-			if _, err := rtc.UpdateDocument(ctx, rt, rtr); err != nil {
-				glog.Errorf("update doc error: %+v", err)
-				return err
-			}
+			return nil
+		}
+		mtx.Lock()
+		_, err = rtc.UpdateDocument(nctx, rt, rtr)
+		mtx.Unlock()
+		if err != nil {
+			return err
 		}
 	}
 

@@ -13,13 +13,17 @@ spec:
             - "kafka:9092"
             - --msg-file
             - "/testdata/messages.json"
+            - --delay
+            - "60"
+            - --iterations
+            - "3"
           image: docker.io/sbezverk/gobmp-player:0.0.0
           imagePullPolicy: Always
           name: gobmp-player
           volumeMounts:
           - mountPath: /testdata/messages.json
             name: messages
-            subPath: messages.json
+            subPath: churn.json
       volumes:
       - name: messages
         hostPath:
