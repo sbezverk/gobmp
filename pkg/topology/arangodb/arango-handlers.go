@@ -159,6 +159,17 @@ func processRouteTargets(ctx context.Context, lckr locker.Locker, rtc driver.Col
 		return nil
 	}
 	// Existing prefix was updated, update route target references if any
+	toAdd, toDel := ExtCommGetDiff("rt=", o.ExtComm, n.ExtComm)
+	if len(toAdd) != 0 {
+		if err := addPrefixRT(ctx, lckr, rtc, n.ID, n.Key, toAdd); err != nil {
+			return err
+		}
+	}
+	if len(toDel) != 0 {
+		if err := deletePrefixRT(ctx, lckr, rtc, n.ID, n.Key, toDel); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -280,4 +291,42 @@ func processRTDel(ctx context.Context, lckr locker.Locker, rtc driver.Collection
 	}
 
 	return nil
+}
+
+// ExtCommGetDiff checks two sets of extended communities for differences and returns two slices.
+// First slice (toAdd) carries items which were not in the old but are in the new, second
+// slice carries items which were in old but absent in the new.
+// extCommType carries a prefix of a particular type of extended community,
+// see github.com/sbezverk/gobmp/pkg/bgp/extended-community.gp for definitions.
+func ExtCommGetDiff(extCommType string, old, new []string) ([]string, []string) {
+	toDel := diffSlice(extCommType, old, new)
+	toAdd := diffSlice(extCommType, new, old)
+
+	return toAdd, toDel
+}
+
+func diffSlice(prefix string, s1, s2 []string) []string {
+	diff := make([]string, 0)
+	for i, s1e := range s1 {
+		found := false
+		if !strings.HasPrefix(s1e, prefix) {
+			continue
+		}
+		// oe = strings.TrimPrefix(oe, extCommType)
+		for _, s2e := range s2 {
+			if !strings.HasPrefix(s2e, prefix) {
+				continue
+			}
+			// ne = strings.TrimPrefix(ne, extCommType)
+			if strings.Compare(s1e, s2e) == 0 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			diff = append(diff, s1[i])
+		}
+	}
+
+	return diff
 }
