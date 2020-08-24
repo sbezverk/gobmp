@@ -159,6 +159,7 @@ func processRouteTargets(ctx context.Context, lckr locker.Locker, rtc driver.Col
 		return nil
 	}
 	// Existing prefix was updated, update route target references if any
+
 	return nil
 }
 
@@ -205,7 +206,6 @@ func processRTAdd(ctx context.Context, lckr locker.Locker, rtc driver.Collection
 	rtr := &L3VPNRT{}
 	nctx := driver.WithWaitForSync(ctx)
 	if found {
-
 		mtx.Lock()
 		_, err := rtc.ReadDocument(nctx, rt, rtr)
 		mtx.Unlock()

@@ -62,7 +62,6 @@ func main() {
 	for i := 0; i < iterations; i++ {
 		start := time.Now()
 		for e := 0; e < len(msgs); e++ {
-			time.Sleep(time.Second * time.Duration(delay))
 			wg.Add(1)
 			go func(msg *filer.MsgOut) {
 				defer wg.Done()
@@ -71,6 +70,8 @@ func main() {
 				}
 			}(msgs[e])
 			records++
+			// If delay was specified in the input parameters, wait for n-seconds before sending next message.
+			time.Sleep(time.Second * time.Duration(delay))
 		}
 		wg.Wait()
 		glog.Infof("%3f seconds took to process %d records", time.Now().Sub(start).Seconds(), records)
