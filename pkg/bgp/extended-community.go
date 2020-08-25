@@ -88,19 +88,19 @@ func UnmarshalBGPExtCommunity(b []byte) ([]ExtCommunity, error) {
 // 0x08	BGP Data Collection	[RFC4384]
 // 0x09	Source AS	[RFC6514]
 // 0x0a	L2VPN Identifier	[RFC6074]
-// 0x10	Cisco VPN-Distinguisher	[Eric_Rosen]	2012-04-10
-// 0x13	Route-Target Record	[draft-ietf-bess-service-chaining]	2016-08-29
-// 0x80	Virtual-Network Identifier Extended Community	[Manju_Ramesh]	2019-06-19
+// 0x10	Cisco VPN-Distinguisher	[Eric_Rosen]
+// 0x13	Route-Target Record	[draft-ietf-bess-service-chaining]
+// 0x80	Virtual-Network Identifier Extended Community	[Manju_Ramesh]
 var transAS2SubTypes = map[uint8]string{
-	0x2:  "rt=",
-	0x3:  "ro=",
-	0x5:  "odi=",
-	0x8:  "bdc=",
-	0x9:  "sas=",
-	0x0a: "l2i=",
-	0x10: "cvd=",
-	0x13: "rtr=",
-	0x80: "vni=",
+	0x2:  ECPRouteTarget,
+	0x3:  ECPRouteOrigin,
+	0x5:  ECPOSPFDomainID,
+	0x8:  ECPBGPDataCollection,
+	0x9:  ECPSourceAS,
+	0x0a: ECPL2VPNID,
+	0x10: ECPCiscoVPNDistinguisher,
+	0x13: ECPRouteTargetRecord,
+	0x80: ECPVirtualNetworkID,
 }
 
 // Transitive IPv4-Address-Specific Extended Community Sub-Types
@@ -110,25 +110,25 @@ var transAS2SubTypes = map[uint8]string{
 // 0x07	OSPF Route ID	[RFC4577]
 // 0x0a	L2VPN Identifier	[RFC6074]
 // 0x0b	VRF Route Import	[RFC6514]
-// 0x0c	Flow-spec Redirect to IPv4	[draft-ietf-idr-flowspec-redirect]	2016-03-22
-// 0x10	Cisco VPN-Distinguisher	[Eric_Rosen]	2012-04-10
-// 0x12	Inter-Area P2MP Segmented Next-Hop	[RFC7524]	2014-01-08
-// 0x13	Route-Target Record	[draft-ietf-bess-service-chaining]	2016-08-29
-// 0x14	VRF-Recursive-Next-Hop-Extended-Community	[Dhananjaya_Rao]	2020-08-04
-// 0x20	MVPN SA RP-address Extended Community	[draft-zzhang-bess-mvpn-msdp-sa-interoperation]	2018-03-26
+// 0x0c	Flow-spec Redirect to IPv4	[draft-ietf-idr-flowspec-redirect]
+// 0x10	Cisco VPN-Distinguisher	[Eric_Rosen]
+// 0x12	Inter-Area P2MP Segmented Next-Hop	[RFC7524]
+// 0x13	Route-Target Record	[draft-ietf-bess-service-chaining]
+// 0x14	VRF-Recursive-Next-Hop-Extended-Community	[Dhananjaya_Rao]
+// 0x20	MVPN SA RP-address Extended Community	[draft-zzhang-bess-mvpn-msdp-sa-interoperation]
 var transIPv4SubTypes = map[uint8]string{
-	0x2:  "rt=",
-	0x3:  "ro=",
-	0x5:  "odi=",
-	0x7:  "ori=",
-	0x0a: "l2i=",
-	0x0b: "vri=",
-	0x0c: "fsr=",
-	0x10: "cvd=",
-	0x12: "snh=",
-	0x13: "rtr=",
-	0x14: "rnh=",
-	0x20: "rpa=",
+	0x2:  ECPRouteTarget,
+	0x3:  ECPRouteOrigin,
+	0x5:  ECPOSPFDomainID,
+	0x7:  ECPOSPFRouteID,
+	0x0a: ECPL2VPNID,
+	0x0b: ECPVRFRouteImport,
+	0x0c: ECPFlowSpecRedirIPv4,
+	0x10: ECPCiscoVPNDistinguisher,
+	0x12: ECPInterAreaP2MPSegmentedNexyHop,
+	0x13: ECPRouteTargetRecord,
+	0x14: ECPVRFRecursiveNextHop,
+	0x20: ECPMVPNSARPAddress,
 }
 
 // Transitive Four-Octet AS-Specific Extended Community Sub-Types
@@ -138,90 +138,91 @@ var transIPv4SubTypes = map[uint8]string{
 // 0x05	OSPF Domain Identifier	[RFC4577]
 // 0x08	BGP Data Collection	[RFC4384]
 // 0x09	Source AS	[RFC6514]
-// 0x10	Cisco VPN Identifier	[Eric_Rosen]	2012-04-10
-// 0x13	Route-Target Record	[draft-ietf-bess-service-chaining]	2016-08-29
+// 0x10	Cisco VPN Identifier	[Eric_Rosen]
+// 0x13	Route-Target Record	[draft-ietf-bess-service-chaining]
 var transAS4SubTypes = map[uint8]string{
-	0x2:  "rt=",
-	0x3:  "ro=",
-	0x4:  "deprecated=",
-	0x5:  "odi=",
-	0x8:  "bdc=",
-	0x9:  "sas=",
-	0x10: "cvd=",
-	0x13: "rtr=",
+	0x2:  ECPRouteTarget,
+	0x3:  ECPRouteOrigin,
+	0x4:  ECPGeneric,
+	0x5:  ECPOSPFDomainID,
+	0x8:  ECPBGPDataCollection,
+	0x9:  ECPSourceAS,
+	0x10: ECPCiscoVPNDistinguisher,
+	0x13: ECPRouteTargetRecord,
 }
 
 // Transitive Opaque Extended Community Sub-Types
-// 0x01	Cost Community	[draft-ietf-idr-custom-decision]	2014-07-15
-// 0x03	CP-ORF	[RFC7543]	2014-09-24
-// 0x04	Extranet Source Extended Community	[RFC7900]	2016-04-28
-// 0x05	Extranet Separation Extended Community	[RFC7900]	2016-04-28
+// 0x01	Cost Community	[draft-ietf-idr-custom-decision]
+// 0x03	CP-ORF	[RFC7543]
+// 0x04	Extranet Source Extended Community	[RFC7900]
+// 0x05	Extranet Separation Extended Community	[RFC7900]
 // 0x06	OSPF Route Type	[RFC4577]
-// 0x07	Additional PMSI Tunnel Attribute Flags	[RFC7902]	2016-05-12
-// 0x08	Context Label Space ID Extended Community	[draft-ietf-bess-mvpn-evpn-aggregation-label]	2019-01-23
+// 0x07	Additional PMSI Tunnel Attribute Flags	[RFC7902]
+// 0x08	Context Label Space ID Extended Community	[draft-ietf-bess-mvpn-evpn-aggregation-label]
 // 0x0b	Color Extended Community	[RFC5512]
 // 0x0c	Encapsulation Extended Community	[RFC5512]
-// 0x0d	Default Gateway	[Yakov_Rekhter]	2012-07-10
-// 0x0e	Point-to-Point-to-Multipoint (PPMP) Label	[Rishabh_Parekh]	2016-01-19
-// 0x14	Consistent Hash Sort Order	[draft-ietf-bess-service-chaining]	2016-05-11
-// 0xaa	LoadBalance	[draft-ietf-bess-service-chaining]	2017-11-01
+// 0x0d	Default Gateway	[Yakov_Rekhter]
+// 0x0e	Point-to-Point-to-Multipoint (PPMP) Label	[Rishabh_Parekh]
+// 0x14	Consistent Hash Sort Order	[draft-ietf-bess-service-chaining]
+// 0xaa	LoadBalance	[draft-ietf-bess-service-chaining]
 var transOpaqueSubTypes = map[uint8]string{
-	0x2:  "cost=",
-	0x3:  "cporf=",
-	0x4:  "esrc=",
-	0x5:  "esep=",
-	0x6:  "ort=",
-	0x7:  "taf=",
-	0x8:  "cls=",
-	0xb:  "color=",
-	0xc:  "encap=",
-	0xe:  "dgw=",
-	0x14: "chso=",
-	0xaa: "lb=",
+	0x1:  ECPCost,
+	0x3:  ECPCPORF,
+	0x4:  ECPExtranetSource,
+	0x5:  ECPExtranetSeparation,
+	0x6:  ECPOSPFRouteType,
+	0x7:  ECPAdditionalPMSITunnelAttributeFlags,
+	0x8:  ECPContextLabelSpaceID,
+	0xb:  ECPColor,
+	0xc:  ECPEncapsulation,
+	0xd:  ECPDefaultGateway,
+	0xe:  ECPPointToPointToMultipoint,
+	0x14: ECPConsistentHashSortOrder,
+	0xaa: ECPLoadBalance,
 }
 
 // EVPN Extended Community Sub-Types
-// 0x00	MAC Mobility	[RFC7432]	2012-07-11
-// 0x01	ESI Label	[RFC7432]	2012-07-11
-// 0x02	ES-Import Route Target	[RFC7432]	2012-07-11
-// 0x03	EVPN Router’s MAC Extended Community	[draft-sajassi-l2vpn-evpn-inter-subnet-forwarding]	2014-09-23
-// 0x04	EVPN Layer 2 Attributes	[RFC8214]	2016-05-11
-// 0x05	E-Tree Extended Community	[RFC8317]	2016-05-11
-// 0x06	DF Election Extended Community	[RFC8584]	2016-05-11
-// 0x07	I-SID Extended Community	[draft-sajassi-bess-evpn-virtual-eth-segment]	2016-05-11
-// 0x08	ND Extended Community	[draft-snr-bess-evpn-na-flags]	2017-01-10
-// 0x09	Multicast Flags Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]	2017-11-06
-// 0x0A	EVI-RT Type 0 Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]	2017-11-06
-// 0x0B	EVI-RT Type 1 Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]	2018-06-06
-// 0x0C	EVI-RT Type 2 Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]	2018-06-06
-// 0x0D	EVI-RT Type 3 Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]	2018-06-26
-// 0x0E	EVPN Attachment Circuit Extended Community	[draft-sajassi-bess-evpn-ac-aware-bundling]	2019-01-23
-// 0x0F	Service Carving Timestamp	[draft-ietf-bess-evpn-fast-df-recovery-01]	2020-05-29
+// 0x00	MAC Mobility	[RFC7432]
+// 0x01	ESI Label	[RFC7432]
+// 0x02	ES-Import Route Target	[RFC7432]
+// 0x03	EVPN Router’s MAC Extended Community	[draft-sajassi-l2vpn-evpn-inter-subnet-forwarding]
+// 0x04	EVPN Layer 2 Attributes	[RFC8214]
+// 0x05	E-Tree Extended Community	[RFC8317]
+// 0x06	DF Election Extended Community	[RFC8584]
+// 0x07	I-SID Extended Community	[draft-sajassi-bess-evpn-virtual-eth-segment]
+// 0x08	ND Extended Community	[draft-snr-bess-evpn-na-flags]
+// 0x09	Multicast Flags Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]
+// 0x0A	EVI-RT Type 0 Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]
+// 0x0B	EVI-RT Type 1 Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]
+// 0x0C	EVI-RT Type 2 Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]
+// 0x0D	EVI-RT Type 3 Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]
+// 0x0E	EVPN Attachment Circuit Extended Community	[draft-sajassi-bess-evpn-ac-aware-bundling]
+// 0x0F	Service Carving Timestamp	[draft-ietf-bess-evpn-fast-df-recovery-01]
 var evpnSubTypes = map[uint8]string{
-	0x0: "macmob=",
-	0x1: "esi-l=",
-	0x2: "es-irt=",
-	0x3: "rmac=",
-	0x4: "l2attr=",
-	0x5: "e-tree=",
-	0x6: "df-elect=",
-	0x7: "i-sid=",
-	0x8: "nd=",
-	0x9: "mflag=",
-	0xa: "evi-rt0=",
-	0xb: "evi-rt1=",
-	0xc: "evi-rt2=",
-	0xd: "evi-rt3=",
-	0xe: "ac=",
-	0xf: "sct=",
+	0x0: ECPMACMobility,
+	0x1: ECPESILabel,
+	0x2: ECPESImportRouteTarget,
+	0x3: ECPEVPNRouterMAC,
+	0x4: ECPEVPNLayer2Attributes,
+	0x5: ECPETree,
+	0x6: ECPDFElection,
+	0x7: ECPISID,
+	0x8: ECPND,
+	0x9: ECPMulticastFlags,
+	0xa: ECPEVIRTType0,
+	0xb: ECPEVIRTType1,
+	0xc: ECPEVIRTType2,
+	0xd: ECPEVIRTType3,
+	0xe: ECPEVPNAttachmentCircuit,
+	0xf: ECPServiceCarvingTimestamp,
 }
 
 // Non-Transitive Two-Octet AS-Specific Extended Community Sub-Types
 // 0x04	Link Bandwidth Extended Community	[draft-ietf-idr-link-bandwidth-00]
-// 0x80	Virtual-Network Identifier Extended Community	[draft-drao-bgp-l3vpn-virtual-network-overlays]	2015-09-29
+// 0x80	Virtual-Network Identifier Extended Community	[draft-drao-bgp-l3vpn-virtual-network-overlays]
 var nonTransAS2SubTypes = map[uint8]string{
-	0x4:  "link-bw=",
-	0x80: "vni=",
+	0x4:  ECPLinkBandwidth,
+	0x80: ECPVNIID,
 }
 
 func getSubType(m map[uint8]string, subType uint8) string {
