@@ -9,6 +9,7 @@ import (
 
 	driver "github.com/arangodb/go-driver"
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 	"github.com/sbezverk/gobmp/pkg/topology/locker"
@@ -159,7 +160,7 @@ func processRouteTargets(ctx context.Context, lckr locker.Locker, rtc driver.Col
 		return nil
 	}
 	// Existing prefix was updated, update route target references if any
-	toAdd, toDel := ExtCommGetDiff("rt=", o.ExtComm, n.ExtComm)
+	toAdd, toDel := ExtCommGetDiff(bgp.ECPRouteTarget, o.ExtComm, n.ExtComm)
 	if len(toAdd) != 0 {
 		if err := addPrefixRT(ctx, lckr, rtc, n.ID, n.Key, toAdd); err != nil {
 			return err
@@ -176,10 +177,10 @@ func processRouteTargets(ctx context.Context, lckr locker.Locker, rtc driver.Col
 
 func addPrefixRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, id, key string, extComm []string) error {
 	for _, ext := range extComm {
-		if !strings.HasPrefix(ext, "rt=") {
+		if !strings.HasPrefix(ext, bgp.ECPRouteTarget) {
 			continue
 		}
-		rt := strings.TrimPrefix(ext, "rt=")
+		rt := strings.TrimPrefix(ext, bgp.ECPRouteTarget)
 		if err := processRTAdd(ctx, lckr, rtc, id, key, rt); err != nil {
 			return err
 		}
@@ -191,10 +192,10 @@ func addPrefixRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection,
 
 func deletePrefixRT(ctx context.Context, lckr locker.Locker, rtc driver.Collection, id, key string, extComm []string) error {
 	for _, ext := range extComm {
-		if !strings.HasPrefix(ext, "rt=") {
+		if !strings.HasPrefix(ext, bgp.ECPRouteTarget) {
 			continue
 		}
-		rt := strings.TrimPrefix(ext, "rt=")
+		rt := strings.TrimPrefix(ext, bgp.ECPRouteTarget)
 		if err := processRTDel(ctx, lckr, rtc, id, key, rt); err != nil {
 			return err
 		}
