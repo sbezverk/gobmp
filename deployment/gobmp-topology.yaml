@@ -8,12 +8,12 @@ spec:
       protocol: TCP
       targetPort: 56768
   selector:
-    app: gobmp-topology
+    app: l3vpn-topology
   type: ClusterIP
   externalIPs:
     - 10.1.1.100
 metadata:
-  name: gobmp-topology
+  name: l3vpn-topology
   namespace: default
 ---
 apiVersion: apps/v1
@@ -22,11 +22,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: gobmp-topology
+      app: l3vpn-topology
   template:
     metadata:
       labels:
-        app: gobmp-topology
+        app: l3vpn-topology
     spec:
       containers:
         - args:
@@ -52,5 +52,5 @@ spec:
               protocol: TCP
               name: perf
 metadata:
-  name: gobmp-topology
+  name: l3vpn-topology
   namespace: default
