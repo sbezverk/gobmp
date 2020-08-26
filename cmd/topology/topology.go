@@ -21,14 +21,16 @@ import (
 )
 
 var (
-	msgSrvAddr string
-	dbSrvAddr  string
-	mockDB     string
-	mockMsg    string
-	dbName     string
-	dbUser     string
-	dbPass     string
-	perfPort   = 56768
+	msgSrvAddr  string
+	dbSrvAddr   string
+	mockDB      string
+	mockMsg     string
+	dbName      string
+	dbUser      string
+	dbPass      string
+	perfPort    = 56768
+	l3vpnPrefix string
+	l3vpnRT     string
 )
 
 func init() {
@@ -39,6 +41,8 @@ func init() {
 	flag.StringVar(&dbName, "database-name", "", "DB name")
 	flag.StringVar(&dbUser, "database-user", "", "DB User name")
 	flag.StringVar(&dbPass, "database-pass", "", "DB User's password")
+	flag.StringVar(&l3vpnPrefix, "l3vpn-prefix", "L3VPN_Prefix", "L3VPN Prefix collection name")
+	flag.StringVar(&l3vpnRT, "l3vpn-rt", "L3VPN_RT", "L3VPN RT collection name")
 }
 
 var (
@@ -81,7 +85,7 @@ func main() {
 		os.Exit(1)
 	}
 	if !isMockDB {
-		dbSrv, err = arangodb.NewDBSrvClient(dbSrvAddr, dbUser, dbPass, dbName)
+		dbSrv, err = arangodb.NewDBSrvClient(dbSrvAddr, dbUser, dbPass, dbName, l3vpnPrefix, l3vpnRT)
 		if err != nil {
 			glog.Errorf("failed to initialize databse client with error: %+v", err)
 			os.Exit(1)
