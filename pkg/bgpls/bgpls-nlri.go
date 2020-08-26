@@ -78,17 +78,29 @@ func (ls *NLRI) GetISISAreaID() string {
 			continue
 		}
 		for p := 0; p < len(tlv.Value); {
-			s += fmt.Sprintf("%02x.", tlv.Value[p])
-			s += fmt.Sprintf("%02x", tlv.Value[p+1])
-			s += fmt.Sprintf("%02x", tlv.Value[p+2])
-			p += 3
+			s += fmt.Sprintf("%02x", tlv.Value[p])
+			p++
+			if p >= len(tlv.Value) {
+				break
+			}
+			s += "."
+			s += fmt.Sprintf("%02x", tlv.Value[p])
+			p++
+			if p >= len(tlv.Value) {
+				break
+			}
+			s += fmt.Sprintf("%02x", tlv.Value[p])
+			p++
+			if p >= len(tlv.Value) {
+				break
+			}
 			if p < len(tlv.Value) {
 				s += ","
 			}
 		}
-		return s
 	}
-	return ""
+
+	return s
 }
 
 // GetLocalIPv4RouterID returns string with local Node IPv4 router ID

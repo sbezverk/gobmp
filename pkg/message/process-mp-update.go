@@ -138,7 +138,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
 				continue
 			}
-			if err := p.marshalAndPublish(&msg, bmp.LSPrefixMsg, []byte(msg.RouterHash), false); err != nil {
+			if err := p.marshalAndPublish(&msg, bmp.LSPrefixMsg, []byte(msg.RouterHash), true); err != nil {
 				glog.Errorf("failed to process LSPrefix message with error: %+v", err)
 				continue
 			}

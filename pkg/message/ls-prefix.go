@@ -32,7 +32,6 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	msg.PeerIP = ph.GetPeerAddrString()
 	msg.Protocol = prfx.GetPrefixProtocolID()
 	msg.LSID = prfx.GetPrefixLSID()
-	msg.OSPFAreaID = prfx.GetPrefixOSPFAreaID()
 	msg.LocalNodeHash = prfx.LocalNodeHash
 	msg.IGPRouterID = prfx.GetLocalIGPRouterID()
 	msg.IGPMetric = prfx.Prefix.GetPrefixMetric()
@@ -52,7 +51,16 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 			msg.RouterID = lsprefix.GetLocalIPv4RouterID()
 		}
 		msg.MTID = lsprefix.GetMTID()
-		msg.ISISAreaID = lsprefix.GetISISAreaID()
+		// switch prfx.ProtocolID {
+		// case base.ISISL1:
+		// 	fallthrough
+		// case base.ISISL2:
+		// 	msg.ISISAreaID = lsprefix.GetISISAreaID()
+		// case base.OSPFv2:
+		// 	fallthrough
+		// case base.OSPFv3:
+		// 	msg.OSPFAreaID = prfx.GetPrefixOSPFAreaID()
+		// }
 		msg.IGPMetric = lsprefix.GetIGPMetric()
 		if ps, err := lsprefix.GetLSPrefixSID(prfx.ProtocolID); err == nil {
 			msg.LSPrefixSID = ps
