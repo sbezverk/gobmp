@@ -7,22 +7,25 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/tools"
-	"github.com/sbezverk/gobmp/pkg/topology/database"
 	"github.com/sbezverk/gobmp/pkg/topology/dbclient"
+	"github.com/sbezverk/gobmp/pkg/topology/locker"
 )
 
 type arangoDB struct {
 	stop chan struct{}
 	dbclient.DB
-	*database.ArangoConn
+	*ArangoConn
+	lckr        locker.Locker
+	l3vpnPrefix string
+	l3vpnRT     string
 }
 
 // NewDBSrvClient returns an instance of a DB server client process
-func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) {
+func NewDBSrvClient(arangoSrv, user, pass, dbname, l3vpnPrefix, l3vpnRT string) (dbclient.Srv, error) {
 	if err := tools.URLAddrValidation(arangoSrv); err != nil {
 		return nil, err
 	}
-	arangoConn, err := database.NewArango(database.ArangoConfig{
+	arangoConn, err := NewArango(ArangoConfig{
 		URL:      arangoSrv,
 		User:     user,
 		Password: pass,
@@ -32,7 +35,10 @@ func NewDBSrvClient(arangoSrv, user, pass, dbname string) (dbclient.Srv, error) 
 		return nil, err
 	}
 	arango := &arangoDB{
-		stop: make(chan struct{}),
+		stop:        make(chan struct{}),
+		lckr:        locker.NewLocker(),
+		l3vpnPrefix: l3vpnPrefix,
+		l3vpnRT:     l3vpnRT,
 	}
 	arango.DB = arango
 	arango.ArangoConn = arangoConn
@@ -57,49 +63,50 @@ func (a *arangoDB) GetInterface() dbclient.DB {
 	return a.DB
 }
 
-func (a *arangoDB) GetArangoDBInterface() *database.ArangoConn {
+func (a *arangoDB) GetArangoDBInterface() *ArangoConn {
 	return a.ArangoConn
 }
 
 func (a *arangoDB) StoreMessage(msgType int, msg interface{}) error {
 	switch msgType {
-	case bmp.PeerStateChangeMsg:
-		p, ok := msg.(*message.PeerStateChange)
-		if !ok {
-			return fmt.Errorf("malformed PeerStateChange message")
-		}
-		// Remove after the corresponding handler is added
-		glog.Infof("Object: %+v", p)
-		// go a.peerChangeHandler(p)
-	case bmp.UnicastPrefixMsg:
-		un, ok := msg.(*message.UnicastPrefix)
-		if !ok {
-			return fmt.Errorf("malformed UnicastPrefix message")
-		}
-		// Remove after the corresponding handler is added
-		glog.Infof("Object: %+v", un)
-		// go a.unicastPrefixHandler(un)
-	case bmp.LSNodeMsg:
-		ln, ok := msg.(*message.LSNode)
-		if !ok {
-			return fmt.Errorf("malformed LSNode message")
-		}
-		// Remove after the corresponding handler is added
-		glog.Infof("Object: %+v", ln)
-		// go a.lsNodeHandler(ln)
-	case bmp.LSLinkMsg:
-		ll, ok := msg.(*message.LSLink)
-		if !ok {
-			return fmt.Errorf("malformed LSLink message")
-		}
-		// Remove after the corresponding handler is added
-		glog.Infof("Object: %+v", ll)
-		// go a.lsLinkHandler(ll)
+	// case bmp.PeerStateChangeMsg:
+	// 	_, ok := msg.(*message.PeerStateChange)
+	// 	if !ok {
+	// 		return fmt.Errorf("malformed PeerStateChange message")
+	// 	}
+	// 	// Remove after the corresponding handler is added
+	// 	// glog.Infof("Object: %+v", p)
+	// 	// go a.peerChangeHandler(p)
+	// case bmp.UnicastPrefixMsg:
+	// 	_, ok := msg.(*message.UnicastPrefix)
+	// 	if !ok {
+	// 		return fmt.Errorf("malformed UnicastPrefix message")
+	// 	}
+	// 	// Remove after the corresponding handler is added
+	// 	// glog.Infof("Object: %+v", un)
+	// 	// go a.unicastPrefixHandler(un)
+	// case bmp.LSNodeMsg:
+	// 	_, ok := msg.(*message.LSNode)
+	// 	if !ok {
+	// 		return fmt.Errorf("malformed LSNode message")
+	// 	}
+	// 	// Remove after the corresponding handler is added
+	// 	// glog.Infof("Object: %+v", ln)
+	// 	// go a.lsNodeHandler(ln)
+	// case bmp.LSLinkMsg:
+	// 	_, ok := msg.(*message.LSLink)
+	// 	if !ok {
+	// 		return fmt.Errorf("malformed LSLink message")
+	// 	}
+	// 	// Remove after the corresponding handler is added
+	// 	// glog.Infof("Object: %+v", ll)
+	// 	// go a.lsLinkHandler(ll)
 	case bmp.L3VPNMsg:
 		l3, ok := msg.(*message.L3VPNPrefix)
 		if !ok {
 			return fmt.Errorf("malformed L3VPN message")
 		}
+		glog.Infof("Object: %+v", l3)
 		go a.l3vpnHandler(l3)
 	}
 

@@ -1,5 +1,4 @@
 FROM scratch
 
-ADD ./testdata/messages.json /messages.json
 COPY ./bin/gobmp-player /gobmp-player
 ENTRYPOINT ["/gobmp-player"]

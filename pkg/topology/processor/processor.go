@@ -48,7 +48,7 @@ func NewProcessorSrv(client dbclient.DB) Srv {
 }
 
 func (p *processor) Start() error {
-	glog.Info("Starting Processor")
+	glog.Info("Starting L3VPN Topology Processor")
 	go p.msgProcessor()
 
 	return nil
