@@ -1,6 +1,8 @@
 package sr
 
 import (
+	"encoding/json"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -76,7 +78,21 @@ type isisFlags struct {
 }
 
 func (f *isisFlags) MarshalJSON() ([]byte, error) {
-	return nil, nil
+	return json.Marshal(struct {
+		R bool `json:"r_flag"`
+		N bool `json:"n_flag"`
+		P bool `json:"p_flag"`
+		E bool `json:"e_flag"`
+		V bool `json:"v_flag"`
+		L bool `json:"l_flag"`
+	}{
+		R: f.R,
+		N: f.N,
+		P: f.P,
+		E: f.E,
+		V: f.V,
+		L: f.L,
+	})
 }
 
 func unmarshalISISFlags(b byte) PrefixSIDFlags {
@@ -104,7 +120,19 @@ type ospfFlags struct {
 }
 
 func (f *ospfFlags) MarshalJSON() ([]byte, error) {
-	return nil, nil
+	return json.Marshal(struct {
+		NP bool `json:"np_flag"`
+		M  bool `json:"m_flag"`
+		E  bool `json:"e_flag"`
+		V  bool `json:"v_flag"`
+		L  bool `json:"l_flag"`
+	}{
+		NP: f.NP,
+		M:  f.M,
+		E:  f.E,
+		V:  f.V,
+		L:  f.L,
+	})
 }
 
 func unmarshalOSPFFlags(b byte) PrefixSIDFlags {
