@@ -12,7 +12,7 @@ import (
 // LinkNLRI defines Node NLRI onject
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type LinkNLRI struct {
-	ProtocolID     uint8
+	ProtocolID     ProtoID
 	Identifier     []byte
 	LocalNode      *NodeDescriptor
 	RemoteNode     *NodeDescriptor
@@ -40,7 +40,7 @@ func (l *LinkNLRI) GetAllAttribute() []uint16 {
 
 // GetLinkProtocolID returns a string representation of LinkNLRI ProtocolID field
 func (l *LinkNLRI) GetLinkProtocolID() string {
-	return tools.ProtocolIDString(l.ProtocolID)
+	return ProtocolIDString(l.ProtocolID)
 }
 
 // GetLinkLSID returns a value of Link Descriptor TLV BGP-LS Identifier
@@ -126,7 +126,7 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	}
 	l := LinkNLRI{}
 	p := 0
-	l.ProtocolID = b[p]
+	l.ProtocolID = ProtoID(b[p])
 	p++
 	// Skip 3 reserved bytes
 	//	p += 3

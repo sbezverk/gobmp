@@ -93,20 +93,19 @@ func (a *arangoDB) StoreMessage(msgType int, msg interface{}) error {
 	// 	// Remove after the corresponding handler is added
 	// 	// glog.Infof("Object: %+v", ln)
 	// 	// go a.lsNodeHandler(ln)
-	// case bmp.LSLinkMsg:
-	// 	_, ok := msg.(*message.LSLink)
-	// 	if !ok {
-	// 		return fmt.Errorf("malformed LSLink message")
-	// 	}
-	// 	// Remove after the corresponding handler is added
-	// 	// glog.Infof("Object: %+v", ll)
-	// 	// go a.lsLinkHandler(ll)
+	case bmp.LSPrefixMsg:
+		p, ok := msg.(*message.LSPrefix)
+		if !ok {
+			return fmt.Errorf("malformed LSPrefix message")
+		}
+		// Remove after the corresponding handler is added
+		glog.Infof("Object: %+v", *p)
 	case bmp.L3VPNMsg:
 		l3, ok := msg.(*message.L3VPNPrefix)
 		if !ok {
 			return fmt.Errorf("malformed L3VPN message")
 		}
-		glog.Infof("Object: %+v", l3)
+		glog.Infof("Object: %+v", *l3)
 		go a.l3vpnHandler(l3)
 	}
 

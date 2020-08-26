@@ -54,7 +54,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		msg.MTID = lsprefix.GetMTID()
 		msg.ISISAreaID = lsprefix.GetISISAreaID()
 		msg.IGPMetric = lsprefix.GetIGPMetric()
-		if ps, err := lsprefix.GetLSPrefixSID(); err == nil {
+		if ps, err := lsprefix.GetLSPrefixSID(prfx.ProtocolID); err == nil {
 			msg.LSPrefixSID = ps
 		}
 	}

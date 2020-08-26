@@ -27,7 +27,7 @@ container: gobmp
 	docker build -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile .
 
 topology-container: topology
-	docker build -t $(REGISTRY_NAME)/gobmp-topology:$(IMAGE_VERSION) -f ./build/Dockerfile.topology .
+	docker build -t $(REGISTRY_NAME)/l3vpn-topology:$(IMAGE_VERSION) -f ./build/Dockerfile.topology .
 
 player-container: player
 	docker build -t $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION) -f ./build/Dockerfile.player .
@@ -36,7 +36,7 @@ push: container
 	docker push $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION)
 
 topology-push: topology-container
-	docker push $(REGISTRY_NAME)/gobmp-topology:$(IMAGE_VERSION)
+	docker push $(REGISTRY_NAME)/l3vpn-topology:$(IMAGE_VERSION)
 
 player-push: player-container
 	docker push $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION)

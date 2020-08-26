@@ -230,13 +230,13 @@ func (ls *NLRI) GetNodeSRLocalBlock() *sr.LocalBlock {
 }
 
 // GetLSPrefixSID returns a string representation of Prefix SID TLV
-func (ls *NLRI) GetLSPrefixSID() ([]*sr.PrefixSIDTLV, error) {
+func (ls *NLRI) GetLSPrefixSID(protoID base.ProtoID) ([]*sr.PrefixSIDTLV, error) {
 	ps := make([]*sr.PrefixSIDTLV, 0)
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1158 {
 			continue
 		}
-		p, err := sr.UnmarshalPrefixSIDTLV(tlv.Value)
+		p, err := sr.UnmarshalPrefixSIDTLV(protoID, tlv.Value)
 		if err != nil {
 			return nil, err
 		}

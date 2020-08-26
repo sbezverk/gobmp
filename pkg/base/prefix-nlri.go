@@ -9,10 +9,28 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+// ProtoID defines a type for Protocol ID field
+type ProtoID uint8
+
+const (
+	// ISISL1 defines protocol id value for ISIS Level 1
+	ISISL1 ProtoID = 1
+	// ISISL2 defines protocol id value for ISIS Level 2
+	ISISL2 ProtoID = 2
+	// OSPFv2 defines protocol id value for OSPFv2
+	OSPFv2 ProtoID = 3
+	// Direct defines protocol id value for Directly sourced local information
+	Direct ProtoID = 4
+	// Static defines protocol id value for Statically configuredlocal information
+	Static ProtoID = 5
+	// OSPFv3 defines protocol id value for OSPFv3
+	OSPFv3 ProtoID = 6
+)
+
 // PrefixNLRI defines Prefix NLRI onject
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type PrefixNLRI struct {
-	ProtocolID    uint8
+	ProtocolID    ProtoID
 	Identifier    []byte
 	LocalNode     *NodeDescriptor
 	Prefix        *PrefixDescriptor
@@ -36,7 +54,7 @@ func (p *PrefixNLRI) GetAllAttribute() []uint16 {
 
 // GetPrefixProtocolID returns a string representation of Prefix NLRI ProtocolID field
 func (p *PrefixNLRI) GetPrefixProtocolID() string {
-	return tools.ProtocolIDString(p.ProtocolID)
+	return ProtocolIDString(p.ProtocolID)
 }
 
 // GetPrefixASN returns Autonomous System Number used to uniquely identify BGP-LS domain
@@ -74,7 +92,7 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 		IsIPv4: ipv4,
 	}
 	p := 0
-	pr.ProtocolID = b[p]
+	pr.ProtocolID = ProtoID(b[p])
 	p++
 	pr.Identifier = make([]byte, 8)
 	copy(pr.Identifier, b[p:p+8])
@@ -98,4 +116,26 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 	pr.Prefix = pn
 
 	return &pr, nil
+}
+
+// ProtocolIDString returns string with protocol deacription based on the id
+func ProtocolIDString(id ProtoID) string {
+	switch id {
+	case 1:
+		return "IS-IS Level 1"
+	case 2:
+		return "IS-IS Level 2"
+	case 3:
+		return "OSPFv2"
+	case 4:
+		return "Direct"
+	case 5:
+		return "Static configuration"
+	case 6:
+		return "OSPFv3"
+	case 7:
+		return "BGP"
+	default:
+		return "Unknown"
+	}
 }

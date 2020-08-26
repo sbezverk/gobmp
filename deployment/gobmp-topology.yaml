@@ -44,9 +44,9 @@ spec:
             - "root"
             - --database-pass
             - "jalapeno"
-          image: docker.io/sbezverk/gobmp-topology:0.0.0
+          image: docker.io/sbezverk/l3vpn-topology:0.0.0
           imagePullPolicy: Always
-          name: gobmp-topology
+          name: l3vpn-topology
           ports:
             - containerPort: 56768
               protocol: TCP
