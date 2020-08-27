@@ -43,7 +43,7 @@ spec:
       containers:
         - args:
             - --v
-            - "6"
+            - "5"
             - --kafka-server
             - "kafka:9092"
           image: docker.io/sbezverk/gobmp:wip

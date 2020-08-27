@@ -58,16 +58,6 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 			msg.RemoteRouterID = lslink.GetRemoteIPv4RouterID()
 		}
 		msg.MTID = lslink.GetMTID()
-		// switch link.ProtocolID {
-		// case base.ISISL1:
-		// 	fallthrough
-		// case base.ISISL2:
-		// 	msg.ISISAreaID = lslink.GetISISAreaID()
-		// case base.OSPFv2:
-		// 	fallthrough
-		// case base.OSPFv3:
-		// 	msg.OSPFAreaID = link.GetLinkOSPFAreaID(true)
-		// }
 		msg.LinkMSD = lslink.GetLinkMSD()
 		msg.IGPMetric = lslink.GetIGPMetric()
 		msg.TEDefaultMetric = lslink.GetTEDefaultMetric()

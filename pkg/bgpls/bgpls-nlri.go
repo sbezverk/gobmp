@@ -241,7 +241,7 @@ func (ls *NLRI) GetNodeSRLocalBlock() *sr.LocalBlock {
 	return nil
 }
 
-// GetLSPrefixSID returns a string representation of Prefix SID TLV
+// GetLSPrefixSID returns a slice of  Prefix SID TLV objects
 func (ls *NLRI) GetLSPrefixSID(protoID base.ProtoID) ([]*sr.PrefixSIDTLV, error) {
 	ps := make([]*sr.PrefixSIDTLV, 0)
 	for _, tlv := range ls.LS {
@@ -256,6 +256,17 @@ func (ls *NLRI) GetLSPrefixSID(protoID base.ProtoID) ([]*sr.PrefixSIDTLV, error)
 	}
 
 	return ps, nil
+}
+
+// GetLSPrefixAttrFlags returns a Prefix Attribute Flags interface
+func (ls *NLRI) GetLSPrefixAttrFlags(protoID base.ProtoID) (base.PrefixAttrFlags, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1170 {
+			continue
+		}
+		return base.UnmarshalPrefixAttrFlagsTLV(protoID, tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
 }
 
 // GetLSSRv6ENDXSID returns SRv6 END.X SID TLV
