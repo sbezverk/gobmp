@@ -11,7 +11,7 @@ import (
 // NodeNLRI defines Node NLRI onject
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type NodeNLRI struct {
-	ProtocolID uint8
+	ProtocolID ProtoID
 	Identifier []byte
 	LocalNode  *NodeDescriptor
 }
@@ -28,7 +28,7 @@ func (n *NodeNLRI) GetAllAttribute() []uint16 {
 
 // GetNodeProtocolID returns a string representation of NodeNLRI ProtocolID field
 func (n *NodeNLRI) GetNodeProtocolID() string {
-	return tools.ProtocolIDString(n.ProtocolID)
+	return ProtocolIDString(n.ProtocolID)
 }
 
 // GetNodeLSID returns a value of Node Descriptor TLV BGP-LS Identifier
@@ -59,7 +59,7 @@ func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
 	}
 	n := NodeNLRI{}
 	p := 0
-	n.ProtocolID = b[p]
+	n.ProtocolID = ProtoID(b[p])
 	p++
 
 	n.Identifier = make([]byte, 8)

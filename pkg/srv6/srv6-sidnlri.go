@@ -14,7 +14,7 @@ import (
 // SIDNLRI defines SRv6 SID NLRI onject
 // no RFC yet
 type SIDNLRI struct {
-	ProtocolID    uint8
+	ProtocolID    base.ProtoID
 	Identifier    []byte
 	LocalNode     *base.NodeDescriptor
 	SRv6SID       *SIDDescriptor
@@ -36,7 +36,7 @@ func (sr *SIDNLRI) GetAllAttribute() []uint16 {
 
 // GetSRv6SIDProtocolID returns a string representation of LinkNLRI ProtocolID field
 func (sr *SIDNLRI) GetSRv6SIDProtocolID() string {
-	return tools.ProtocolIDString(sr.ProtocolID)
+	return base.ProtocolIDString(sr.ProtocolID)
 }
 
 // GetSRv6SIDLSID returns a value of Local Node Descriptor TLV BGP-LS Identifier
@@ -84,7 +84,7 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 	}
 	sr := SIDNLRI{}
 	p := 0
-	sr.ProtocolID = b[p]
+	sr.ProtocolID = base.ProtoID(b[p])
 	p++
 	// Skip reserved bytes
 	//	p += 3

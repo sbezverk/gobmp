@@ -10,29 +10,28 @@ apiVersion: v1
 kind: Service
 spec:
   ports:
-   - name: 5000-tcp
-     nodePort: 30555
-     port: 5000
-     protocol: TCP
-     targetPort: 5000
-   - name: perf
-     nodePort: 30767
-     port: 56767
-     protocol: TCP
-     targetPort: 56767
+    - name: 5000-tcp
+      port: 5000
+      protocol: TCP
+      targetPort: 5000
+    - name: perf
+      port: 56767
+      protocol: TCP
+      targetPort: 56767
   selector:
     app: gobmp
-  type: NodePort
+  type: ClusterIP
+  externalIPs:
+    - 192.168.80.254
+    - 10.1.1.100
 metadata:
   name: gobmp
   namespace: default
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata:
-  name: gobmp
 spec:
-  replicas: 1 
+  replicas: 1
   selector:
     matchLabels:
       app: gobmp
@@ -43,20 +42,20 @@ spec:
     spec:
       containers:
         - args:
-          - --v
-          - "5"
-          - --kafka-server
-          - broker.jalapeno:9092
-          image: docker.io/sbezverk/gobmp:0.0.14
+            - --v
+            - "5"
+            - --kafka-server
+            - "kafka:9092"
+          image: docker.io/sbezverk/gobmp:wip
           imagePullPolicy: Always
           name: gobmp
           ports:
-          - containerPort: 5000
-            protocol: TCP
-            name: 5000-tcp
-          - containerPort: 56767
-            protocol: TCP
-            name: perf
+            - containerPort: 5000
+              protocol: TCP
+              name: 5000-tcp
+            - containerPort: 56767
+              protocol: TCP
+              name: perf
       volumes:
         - name: config-volume
           configMap:
@@ -64,4 +63,3 @@ spec:
 metadata:
   name: gobmp
   namespace: default
-

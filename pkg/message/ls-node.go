@@ -40,12 +40,21 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 	msg.IGPRouterID = node.GetNodeIGPRouterID()
 	msg.LSID = node.GetNodeLSID()
 	msg.ASN = node.GetNodeASN()
-	msg.OSPFAreaID = node.GetNodeOSPFAreaID()
 	lsnode, err := update.GetNLRI29()
 	if err == nil {
 		msg.Flags = lsnode.GetNodeFlags()
 		msg.Name = lsnode.GetNodeName()
 		msg.MTID = lsnode.GetMTID()
+		switch node.ProtocolID {
+		case base.ISISL1:
+			fallthrough
+		case base.ISISL2:
+			msg.ISISAreaID = lsnode.GetISISAreaID()
+		case base.OSPFv2:
+			fallthrough
+		case base.OSPFv3:
+			msg.OSPFAreaID = node.GetNodeOSPFAreaID()
+		}
 		msg.ISISAreaID = lsnode.GetISISAreaID()
 		if ph.FlagV {
 			msg.RouterID = lsnode.GetLocalIPv6RouterID()
