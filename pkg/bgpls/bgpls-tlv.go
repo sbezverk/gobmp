@@ -4,17 +4,15 @@ import (
 	"encoding/binary"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // TLV defines BGP-LS TLV object
 // https://tootlv.ietf.org/html/rfc7752#section-3.3
 type TLV struct {
-	Type       uint16
-	Length     uint16
-	Value      []byte
-	Capability *sr.Capability
+	Type   uint16
+	Length uint16
+	Value  []byte
 }
 
 // UnmarshalBGPLSTLV builds Collection of BGP-LS TLVs
