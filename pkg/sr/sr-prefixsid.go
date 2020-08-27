@@ -39,11 +39,11 @@ func UnmarshalPrefixSIDTLV(protoID base.ProtoID, b []byte) (*PrefixSIDTLV, error
 	case base.ISISL1:
 		fallthrough
 	case base.ISISL2:
-		psid.Flags = unmarshalISISFlags(b[p])
+		psid.Flags = UnmarshalISISFlags(b[p])
 	case base.OSPFv2:
 		fallthrough
 	case base.OSPFv3:
-		psid.Flags = unmarshalOSPFFlags(b[p])
+		psid.Flags = UnmarshalOSPFFlags(b[p])
 	}
 	p++
 	psid.Algorithm = b[p]
@@ -95,7 +95,7 @@ func (f *isisFlags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalISISFlags(b byte) PrefixSIDFlags {
+func UnmarshalISISFlags(b byte) PrefixSIDFlags {
 	f := &isisFlags{}
 	f.R = b&0x80 == 0x80
 	f.N = b&0x40 == 0x40
@@ -135,7 +135,7 @@ func (f *ospfFlags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalOSPFFlags(b byte) PrefixSIDFlags {
+func UnmarshalOSPFFlags(b byte) PrefixSIDFlags {
 	f := &ospfFlags{}
 	f.NP = b&0x40 == 0x40
 	f.M = b&0x20 == 0x20

@@ -200,6 +200,7 @@ type LSPrefix struct {
 	RouterID        string               `json:"router_id,omitempty"`
 	RoutingID       string               `json:"routing_id,omitempty"`
 	LSID            uint32               `json:"ls_id,omitempty"`
+	ProtocolID      base.ProtoID         `json:"protocol_id,omitempty"`
 	Protocol        string               `json:"protocol,omitempty"`
 	Nexthop         string               `json:"nexthop,omitempty"`
 	LocalNodeHash   string               `json:"local_node_hash,omitempty"`
