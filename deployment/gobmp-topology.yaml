@@ -44,7 +44,7 @@ spec:
             - "root"
             - --database-pass
             - "jalapeno"
-          image: docker.io/sbezverk/l3vpn-topology:0.0.0
+          image: docker.io/sbezverk/l3vpn-topology:wip
           imagePullPolicy: Always
           name: l3vpn-topology
           ports:

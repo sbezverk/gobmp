@@ -37,6 +37,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 	}
 	msg.Protocol = node.GetNodeProtocolID()
+	msg.ProtocolID = node.ProtocolID
 	msg.IGPRouterID = node.GetNodeIGPRouterID()
 	msg.LSID = node.GetNodeLSID()
 	msg.ASN = node.GetNodeASN()

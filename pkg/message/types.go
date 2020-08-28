@@ -90,6 +90,7 @@ type LSNode struct {
 	OSPFAreaID          string              `json:"ospf_area_id,omitempty"`
 	ISISAreaID          string              `json:"isis_area_id,omitempty"`
 	Protocol            string              `json:"protocol,omitempty"`
+	ProtocolID          base.ProtoID        `json:"protocol_id,omitempty"`
 	Flags               uint8               `json:"flags,omitempty"`
 	Nexthop             string              `json:"nexthop,omitempty"`
 	Name                string              `json:"name,omitempty"`

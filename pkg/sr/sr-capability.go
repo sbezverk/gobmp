@@ -42,6 +42,47 @@ func UnmarshalSRCapability(protoID base.ProtoID, b []byte) (*Capability, error) 
 	return &cap, nil
 }
 
+// BuildSRCapability builds SR Capability object from json.RawMessage
+func BuildSRCapability(protoID base.ProtoID, b json.RawMessage) (*Capability, error) {
+	cap := Capability{}
+	var f map[string]json.RawMessage
+	if err := json.Unmarshal(b, &f); err != nil {
+		return nil, err
+	}
+	if v, ok := f["sr_capability_flags"]; ok {
+		var fo map[string]json.RawMessage
+		if err := json.Unmarshal(v, &fo); err != nil {
+			return nil, err
+		}
+		switch protoID {
+		case base.ISISL1:
+			fallthrough
+		case base.ISISL2:
+			c, err := buildISISCapFlags(fo)
+			if err != nil {
+				return nil, err
+			}
+			cap.Flags = c
+		case base.OSPFv2:
+			fallthrough
+		case base.OSPFv3:
+			c, err := buildOSPFCapFlags(fo)
+			if err != nil {
+				return nil, err
+			}
+			cap.Flags = c
+		}
+	}
+	cap.TLV = make([]CapabilityTLV, 0)
+	if v, ok := f["sr_capability_tlv"]; ok {
+		if err := json.Unmarshal(v, &cap.TLV); err != nil {
+			return nil, err
+		}
+	}
+
+	return &cap, nil
+}
+
 // CapabilityFlags used for "duck typing", SR Capability Flags are different for different protocols,
 //  this interface will allow to integrate it in a common SR Capability structure.
 type CapabilityFlags interface {
@@ -80,6 +121,24 @@ func unmarshalISISCapFlags(b byte) CapabilityFlags {
 	return f
 }
 
+func buildISISCapFlags(fo map[string]json.RawMessage) (CapabilityFlags, error) {
+	f := &isisCapFlags{}
+	f.I = false
+	if v, ok := fo["i_flag"]; ok {
+		if err := json.Unmarshal(v, &f.I); err != nil {
+			return nil, err
+		}
+	}
+	f.V = false
+	if v, ok := fo["v_flag"]; ok {
+		if err := json.Unmarshal(v, &f.V); err != nil {
+			return nil, err
+		}
+	}
+
+	return f, nil
+}
+
 // ospfCapFlags currently non defined
 type ospfCapFlags struct {
 }
@@ -96,4 +155,10 @@ func unmarshalOSPFCapFlags(b byte) CapabilityFlags {
 	f := &ospfCapFlags{}
 
 	return f
+}
+
+func buildOSPFCapFlags(fo map[string]json.RawMessage) (CapabilityFlags, error) {
+	f := &ospfCapFlags{}
+
+	return f, nil
 }

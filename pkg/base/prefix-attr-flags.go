@@ -22,11 +22,32 @@ func UnmarshalPrefixAttrFlagsTLV(protoID ProtoID, b []byte) (PrefixAttrFlags, er
 	case ISISL1:
 		fallthrough
 	case ISISL2:
-		return UnmarshalISISFlags(b[0]), nil
+		return unmarshalISISFlags(b[0]), nil
 	case OSPFv2:
-		return UnmarshalOSPFv2Flags(b[0]), nil
+		return unmarshalOSPFv2Flags(b[0]), nil
 	case OSPFv3:
-		return UnmarshalOSPFv3Flags(b[0]), nil
+		return unmarshalOSPFv3Flags(b[0]), nil
+	default:
+		return nil, fmt.Errorf("unknown protocol id: %d", protoID)
+	}
+}
+
+// BuildPrefixAttrFlags builds Prefix attributes flags object from json RawMessage
+func BuildPrefixAttrFlags(protoID ProtoID, b json.RawMessage) (PrefixAttrFlags, error) {
+	var f map[string]json.RawMessage
+	if err := json.Unmarshal(b, &f); err != nil {
+		return nil, err
+	}
+
+	switch protoID {
+	case ISISL1:
+		fallthrough
+	case ISISL2:
+		return buildISISFlags(f)
+	case OSPFv2:
+		return buildOSPFv2Flags(f)
+	case OSPFv3:
+		return buildOSPFv3Flags(f)
 	default:
 		return nil, fmt.Errorf("unknown protocol id: %d", protoID)
 	}
@@ -54,13 +75,38 @@ func (f *isisFlags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func UnmarshalISISFlags(b byte) PrefixAttrFlags {
+func unmarshalISISFlags(b byte) PrefixAttrFlags {
 	f := &isisFlags{}
 	f.X = b&0x80 == 0x80
 	f.R = b&0x40 == 0x40
 	f.N = b&0x20 == 0x20
 
 	return f
+}
+
+func buildISISFlags(b map[string]json.RawMessage) (PrefixAttrFlags, error) {
+	f := &isisFlags{}
+
+	f.X = false
+	if v, ok := b["x_flag"]; ok {
+		if err := json.Unmarshal(v, &f.X); err != nil {
+			return nil, err
+		}
+	}
+	f.R = false
+	if v, ok := b["r_flag"]; ok {
+		if err := json.Unmarshal(v, &f.R); err != nil {
+			return nil, err
+		}
+	}
+	f.N = false
+	if v, ok := b["n_flag"]; ok {
+		if err := json.Unmarshal(v, &f.N); err != nil {
+			return nil, err
+		}
+	}
+
+	return f, nil
 }
 
 // 0x80 - A-Flag (Attach Flag)
@@ -80,12 +126,31 @@ func (f *ospfv2Flags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func UnmarshalOSPFv2Flags(b byte) PrefixAttrFlags {
+func unmarshalOSPFv2Flags(b byte) PrefixAttrFlags {
 	f := &ospfv2Flags{}
 	f.A = b&0x80 == 0x80
 	f.N = b&0x40 == 0x40
 
 	return f
+}
+
+func buildOSPFv2Flags(b map[string]json.RawMessage) (PrefixAttrFlags, error) {
+	f := &ospfv2Flags{}
+
+	f.A = false
+	if v, ok := b["a_flag"]; ok {
+		if err := json.Unmarshal(v, &f.A); err != nil {
+			return nil, err
+		}
+	}
+	f.N = false
+	if v, ok := b["n_flag"]; ok {
+		if err := json.Unmarshal(v, &f.N); err != nil {
+			return nil, err
+		}
+	}
+
+	return f, nil
 }
 
 //  0  1  2  3  4  5  6  7
@@ -119,7 +184,7 @@ func (f *ospfv3Flags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func UnmarshalOSPFv3Flags(b byte) PrefixAttrFlags {
+func unmarshalOSPFv3Flags(b byte) PrefixAttrFlags {
 	f := &ospfv3Flags{}
 	f.N = b&0x20 == 0x20
 	f.DN = b&0x10 == 0x10
@@ -129,4 +194,47 @@ func UnmarshalOSPFv3Flags(b byte) PrefixAttrFlags {
 	f.NU = b&0x01 == 0x01
 
 	return f
+}
+
+func buildOSPFv3Flags(b map[string]json.RawMessage) (PrefixAttrFlags, error) {
+	f := &ospfv3Flags{}
+
+	f.N = false
+	if v, ok := b["n_flag"]; ok {
+		if err := json.Unmarshal(v, &f.N); err != nil {
+			return nil, err
+		}
+	}
+	f.DN = false
+	if v, ok := b["dn_flag"]; ok {
+		if err := json.Unmarshal(v, &f.DN); err != nil {
+			return nil, err
+		}
+	}
+	f.P = false
+	if v, ok := b["p_flag"]; ok {
+		if err := json.Unmarshal(v, &f.P); err != nil {
+			return nil, err
+		}
+	}
+	f.X = false
+	if v, ok := b["x_flag"]; ok {
+		if err := json.Unmarshal(v, &f.X); err != nil {
+			return nil, err
+		}
+	}
+	f.LA = false
+	if v, ok := b["la_flag"]; ok {
+		if err := json.Unmarshal(v, &f.LA); err != nil {
+			return nil, err
+		}
+	}
+	f.NU = false
+	if v, ok := b["nu_flag"]; ok {
+		if err := json.Unmarshal(v, &f.NU); err != nil {
+			return nil, err
+		}
+	}
+
+	return f, nil
 }
