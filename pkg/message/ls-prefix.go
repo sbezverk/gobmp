@@ -30,6 +30,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
+	msg.ProtocolID = prfx.ProtocolID
 	msg.Protocol = prfx.GetPrefixProtocolID()
 	msg.LSID = prfx.GetPrefixLSID()
 	msg.LocalNodeHash = prfx.LocalNodeHash

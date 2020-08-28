@@ -57,6 +57,47 @@ func UnmarshalPrefixSIDTLV(protoID base.ProtoID, b []byte) (*PrefixSIDTLV, error
 	return &psid, nil
 }
 
+// BuildPrefixSID builds Prefix SID TLV Object from json map[string]json.RawMessage
+func BuildPrefixSID(protoID base.ProtoID, b map[string]json.RawMessage) (*PrefixSIDTLV, error) {
+	psid := PrefixSIDTLV{}
+	if v, ok := b["flags"]; ok {
+		var fo map[string]json.RawMessage
+		if err := json.Unmarshal(v, &fo); err != nil {
+			return nil, err
+		}
+		switch protoID {
+		case base.ISISL1:
+			fallthrough
+		case base.ISISL2:
+			f, err := buildISISFlags(fo)
+			if err != nil {
+				return nil, err
+			}
+			psid.Flags = f
+		case base.OSPFv2:
+			fallthrough
+		case base.OSPFv3:
+			f, err := buildOSPFFlags(fo)
+			if err != nil {
+				return nil, err
+			}
+			psid.Flags = f
+		}
+	}
+	if v, ok := b["algo"]; ok {
+		if err := json.Unmarshal(v, &psid.Algorithm); err != nil {
+			return nil, err
+		}
+	}
+	if v, ok := b["prefix_sid"]; ok {
+		if err := json.Unmarshal(v, &psid.SID); err != nil {
+			return nil, err
+		}
+	}
+
+	return &psid, nil
+}
+
 // PrefixSIDFlags used for "duck typing", PrefixSID Flags are different for different protocols,
 //  this interface will allow to integrate it in a common PrefixSID structure.
 type PrefixSIDFlags interface {
@@ -107,6 +148,48 @@ func unmarshalISISFlags(b byte) PrefixSIDFlags {
 	return f
 }
 
+func buildISISFlags(b map[string]json.RawMessage) (PrefixSIDFlags, error) {
+	f := &isisFlags{}
+	f.R = false
+	if v, ok := b["r_flag"]; ok {
+		if err := json.Unmarshal(v, &f.R); err != nil {
+			return nil, err
+		}
+	}
+	f.N = false
+	if v, ok := b["n_flag"]; ok {
+		if err := json.Unmarshal(v, &f.N); err != nil {
+			return nil, err
+		}
+	}
+	f.P = false
+	if v, ok := b["p_flag"]; ok {
+		if err := json.Unmarshal(v, &f.P); err != nil {
+			return nil, err
+		}
+	}
+	f.E = false
+	if v, ok := b["e_flag"]; ok {
+		if err := json.Unmarshal(v, &f.E); err != nil {
+			return nil, err
+		}
+	}
+	f.V = false
+	if v, ok := b["v_flag"]; ok {
+		if err := json.Unmarshal(v, &f.V); err != nil {
+			return nil, err
+		}
+	}
+	f.L = false
+	if v, ok := b["l_flag"]; ok {
+		if err := json.Unmarshal(v, &f.L); err != nil {
+			return nil, err
+		}
+	}
+
+	return f, nil
+}
+
 //   0  1  2  3  4  5  6  7
 // +--+--+--+--+--+--+--+--+
 // |  |NP|M |E |V |L |  |  |
@@ -144,4 +227,41 @@ func unmarshalOSPFFlags(b byte) PrefixSIDFlags {
 	f.L = b&0x4 == 0x4
 
 	return f
+}
+
+func buildOSPFFlags(b map[string]json.RawMessage) (PrefixSIDFlags, error) {
+	f := &ospfFlags{}
+
+	f.NP = false
+	if v, ok := b["np_flag"]; ok {
+		if err := json.Unmarshal(v, &f.NP); err != nil {
+			return nil, err
+		}
+	}
+	f.M = false
+	if v, ok := b["m_flag"]; ok {
+		if err := json.Unmarshal(v, &f.M); err != nil {
+			return nil, err
+		}
+	}
+	f.E = false
+	if v, ok := b["e_flag"]; ok {
+		if err := json.Unmarshal(v, &f.E); err != nil {
+			return nil, err
+		}
+	}
+	f.V = false
+	if v, ok := b["v_flag"]; ok {
+		if err := json.Unmarshal(v, &f.V); err != nil {
+			return nil, err
+		}
+	}
+	f.L = false
+	if v, ok := b["l_flag"]; ok {
+		if err := json.Unmarshal(v, &f.L); err != nil {
+			return nil, err
+		}
+	}
+
+	return f, nil
 }

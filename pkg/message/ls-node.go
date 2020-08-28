@@ -37,6 +37,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 	}
 	msg.Protocol = node.GetNodeProtocolID()
+	msg.ProtocolID = node.ProtocolID
 	msg.IGPRouterID = node.GetNodeIGPRouterID()
 	msg.LSID = node.GetNodeLSID()
 	msg.ASN = node.GetNodeASN()
@@ -62,7 +63,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 			msg.RouterID = lsnode.GetLocalIPv4RouterID()
 		}
 		msg.NodeMSD = lsnode.GetNodeMSD()
-		if cap, err := lsnode.GetNodeSRCapabilities(); err == nil {
+		if cap, err := lsnode.GetNodeSRCapabilities(node.ProtocolID); err == nil {
 			msg.SRCapabilities = cap
 		}
 		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
