@@ -12,6 +12,7 @@ import (
 //  this interface will allow to integrate it in a common PrefixAttributeFlags structure.
 type PrefixAttrFlags interface {
 	MarshalJSON() ([]byte, error)
+	ISISL1PrefixAttrFlags
 }
 
 // UnmarshalPrefixAttrFlagsTLV builds Prefix attributes flags object
@@ -51,6 +52,13 @@ func BuildPrefixAttrFlags(protoID ProtoID, b json.RawMessage) (PrefixAttrFlags, 
 	default:
 		return nil, fmt.Errorf("unknown protocol id: %d", protoID)
 	}
+}
+
+// ISISL1PrefixAttrFlags defines methods to test ISIS L1 prefix attribute flags
+type ISISL1PrefixAttrFlags interface {
+	IsX() bool
+	IsR() bool
+	IsN() bool
 }
 
 //  0 1 2 3 4 5 6 7...
