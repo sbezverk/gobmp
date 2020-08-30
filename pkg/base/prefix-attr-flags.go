@@ -22,11 +22,11 @@ func UnmarshalPrefixAttrFlagsTLV(protoID ProtoID, b []byte) (PrefixAttrFlags, er
 	case ISISL1:
 		fallthrough
 	case ISISL2:
-		return unmarshalISISFlags(b[0]), nil
+		return UnmarshalISISFlags(b[0]), nil
 	case OSPFv2:
-		return unmarshalOSPFv2Flags(b[0]), nil
+		return UnmarshalOSPFv2Flags(b[0]), nil
 	case OSPFv3:
-		return unmarshalOSPFv3Flags(b[0]), nil
+		return UnmarshalOSPFv3Flags(b[0]), nil
 	default:
 		return nil, fmt.Errorf("unknown protocol id: %d", protoID)
 	}
@@ -53,12 +53,14 @@ func BuildPrefixAttrFlags(protoID ProtoID, b json.RawMessage) (PrefixAttrFlags, 
 	}
 }
 
-// ISISL1PrefixAttrFlags defines methods to test ISIS L1 prefix attribute flags
-type ISISL1PrefixAttrFlags interface {
+// ISISPrefixAttrFlags defines methods to test ISIS L1 prefix attribute flags
+type ISISPrefixAttrFlags interface {
 	IsX() bool
 	IsR() bool
 	IsN() bool
 }
+
+var _ ISISPrefixAttrFlags = &isisFlags{}
 
 //  0 1 2 3 4 5 6 7...
 // +-+-+-+-+-+-+-+-+...
@@ -94,7 +96,8 @@ func (f *isisFlags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalISISFlags(b byte) PrefixAttrFlags {
+// UnmarshalISISFlags build ISIS Prefix Attribute Flags object
+func UnmarshalISISFlags(b byte) PrefixAttrFlags {
 	f := &isisFlags{}
 	f.X = b&0x80 == 0x80
 	f.R = b&0x40 == 0x40
@@ -134,6 +137,8 @@ type OSPFv2PrefixAttrFlags interface {
 	IsN() bool
 }
 
+var _ OSPFv2PrefixAttrFlags = &ospfv2Flags{}
+
 // 0x80 - A-Flag (Attach Flag)
 // 0x40 - N-Flag (Node Flag)
 type ospfv2Flags struct {
@@ -141,7 +146,7 @@ type ospfv2Flags struct {
 	N bool `json:"n_flag"`
 }
 
-func (f *ospfv2Flags) IsX() bool {
+func (f *ospfv2Flags) IsA() bool {
 	return f.A
 }
 
@@ -159,7 +164,8 @@ func (f *ospfv2Flags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalOSPFv2Flags(b byte) PrefixAttrFlags {
+// UnmarshalOSPFv2Flags build Prefix Attribute Flags object
+func UnmarshalOSPFv2Flags(b byte) PrefixAttrFlags {
 	f := &ospfv2Flags{}
 	f.A = b&0x80 == 0x80
 	f.N = b&0x40 == 0x40
@@ -195,6 +201,8 @@ type OSPFv3PrefixAttrFlags interface {
 	IsLA() bool
 	IsNU() bool
 }
+
+var _ OSPFv3PrefixAttrFlags = &ospfv3Flags{}
 
 //  0  1  2  3  4  5  6  7
 // +--+--+--+--+--+--+--+--+
@@ -251,7 +259,8 @@ func (f *ospfv3Flags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalOSPFv3Flags(b byte) PrefixAttrFlags {
+// UnmarshalOSPFv3Flags builds Prefix Attribute Flags object
+func UnmarshalOSPFv3Flags(b byte) PrefixAttrFlags {
 	f := &ospfv3Flags{}
 	f.N = b&0x20 == 0x20
 	f.DN = b&0x10 == 0x10
