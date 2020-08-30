@@ -18,7 +18,7 @@ func TestUnmarshalSRCapabilities(t *testing.T) {
 			name: "real data",
 			raw:  []byte{0x80, 0x00, 0x00, 0xfa, 0x00, 0x04, 0x89, 0x00, 0x03, 0x01, 0x86, 0xa0},
 			expected: &Capability{
-				Flags: unmarshalISISCapFlags(0x80),
+				Flags: UnmarshalISISCapFlags(0x80),
 				TLV: []CapabilityTLV{
 					{
 						Range: 64000,
