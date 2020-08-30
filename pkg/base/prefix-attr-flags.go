@@ -12,7 +12,6 @@ import (
 //  this interface will allow to integrate it in a common PrefixAttributeFlags structure.
 type PrefixAttrFlags interface {
 	MarshalJSON() ([]byte, error)
-	ISISL1PrefixAttrFlags
 }
 
 // UnmarshalPrefixAttrFlagsTLV builds Prefix attributes flags object
@@ -71,6 +70,18 @@ type isisFlags struct {
 	N bool `json:"n_flag"`
 }
 
+func (f *isisFlags) IsX() bool {
+	return f.X
+}
+
+func (f *isisFlags) IsR() bool {
+	return f.R
+}
+
+func (f *isisFlags) IsN() bool {
+	return f.N
+}
+
 func (f *isisFlags) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		X bool `json:"x_flag"`
@@ -117,11 +128,25 @@ func buildISISFlags(b map[string]json.RawMessage) (PrefixAttrFlags, error) {
 	return f, nil
 }
 
+// OSPFv2PrefixAttrFlags defines methods to test OSPFv2 prefix attribute flags
+type OSPFv2PrefixAttrFlags interface {
+	IsA() bool
+	IsN() bool
+}
+
 // 0x80 - A-Flag (Attach Flag)
 // 0x40 - N-Flag (Node Flag)
 type ospfv2Flags struct {
 	A bool `json:"a_flag"`
 	N bool `json:"n_flag"`
+}
+
+func (f *ospfv2Flags) IsX() bool {
+	return f.A
+}
+
+func (f *ospfv2Flags) IsN() bool {
+	return f.N
 }
 
 func (f *ospfv2Flags) MarshalJSON() ([]byte, error) {
@@ -161,6 +186,16 @@ func buildOSPFv2Flags(b map[string]json.RawMessage) (PrefixAttrFlags, error) {
 	return f, nil
 }
 
+// OSPFv3PrefixAttrFlags defines methods to test OSPFv3 prefix attribute flags
+type OSPFv3PrefixAttrFlags interface {
+	IsN() bool
+	IsDN() bool
+	IsP() bool
+	IsX() bool
+	IsLA() bool
+	IsNU() bool
+}
+
 //  0  1  2  3  4  5  6  7
 // +--+--+--+--+--+--+--+--+
 // |  |  | N|DN| P| x|LA|NU|
@@ -172,6 +207,30 @@ type ospfv3Flags struct {
 	X  bool `json:"x_flag"`
 	LA bool `json:"la_flag"`
 	NU bool `json:"nu_flag"`
+}
+
+func (f *ospfv3Flags) IsN() bool {
+	return f.N
+}
+
+func (f *ospfv3Flags) IsDN() bool {
+	return f.DN
+}
+
+func (f *ospfv3Flags) IsP() bool {
+	return f.P
+}
+
+func (f *ospfv3Flags) IsX() bool {
+	return f.X
+}
+
+func (f *ospfv3Flags) IsLA() bool {
+	return f.LA
+}
+
+func (f *ospfv3Flags) IsNU() bool {
+	return f.NU
 }
 
 func (f *ospfv3Flags) MarshalJSON() ([]byte, error) {
