@@ -75,14 +75,21 @@ func TestLSLinkRoundTrip(t *testing.T) {
 			name: "protocol_id_1",
 			original: &LSLink{
 				ProtocolID: 1,
+				LSAdjacencySID: []*sr.AdjacencySIDTLV{
+					{
+						Flags:  sr.UnmarshalAdjacencySIDISISFlags(0x80),
+						Weight: 1,
+						SID:    []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					},
+				},
 			},
 		},
-		{
-			name: "protocol_id_3",
-			original: &LSLink{
-				ProtocolID: 3,
-			},
-		},
+		// {
+		// 	name: "protocol_id_3",
+		// 	original: &LSLink{
+		// 		ProtocolID: 3,
+		// 	},
+		// },
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -95,7 +102,7 @@ func TestLSLinkRoundTrip(t *testing.T) {
 				t.Errorf("failed to unmarshal with error: %+v", err)
 			}
 			if !reflect.DeepEqual(tt.original, result) {
-				t.Error("original LSNode does not match resulting one")
+				t.Error("original LSLink does not match resulting one")
 			}
 			switch result.ProtocolID {
 			case base.ISISL1:

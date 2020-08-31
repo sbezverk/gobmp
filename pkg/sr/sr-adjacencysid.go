@@ -44,6 +44,47 @@ func UnmarshalAdjacencySIDTLV(protoID base.ProtoID, b []byte) (*AdjacencySIDTLV,
 	return &asid, nil
 }
 
+// BuildAdjacencySID builds Adjacency SID TLV Object from json map[string]json.RawMessage
+func BuildAdjacencySID(protoID base.ProtoID, b map[string]json.RawMessage) (*AdjacencySIDTLV, error) {
+	asid := &AdjacencySIDTLV{}
+	if v, ok := b["flags"]; ok {
+		var fo map[string]json.RawMessage
+		if err := json.Unmarshal(v, &fo); err != nil {
+			return nil, err
+		}
+		switch protoID {
+		case base.ISISL1:
+			fallthrough
+		case base.ISISL2:
+			f, err := buildAdjISISFlags(fo)
+			if err != nil {
+				return nil, err
+			}
+			asid.Flags = f
+			// case base.OSPFv2:
+			// 	fallthrough
+			// case base.OSPFv3:
+			// 	f, err := buildOSPFFlags(fo)
+			// 	if err != nil {
+			// 		return nil, err
+			// 	}
+			// 	psid.Flags = f
+		}
+	}
+	if v, ok := b["weight"]; ok {
+		if err := json.Unmarshal(v, &asid.Weight); err != nil {
+			return nil, err
+		}
+	}
+	if v, ok := b["sid"]; ok {
+		if err := json.Unmarshal(v, &asid.SID); err != nil {
+			return nil, err
+		}
+	}
+
+	return asid, nil
+}
+
 // AdjacencySIDFlags used for "duck typing", PrefixSID Flags are different for different protocols,
 //  this interface will allow to integrate it in a common Adjacency SID structure.
 type AdjacencySIDFlags interface {
