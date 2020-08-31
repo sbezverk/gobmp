@@ -24,11 +24,11 @@ func UnmarshalSRCapability(protoID base.ProtoID, b []byte) (*Capability, error) 
 	case base.ISISL1:
 		fallthrough
 	case base.ISISL2:
-		cap.Flags = unmarshalISISCapFlags(b[p])
+		cap.Flags = UnmarshalISISCapFlags(b[p])
 	case base.OSPFv2:
 		fallthrough
 	case base.OSPFv3:
-		cap.Flags = unmarshalOSPFCapFlags(b[p])
+		cap.Flags = UnmarshalOSPFCapFlags(b[p])
 	}
 	p++
 	// Skip reserved byte
@@ -99,9 +99,23 @@ type isisCapFlags struct {
 	V bool `json:"v_flag"`
 }
 
+// ISISCapFlags defines methods to check ISIS Capabilities flags
+type ISISCapFlags interface {
+	IsI() bool
+	IsV() bool
+}
+
+func (f *isisCapFlags) IsI() bool {
+	return f.I
+}
+
+func (f *isisCapFlags) IsV() bool {
+	return f.V
+}
+
 func (f *isisCapFlags) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		I bool `json:"e_flag"`
+		I bool `json:"i_flag"`
 		V bool `json:"v_flag"`
 	}{
 		I: f.I,
@@ -113,7 +127,8 @@ func (f *isisCapFlags) capFlags() {
 	// Function to avoind misuse of CapabilityFlags interface with different type of flags
 }
 
-func unmarshalISISCapFlags(b byte) CapabilityFlags {
+// UnmarshalISISCapFlags constructs CapabilityFlags interface from Flags byte
+func UnmarshalISISCapFlags(b byte) CapabilityFlags {
 	f := &isisCapFlags{}
 	f.I = b&0x80 == 0x80
 	f.V = b&0x40 == 0x40
@@ -139,19 +154,25 @@ func buildISISCapFlags(fo map[string]json.RawMessage) (CapabilityFlags, error) {
 	return f, nil
 }
 
+// OSPFCapFlags defines methods to check OSPF Capabilities flags
+type OSPFCapFlags interface {
+}
+
 // ospfCapFlags currently non defined
 type ospfCapFlags struct {
 }
 
 func (f *ospfCapFlags) MarshalJSON() ([]byte, error) {
-	return nil, nil
+	return json.Marshal(struct {
+	}{})
 }
 
 func (f *ospfCapFlags) capFlags() {
 	// Function to avoind misuse of CapabilityFlags interface with different type of flags
 }
 
-func unmarshalOSPFCapFlags(b byte) CapabilityFlags {
+// UnmarshalOSPFCapFlags constructs CapabilityFlags interface from Flags byte
+func UnmarshalOSPFCapFlags(b byte) CapabilityFlags {
 	f := &ospfCapFlags{}
 
 	return f

@@ -37,6 +37,7 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 	}
 	msg.Protocol = link.GetLinkProtocolID()
+	msg.ProtocolID = link.ProtocolID
 	msg.LSID = link.GetLinkLSID(true)
 	msg.LocalLinkID = link.GetLinkID(true)
 	msg.RemoteLinkID = link.GetLinkID(false)

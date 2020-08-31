@@ -120,6 +120,7 @@ type LSLink struct {
 	RoutingID             string                `json:"routing_id,omitempty"`
 	LSID                  uint32                `json:"ls_id,omitempty"`
 	Protocol              string                `json:"protocol,omitempty"`
+	ProtocolID            base.ProtoID          `json:"protocol_id,omitempty"`
 	Nexthop               string                `json:"nexthop,omitempty"`
 	MTID                  []uint16              `json:"mt_id,omitempty"`
 	LocalLinkID           string                `json:"local_link_id,omitempty"`

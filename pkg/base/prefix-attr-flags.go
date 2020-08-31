@@ -22,11 +22,11 @@ func UnmarshalPrefixAttrFlagsTLV(protoID ProtoID, b []byte) (PrefixAttrFlags, er
 	case ISISL1:
 		fallthrough
 	case ISISL2:
-		return unmarshalISISFlags(b[0]), nil
+		return UnmarshalISISFlags(b[0]), nil
 	case OSPFv2:
-		return unmarshalOSPFv2Flags(b[0]), nil
+		return UnmarshalOSPFv2Flags(b[0]), nil
 	case OSPFv3:
-		return unmarshalOSPFv3Flags(b[0]), nil
+		return UnmarshalOSPFv3Flags(b[0]), nil
 	default:
 		return nil, fmt.Errorf("unknown protocol id: %d", protoID)
 	}
@@ -53,6 +53,15 @@ func BuildPrefixAttrFlags(protoID ProtoID, b json.RawMessage) (PrefixAttrFlags, 
 	}
 }
 
+// ISISPrefixAttrFlags defines methods to test ISIS L1 prefix attribute flags
+type ISISPrefixAttrFlags interface {
+	IsX() bool
+	IsR() bool
+	IsN() bool
+}
+
+var _ ISISPrefixAttrFlags = &isisFlags{}
+
 //  0 1 2 3 4 5 6 7...
 // +-+-+-+-+-+-+-+-+...
 // |X|R|N|          ...
@@ -61,6 +70,18 @@ type isisFlags struct {
 	X bool `json:"x_flag"`
 	R bool `json:"r_flag"`
 	N bool `json:"n_flag"`
+}
+
+func (f *isisFlags) IsX() bool {
+	return f.X
+}
+
+func (f *isisFlags) IsR() bool {
+	return f.R
+}
+
+func (f *isisFlags) IsN() bool {
+	return f.N
 }
 
 func (f *isisFlags) MarshalJSON() ([]byte, error) {
@@ -75,7 +96,8 @@ func (f *isisFlags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalISISFlags(b byte) PrefixAttrFlags {
+// UnmarshalISISFlags build ISIS Prefix Attribute Flags object
+func UnmarshalISISFlags(b byte) PrefixAttrFlags {
 	f := &isisFlags{}
 	f.X = b&0x80 == 0x80
 	f.R = b&0x40 == 0x40
@@ -109,11 +131,27 @@ func buildISISFlags(b map[string]json.RawMessage) (PrefixAttrFlags, error) {
 	return f, nil
 }
 
+// OSPFv2PrefixAttrFlags defines methods to test OSPFv2 prefix attribute flags
+type OSPFv2PrefixAttrFlags interface {
+	IsA() bool
+	IsN() bool
+}
+
+var _ OSPFv2PrefixAttrFlags = &ospfv2Flags{}
+
 // 0x80 - A-Flag (Attach Flag)
 // 0x40 - N-Flag (Node Flag)
 type ospfv2Flags struct {
 	A bool `json:"a_flag"`
 	N bool `json:"n_flag"`
+}
+
+func (f *ospfv2Flags) IsA() bool {
+	return f.A
+}
+
+func (f *ospfv2Flags) IsN() bool {
+	return f.N
 }
 
 func (f *ospfv2Flags) MarshalJSON() ([]byte, error) {
@@ -126,7 +164,8 @@ func (f *ospfv2Flags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalOSPFv2Flags(b byte) PrefixAttrFlags {
+// UnmarshalOSPFv2Flags build Prefix Attribute Flags object
+func UnmarshalOSPFv2Flags(b byte) PrefixAttrFlags {
 	f := &ospfv2Flags{}
 	f.A = b&0x80 == 0x80
 	f.N = b&0x40 == 0x40
@@ -153,6 +192,18 @@ func buildOSPFv2Flags(b map[string]json.RawMessage) (PrefixAttrFlags, error) {
 	return f, nil
 }
 
+// OSPFv3PrefixAttrFlags defines methods to test OSPFv3 prefix attribute flags
+type OSPFv3PrefixAttrFlags interface {
+	IsN() bool
+	IsDN() bool
+	IsP() bool
+	IsX() bool
+	IsLA() bool
+	IsNU() bool
+}
+
+var _ OSPFv3PrefixAttrFlags = &ospfv3Flags{}
+
 //  0  1  2  3  4  5  6  7
 // +--+--+--+--+--+--+--+--+
 // |  |  | N|DN| P| x|LA|NU|
@@ -164,6 +215,30 @@ type ospfv3Flags struct {
 	X  bool `json:"x_flag"`
 	LA bool `json:"la_flag"`
 	NU bool `json:"nu_flag"`
+}
+
+func (f *ospfv3Flags) IsN() bool {
+	return f.N
+}
+
+func (f *ospfv3Flags) IsDN() bool {
+	return f.DN
+}
+
+func (f *ospfv3Flags) IsP() bool {
+	return f.P
+}
+
+func (f *ospfv3Flags) IsX() bool {
+	return f.X
+}
+
+func (f *ospfv3Flags) IsLA() bool {
+	return f.LA
+}
+
+func (f *ospfv3Flags) IsNU() bool {
+	return f.NU
 }
 
 func (f *ospfv3Flags) MarshalJSON() ([]byte, error) {
@@ -184,7 +259,8 @@ func (f *ospfv3Flags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalOSPFv3Flags(b byte) PrefixAttrFlags {
+// UnmarshalOSPFv3Flags builds Prefix Attribute Flags object
+func UnmarshalOSPFv3Flags(b byte) PrefixAttrFlags {
 	f := &ospfv3Flags{}
 	f.N = b&0x20 == 0x20
 	f.DN = b&0x10 == 0x10

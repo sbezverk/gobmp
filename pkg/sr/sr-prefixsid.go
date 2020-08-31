@@ -39,11 +39,11 @@ func UnmarshalPrefixSIDTLV(protoID base.ProtoID, b []byte) (*PrefixSIDTLV, error
 	case base.ISISL1:
 		fallthrough
 	case base.ISISL2:
-		psid.Flags = unmarshalISISFlags(b[p])
+		psid.Flags = UnmarshalPrefixSIDISISFlags(b[p])
 	case base.OSPFv2:
 		fallthrough
 	case base.OSPFv3:
-		psid.Flags = unmarshalOSPFFlags(b[p])
+		psid.Flags = UnmarshalPrefixSIDOSPFFlags(b[p])
 	}
 	p++
 	psid.Algorithm = b[p]
@@ -104,6 +104,18 @@ type PrefixSIDFlags interface {
 	MarshalJSON() ([]byte, error)
 }
 
+// PrefixSIDISISFlags defines methods to check PrefixSID ISIS flags
+type PrefixSIDISISFlags interface {
+	IsR() bool
+	IsN() bool
+	IsP() bool
+	IsE() bool
+	IsV() bool
+	IsL() bool
+}
+
+var _ PrefixSIDISISFlags = &isisFlags{}
+
 // Flags carries PrefixSID flag bits
 //  0 1 2 3 4 5 6 7
 // +-+-+-+-+-+-+-+-+
@@ -116,6 +128,30 @@ type isisFlags struct {
 	E bool `json:"e_flag"`
 	V bool `json:"v_flag"`
 	L bool `json:"l_flag"`
+}
+
+func (f *isisFlags) IsR() bool {
+	return f.R
+}
+
+func (f *isisFlags) IsN() bool {
+	return f.N
+}
+
+func (f *isisFlags) IsP() bool {
+	return f.P
+}
+
+func (f *isisFlags) IsE() bool {
+	return f.E
+}
+
+func (f *isisFlags) IsV() bool {
+	return f.V
+}
+
+func (f *isisFlags) IsL() bool {
+	return f.L
 }
 
 func (f *isisFlags) MarshalJSON() ([]byte, error) {
@@ -136,7 +172,8 @@ func (f *isisFlags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalISISFlags(b byte) PrefixSIDFlags {
+// UnmarshalPrefixSIDISISFlags instantiates PrefixSIDFlags interface from the byte
+func UnmarshalPrefixSIDISISFlags(b byte) PrefixSIDFlags {
 	f := &isisFlags{}
 	f.R = b&0x80 == 0x80
 	f.N = b&0x40 == 0x40
@@ -190,6 +227,17 @@ func buildISISFlags(b map[string]json.RawMessage) (PrefixSIDFlags, error) {
 	return f, nil
 }
 
+// PrefixSIDISISFlags defines methods to check PrefixSID ISIS flags
+type PrefixSIDOSPFFlags interface {
+	IsNP() bool
+	IsM() bool
+	IsE() bool
+	IsV() bool
+	IsL() bool
+}
+
+var _ PrefixSIDOSPFFlags = &ospfFlags{}
+
 //   0  1  2  3  4  5  6  7
 // +--+--+--+--+--+--+--+--+
 // |  |NP|M |E |V |L |  |  |
@@ -200,6 +248,26 @@ type ospfFlags struct {
 	E  bool `json:"e_flag"`
 	V  bool `json:"v_flag"`
 	L  bool `json:"l_flag"`
+}
+
+func (f *ospfFlags) IsNP() bool {
+	return f.NP
+}
+
+func (f *ospfFlags) IsM() bool {
+	return f.M
+}
+
+func (f *ospfFlags) IsE() bool {
+	return f.E
+}
+
+func (f *ospfFlags) IsV() bool {
+	return f.V
+}
+
+func (f *ospfFlags) IsL() bool {
+	return f.L
 }
 
 func (f *ospfFlags) MarshalJSON() ([]byte, error) {
@@ -218,7 +286,8 @@ func (f *ospfFlags) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func unmarshalOSPFFlags(b byte) PrefixSIDFlags {
+// UnmarshalPrefixSIDOSPFFlags instantiates PrefixSIDFlags interface from the byte
+func UnmarshalPrefixSIDOSPFFlags(b byte) PrefixSIDFlags {
 	f := &ospfFlags{}
 	f.NP = b&0x40 == 0x40
 	f.M = b&0x20 == 0x20
