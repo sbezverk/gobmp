@@ -119,6 +119,12 @@ func TestLSPrefixRoundTrip(t *testing.T) {
 			original: &LSPrefix{
 				ProtocolID:      base.ISISL1,
 				PrefixAttrFlags: base.UnmarshalISISFlags(0x80),
+				LSPrefixSID: []*sr.PrefixSIDTLV{
+					{
+						Flags: sr.UnmarshalPrefixSIDISISFlags(0x80),
+						SID:   []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					},
+				},
 			},
 		},
 		{
@@ -126,6 +132,12 @@ func TestLSPrefixRoundTrip(t *testing.T) {
 			original: &LSPrefix{
 				ProtocolID:      base.ISISL2,
 				PrefixAttrFlags: base.UnmarshalISISFlags(0x80),
+				LSPrefixSID: []*sr.PrefixSIDTLV{
+					{
+						Flags: sr.UnmarshalPrefixSIDISISFlags(0x80),
+						SID:   []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					},
+				},
 			},
 		},
 		{
@@ -133,6 +145,12 @@ func TestLSPrefixRoundTrip(t *testing.T) {
 			original: &LSPrefix{
 				ProtocolID:      base.OSPFv2,
 				PrefixAttrFlags: base.UnmarshalOSPFv2Flags(0x80),
+				LSPrefixSID: []*sr.PrefixSIDTLV{
+					{
+						Flags: sr.UnmarshalPrefixSIDOSPFFlags(0x80),
+						SID:   []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					},
+				},
 			},
 		},
 		{
@@ -140,6 +158,12 @@ func TestLSPrefixRoundTrip(t *testing.T) {
 			original: &LSPrefix{
 				ProtocolID:      base.OSPFv3,
 				PrefixAttrFlags: base.UnmarshalOSPFv3Flags(0x80),
+				LSPrefixSID: []*sr.PrefixSIDTLV{
+					{
+						Flags: sr.UnmarshalPrefixSIDOSPFFlags(0x80),
+						SID:   []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					},
+				},
 			},
 		},
 	}
@@ -170,6 +194,23 @@ func TestLSPrefixRoundTrip(t *testing.T) {
 			case base.OSPFv3:
 				if _, ok := result.PrefixAttrFlags.(base.OSPFv3PrefixAttrFlags); !ok {
 					t.Error("failed to recover OSPFv3 Prefix Attribute Flags interface")
+				}
+			}
+			// Testing if Flags interface can be recovered from Prefix SID object
+			for _, psid := range result.LSPrefixSID {
+				switch result.ProtocolID {
+				case base.ISISL1:
+					fallthrough
+				case base.ISISL2:
+					if _, ok := psid.Flags.(sr.PrefixSIDISISFlags); !ok {
+						t.Error("failed to recover ISIS Prefix SID Flags interface")
+					}
+				case base.OSPFv2:
+					fallthrough
+				case base.OSPFv3:
+					if _, ok := psid.Flags.(sr.PrefixSIDOSPFFlags); !ok {
+						t.Error("failed to recover OSPF Prefix SID Flags interface")
+					}
 				}
 			}
 		})
