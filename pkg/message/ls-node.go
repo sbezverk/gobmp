@@ -69,6 +69,9 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
 		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
 		msg.SRv6CapabilitiesTLV = lsnode.GetNodeSRv6CapabilitiesTLV()
+		if fad, err := lsnode.GetFlexAlgoDefinition(); err == nil {
+			msg.FlexAlgoDefinition = fad
+		}
 	}
 
 	return &msg, nil

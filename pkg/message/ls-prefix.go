@@ -59,6 +59,9 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		if paf, err := lsprefix.GetLSPrefixAttrFlags(); err == nil {
 			msg.PrefixAttrFlags = paf
 		}
+		if fap, err := lsprefix.GetFlexAlgoPrefixMetric(); err == nil {
+			msg.FlexAlgoPrefixMetric = fap
+		}
 	}
 
 	return &msg, nil
