@@ -3,10 +3,12 @@ package message
 import (
 	"encoding/json"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/srv6"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // UnmarshalJSON is a custom unmarshaller for LSPrefix struct
@@ -185,6 +187,7 @@ func (p *LSPrefix) UnmarshalJSON(b []byte) error {
 
 // UnmarshalJSON is a custom unmarshaller for LSPrefix struct
 func (n *LSNode) UnmarshalJSON(b []byte) error {
+	glog.Infof("><LSNode> UnmarshalJSON called: %s", tools.MessageHex(b))
 	var objmap map[string]json.RawMessage
 	if err := json.Unmarshal(b, &objmap); err != nil {
 		return err
@@ -331,6 +334,7 @@ func (n *LSNode) UnmarshalJSON(b []byte) error {
 	if v, ok := objmap["ls_sr_capabilities"]; ok {
 		cap, err := sr.BuildSRCapability(n.ProtocolID, v)
 		if err != nil {
+			glog.Errorf("BuildSRCapability failed with error: %+v", err)
 			return err
 		}
 		n.SRCapabilities = cap

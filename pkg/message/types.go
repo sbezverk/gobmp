@@ -71,7 +71,10 @@ type UnicastPrefix struct {
 
 // LSNode defines a structure of LS Node message
 type LSNode struct {
-	Action              string              `json:"action"` // Action can be "add" or "del"
+	Key                 string              `json:"_key,omitempty"`
+	ID                  string              `json:"_id,omitempty"`
+	Rev                 string              `json:"_rev,omitempty"`
+	Action              string              `json:"action,omitempty"` // Action can be "add" or "del"
 	Sequence            int                 `json:"sequence,omitempty"`
 	Hash                string              `json:"hash,omitempty"`
 	RouterHash          string              `json:"router_hash,omitempty"`

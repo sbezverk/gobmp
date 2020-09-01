@@ -61,14 +61,18 @@ func BuildAdjacencySID(protoID base.ProtoID, b map[string]json.RawMessage) (*Adj
 				return nil, err
 			}
 			asid.Flags = f
-			// case base.OSPFv2:
-			// 	fallthrough
-			// case base.OSPFv3:
-			// 	f, err := buildOSPFFlags(fo)
-			// 	if err != nil {
-			// 		return nil, err
-			// 	}
-			// 	psid.Flags = f
+		case base.OSPFv2:
+			f, err := buildAdjOSPFv2Flags(fo)
+			if err != nil {
+				return nil, err
+			}
+			asid.Flags = f
+		case base.OSPFv3:
+			f, err := buildAdjOSPFv3Flags(fo)
+			if err != nil {
+				return nil, err
+			}
+			asid.Flags = f
 		}
 	}
 	if v, ok := b["weight"]; ok {
@@ -225,4 +229,220 @@ func UnmarshalAdjacencySIDOSPFFlags(b byte) AdjacencySIDFlags {
 	f.P = b&0x4 == 0x4
 
 	return f
+}
+
+// AdjacencySIDOSPFv2Flags defines methods to check AdjacencySID OSPFv2 flags
+type AdjacencySIDOSPFv2Flags interface {
+	IsB() bool
+	IsV() bool
+	IsL() bool
+	IsG() bool
+	IsP() bool
+}
+
+var _ AdjacencySIDOSPFv2Flags = &adjOSPFv2Flags{}
+
+//  0 1 2 3 4 5 6 7
+// +-+-+-+-+-+-+-+-+
+// |B|V|L|G|P|     |
+// +-+-+-+-+-+-+-+-+
+
+type adjOSPFv2Flags struct {
+	B bool `json:"b_flag"`
+	V bool `json:"v_flag"`
+	L bool `json:"l_flag"`
+	G bool `json:"s_flag"`
+	P bool `json:"p_flag"`
+}
+
+func (f *adjOSPFv2Flags) IsB() bool {
+	return f.B
+}
+
+func (f *adjOSPFv2Flags) IsV() bool {
+	return f.V
+}
+
+func (f *adjOSPFv2Flags) IsL() bool {
+	return f.L
+}
+
+func (f *adjOSPFv2Flags) IsG() bool {
+	return f.G
+}
+
+func (f *adjOSPFv2Flags) IsP() bool {
+	return f.P
+}
+
+func (f *adjOSPFv2Flags) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		B bool `json:"b_flag"`
+		V bool `json:"v_flag"`
+		L bool `json:"l_flag"`
+		G bool `json:"s_flag"`
+		P bool `json:"p_flag"`
+	}{
+		B: f.B,
+		V: f.V,
+		L: f.L,
+		G: f.G,
+		P: f.P,
+	})
+}
+
+// UnmarshalAdjacencySIDOSPFv2Flags instantiates Adjacency SID Flags interface from the byte
+func UnmarshalAdjacencySIDOSPFv2Flags(b byte) AdjacencySIDFlags {
+	f := &adjOSPFv2Flags{}
+	f.B = b&0x80 == 0x80
+	f.V = b&0x40 == 0x40
+	f.L = b&0x20 == 0x20
+	f.G = b&0x10 == 0x10
+	f.P = b&0x8 == 0x8
+
+	return f
+}
+
+func buildAdjOSPFv2Flags(b map[string]json.RawMessage) (AdjacencySIDFlags, error) {
+	f := &adjOSPFv2Flags{}
+	f.B = false
+	if v, ok := b["b_flag"]; ok {
+		if err := json.Unmarshal(v, &f.B); err != nil {
+			return nil, err
+		}
+	}
+	f.V = false
+	if v, ok := b["v_flag"]; ok {
+		if err := json.Unmarshal(v, &f.V); err != nil {
+			return nil, err
+		}
+	}
+	f.L = false
+	if v, ok := b["l_flag"]; ok {
+		if err := json.Unmarshal(v, &f.L); err != nil {
+			return nil, err
+		}
+	}
+	f.G = false
+	if v, ok := b["g_flag"]; ok {
+		if err := json.Unmarshal(v, &f.G); err != nil {
+			return nil, err
+		}
+	}
+	f.P = false
+	if v, ok := b["p_flag"]; ok {
+		if err := json.Unmarshal(v, &f.P); err != nil {
+			return nil, err
+		}
+	}
+
+	return f, nil
+}
+
+// AdjacencySIDOSPFv3Flags defines methods to check AdjacencySID OSPFv2 flags
+type AdjacencySIDOSPFv3Flags interface {
+	IsB() bool
+	IsV() bool
+	IsL() bool
+	IsG() bool
+	IsP() bool
+}
+
+var _ AdjacencySIDOSPFv2Flags = &adjOSPFv2Flags{}
+
+//  0 1 2 3 4 5 6 7
+// +-+-+-+-+-+-+-+-+
+// |B|V|L|G|P|     |
+// +-+-+-+-+-+-+-+-+
+
+type adjOSPFv3Flags struct {
+	B bool `json:"b_flag"`
+	V bool `json:"v_flag"`
+	L bool `json:"l_flag"`
+	G bool `json:"s_flag"`
+	P bool `json:"p_flag"`
+}
+
+func (f *adjOSPFv3Flags) IsB() bool {
+	return f.B
+}
+
+func (f *adjOSPFv3Flags) IsV() bool {
+	return f.V
+}
+
+func (f *adjOSPFv3Flags) IsL() bool {
+	return f.L
+}
+
+func (f *adjOSPFv3Flags) IsG() bool {
+	return f.G
+}
+
+func (f *adjOSPFv3Flags) IsP() bool {
+	return f.P
+}
+
+func (f *adjOSPFv3Flags) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		B bool `json:"b_flag"`
+		V bool `json:"v_flag"`
+		L bool `json:"l_flag"`
+		G bool `json:"s_flag"`
+		P bool `json:"p_flag"`
+	}{
+		B: f.B,
+		V: f.V,
+		L: f.L,
+		G: f.G,
+		P: f.P,
+	})
+}
+
+// UnmarshalAdjacencySIDOSPFv3Flags instantiates Adjacency SID Flags interface from the byte
+func UnmarshalAdjacencySIDOSPFv3Flags(b byte) AdjacencySIDFlags {
+	f := &adjOSPFv3Flags{}
+	f.B = b&0x80 == 0x80
+	f.V = b&0x40 == 0x40
+	f.L = b&0x20 == 0x20
+	f.G = b&0x10 == 0x10
+	f.P = b&0x8 == 0x8
+
+	return f
+}
+
+func buildAdjOSPFv3Flags(b map[string]json.RawMessage) (AdjacencySIDFlags, error) {
+	f := &adjOSPFv3Flags{}
+	f.B = false
+	if v, ok := b["b_flag"]; ok {
+		if err := json.Unmarshal(v, &f.B); err != nil {
+			return nil, err
+		}
+	}
+	f.V = false
+	if v, ok := b["v_flag"]; ok {
+		if err := json.Unmarshal(v, &f.V); err != nil {
+			return nil, err
+		}
+	}
+	f.L = false
+	if v, ok := b["l_flag"]; ok {
+		if err := json.Unmarshal(v, &f.L); err != nil {
+			return nil, err
+		}
+	}
+	f.G = false
+	if v, ok := b["g_flag"]; ok {
+		if err := json.Unmarshal(v, &f.G); err != nil {
+			return nil, err
+		}
+	}
+	f.P = false
+	if v, ok := b["p_flag"]; ok {
+		if err := json.Unmarshal(v, &f.P); err != nil {
+			return nil, err
+		}
+	}
+
+	return f, nil
 }
