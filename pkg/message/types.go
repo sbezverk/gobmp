@@ -92,7 +92,6 @@ type LSNode struct {
 	Timestamp           string              `json:"timestamp,omitempty"`
 	IGPRouterID         string              `json:"igp_router_id,omitempty"`
 	RouterID            string              `json:"router_id,omitempty"`
-	RoutingID           string              `json:"routing_id,omitempty"`
 	ASN                 uint32              `json:"asn,omitempty"`
 	LSID                uint32              `json:"ls_id,omitempty"`
 	MTID                []uint16            `json:"mt_id,omitempty"`
@@ -129,7 +128,6 @@ type LSLink struct {
 	Timestamp             string                `json:"timestamp,omitempty"`
 	IGPRouterID           string                `json:"igp_router_id,omitempty"`
 	RouterID              string                `json:"router_id,omitempty"`
-	RoutingID             string                `json:"routing_id,omitempty"`
 	LSID                  uint32                `json:"ls_id,omitempty"`
 	Protocol              string                `json:"protocol,omitempty"`
 	ProtocolID            base.ProtoID          `json:"protocol_id,omitempty"`
@@ -218,7 +216,6 @@ type LSPrefix struct {
 	Timestamp       string              `json:"timestamp,omitempty"`
 	IGPRouterID     string              `json:"igp_router_id,omitempty"`
 	RouterID        string              `json:"router_id,omitempty"`
-	RoutingID       string              `json:"routing_id,omitempty"`
 	LSID            uint32              `json:"ls_id,omitempty"`
 	ProtocolID      base.ProtoID        `json:"protocol_id,omitempty"`
 	Protocol        string              `json:"protocol,omitempty"`
@@ -257,7 +254,6 @@ type LSSRv6SID struct {
 	IGPRouterID          string                 `json:"igp_router_id,omitempty"`
 	LocalNodeASN         uint32                 `json:"local_node_asn,omitempty"`
 	RouterID             string                 `json:"router_id,omitempty"`
-	RoutingID            string                 `json:"routing_id,omitempty"`
 	LSID                 uint32                 `json:"ls_id,omitempty"`
 	OSPFAreaID           string                 `json:"ospf_area_id,omitempty"`
 	ISISAreaID           string                 `json:"isis_area_id,omitempty"`
