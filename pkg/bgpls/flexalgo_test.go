@@ -21,7 +21,7 @@ func TestUnmarshalFlexAlgoDefinition(t *testing.T) {
 				MetricType:      0,
 				Priority:        128,
 				CalculationType: 0,
-				SubTLV: []*base.TLV{
+				SubTLV: []*base.SubTLV{
 					{
 						Type:   1040,
 						Length: 32,

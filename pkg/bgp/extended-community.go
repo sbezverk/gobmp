@@ -69,7 +69,7 @@ func makeExtCommunity(b []byte) (*ExtCommunity, error) {
 func UnmarshalBGPExtCommunity(b []byte) ([]ExtCommunity, error) {
 	exts := make([]ExtCommunity, 0)
 	for p := 0; p < len(b); {
-		glog.V(5).Infof("Extended community: %s", tools.MessageHex(b[p:p+8]))
+		glog.V(6).Infof("Extended community: %s", tools.MessageHex(b[p:p+8]))
 		ext, err := makeExtCommunity(b[p : p+8])
 		if err != nil {
 			return nil, err
