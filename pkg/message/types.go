@@ -10,7 +10,10 @@ import (
 
 // PeerStateChange defines a message format sent to as a result of BMP Peer Up or Peer Down message
 type PeerStateChange struct {
-	Action           string `json:"action"` // Action can be "up" or "down"
+	Key              string `json:"_key,omitempty"`
+	ID               string `json:"_id,omitempty"`
+	Rev              string `json:"_rev,omitempty"`
+	Action           string `json:"action,omitempty"` // Action can be "up" or "down"
 	Sequence         int    `json:"sequence,omitempty"`
 	Hash             string `json:"hash,omitempty"`
 	RouterHash       string `json:"router_hash,omitempty"`
@@ -46,7 +49,10 @@ type PeerStateChange struct {
 // UnicastPrefix defines a message format sent as a result of BMP Route Monitor message
 // which carries BGP Update with original NLRI information.
 type UnicastPrefix struct {
-	Action         string              `json:"action"` // Action can be "add" or "del"
+	Key            string              `json:"_key,omitempty"`
+	ID             string              `json:"_id,omitempty"`
+	Rev            string              `json:"_rev,omitempty"`
+	Action         string              `json:"action,omitempty"` // Action can be "add" or "del"
 	Sequence       int                 `json:"sequence,omitempty"`
 	Hash           string              `json:"hash,omitempty"`
 	RouterHash     string              `json:"router_hash,omitempty"`
@@ -94,7 +100,7 @@ type LSNode struct {
 	ISISAreaID          string              `json:"isis_area_id,omitempty"`
 	Protocol            string              `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID        `json:"protocol_id,omitempty"`
-	Flags               uint8               `json:"flags,omitempty"`
+	Flags               uint8               `json:"flags"`
 	Nexthop             string              `json:"nexthop,omitempty"`
 	Name                string              `json:"name,omitempty"`
 	SRCapabilities      *sr.Capability      `json:"ls_sr_capabilities,omitempty"`
@@ -108,7 +114,10 @@ type LSNode struct {
 
 // LSLink defines a structure of LS link message
 type LSLink struct {
-	Action                string                `json:"action"`
+	Key                   string                `json:"_key,omitempty"`
+	ID                    string                `json:"_id,omitempty"`
+	Rev                   string                `json:"_rev,omitempty"`
+	Action                string                `json:"action,omitempty"`
 	Sequence              int                   `json:"sequence,omitempty"`
 	Hash                  string                `json:"hash,omitempty"`
 	RouterHash            string                `json:"router_hash,omitempty"`
@@ -163,7 +172,10 @@ type LSLink struct {
 
 // L3VPNPrefix defines the structure of Layer 3 VPN message
 type L3VPNPrefix struct {
-	Action         string              `json:"action"` // Action can be "add" or "del"
+	Key            string              `json:"_key,omitempty"`
+	ID             string              `json:"_id,omitempty"`
+	Rev            string              `json:"_rev,omitempty"`
+	Action         string              `json:"action,omitempty"` // Action can be "add" or "del"
 	Sequence       int                 `json:"sequence,omitempty"`
 	Hash           string              `json:"hash,omitempty"`
 	RouterHash     string              `json:"router_hash,omitempty"`
@@ -191,42 +203,48 @@ type L3VPNPrefix struct {
 
 // LSPrefix defines a structure of LS Prefix message
 type LSPrefix struct {
-	Action          string               `json:"action"`
-	Sequence        int                  `json:"sequence,omitempty"`
-	Hash            string               `json:"hash,omitempty"`
-	RouterHash      string               `json:"router_hash,omitempty"`
-	RouterIP        string               `json:"router_ip,omitempty"`
-	BaseAttributes  *bgp.BaseAttributes  `json:"base_attrs,omitempty"`
-	PeerHash        string               `json:"peer_hash,omitempty"`
-	PeerIP          string               `json:"peer_ip,omitempty"`
-	PeerASN         int32                `json:"peer_asn,omitempty"`
-	Timestamp       string               `json:"timestamp,omitempty"`
-	IGPRouterID     string               `json:"igp_router_id,omitempty"`
-	RouterID        string               `json:"router_id,omitempty"`
-	RoutingID       string               `json:"routing_id,omitempty"`
-	LSID            uint32               `json:"ls_id,omitempty"`
-	ProtocolID      base.ProtoID         `json:"protocol_id,omitempty"`
-	Protocol        string               `json:"protocol,omitempty"`
-	Nexthop         string               `json:"nexthop,omitempty"`
-	LocalNodeHash   string               `json:"local_node_hash,omitempty"`
-	MTID            []uint16             `json:"mt_id,omitempty"`
-	OSPFRouteType   uint8                `json:"ospf_route_type,omitempty"`
-	IGPFlags        uint8                `json:"igp_flags,omitempty"`
-	RouteTag        uint8                `json:"route_tag,omitempty"`
-	ExtRouteTag     uint8                `json:"ext_route_tag,omitempty"`
-	OSPFFwdAddr     string               `json:"ospf_fwd_addr,omitempty"`
-	IGPMetric       uint32               `json:"igp_metric,omitempty"`
-	Prefix          string               `json:"prefix,omitempty"`
-	PrefixLen       int32                `json:"prefix_len,omitempty"`
-	IsPrepolicy     bool                 `json:"isprepolicy"`
-	IsAdjRIBIn      bool                 `json:"is_adj_rib_in"`
-	LSPrefixSID     []*sr.PrefixSIDTLV   `json:"ls_prefix_sid,omitempty"`
-	PrefixAttrFlags base.PrefixAttrFlags `json:"prefix_attr_flags,omitempty"`
+	Key             string              `json:"_key,omitempty"`
+	ID              string              `json:"_id,omitempty"`
+	Rev             string              `json:"_rev,omitempty"`
+	Action          string              `json:"action,omitempty"`
+	Sequence        int                 `json:"sequence,omitempty"`
+	Hash            string              `json:"hash,omitempty"`
+	RouterHash      string              `json:"router_hash,omitempty"`
+	RouterIP        string              `json:"router_ip,omitempty"`
+	BaseAttributes  *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash        string              `json:"peer_hash,omitempty"`
+	PeerIP          string              `json:"peer_ip,omitempty"`
+	PeerASN         int32               `json:"peer_asn,omitempty"`
+	Timestamp       string              `json:"timestamp,omitempty"`
+	IGPRouterID     string              `json:"igp_router_id,omitempty"`
+	RouterID        string              `json:"router_id,omitempty"`
+	RoutingID       string              `json:"routing_id,omitempty"`
+	LSID            uint32              `json:"ls_id,omitempty"`
+	ProtocolID      base.ProtoID        `json:"protocol_id,omitempty"`
+	Protocol        string              `json:"protocol,omitempty"`
+	Nexthop         string              `json:"nexthop,omitempty"`
+	LocalNodeHash   string              `json:"local_node_hash,omitempty"`
+	MTID            []uint16            `json:"mt_id,omitempty"`
+	OSPFRouteType   uint8               `json:"ospf_route_type,omitempty"`
+	IGPFlags        uint8               `json:"igp_flags"`
+	RouteTag        uint8               `json:"route_tag,omitempty"`
+	ExtRouteTag     uint8               `json:"ext_route_tag,omitempty"`
+	OSPFFwdAddr     string              `json:"ospf_fwd_addr,omitempty"`
+	IGPMetric       uint32              `json:"igp_metric,omitempty"`
+	Prefix          string              `json:"prefix,omitempty"`
+	PrefixLen       int32               `json:"prefix_len,omitempty"`
+	IsPrepolicy     bool                `json:"isprepolicy"`
+	IsAdjRIBIn      bool                `json:"is_adj_rib_in"`
+	LSPrefixSID     []*sr.PrefixSIDTLV  `json:"ls_prefix_sid,omitempty"`
+	PrefixAttrFlags uint8               `json:"prefix_attr_flags"`
 }
 
 // LSSRv6SID defines a structure of LS SRv6 SID message
 type LSSRv6SID struct {
-	Action               string                 `json:"action"`
+	Key                  string                 `json:"_key,omitempty"`
+	ID                   string                 `json:"_id,omitempty"`
+	Rev                  string                 `json:"_rev,omitempty"`
+	Action               string                 `json:"action,omitempty"`
 	Sequence             int                    `json:"sequence,omitempty"`
 	Hash                 string                 `json:"hash,omitempty"`
 	RouterHash           string                 `json:"router_hash,omitempty"`
@@ -248,7 +266,7 @@ type LSSRv6SID struct {
 	LocalNodeHash        string                 `json:"local_node_hash,omitempty"`
 	MTID                 []uint16               `json:"mt_id,omitempty"`
 	OSPFRouteType        uint8                  `json:"ospf_route_type,omitempty"`
-	IGPFlags             uint8                  `json:"igp_flags,omitempty"`
+	IGPFlags             uint8                  `json:"igp_flags"`
 	RouteTag             uint8                  `json:"route_tag,omitempty"`
 	ExtRouteTag          uint8                  `json:"ext_route_tag,omitempty"`
 	OSPFFwdAddr          string                 `json:"ospf_fwd_addr,omitempty"`
@@ -265,7 +283,10 @@ type LSSRv6SID struct {
 
 // EVPNPrefix defines the structure of EVPN message
 type EVPNPrefix struct {
-	Action         string              `json:"action"` // Action can be "add" or "del"
+	Key            string              `json:"_key,omitempty"`
+	ID             string              `json:"_id,omitempty"`
+	Rev            string              `json:"_rev,omitempty"`
+	Action         string              `json:"action,omitempty"` // Action can be "add" or "del"
 	Sequence       int                 `json:"sequence,omitempty"`
 	Hash           string              `json:"hash,omitempty"`
 	RouterHash     string              `json:"router_hash,omitempty"`

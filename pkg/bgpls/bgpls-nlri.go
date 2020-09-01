@@ -198,12 +198,12 @@ func (ls *NLRI) GetLinkMSD() string {
 }
 
 // GetNodeSRCapabilities returns string representation of SR Capabilities
-func (ls *NLRI) GetNodeSRCapabilities(protoID base.ProtoID) (*sr.Capability, error) {
+func (ls *NLRI) GetNodeSRCapabilities() (*sr.Capability, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1034 {
 			continue
 		}
-		return sr.UnmarshalSRCapability(protoID, tlv.Value)
+		return sr.UnmarshalSRCapability(tlv.Value)
 	}
 
 	return nil, fmt.Errorf("not found")
@@ -242,13 +242,13 @@ func (ls *NLRI) GetNodeSRLocalBlock() *sr.LocalBlock {
 }
 
 // GetLSPrefixSID returns a slice of  Prefix SID TLV objects
-func (ls *NLRI) GetLSPrefixSID(protoID base.ProtoID) ([]*sr.PrefixSIDTLV, error) {
+func (ls *NLRI) GetLSPrefixSID() ([]*sr.PrefixSIDTLV, error) {
 	ps := make([]*sr.PrefixSIDTLV, 0)
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1158 {
 			continue
 		}
-		p, err := sr.UnmarshalPrefixSIDTLV(protoID, tlv.Value)
+		p, err := sr.UnmarshalPrefixSIDTLV(tlv.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -259,14 +259,14 @@ func (ls *NLRI) GetLSPrefixSID(protoID base.ProtoID) ([]*sr.PrefixSIDTLV, error)
 }
 
 // GetLSPrefixAttrFlags returns a Prefix Attribute Flags interface
-func (ls *NLRI) GetLSPrefixAttrFlags(protoID base.ProtoID) (base.PrefixAttrFlags, error) {
+func (ls *NLRI) GetLSPrefixAttrFlags() (uint8, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1170 {
 			continue
 		}
-		return base.UnmarshalPrefixAttrFlagsTLV(protoID, tlv.Value)
+		return uint8(tlv.Value[0]), nil
 	}
-	return nil, fmt.Errorf("not found")
+	return 0, fmt.Errorf("not found")
 }
 
 // GetLSSRv6ENDXSID returns SRv6 END.X SID TLV
@@ -572,14 +572,14 @@ func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
 }
 
 // GetSRAdjacencySID returns SR Adjacency SID object
-func (ls *NLRI) GetSRAdjacencySID(protoID base.ProtoID) ([]*sr.AdjacencySIDTLV, error) {
+func (ls *NLRI) GetSRAdjacencySID() ([]*sr.AdjacencySIDTLV, error) {
 	adjs := make([]*sr.AdjacencySIDTLV, 0)
 	// It appears Path Attributes can carry multiple entries of SR Adjacency SID
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1099 {
 			continue
 		}
-		adj, err := sr.UnmarshalAdjacencySIDTLV(protoID, tlv.Value)
+		adj, err := sr.UnmarshalAdjacencySIDTLV(tlv.Value)
 		if err != nil {
 			return nil, err
 		}

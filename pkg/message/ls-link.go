@@ -82,7 +82,7 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.UnidirLinkDelayMinMax = lslink.GetUnidirLinkDelayMinMax()
 		msg.UnidirPacketLoss = lslink.GetUnidirLinkLoss()
 		msg.UnidirResidualBW = lslink.GetUnidirResidualBandwidth()
-		if adj, err := lslink.GetSRAdjacencySID(msg.ProtocolID); err == nil {
+		if adj, err := lslink.GetSRAdjacencySID(); err == nil {
 			msg.LSAdjacencySID = adj
 		}
 	}
