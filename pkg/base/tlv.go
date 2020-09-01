@@ -6,9 +6,9 @@ import (
 
 // TLV defines generic Typle Length Value element
 type TLV struct {
-	Type   uint16
-	Length uint16
-	Value  []byte
+	Type   uint16 `json:"tlv_type,omitempty"`
+	Length uint16 `json:"-"`
+	Value  []byte `json:"tlv_value,omitempty"`
 }
 
 // UnmarshalTLV builds a map of TLVs elements
