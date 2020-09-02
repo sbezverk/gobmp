@@ -106,7 +106,7 @@ type LSNode struct {
 	SRCapabilities      *sr.Capability            `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         []int                     `json:"sr_algorithm,omitempty"`
 	SRLocalBlock        *sr.LocalBlock            `json:"sr_local_block,omitempty"`
-	SRv6CapabilitiesTLV string                    `json:"srv6_capabilities_tlv,omitempty"`
+	SRv6CapabilitiesTLV *srv6.CapabilityTLV       `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             string                    `json:"node_msd,omitempty"`
 	FlexAlgoDefinition  *bgpls.FlexAlgoDefinition `json:"flex_algo_definition,omitempty"`
 	IsPrepolicy         bool                      `json:"isprepolicy"`

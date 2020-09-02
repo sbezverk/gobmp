@@ -305,23 +305,14 @@ func (ls *NLRI) GetLSSRv6ENDXSID() (*srv6.EndXSIDTLV, error) {
 }
 
 // GetNodeSRv6CapabilitiesTLV returns string representation of SRv6 Capabilities TLV
-func (ls *NLRI) GetNodeSRv6CapabilitiesTLV() string {
-	var s string
+func (ls *NLRI) GetNodeSRv6CapabilitiesTLV() (*srv6.CapabilityTLV, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1038 {
 			continue
 		}
-		tlv, err := srv6.UnmarshalSRv6CapabilityTLV(tlv.Value)
-		if err != nil {
-			return s
-		}
-		if tlv == nil {
-			return s
-		}
-		s += fmt.Sprintf("%04x", tlv.Flag)
+		return srv6.UnmarshalSRv6CapabilityTLV(tlv.Value)
 	}
-
-	return s
+	return nil, fmt.Errorf("not found")
 }
 
 // GetAdminGroup returns Administrative group (color)
