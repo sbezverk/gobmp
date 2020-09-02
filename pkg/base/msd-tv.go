@@ -7,16 +7,16 @@ import (
 
 // MSDTV defines MSD Type Value tuple
 type MSDTV struct {
-	Type  uint8
-	Value uint8
+	Type  uint8 `json:"msd_type"`
+	Value uint8 `json:"msd_value"`
 }
 
 // UnmarshalMSDTV builds slice of MSD Type Value tuples
-func UnmarshalMSDTV(b []byte) ([]MSDTV, error) {
+func UnmarshalMSDTV(b []byte) ([]*MSDTV, error) {
 	glog.V(6).Infof("UnmarshalMSDTV Raw: %s", tools.MessageHex(b))
-	tvs := make([]MSDTV, 0)
+	tvs := make([]*MSDTV, 0)
 	for p := 0; p < len(b); {
-		tv := MSDTV{}
+		tv := &MSDTV{}
 		tv.Type = b[p]
 		p++
 		tv.Value = b[p]

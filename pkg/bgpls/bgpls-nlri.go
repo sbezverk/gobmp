@@ -151,50 +151,28 @@ func (ls *NLRI) GetRemoteIPv6RouterID() string {
 	return ""
 }
 
-// GetNodeMSD returns string with Node's MSD codes
-func (ls *NLRI) GetNodeMSD() string {
-	var s string
+// GetNodeMSD returns Node's MSD object
+func (ls *NLRI) GetNodeMSD() ([]*base.MSDTV, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 266 {
 			continue
 		}
-		msd, err := base.UnmarshalNodeMSD(tlv.Value)
-		if err != nil {
-			return s
-		}
-		if msd == nil {
-			return s
-		}
-		s += fmt.Sprintf("%d:%d", msd.MSD[0].Type, msd.MSD[0].Value)
-		for i := 1; i < len(msd.MSD); i++ {
-			s += fmt.Sprintf(",%d:%d", msd.MSD[i].Type, msd.MSD[i].Value)
-		}
+		return base.UnmarshalMSDTV(tlv.Value)
 	}
 
-	return s
+	return nil, fmt.Errorf("not found")
 }
 
-// GetLinkMSD returns string with Node's MSD codes
-func (ls *NLRI) GetLinkMSD() string {
-	var s string
+// GetLinkMSD returns Link's MSD object
+func (ls *NLRI) GetLinkMSD() ([]*base.MSDTV, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 267 {
 			continue
 		}
-		msd, err := base.UnmarshalLinkMSD(tlv.Value)
-		if err != nil {
-			return s
-		}
-		if msd == nil {
-			return s
-		}
-		s += fmt.Sprintf("%d:%d", msd.MSD[0].Type, msd.MSD[0].Value)
-		for i := 1; i < len(msd.MSD); i++ {
-			s += fmt.Sprintf(",%d:%d", msd.MSD[i].Type, msd.MSD[i].Value)
-		}
+		return base.UnmarshalMSDTV(tlv.Value)
 	}
 
-	return s
+	return nil, fmt.Errorf("not found")
 }
 
 // GetNodeSRCapabilities returns string representation of SR Capabilities

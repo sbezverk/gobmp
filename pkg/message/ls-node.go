@@ -62,7 +62,9 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		} else {
 			msg.RouterID = lsnode.GetLocalIPv4RouterID()
 		}
-		msg.NodeMSD = lsnode.GetNodeMSD()
+		if msd, err := lsnode.GetNodeMSD(); err == nil {
+			msg.NodeMSD = msd
+		}
 		if cap, err := lsnode.GetNodeSRCapabilities(); err == nil {
 			msg.SRCapabilities = cap
 		}

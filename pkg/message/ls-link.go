@@ -59,7 +59,9 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 			msg.RemoteRouterID = lslink.GetRemoteIPv4RouterID()
 		}
 		msg.MTID = lslink.GetMTID()
-		msg.LinkMSD = lslink.GetLinkMSD()
+		if msd, err := lslink.GetLinkMSD(); err == nil {
+			msg.LinkMSD = msd
+		}
 		msg.IGPMetric = lslink.GetIGPMetric()
 		msg.TEDefaultMetric = lslink.GetTEDefaultMetric()
 		msg.AdminGroup = lslink.GetAdminGroup()
