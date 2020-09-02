@@ -241,6 +241,30 @@ func (ls *NLRI) GetNodeSRLocalBlock() *sr.LocalBlock {
 	return nil
 }
 
+// GetFlexAlgoDefinition returns node's FlexAlgo Definition object
+func (ls *NLRI) GetFlexAlgoDefinition() (*FlexAlgoDefinition, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1039 {
+			continue
+		}
+		return UnmarshalFlexAlgoDefinition(tlv.Value)
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
+// GetFlexAlgoPrefixMetric returns prefix's FlexAlgo Metric object
+func (ls *NLRI) GetFlexAlgoPrefixMetric() (*FlexAlgoPrefixMetric, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1044 {
+			continue
+		}
+		return UnmarshalFlexAlgoPrefixMetric(tlv.Value)
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
 // GetLSPrefixSID returns a slice of  Prefix SID TLV objects
 func (ls *NLRI) GetLSPrefixSID() ([]*sr.PrefixSIDTLV, error) {
 	ps := make([]*sr.PrefixSIDTLV, 0)
