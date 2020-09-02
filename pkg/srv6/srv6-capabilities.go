@@ -10,8 +10,7 @@ import (
 // CapabilityTLV defines SRv6 Capability TLV object
 // No RFC yet
 type CapabilityTLV struct {
-	Flag     uint16
-	Reserved uint16
+	Flag uint16 `json:"flag"`
 }
 
 // UnmarshalSRv6CapabilityTLV builds SRv6 Capability TLV object

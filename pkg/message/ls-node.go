@@ -62,13 +62,17 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		} else {
 			msg.RouterID = lsnode.GetLocalIPv4RouterID()
 		}
-		msg.NodeMSD = lsnode.GetNodeMSD()
+		if msd, err := lsnode.GetNodeMSD(); err == nil {
+			msg.NodeMSD = msd
+		}
 		if cap, err := lsnode.GetNodeSRCapabilities(); err == nil {
 			msg.SRCapabilities = cap
 		}
 		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
 		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
-		msg.SRv6CapabilitiesTLV = lsnode.GetNodeSRv6CapabilitiesTLV()
+		if cap, err := lsnode.GetNodeSRv6CapabilitiesTLV(); err == nil {
+			msg.SRv6CapabilitiesTLV = cap
+		}
 		if fad, err := lsnode.GetFlexAlgoDefinition(); err == nil {
 			msg.FlexAlgoDefinition = fad
 		}

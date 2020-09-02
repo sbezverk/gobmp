@@ -106,8 +106,8 @@ type LSNode struct {
 	SRCapabilities      *sr.Capability            `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         []int                     `json:"sr_algorithm,omitempty"`
 	SRLocalBlock        *sr.LocalBlock            `json:"sr_local_block,omitempty"`
-	SRv6CapabilitiesTLV string                    `json:"srv6_capabilities_tlv,omitempty"`
-	NodeMSD             string                    `json:"node_msd,omitempty"`
+	SRv6CapabilitiesTLV *srv6.CapabilityTLV       `json:"srv6_capabilities_tlv,omitempty"`
+	NodeMSD             []*base.MSDTV             `json:"node_msd,omitempty"`
 	FlexAlgoDefinition  *bgpls.FlexAlgoDefinition `json:"flex_algo_definition,omitempty"`
 	IsPrepolicy         bool                      `json:"isprepolicy"`
 	IsAdjRIBIn          bool                      `json:"is_adj_rib_in"`
@@ -160,7 +160,7 @@ type LSLink struct {
 	IsPrepolicy           bool                  `json:"isprepolicy"`
 	IsAdjRIBIn            bool                  `json:"is_adj_rib_in"`
 	LSAdjacencySID        []*sr.AdjacencySIDTLV `json:"ls_adjacency_sid,omitempty"`
-	LinkMSD               string                `json:"link_msd,omitempty"`
+	LinkMSD               []*base.MSDTV         `json:"link_msd,omitempty"`
 	UnidirLinkDelay       uint32                `json:"unidir_link_delay,omitempty"`
 	UnidirLinkDelayMinMax []uint32              `json:"unidir_link_delay_min_max,omitempty"`
 	UnidirDelayVariation  uint32                `json:"unidir_delay_variation,omitempty"`
