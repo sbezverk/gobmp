@@ -13,7 +13,7 @@ type TLV struct {
 
 // SubTLV defines generic Sub Type Length Value element
 type SubTLV struct {
-	Type   uint16 `json:"sub_tlv_type,omitempty"`
+	Type   uint16 `json:"sub_tlv_type"`
 	Length uint16 `json:"-"`
 	Value  []byte `json:"sub_tlv_value,omitempty"`
 }
