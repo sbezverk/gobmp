@@ -272,7 +272,7 @@ func (ls *NLRI) GetLSPrefixAttrFlags() (uint8, error) {
 }
 
 // GetLSSRv6ENDXSID returns SRv6 END.X SID TLV
-func (ls *NLRI) GetLSSRv6ENDXSID() (*srv6.EndXSIDTLV, error) {
+func (ls *NLRI) GetLSSRv6ENDXSID() ([]*srv6.EndXSIDTLV, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1106 {
 			continue

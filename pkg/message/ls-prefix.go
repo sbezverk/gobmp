@@ -20,13 +20,12 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSPrefix{
-		Action:         operation,
-		RouterHash:     p.speakerHash,
-		RouterIP:       p.speakerIP,
-		PeerHash:       ph.GetPeerHash(),
-		PeerASN:        ph.PeerAS,
-		Timestamp:      ph.PeerTimestamp,
-		BaseAttributes: update.BaseAttributes,
+		Action:     operation,
+		RouterHash: p.speakerHash,
+		RouterIP:   p.speakerIP,
+		PeerHash:   ph.GetPeerHash(),
+		PeerASN:    ph.PeerAS,
+		Timestamp:  ph.PeerTimestamp,
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
