@@ -160,7 +160,7 @@ func isASPath4(b []byte) bool {
 	p := 0
 	// Skipping type
 	p++
-	// Length of path segment in 2 or 4 bytes
+	// Length of path segment in 2 or 4 bytes depending if AS2 or AS4 is used.
 	l := int(b[p])
 	p++
 	// Check if next segment can be found with AS4
@@ -174,14 +174,18 @@ func isASPath4(b []byte) bool {
 		return false
 	}
 	// Check if next segment can be found with AS4
-	if b[p+l*4] == 0x1 || b[p+l*4] == 0x2 {
-		// Found next AS4 segment, confirmed AS4
-		return true
+	if p+l*4 < len(b) {
+		if b[p+l*4] == 0x1 || b[p+l*4] == 0x2 {
+			// Found next AS4 segment, confirmed AS4
+			return true
+		}
 	}
 	// Check if next segment can be found with AS2
-	if b[p+l*2] == 0x1 || b[p+l*2] == 0x2 {
-		// Found next AS2 segment, confirmed AS2
-		return false
+	if p+l*2 < len(b) {
+		if b[p+l*2] == 0x1 || b[p+l*2] == 0x2 {
+			// Found next AS2 segment, confirmed AS2
+			return false
+		}
 	}
 	// Should never reach here
 	return false
