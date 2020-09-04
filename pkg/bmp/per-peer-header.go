@@ -12,6 +12,10 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+const (
+	BMP_PEER_HEADER_SIZE = 42
+)
+
 // PerPeerHeader defines BMP Per-Peer Header per rfc7854
 type PerPeerHeader struct {
 	PeerType          byte
@@ -23,6 +27,39 @@ type PerPeerHeader struct {
 	PeerAS            int32
 	PeerBGPID         []byte
 	PeerTimestamp     string
+}
+
+// Len returns the length of PerPeerHeader structure
+func (p *PerPeerHeader) Len() int {
+	return 1 + 1 + len(p.PeerDistinguisher) + len(p.PeerAddress) + 4 + len(p.PeerBGPID) + len(p.PeerTimestamp)
+}
+
+// Serialize generate a slice of bytes for sending over the network
+func (p *PerPeerHeader) Serialize() ([]byte, error) {
+	b := make([]byte, BMP_PEER_HEADER_SIZE)
+	b[0] = p.PeerType
+	flag := uint8(0)
+	if p.FlagV {
+		flag |= 0x80
+	}
+	if p.FlagL {
+		flag |= 0x40
+	}
+	if p.FlagA {
+		flag |= 0x20
+	}
+	b[1] = flag
+	copy(b[2:10], p.PeerDistinguisher)
+	if p.FlagV {
+		copy(b[10:26], p.PeerAddress)
+	} else {
+		copy(b[22:26], net.IP(p.PeerAddress).To4())
+	}
+	binary.BigEndian.PutUint32(b[26:30], uint32(p.PeerAS))
+	copy(b[30:34], p.PeerBGPID)
+	copy(b[34:], []byte(p.PeerTimestamp))
+
+	return b, nil
 }
 
 // UnmarshalPerPeerHeader processes Per-Peer header
