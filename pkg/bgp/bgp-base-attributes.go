@@ -131,7 +131,6 @@ func unmarshalAttrOrigin(b []byte) string {
 
 // unmarshalAttrASPath returns a slice with a list of ASes
 func unmarshalAttrASPath(b []byte) []uint32 {
-	glog.Infof("AS Path: %s", tools.MessageHex(b))
 	path := make([]uint32, 0)
 	as4 := isASPath4(b)
 	for p := 0; p < len(b); {
@@ -158,15 +157,34 @@ func unmarshalAttrASPath(b []byte) []uint32 {
 }
 
 func isASPath4(b []byte) bool {
-	l := 0
-	s := 0
-	for p := 0; p < len(b); {
-		l += int(b[p+1] * 4)
-		p += int(b[p+1]*4) + 2
-		s++
+	p := 0
+	// Skipping type
+	p++
+	// Length of path segment in 2 or 4 bytes
+	l := int(b[p])
+	p++
+	// Check if next segment can be found with AS4
+	if l*4 == len(b[p:]) {
+		// Found last AS4 segment, confirmed AS4
+		return true
 	}
-
-	return l+s*2 == len(b)
+	// Check if next segment can be found with AS4
+	if l*2 == len(b[p:]) {
+		// Found last AS2 segment, confirmed AS2
+		return false
+	}
+	// Check if next segment can be found with AS4
+	if b[p+l*4] == 0x1 || b[p+l*4] == 0x2 {
+		// Found next AS4 segment, confirmed AS4
+		return true
+	}
+	// Check if next segment can be found with AS2
+	if b[p+l*2] == 0x1 || b[p+l*2] == 0x2 {
+		// Found next AS2 segment, confirmed AS2
+		return false
+	}
+	// Should never reach here
+	return false
 }
 
 // unmarshalAttrNextHop returns the value of Next Hop attribute
