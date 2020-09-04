@@ -131,6 +131,7 @@ func unmarshalAttrOrigin(b []byte) string {
 
 // unmarshalAttrASPath returns a slice with a list of ASes
 func unmarshalAttrASPath(b []byte) []uint32 {
+	glog.Infof("AS Path: %s", tools.MessageHex(b))
 	path := make([]uint32, 0)
 	as4 := isASPath4(b)
 	for p := 0; p < len(b); {

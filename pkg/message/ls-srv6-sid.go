@@ -25,7 +25,7 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 		RouterIP:   p.speakerIP,
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,
-		Timestamp:  ph.PeerTimestamp,
+		Timestamp:  ph.GetPeerTimestamp(),
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()

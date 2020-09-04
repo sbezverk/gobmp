@@ -42,7 +42,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			RouterIP:       p.speakerIP,
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,
-			Timestamp:      ph.PeerTimestamp,
+			Timestamp:      ph.GetPeerTimestamp(),
 			PrefixLen:      int32(e.Length),
 			PathID:         int32(e.PathID),
 			BaseAttributes: update.BaseAttributes,

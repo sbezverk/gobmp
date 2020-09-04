@@ -25,7 +25,7 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		RouterIP:   p.speakerIP,
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,
-		Timestamp:  ph.PeerTimestamp,
+		Timestamp:  ph.GetPeerTimestamp(),
 	}
 	msg.Nexthop = nextHop
 	if ph.FlagV {

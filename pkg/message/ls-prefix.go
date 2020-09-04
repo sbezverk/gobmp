@@ -25,7 +25,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		RouterIP:   p.speakerIP,
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,
-		Timestamp:  ph.PeerTimestamp,
+		Timestamp:  ph.GetPeerTimestamp(),
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
