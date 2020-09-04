@@ -20,15 +20,13 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSNode{
-		Action:         operation,
-		RouterHash:     p.speakerHash,
-		RouterIP:       p.speakerIP,
-		PeerHash:       ph.GetPeerHash(),
-		PeerASN:        ph.PeerAS,
-		Timestamp:      ph.PeerTimestamp,
-		BaseAttributes: update.BaseAttributes,
+		Action:     operation,
+		RouterHash: p.speakerHash,
+		RouterIP:   p.speakerIP,
+		PeerHash:   ph.GetPeerHash(),
+		PeerASN:    ph.PeerAS,
+		Timestamp:  ph.GetPeerTimestamp(),
 	}
-	msg.Nexthop = nextHop
 	if ph.FlagV {
 		// IPv6 specific conversions
 		msg.PeerIP = net.IP(ph.PeerAddress).To16().String()
@@ -43,7 +41,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 	msg.ASN = node.GetNodeASN()
 	lsnode, err := update.GetNLRI29()
 	if err == nil {
-		msg.Flags = lsnode.GetNodeFlags()
+		msg.NodeFlags = lsnode.GetNodeFlags()
 		msg.Name = lsnode.GetNodeName()
 		msg.MTID = lsnode.GetMTID()
 		switch node.ProtocolID {

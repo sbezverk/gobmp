@@ -8,6 +8,10 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+const (
+	BMP_HEADER_SIZE = 6
+)
+
 // CommonHeader defines BMP message Common Header per rfc7854
 type CommonHeader struct {
 	Version       byte
@@ -45,4 +49,13 @@ func UnmarshalCommonHeader(b []byte) (*CommonHeader, error) {
 	}
 
 	return ch, nil
+}
+
+// Serialize generates a slice of bytes from CommonHeader structure
+func (c *CommonHeader) Serialize() ([]byte, error) {
+	b := make([]byte, BMP_HEADER_SIZE)
+	b[0] = c.Version
+	binary.BigEndian.PutUint32(b[1:], uint32(c.MessageLength))
+	b[5] = c.MessageType
+	return b, nil
 }

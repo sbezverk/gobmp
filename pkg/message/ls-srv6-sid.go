@@ -20,13 +20,12 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSSRv6SID{
-		Action:         operation,
-		RouterHash:     p.speakerHash,
-		RouterIP:       p.speakerIP,
-		PeerHash:       ph.GetPeerHash(),
-		PeerASN:        ph.PeerAS,
-		Timestamp:      ph.PeerTimestamp,
-		BaseAttributes: update.BaseAttributes,
+		Action:     operation,
+		RouterHash: p.speakerHash,
+		RouterIP:   p.speakerIP,
+		PeerHash:   ph.GetPeerHash(),
+		PeerASN:    ph.PeerAS,
+		Timestamp:  ph.GetPeerTimestamp(),
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()

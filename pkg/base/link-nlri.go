@@ -73,29 +73,27 @@ func (l *LinkNLRI) GetLinkID(local bool) string {
 }
 
 // GetLinkInterfaceAddr returns Link Interface IPv4 address as a string
-func (l *LinkNLRI) GetLinkInterfaceAddr() string {
-	ipv4 := l.Link.GetLinkIPv4InterfaceAddr()
-	ipv6 := l.Link.GetLinkIPv6InterfaceAddr()
-	if ipv4 != "" {
-		if ipv6 != "" {
-			return ipv4 + "," + ipv6
-		}
-		return ipv4
+func (l *LinkNLRI) GetLinkInterfaceAddr() []string {
+	addr := make([]string, 0)
+	if a := l.Link.GetLinkIPv4InterfaceAddr(); a != "" {
+		addr = append(addr, a)
 	}
-	return ipv6
+	if a := l.Link.GetLinkIPv6InterfaceAddr(); a != "" {
+		addr = append(addr, a)
+	}
+	return addr
 }
 
 // GetLinkNeighborAddr returns Link's neighbor IPv4 address as a string
-func (l *LinkNLRI) GetLinkNeighborAddr() string {
-	ipv4 := l.Link.GetLinkIPv4NeighborAddr()
-	ipv6 := l.Link.GetLinkIPv6NeighborAddr()
-	if ipv4 != "" {
-		if ipv6 != "" {
-			return ipv4 + "," + ipv6
-		}
-		return ipv4
+func (l *LinkNLRI) GetLinkNeighborAddr() []string {
+	addr := make([]string, 0)
+	if a := l.Link.GetLinkIPv4NeighborAddr(); a != "" {
+		addr = append(addr, a)
 	}
-	return ipv6
+	if a := l.Link.GetLinkIPv6NeighborAddr(); a != "" {
+		addr = append(addr, a)
+	}
+	return addr
 }
 
 // GetLocalASN returns value of Local Node's ASN

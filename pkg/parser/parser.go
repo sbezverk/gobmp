@@ -35,7 +35,7 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 		p += bmp.CommonHeaderLength
 		switch ch.MessageType {
 		case bmp.RouteMonitorMsg:
-			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[p : p+int(ch.MessageLength-bmp.CommonHeaderLength)]); err != nil {
+			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[p : p+bmp.PerPeerHeaderLength]); err != nil {
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}

@@ -29,38 +29,59 @@ const (
 )
 
 // UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object
-func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
+func UnmarshalSRv6EndXSIDTLV(b []byte) ([]*EndXSIDTLV, error) {
 	glog.V(6).Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
 	if len(b) < EndXSIDTLVMinLen {
 		return nil, fmt.Errorf("invalid length of data %d, expected minimum of %d", len(b), EndXSIDTLVMinLen)
 	}
-	endx := EndXSIDTLV{}
 	p := 0
-	endx.EndpointBehavior = binary.BigEndian.Uint16(b[p : p+2])
-	p += 2
-	endx.BFlag = b[p]&0x01 == 0x01
-	endx.SFlag = b[p]&0x02 == 0x02
-	endx.PFlag = b[p]&0x04 == 0x04
-	p++
-	endx.Algorithm = b[p]
-	p++
-	endx.Weight = b[p]
-	p++
-	// Skip reserved byte
-	p++
-	sid := net.IP(b[p : p+16])
-	if sid.To16() == nil {
-		return nil, fmt.Errorf("invalid sid format")
-	}
-	endx.SID = sid.To16().String()
-	p += 16
-	if len(b) > p {
-		stlvs, err := base.UnmarshalTLV(b[p:])
-		if err != nil {
-			return nil, err
+	endx := make([]*EndXSIDTLV, 0)
+	for p < len(b) {
+		e := EndXSIDTLV{}
+		if p+2 > len(b) {
+			break
 		}
-		endx.SubTLVs = stlvs
+		e.EndpointBehavior = binary.BigEndian.Uint16(b[p : p+2])
+		if p+2 > len(b) {
+			break
+		}
+		p += 2
+		e.BFlag = b[p]&0x01 == 0x01
+		e.SFlag = b[p]&0x02 == 0x02
+		e.PFlag = b[p]&0x04 == 0x04
+		if p+1 > len(b) {
+			break
+		}
+		p++
+		e.Algorithm = b[p]
+		if p+1 > len(b) {
+			break
+		}
+		p++
+		e.Weight = b[p]
+		if p+2 > len(b) {
+			break
+		}
+		p++
+		// Skip reserved byte
+		p++
+		if p+16 > len(b) {
+			break
+		}
+		sid := net.IP(b[p : p+16])
+		if sid.To16() == nil {
+			return nil, fmt.Errorf("invalid sid format")
+		}
+		e.SID = sid.To16().String()
+		p += 16
+		if len(b) > p {
+			stlvs, err := base.UnmarshalTLV(b[p:])
+			if err != nil {
+				return nil, err
+			}
+			e.SubTLVs = stlvs
+		}
 	}
 
-	return &endx, nil
+	return endx, nil
 }

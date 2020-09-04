@@ -28,7 +28,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			RouterIP:       p.speakerIP,
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,
-			Timestamp:      ph.PeerTimestamp,
+			Timestamp:      ph.GetPeerTimestamp(),
 			PrefixLen:      int32(pr.Length),
 			PathID:         int32(pr.PathID),
 			BaseAttributes: update.BaseAttributes,

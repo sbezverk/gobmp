@@ -86,7 +86,6 @@ type LSNode struct {
 	Hash                string                    `json:"hash,omitempty"`
 	RouterHash          string                    `json:"router_hash,omitempty"`
 	RouterIP            string                    `json:"router_ip,omitempty"`
-	BaseAttributes      *bgp.BaseAttributes       `json:"base_attrs,omitempty"`
 	PeerHash            string                    `json:"peer_hash,omitempty"`
 	PeerIP              string                    `json:"peer_ip,omitempty"`
 	PeerASN             int32                     `json:"peer_asn,omitempty"`
@@ -100,8 +99,7 @@ type LSNode struct {
 	ISISAreaID          string                    `json:"isis_area_id,omitempty"`
 	Protocol            string                    `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID              `json:"protocol_id,omitempty"`
-	Flags               uint8                     `json:"flags"`
-	Nexthop             string                    `json:"nexthop,omitempty"`
+	NodeFlags           uint8                     `json:"node_flags"`
 	Name                string                    `json:"name,omitempty"`
 	SRCapabilities      *sr.Capability            `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         []int                     `json:"sr_algorithm,omitempty"`
@@ -123,7 +121,6 @@ type LSLink struct {
 	Hash                  string                `json:"hash,omitempty"`
 	RouterHash            string                `json:"router_hash,omitempty"`
 	RouterIP              string                `json:"router_ip,omitempty"`
-	BaseAttributes        *bgp.BaseAttributes   `json:"base_attrs,omitempty"`
 	PeerHash              string                `json:"peer_hash,omitempty"`
 	PeerIP                string                `json:"peer_ip,omitempty"`
 	PeerASN               int32                 `json:"peer_asn,omitempty"`
@@ -137,8 +134,8 @@ type LSLink struct {
 	MTID                  []uint16              `json:"mt_id,omitempty"`
 	LocalLinkID           string                `json:"local_link_id,omitempty"`
 	RemoteLinkID          string                `json:"remote_link_id,omitempty"`
-	InterfaceIP           string                `json:"intf_ip,omitempty"`
-	NeighborIP            string                `json:"nei_ip,omitempty"`
+	LocalLinkIP           []string              `json:"local_link_ip,omitempty"`
+	RemoteLinkIP          []string              `json:"remote_link_ip,omitempty"`
 	IGPMetric             uint32                `json:"igp_metric,omitempty"`
 	AdminGroup            uint32                `json:"admin_group,omitempty"`
 	MaxLinkBW             uint32                `json:"max_link_bw,omitempty"`
@@ -156,9 +153,7 @@ type LSLink struct {
 	LocalNodeASN          uint32                `json:"local_node_asn,omitempty"`
 	RemoteNodeASN         uint32                `json:"remote_node_asn,omitempty"`
 	SRv6BGPPeerNodeSID    *srv6.BGPPeerNodeSID  `json:"srv6_bgp_peer_node_sid,omitempty"`
-	SRv6ENDXSID           *srv6.EndXSIDTLV      `json:"srv6_endx_sid,omitempty"`
-	IsPrepolicy           bool                  `json:"isprepolicy"`
-	IsAdjRIBIn            bool                  `json:"is_adj_rib_in"`
+	SRv6ENDXSID           []*srv6.EndXSIDTLV    `json:"srv6_endx_sid,omitempty"`
 	LSAdjacencySID        []*sr.AdjacencySIDTLV `json:"ls_adjacency_sid,omitempty"`
 	LinkMSD               []*base.MSDTV         `json:"link_msd,omitempty"`
 	UnidirLinkDelay       uint32                `json:"unidir_link_delay,omitempty"`
@@ -203,31 +198,33 @@ type L3VPNPrefix struct {
 
 // LSPrefix defines a structure of LS Prefix message
 type LSPrefix struct {
-	Key                  string                      `json:"_key,omitempty"`
-	ID                   string                      `json:"_id,omitempty"`
-	Rev                  string                      `json:"_rev,omitempty"`
-	Action               string                      `json:"action,omitempty"`
-	Sequence             int                         `json:"sequence,omitempty"`
-	Hash                 string                      `json:"hash,omitempty"`
-	RouterHash           string                      `json:"router_hash,omitempty"`
-	RouterIP             string                      `json:"router_ip,omitempty"`
-	BaseAttributes       *bgp.BaseAttributes         `json:"base_attrs,omitempty"`
-	PeerHash             string                      `json:"peer_hash,omitempty"`
-	PeerIP               string                      `json:"peer_ip,omitempty"`
-	PeerASN              int32                       `json:"peer_asn,omitempty"`
-	Timestamp            string                      `json:"timestamp,omitempty"`
-	IGPRouterID          string                      `json:"igp_router_id,omitempty"`
-	RouterID             string                      `json:"router_id,omitempty"`
-	LSID                 uint32                      `json:"ls_id,omitempty"`
-	ProtocolID           base.ProtoID                `json:"protocol_id,omitempty"`
-	Protocol             string                      `json:"protocol,omitempty"`
-	Nexthop              string                      `json:"nexthop,omitempty"`
-	LocalNodeHash        string                      `json:"local_node_hash,omitempty"`
-	MTID                 []uint16                    `json:"mt_id,omitempty"`
-	OSPFRouteType        uint8                       `json:"ospf_route_type,omitempty"`
-	IGPFlags             uint8                       `json:"igp_flags"`
-	RouteTag             uint8                       `json:"route_tag,omitempty"`
-	ExtRouteTag          uint8                       `json:"ext_route_tag,omitempty"`
+	Key           string       `json:"_key,omitempty"`
+	ID            string       `json:"_id,omitempty"`
+	Rev           string       `json:"_rev,omitempty"`
+	Action        string       `json:"action,omitempty"`
+	Sequence      int          `json:"sequence,omitempty"`
+	Hash          string       `json:"hash,omitempty"`
+	RouterHash    string       `json:"router_hash,omitempty"`
+	RouterIP      string       `json:"router_ip,omitempty"`
+	PeerHash      string       `json:"peer_hash,omitempty"`
+	PeerIP        string       `json:"peer_ip,omitempty"`
+	PeerASN       int32        `json:"peer_asn,omitempty"`
+	Timestamp     string       `json:"timestamp,omitempty"`
+	IGPRouterID   string       `json:"igp_router_id,omitempty"`
+	RouterID      string       `json:"router_id,omitempty"`
+	LSID          uint32       `json:"ls_id,omitempty"`
+	ProtocolID    base.ProtoID `json:"protocol_id,omitempty"`
+	Protocol      string       `json:"protocol,omitempty"`
+	Nexthop       string       `json:"nexthop,omitempty"`
+	LocalNodeHash string       `json:"local_node_hash,omitempty"`
+	MTID          []uint16     `json:"mt_id,omitempty"`
+	OSPFRouteType uint8        `json:"ospf_route_type,omitempty"`
+	IGPFlags      uint8        `json:"igp_flags"`
+
+	// TODO Add populations 333
+	IGPRouteTag    []uint32 `json:"route_tag,omitempty"`
+	IGPExtRouteTag []uint64 `json:"ext_route_tag,omitempty"`
+
 	OSPFFwdAddr          string                      `json:"ospf_fwd_addr,omitempty"`
 	IGPMetric            uint32                      `json:"igp_metric,omitempty"`
 	Prefix               string                      `json:"prefix,omitempty"`
@@ -237,37 +234,40 @@ type LSPrefix struct {
 	LSPrefixSID          []*sr.PrefixSIDTLV          `json:"ls_prefix_sid,omitempty"`
 	PrefixAttrFlags      uint8                       `json:"prefix_attr_flags"`
 	FlexAlgoPrefixMetric *bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
+
+	// TODO Add SID Locator
 }
 
 // LSSRv6SID defines a structure of LS SRv6 SID message
 type LSSRv6SID struct {
-	Key                  string                 `json:"_key,omitempty"`
-	ID                   string                 `json:"_id,omitempty"`
-	Rev                  string                 `json:"_rev,omitempty"`
-	Action               string                 `json:"action,omitempty"`
-	Sequence             int                    `json:"sequence,omitempty"`
-	Hash                 string                 `json:"hash,omitempty"`
-	RouterHash           string                 `json:"router_hash,omitempty"`
-	RouterIP             string                 `json:"router_ip,omitempty"`
-	BaseAttributes       *bgp.BaseAttributes    `json:"base_attrs,omitempty"`
-	PeerHash             string                 `json:"peer_hash,omitempty"`
-	PeerIP               string                 `json:"peer_ip,omitempty"`
-	PeerASN              int32                  `json:"peer_asn,omitempty"`
-	Timestamp            string                 `json:"timestamp,omitempty"`
-	IGPRouterID          string                 `json:"igp_router_id,omitempty"`
-	LocalNodeASN         uint32                 `json:"local_node_asn,omitempty"`
-	RouterID             string                 `json:"router_id,omitempty"`
-	LSID                 uint32                 `json:"ls_id,omitempty"`
-	OSPFAreaID           string                 `json:"ospf_area_id,omitempty"`
-	ISISAreaID           string                 `json:"isis_area_id,omitempty"`
-	Protocol             string                 `json:"protocol,omitempty"`
-	Nexthop              string                 `json:"nexthop,omitempty"`
-	LocalNodeHash        string                 `json:"local_node_hash,omitempty"`
-	MTID                 []uint16               `json:"mt_id,omitempty"`
-	OSPFRouteType        uint8                  `json:"ospf_route_type,omitempty"`
-	IGPFlags             uint8                  `json:"igp_flags"`
-	RouteTag             uint8                  `json:"route_tag,omitempty"`
-	ExtRouteTag          uint8                  `json:"ext_route_tag,omitempty"`
+	Key           string   `json:"_key,omitempty"`
+	ID            string   `json:"_id,omitempty"`
+	Rev           string   `json:"_rev,omitempty"`
+	Action        string   `json:"action,omitempty"`
+	Sequence      int      `json:"sequence,omitempty"`
+	Hash          string   `json:"hash,omitempty"`
+	RouterHash    string   `json:"router_hash,omitempty"`
+	RouterIP      string   `json:"router_ip,omitempty"`
+	PeerHash      string   `json:"peer_hash,omitempty"`
+	PeerIP        string   `json:"peer_ip,omitempty"`
+	PeerASN       int32    `json:"peer_asn,omitempty"`
+	Timestamp     string   `json:"timestamp,omitempty"`
+	IGPRouterID   string   `json:"igp_router_id,omitempty"`
+	LocalNodeASN  uint32   `json:"local_node_asn,omitempty"`
+	RouterID      string   `json:"router_id,omitempty"`
+	LSID          uint32   `json:"ls_id,omitempty"`
+	OSPFAreaID    string   `json:"ospf_area_id,omitempty"`
+	ISISAreaID    string   `json:"isis_area_id,omitempty"`
+	Protocol      string   `json:"protocol,omitempty"`
+	Nexthop       string   `json:"nexthop,omitempty"`
+	LocalNodeHash string   `json:"local_node_hash,omitempty"`
+	MTID          []uint16 `json:"mt_id,omitempty"`
+	OSPFRouteType uint8    `json:"ospf_route_type,omitempty"`
+	IGPFlags      uint8    `json:"igp_flags"`
+
+	// TODO Add population
+	IGPRouteTag          uint8                  `json:"route_tag,omitempty"`
+	IGPExtRouteTag       uint8                  `json:"ext_route_tag,omitempty"`
 	OSPFFwdAddr          string                 `json:"ospf_fwd_addr,omitempty"`
 	IGPMetric            uint32                 `json:"igp_metric,omitempty"`
 	Prefix               string                 `json:"prefix,omitempty"`

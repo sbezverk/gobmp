@@ -12,6 +12,10 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+const (
+	BMP_PEER_HEADER_SIZE = 42
+)
+
 // PerPeerHeader defines BMP Per-Peer Header per rfc7854
 type PerPeerHeader struct {
 	PeerType          byte
@@ -22,7 +26,41 @@ type PerPeerHeader struct {
 	PeerAddress       []byte
 	PeerAS            int32
 	PeerBGPID         []byte
-	PeerTimestamp     string
+	PeerTimestamp     []byte
+}
+
+// Len returns the length of PerPeerHeader structure
+func (p *PerPeerHeader) Len() int {
+	return 1 + 1 + len(p.PeerDistinguisher) + len(p.PeerAddress) + 4 + len(p.PeerBGPID) + len(p.PeerTimestamp)
+}
+
+// Serialize generate a slice of bytes for sending over the network
+func (p *PerPeerHeader) Serialize() ([]byte, error) {
+	b := make([]byte, BMP_PEER_HEADER_SIZE)
+	b[0] = p.PeerType
+	flag := uint8(0)
+	if p.FlagV {
+		flag |= 0x80
+	}
+	if p.FlagL {
+		flag |= 0x40
+	}
+	if p.FlagA {
+		flag |= 0x20
+	}
+	b[1] = flag
+	copy(b[2:10], p.PeerDistinguisher)
+	if p.FlagV {
+		copy(b[10:26], p.PeerAddress)
+	} else {
+		// Copying only last 4 bytes where IPv4 address is stored
+		copy(b[22:26], p.PeerAddress[12:16])
+	}
+	binary.BigEndian.PutUint32(b[26:30], uint32(p.PeerAS))
+	copy(b[30:34], p.PeerBGPID)
+	copy(b[34:42], p.PeerTimestamp)
+
+	return b, nil
 }
 
 // UnmarshalPerPeerHeader processes Per-Peer header
@@ -32,6 +70,7 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 		PeerDistinguisher: make([]byte, 8), // newPeerDistinguisher(),
 		PeerAddress:       make([]byte, 16),
 		PeerBGPID:         make([]byte, 4),
+		PeerTimestamp:     make([]byte, 8),
 	}
 	// Extracting Peer type
 	// *  Peer Type = 0: Global Instance Peer
@@ -61,15 +100,19 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	p += 4
 	copy(pph.PeerBGPID, b[p:p+4])
 	p += 4
-	t := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
-	ts := time.Second * time.Duration(binary.BigEndian.Uint32(b[p:p+4]))
-	p += 4
-	tms := time.Duration(int(binary.BigEndian.Uint32(b[p : p+4])))
-	t = t.Add(ts)
-	t = t.Add(tms)
-	pph.PeerTimestamp = t.Format(time.StampMicro)
+	// Store Peer's timestamp (8 bytes) as a slice
+	copy(pph.PeerTimestamp, b[p:p+8])
 
 	return pph, nil
+}
+
+func (p *PerPeerHeader) GetPeerTimestamp() string {
+	t := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
+	ts := time.Second * time.Duration(binary.BigEndian.Uint32(p.PeerTimestamp[0:4]))
+	tms := time.Duration(int(binary.BigEndian.Uint32(p.PeerTimestamp[4:8])))
+	t = t.Add(ts)
+	t = t.Add(tms)
+	return t.Format(time.StampMicro)
 }
 
 // GetPeerHash calculates Peer Hash and returns as a hex string

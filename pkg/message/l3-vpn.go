@@ -33,7 +33,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			RouterIP:       p.speakerIP,
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,
-			Timestamp:      ph.PeerTimestamp,
+			Timestamp:      ph.GetPeerTimestamp(),
 			Nexthop:        nlri.GetNextHop(),
 			PrefixLen:      int32(e.Length),
 			PathID:         int32(e.PathID),

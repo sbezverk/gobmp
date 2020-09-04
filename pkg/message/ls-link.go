@@ -20,13 +20,12 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSLink{
-		Action:         operation,
-		RouterHash:     p.speakerHash,
-		RouterIP:       p.speakerIP,
-		PeerHash:       ph.GetPeerHash(),
-		PeerASN:        ph.PeerAS,
-		Timestamp:      ph.PeerTimestamp,
-		BaseAttributes: update.BaseAttributes,
+		Action:     operation,
+		RouterHash: p.speakerHash,
+		RouterIP:   p.speakerIP,
+		PeerHash:   ph.GetPeerHash(),
+		PeerASN:    ph.PeerAS,
+		Timestamp:  ph.GetPeerTimestamp(),
 	}
 	msg.Nexthop = nextHop
 	if ph.FlagV {
@@ -41,8 +40,8 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	msg.LSID = link.GetLinkLSID(true)
 	msg.LocalLinkID = link.GetLinkID(true)
 	msg.RemoteLinkID = link.GetLinkID(false)
-	msg.InterfaceIP = link.GetLinkInterfaceAddr()
-	msg.NeighborIP = link.GetLinkNeighborAddr()
+	msg.LocalLinkIP = link.GetLinkInterfaceAddr()
+	msg.RemoteLinkIP = link.GetLinkNeighborAddr()
 	msg.LocalNodeHash = link.LocalNodeHash
 	msg.RemoteNodeHash = link.RemoteNodeHash
 	msg.LocalNodeASN = link.GetLocalASN()

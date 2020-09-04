@@ -157,15 +157,38 @@ func unmarshalAttrASPath(b []byte) []uint32 {
 }
 
 func isASPath4(b []byte) bool {
-	l := 0
-	s := 0
-	for p := 0; p < len(b); {
-		l += int(b[p+1] * 4)
-		p += int(b[p+1]*4) + 2
-		s++
+	p := 0
+	// Skipping type
+	p++
+	// Length of path segment in 2 or 4 bytes depending if AS2 or AS4 is used.
+	l := int(b[p])
+	p++
+	// Check if next segment can be found with AS4
+	if l*4 == len(b[p:]) {
+		// Found last AS4 segment, confirmed AS4
+		return true
 	}
-
-	return l+s*2 == len(b)
+	// Check if next segment can be found with AS4
+	if l*2 == len(b[p:]) {
+		// Found last AS2 segment, confirmed AS2
+		return false
+	}
+	// Check if next segment can be found with AS4
+	if p+l*4 < len(b) {
+		if b[p+l*4] == 0x1 || b[p+l*4] == 0x2 {
+			// Found next AS4 segment, confirmed AS4
+			return true
+		}
+	}
+	// Check if next segment can be found with AS2
+	if p+l*2 < len(b) {
+		if b[p+l*2] == 0x1 || b[p+l*2] == 0x2 {
+			// Found next AS2 segment, confirmed AS2
+			return false
+		}
+	}
+	// Should never reach here
+	return false
 }
 
 // unmarshalAttrNextHop returns the value of Next Hop attribute

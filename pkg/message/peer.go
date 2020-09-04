@@ -32,7 +32,7 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			RemoteASN:      msg.PeerHeader.PeerAS,
 			PeerRD:         msg.PeerHeader.GetPeerDistinguisherString(),
 			RemotePort:     int(peerUpMsg.RemotePort),
-			Timestamp:      msg.PeerHeader.PeerTimestamp,
+			Timestamp:      msg.PeerHeader.GetPeerTimestamp(),
 			LocalPort:      int(peerUpMsg.LocalPort),
 			AdvHolddown:    int(peerUpMsg.SentOpen.HoldTime),
 			RemoteHolddown: int(peerUpMsg.ReceivedOpen.HoldTime),
@@ -95,7 +95,7 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			BMPReason:  int(peerDownMsg.Reason),
 			RemoteASN:  msg.PeerHeader.PeerAS,
 			PeerRD:     msg.PeerHeader.GetPeerDistinguisherString(),
-			Timestamp:  msg.PeerHeader.PeerTimestamp,
+			Timestamp:  msg.PeerHeader.GetPeerTimestamp(),
 		}
 		if msg.PeerHeader.FlagV {
 			m.IsIPv4 = false
