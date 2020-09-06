@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 
 	"net/http"
@@ -29,6 +30,7 @@ var (
 )
 
 func init() {
+	runtime.GOMAXPROCS(1)
 	flag.IntVar(&srcPort, "source-port", 5000, "port exposed to outside")
 	flag.IntVar(&dstPort, "destination-port", 5050, "port openBMP is listening")
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
