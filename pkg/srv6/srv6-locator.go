@@ -19,26 +19,40 @@ type LocatorTLV struct {
 }
 
 // UnmarshalSRv6LocatorTLV builds SRv6 Locator TLV object
-func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
+func UnmarshalSRv6LocatorTLV(b []byte) ([]*LocatorTLV, error) {
 	glog.V(6).Infof("SRv6 Locator TLV Raw: %s", tools.MessageHex(b))
-	loc := LocatorTLV{}
-	p := 0
-	loc.Flag = b[p]
-	p++
-	loc.Algorithm = b[p]
-	p++
-	// Skip reserved byte
-	p += 2
-	loc.Metric = binary.BigEndian.Uint32(b[p : p+4])
-	p += 4
-
-	if len(b) > p {
-		stlvs, err := base.UnmarshalTLV(b[p:])
-		if err != nil {
-			return nil, err
+	locs := make([]*LocatorTLV, 0)
+	for p := 0; p < len(b); {
+		loc := LocatorTLV{}
+		loc.Flag = b[p]
+		if p+1 > len(b) {
+			break
 		}
-		loc.SubTLV = stlvs
-	}
+		p++
+		loc.Algorithm = b[p]
+		if p+1 > len(b) {
+			break
+		}
+		p++
+		// Skip reserved byte
+		if p+2 > len(b) {
+			break
+		}
+		p += 2
+		if p+4 > len(b) {
+			break
+		}
+		loc.Metric = binary.BigEndian.Uint32(b[p : p+4])
+		p += 4
 
-	return &loc, nil
+		if len(b) > p {
+			stlvs, err := base.UnmarshalTLV(b[p:])
+			if err != nil {
+				return nil, err
+			}
+			loc.SubTLV = stlvs
+		}
+		locs = append(locs, &loc)
+	}
+	return locs, nil
 }
