@@ -234,8 +234,7 @@ type LSPrefix struct {
 	LSPrefixSID          []*sr.PrefixSIDTLV          `json:"ls_prefix_sid,omitempty"`
 	PrefixAttrFlags      uint8                       `json:"prefix_attr_flags"`
 	FlexAlgoPrefixMetric *bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
-
-	// TODO Add SID Locator
+	SRv6Locator          []*srv6.LocatorTLV          `json:"srv6_locator,omitempty"`
 }
 
 // LSSRv6SID defines a structure of LS SRv6 SID message

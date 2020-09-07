@@ -61,6 +61,9 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		if fap, err := lsprefix.GetFlexAlgoPrefixMetric(); err == nil {
 			msg.FlexAlgoPrefixMetric = fap
 		}
+		if loc, err := lsprefix.GetLSSRv6Locator(); err == nil {
+			msg.SRv6Locator = loc
+		}
 	}
 
 	return &msg, nil

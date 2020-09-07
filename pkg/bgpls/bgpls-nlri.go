@@ -260,6 +260,23 @@ func (ls *NLRI) GetLSPrefixSID() ([]*sr.PrefixSIDTLV, error) {
 	return ps, nil
 }
 
+// GetLSSRv6Locator returns a slice of SRv6 locator objects
+func (ls *NLRI) GetLSSRv6Locator() ([]*srv6.LocatorTLV, error) {
+	locs := make([]*srv6.LocatorTLV, 0)
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1162 {
+			continue
+		}
+		loc, err := srv6.UnmarshalSRv6LocatorTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		locs = append(locs, loc)
+	}
+
+	return locs, nil
+}
+
 // GetLSPrefixAttrFlags returns a Prefix Attribute Flags interface
 func (ls *NLRI) GetLSPrefixAttrFlags() (uint8, error) {
 	for _, tlv := range ls.LS {
