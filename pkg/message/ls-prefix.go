@@ -35,6 +35,8 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	msg.LocalNodeHash = prfx.LocalNodeHash
 	msg.IGPRouterID = prfx.GetLocalIGPRouterID()
 	msg.IGPMetric = prfx.Prefix.GetPrefixMetric()
+	msg.IGPRouteTag = prfx.Prefix.GetPrefixIGPRouteTag()
+	msg.IGPExtRouteTag = prfx.Prefix.GetPrefixIGPExtRouteTag()
 	route := prfx.Prefix.GetPrefixIPReachability(ipv4)
 	msg.PrefixLen = int32(route.Length)
 	pr := prfx.Prefix.GetPrefixIPReachability(ipv4).Prefix
