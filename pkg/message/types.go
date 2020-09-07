@@ -78,37 +78,37 @@ type UnicastPrefix struct {
 
 // LSNode defines a structure of LS Node message
 type LSNode struct {
-	Key                 string                    `json:"_key,omitempty"`
-	ID                  string                    `json:"_id,omitempty"`
-	Rev                 string                    `json:"_rev,omitempty"`
-	Action              string                    `json:"action,omitempty"` // Action can be "add" or "del"
-	Sequence            int                       `json:"sequence,omitempty"`
-	Hash                string                    `json:"hash,omitempty"`
-	RouterHash          string                    `json:"router_hash,omitempty"`
-	RouterIP            string                    `json:"router_ip,omitempty"`
-	PeerHash            string                    `json:"peer_hash,omitempty"`
-	PeerIP              string                    `json:"peer_ip,omitempty"`
-	PeerASN             int32                     `json:"peer_asn,omitempty"`
-	Timestamp           string                    `json:"timestamp,omitempty"`
-	IGPRouterID         string                    `json:"igp_router_id,omitempty"`
-	RouterID            string                    `json:"router_id,omitempty"`
-	ASN                 uint32                    `json:"asn,omitempty"`
-	LSID                uint32                    `json:"ls_id,omitempty"`
-	MTID                []uint16                  `json:"mt_id,omitempty"`
-	OSPFAreaID          string                    `json:"ospf_area_id,omitempty"`
-	ISISAreaID          string                    `json:"isis_area_id,omitempty"`
-	Protocol            string                    `json:"protocol,omitempty"`
-	ProtocolID          base.ProtoID              `json:"protocol_id,omitempty"`
-	NodeFlags           uint8                     `json:"node_flags"`
-	Name                string                    `json:"name,omitempty"`
-	SRCapabilities      *sr.Capability            `json:"ls_sr_capabilities,omitempty"`
-	SRAlgorithm         []int                     `json:"sr_algorithm,omitempty"`
-	SRLocalBlock        *sr.LocalBlock            `json:"sr_local_block,omitempty"`
-	SRv6CapabilitiesTLV *srv6.CapabilityTLV       `json:"srv6_capabilities_tlv,omitempty"`
-	NodeMSD             []*base.MSDTV             `json:"node_msd,omitempty"`
-	FlexAlgoDefinition  *bgpls.FlexAlgoDefinition `json:"flex_algo_definition,omitempty"`
-	IsPrepolicy         bool                      `json:"isprepolicy"`
-	IsAdjRIBIn          bool                      `json:"is_adj_rib_in"`
+	Key                 string                      `json:"_key,omitempty"`
+	ID                  string                      `json:"_id,omitempty"`
+	Rev                 string                      `json:"_rev,omitempty"`
+	Action              string                      `json:"action,omitempty"` // Action can be "add" or "del"
+	Sequence            int                         `json:"sequence,omitempty"`
+	Hash                string                      `json:"hash,omitempty"`
+	RouterHash          string                      `json:"router_hash,omitempty"`
+	RouterIP            string                      `json:"router_ip,omitempty"`
+	PeerHash            string                      `json:"peer_hash,omitempty"`
+	PeerIP              string                      `json:"peer_ip,omitempty"`
+	PeerASN             int32                       `json:"peer_asn,omitempty"`
+	Timestamp           string                      `json:"timestamp,omitempty"`
+	IGPRouterID         string                      `json:"igp_router_id,omitempty"`
+	RouterID            string                      `json:"router_id,omitempty"`
+	ASN                 uint32                      `json:"asn,omitempty"`
+	LSID                uint32                      `json:"ls_id,omitempty"`
+	MTID                []uint16                    `json:"mt_id,omitempty"`
+	OSPFAreaID          string                      `json:"ospf_area_id,omitempty"`
+	ISISAreaID          string                      `json:"isis_area_id,omitempty"`
+	Protocol            string                      `json:"protocol,omitempty"`
+	ProtocolID          base.ProtoID                `json:"protocol_id,omitempty"`
+	NodeFlags           uint8                       `json:"node_flags"`
+	Name                string                      `json:"name,omitempty"`
+	SRCapabilities      *sr.Capability              `json:"ls_sr_capabilities,omitempty"`
+	SRAlgorithm         []int                       `json:"sr_algorithm,omitempty"`
+	SRLocalBlock        *sr.LocalBlock              `json:"sr_local_block,omitempty"`
+	SRv6CapabilitiesTLV *srv6.CapabilityTLV         `json:"srv6_capabilities_tlv,omitempty"`
+	NodeMSD             []*base.MSDTV               `json:"node_msd,omitempty"`
+	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition `json:"flex_algo_definition,omitempty"`
+	IsPrepolicy         bool                        `json:"isprepolicy"`
+	IsAdjRIBIn          bool                        `json:"is_adj_rib_in"`
 }
 
 // LSLink defines a structure of LS link message
@@ -198,40 +198,40 @@ type L3VPNPrefix struct {
 
 // LSPrefix defines a structure of LS Prefix message
 type LSPrefix struct {
-	Key                  string                      `json:"_key,omitempty"`
-	ID                   string                      `json:"_id,omitempty"`
-	Rev                  string                      `json:"_rev,omitempty"`
-	Action               string                      `json:"action,omitempty"`
-	Sequence             int                         `json:"sequence,omitempty"`
-	Hash                 string                      `json:"hash,omitempty"`
-	RouterHash           string                      `json:"router_hash,omitempty"`
-	RouterIP             string                      `json:"router_ip,omitempty"`
-	PeerHash             string                      `json:"peer_hash,omitempty"`
-	PeerIP               string                      `json:"peer_ip,omitempty"`
-	PeerASN              int32                       `json:"peer_asn,omitempty"`
-	Timestamp            string                      `json:"timestamp,omitempty"`
-	IGPRouterID          string                      `json:"igp_router_id,omitempty"`
-	RouterID             string                      `json:"router_id,omitempty"`
-	LSID                 uint32                      `json:"ls_id,omitempty"`
-	ProtocolID           base.ProtoID                `json:"protocol_id,omitempty"`
-	Protocol             string                      `json:"protocol,omitempty"`
-	Nexthop              string                      `json:"nexthop,omitempty"`
-	LocalNodeHash        string                      `json:"local_node_hash,omitempty"`
-	MTID                 []uint16                    `json:"mt_id,omitempty"`
-	OSPFRouteType        uint8                       `json:"ospf_route_type,omitempty"`
-	IGPFlags             uint8                       `json:"igp_flags"`
-	IGPRouteTag          []uint32                    `json:"route_tag,omitempty"`
-	IGPExtRouteTag       []uint64                    `json:"ext_route_tag,omitempty"`
-	OSPFFwdAddr          string                      `json:"ospf_fwd_addr,omitempty"`
-	IGPMetric            uint32                      `json:"igp_metric,omitempty"`
-	Prefix               string                      `json:"prefix,omitempty"`
-	PrefixLen            int32                       `json:"prefix_len,omitempty"`
-	IsPrepolicy          bool                        `json:"isprepolicy"`
-	IsAdjRIBIn           bool                        `json:"is_adj_rib_in"`
-	LSPrefixSID          []*sr.PrefixSIDTLV          `json:"ls_prefix_sid,omitempty"`
-	PrefixAttrFlags      uint8                       `json:"prefix_attr_flags"`
-	FlexAlgoPrefixMetric *bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
-	SRv6Locator          []*srv6.LocatorTLV          `json:"srv6_locator,omitempty"`
+	Key                  string                        `json:"_key,omitempty"`
+	ID                   string                        `json:"_id,omitempty"`
+	Rev                  string                        `json:"_rev,omitempty"`
+	Action               string                        `json:"action,omitempty"`
+	Sequence             int                           `json:"sequence,omitempty"`
+	Hash                 string                        `json:"hash,omitempty"`
+	RouterHash           string                        `json:"router_hash,omitempty"`
+	RouterIP             string                        `json:"router_ip,omitempty"`
+	PeerHash             string                        `json:"peer_hash,omitempty"`
+	PeerIP               string                        `json:"peer_ip,omitempty"`
+	PeerASN              int32                         `json:"peer_asn,omitempty"`
+	Timestamp            string                        `json:"timestamp,omitempty"`
+	IGPRouterID          string                        `json:"igp_router_id,omitempty"`
+	RouterID             string                        `json:"router_id,omitempty"`
+	LSID                 uint32                        `json:"ls_id,omitempty"`
+	ProtocolID           base.ProtoID                  `json:"protocol_id,omitempty"`
+	Protocol             string                        `json:"protocol,omitempty"`
+	Nexthop              string                        `json:"nexthop,omitempty"`
+	LocalNodeHash        string                        `json:"local_node_hash,omitempty"`
+	MTID                 []uint16                      `json:"mt_id,omitempty"`
+	OSPFRouteType        uint8                         `json:"ospf_route_type,omitempty"`
+	IGPFlags             uint8                         `json:"igp_flags"`
+	IGPRouteTag          []uint32                      `json:"route_tag,omitempty"`
+	IGPExtRouteTag       []uint64                      `json:"ext_route_tag,omitempty"`
+	OSPFFwdAddr          string                        `json:"ospf_fwd_addr,omitempty"`
+	IGPMetric            uint32                        `json:"igp_metric,omitempty"`
+	Prefix               string                        `json:"prefix,omitempty"`
+	PrefixLen            int32                         `json:"prefix_len,omitempty"`
+	IsPrepolicy          bool                          `json:"isprepolicy"`
+	IsAdjRIBIn           bool                          `json:"is_adj_rib_in"`
+	LSPrefixSID          []*sr.PrefixSIDTLV            `json:"ls_prefix_sid,omitempty"`
+	PrefixAttrFlags      uint8                         `json:"prefix_attr_flags"`
+	FlexAlgoPrefixMetric []*bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
+	SRv6Locator          []*srv6.LocatorTLV            `json:"srv6_locator,omitempty"`
 }
 
 // LSSRv6SID defines a structure of LS SRv6 SID message

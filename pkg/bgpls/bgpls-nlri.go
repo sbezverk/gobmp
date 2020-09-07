@@ -220,27 +220,37 @@ func (ls *NLRI) GetNodeSRLocalBlock() *sr.LocalBlock {
 }
 
 // GetFlexAlgoDefinition returns node's FlexAlgo Definition object
-func (ls *NLRI) GetFlexAlgoDefinition() (*FlexAlgoDefinition, error) {
+func (ls *NLRI) GetFlexAlgoDefinition() ([]*FlexAlgoDefinition, error) {
+	fads := make([]*FlexAlgoDefinition, 0)
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1039 {
 			continue
 		}
-		return UnmarshalFlexAlgoDefinition(tlv.Value)
+		fad, err := UnmarshalFlexAlgoDefinition(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		fads = append(fads, fad)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return fads, nil
 }
 
 // GetFlexAlgoPrefixMetric returns prefix's FlexAlgo Metric object
-func (ls *NLRI) GetFlexAlgoPrefixMetric() (*FlexAlgoPrefixMetric, error) {
+func (ls *NLRI) GetFlexAlgoPrefixMetric() ([]*FlexAlgoPrefixMetric, error) {
+	faps := make([]*FlexAlgoPrefixMetric, 0)
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1044 {
 			continue
 		}
-		return UnmarshalFlexAlgoPrefixMetric(tlv.Value)
+		fap, err := UnmarshalFlexAlgoPrefixMetric(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		faps = append(faps, fap)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return faps, nil
 }
 
 // GetLSPrefixSID returns a slice of  Prefix SID TLV objects
@@ -290,13 +300,18 @@ func (ls *NLRI) GetLSPrefixAttrFlags() (uint8, error) {
 
 // GetLSSRv6ENDXSID returns SRv6 END.X SID TLV
 func (ls *NLRI) GetLSSRv6ENDXSID() ([]*srv6.EndXSIDTLV, error) {
+	endxs := make([]*srv6.EndXSIDTLV, 0)
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1106 {
 			continue
 		}
-		return srv6.UnmarshalSRv6EndXSIDTLV(tlv.Value)
+		endx, err := srv6.UnmarshalSRv6EndXSIDTLV(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		endxs = append(endxs, endx)
 	}
-	return nil, fmt.Errorf("not found")
+	return endxs, nil
 }
 
 // GetNodeSRv6CapabilitiesTLV returns string representation of SRv6 Capabilities TLV
