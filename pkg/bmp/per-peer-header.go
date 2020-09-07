@@ -22,6 +22,7 @@ type PerPeerHeader struct {
 	FlagV             bool
 	FlagL             bool
 	FlagA             bool
+	FlagO             bool
 	PeerDistinguisher []byte // *PeerDistinguisher
 	PeerAddress       []byte
 	PeerAS            int32
@@ -47,6 +48,9 @@ func (p *PerPeerHeader) Serialize() ([]byte, error) {
 	}
 	if p.FlagA {
 		flag |= 0x20
+	}
+	if p.FlagO {
+		flag |= 0x10
 	}
 	b[1] = flag
 	copy(b[2:10], p.PeerDistinguisher)
@@ -89,6 +93,7 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	pph.FlagV = b[p]&0x80 == 0x80
 	pph.FlagL = b[p]&0x40 == 0x40
 	pph.FlagA = b[p]&0x20 == 0x20
+	pph.FlagO = b[p]&0x10 == 0x10
 	p++
 	// RD 8 bytes
 	copy(pph.PeerDistinguisher, b[p:p+8])
