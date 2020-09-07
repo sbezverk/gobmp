@@ -38,26 +38,14 @@ func UnmarshalFlexAlgoDefinition(b []byte) (*FlexAlgoDefinition, error) {
 	p++
 	fad.Priority = b[p]
 	p++
-	for p < len(b) {
-		stlv := &base.SubTLV{}
-		if p+2 > len(b) {
-			break
+	if p < len(b) {
+		sstlvs, err := base.UnmarshalSubTLV(b[p:])
+		if err != nil {
+			return nil, err
 		}
-		stlv.Type = binary.BigEndian.Uint16(b[p : p+2])
-		p += 2
-		if p+2 > len(b) {
-			break
-		}
-		stlv.Length = binary.BigEndian.Uint16(b[p : p+2])
-		p += 2
-		if p+int(stlv.Length) > len(b) {
-			break
-		}
-		stlv.Value = make([]byte, stlv.Length)
-		copy(stlv.Value, b[p:p+int(stlv.Length)])
-		p += int(stlv.Length)
-		fad.SubTLV = append(fad.SubTLV, stlv)
+		fad.SubTLV = sstlvs
 	}
+
 	return &fad, nil
 }
 

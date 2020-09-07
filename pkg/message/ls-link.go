@@ -76,6 +76,9 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		if sid, err := lslink.GetLSSRv6ENDXSID(); err == nil {
 			msg.SRv6ENDXSID = sid
 		}
+		if aslas, err := lslink.GetAppSpecLinkAttr(); err == nil {
+			msg.AppSpecLinkAttr = aslas
+		}
 		msg.UnidirAvailableBW = lslink.GetUnidirAvailableBandwidth()
 		msg.UnidirBWUtilization = lslink.GetUnidirUtilizedBandwidth()
 		msg.UnidirDelayVariation = lslink.GetUnidirDelayVariation()
