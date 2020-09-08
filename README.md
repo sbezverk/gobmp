@@ -1,3 +1,7 @@
+<p align="left">
+  <img src="https://github.com/sbezverk/gobmp/blob/master/Hudson_Go_BMP_logo.png?raw=true" width="40%" height="40%">
+</p>
+
 # goBMP
 
  
