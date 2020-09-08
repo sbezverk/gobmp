@@ -6,15 +6,15 @@
 
  
 
-goBMP is an implementation of Open BMP (RFC 7854) protocol’s collector in go language.  Collected BGP information can be published to kafka topics, stored in the file in JSON format or printed to stdout.
+goBMP is a BGP Monitoring Protocol (RFC 7854) collector implemented in go language.  Collected BGP information can be published to kafka topics, stored in the file in JSON format or printed to stdout.
 
  
 
-goBMP is suitable to run as a standalone binary as well as a containerized workload, provided deployment yaml allows running it as a deployment in Kubernetes.
+goBMP is suitable to run as a standalone binary as well as a containerized workload.  The provided deployment yaml allows running goBMP as a deployment in Kubernetes.
 
  
 
-goBMP receives BGP updates as a part of Open BMP messages, goBMP parses them and generates records depending on BGP Update NLRI and AFI/SAFI.
+goBMP receives BGP NLRI data via BMP messages. goBMP then parses the messagews and generates records depending on BGP Update NLRI and AFI/SAFI.
 
  
 
@@ -103,7 +103,7 @@ List of currently supported NLRI and AFI/SAFI:
 
  
 
-goBMP also supports a number of drafts for under development protocols and extensions, such as BGP LS extensions for SRv6 support, Flex Algo, Application Specific attributes etc. 
+goBMP also supports a number of drafts for protocols and extensions that are still under development. Some examples are BGP LS extensions for SRv6 support, Flex Algo, Application Specific attributes etc. 
 
 For the complete list of supported extensions and drafts follow this link: [Support RFCs and Drafts.](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
 
@@ -151,7 +151,7 @@ Dump processed BMP messages into a file or to the standard output.
 --intercept={true|false}
 ```
 
-When intercept set "true", all incomming BMP messages will be processed and a copy of a message  will be sent to TCP port specified by destination-port.
+When intercept set "true", all incomming BMP messages will be processed and a copy of a message will be sent to TCP port specified by destination-port.
 
 
 ```
