@@ -596,6 +596,24 @@ func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
 	return 0
 }
 
+// GetAppSpecLinkAttr returns a slice of Application Specifc Link Attributes
+func (ls *NLRI) GetAppSpecLinkAttr() ([]*AppSpecLinkAttr, error) {
+	aslas := make([]*AppSpecLinkAttr, 0)
+	// It appears Path Attributes can carry multiple entries of SR Adjacency SID
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1122 {
+			continue
+		}
+		asla, err := UnmarshalAppSpecLinkAttr(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		aslas = append(aslas, asla)
+	}
+
+	return aslas, nil
+}
+
 // GetSRAdjacencySID returns SR Adjacency SID object
 func (ls *NLRI) GetSRAdjacencySID() ([]*sr.AdjacencySIDTLV, error) {
 	adjs := make([]*sr.AdjacencySIDTLV, 0)

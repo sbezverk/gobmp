@@ -42,7 +42,6 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		}
 		msgs, err := p.unicast(nlri, operation, ph, update, labeled)
 		if err != nil {
-			glog.Errorf("failed to produce Unicast Prefix messages with error: %+v", err)
 			return
 		}
 		// Loop through and publish all collected messages

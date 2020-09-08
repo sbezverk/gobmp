@@ -13,14 +13,14 @@ import (
 // EndXSIDTLV defines SRv6 End.X SID TLV object
 // No RFC yet
 type EndXSIDTLV struct {
-	EndpointBehavior uint16              `json:"endpoint_behavior,omitempty"`
-	BFlag            bool                `json:"b_flag"`
-	SFlag            bool                `json:"s_flag"`
-	PFlag            bool                `json:"p_flag"`
-	Algorithm        uint8               `json:"algorithm,omitempty"`
-	Weight           uint8               `json:"weight,omitempty"`
-	SID              string              `json:"sid,omitempty"`
-	SubTLVs          map[uint16]base.TLV `json:"sub_tlvs,omitempty"`
+	EndpointBehavior uint16         `json:"endpoint_behavior,omitempty"`
+	BFlag            bool           `json:"b_flag"`
+	SFlag            bool           `json:"s_flag"`
+	PFlag            bool           `json:"p_flag"`
+	Algorithm        uint8          `json:"algorithm,omitempty"`
+	Weight           uint8          `json:"weight,omitempty"`
+	SID              string         `json:"sid,omitempty"`
+	SubTLVs          []*base.SubTLV `json:"sub_tlvs,omitempty"`
 }
 
 const (
@@ -73,7 +73,7 @@ func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
 	e.SID = sid.To16().String()
 	p += 16
 	if len(b) > p {
-		stlvs, err := base.UnmarshalTLV(b[p:])
+		stlvs, err := base.UnmarshalSubTLV(b[p:])
 		if err != nil {
 			return nil, err
 		}
