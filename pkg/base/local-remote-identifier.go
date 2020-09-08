@@ -1,8 +1,7 @@
 package base
 
 import (
-	"fmt"
-	"net"
+	"encoding/binary"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -15,21 +14,12 @@ type LocalRemoteIdentifierTLV struct {
 	Remote []byte
 }
 
-func (lri *LocalRemoteIdentifierTLV) String() string {
-	var s string
-	s += "   Local/Remote Identifiers:" + "\n"
-	s += fmt.Sprintf("      Local: %d\n", lri.Local)
-	s += fmt.Sprintf("      Remote: %d\n", lri.Remote)
-
-	return s
-}
-
 // GetLinkID return a string of a Local or Remote Link ID
-func (lri *LocalRemoteIdentifierTLV) GetLinkID(local bool) string {
+func (lri *LocalRemoteIdentifierTLV) GetLinkID(local bool) uint32 {
 	if local {
-		return net.IP(lri.Local).To4().String()
+		return binary.BigEndian.Uint32(lri.Local)
 	}
-	return net.IP(lri.Remote).To4().String()
+	return binary.BigEndian.Uint32(lri.Remote)
 }
 
 // UnmarshalLocalRemoteIdentifierTLV builds Link Descriptor Local/Remote Identifiers TLV object

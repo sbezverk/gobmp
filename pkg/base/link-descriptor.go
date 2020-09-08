@@ -14,19 +14,19 @@ type LinkDescriptor struct {
 }
 
 // GetLinkID returns Local or Remote Link ID as a string, depending on passed parameter
-func (l *LinkDescriptor) GetLinkID(local bool) string {
+func (l *LinkDescriptor) GetLinkID(local bool) uint32 {
 	if tlv, ok := l.LinkTLV[258]; ok {
 		id, err := UnmarshalLocalRemoteIdentifierTLV(tlv.Value)
 		if err != nil {
-			return ""
+			return 0
 		}
 		if id == nil {
-			return ""
+			return 0
 		}
 		return id.GetLinkID(local)
 	}
 
-	return ""
+	return 0
 }
 
 // GetLinkIPv4InterfaceAddr returns Link Interface IPv4 address as a string

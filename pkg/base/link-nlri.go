@@ -68,7 +68,7 @@ func (l *LinkNLRI) GetLinkOSPFAreaID(local bool) string {
 }
 
 // GetLinkID returns Local or Remote Link ID as a string, depending on passed parameter
-func (l *LinkNLRI) GetLinkID(local bool) string {
+func (l *LinkNLRI) GetLinkID(local bool) uint32 {
 	return l.Link.GetLinkID(local)
 }
 

@@ -132,8 +132,8 @@ type LSLink struct {
 	ProtocolID            base.ProtoID             `json:"protocol_id,omitempty"`
 	Nexthop               string                   `json:"nexthop,omitempty"`
 	MTID                  []uint16                 `json:"mt_id,omitempty"`
-	LocalLinkID           string                   `json:"local_link_id,omitempty"`
-	RemoteLinkID          string                   `json:"remote_link_id,omitempty"`
+	LocalLinkID           uint32                   `json:"local_link_id,omitempty"`
+	RemoteLinkID          uint32                   `json:"remote_link_id,omitempty"`
 	LocalLinkIP           []string                 `json:"local_link_ip,omitempty"`
 	RemoteLinkIP          []string                 `json:"remote_link_ip,omitempty"`
 	IGPMetric             uint32                   `json:"igp_metric,omitempty"`
