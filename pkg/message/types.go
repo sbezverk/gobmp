@@ -136,7 +136,6 @@ type LSLink struct {
 	RemoteLinkID          uint32                   `json:"remote_link_id,omitempty"`
 	LocalLinkIP           []string                 `json:"local_link_ip,omitempty"`
 	RemoteLinkIP          []string                 `json:"remote_link_ip,omitempty"`
-	IsIPv4                bool                     `json:"is_ipv4"`
 	IGPMetric             uint32                   `json:"igp_metric,omitempty"`
 	AdminGroup            uint32                   `json:"admin_group,omitempty"`
 	MaxLinkBW             uint32                   `json:"max_link_bw,omitempty"`
@@ -215,7 +214,6 @@ type LSPrefix struct {
 	IGPRouterID          string                        `json:"igp_router_id,omitempty"`
 	RouterID             string                        `json:"router_id,omitempty"`
 	LSID                 uint32                        `json:"ls_id,omitempty"`
-	IsIPv4               bool                          `json:"is_ipv4"`
 	ProtocolID           base.ProtoID                  `json:"protocol_id,omitempty"`
 	Protocol             string                        `json:"protocol,omitempty"`
 	Nexthop              string                        `json:"nexthop,omitempty"`
