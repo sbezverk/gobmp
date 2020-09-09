@@ -48,7 +48,7 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	msg.RemoteNodeASN = link.GetRemoteASN()
 	msg.RemoteIGPRouterID = link.GetRemoteIGPRouterID()
 	msg.IGPRouterID = link.GetLocalIGPRouterID()
-
+	msg.MTID = link.Link.GetLinkMTID()
 	if lslink, err := update.GetNLRI29(); err == nil {
 		if ph.FlagV {
 			msg.RouterID = lslink.GetLocalIPv6RouterID()
@@ -57,7 +57,6 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 			msg.RouterID = lslink.GetLocalIPv4RouterID()
 			msg.RemoteRouterID = lslink.GetRemoteIPv4RouterID()
 		}
-		msg.MTID = lslink.GetMTID()
 		if msd, err := lslink.GetLinkMSD(); err == nil {
 			msg.LinkMSD = msd
 		}

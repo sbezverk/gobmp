@@ -79,8 +79,8 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 
 func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 	p.Lock()
-	defer p.Unlock()
 	t, ok := p.topics[topic]
+	p.Unlock()
 	if !ok {
 		return fmt.Errorf("topic %s in not initialized", topic)
 	}
@@ -94,7 +94,9 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 			glog.Errorf("Failed to connect to the topic %s's partition leader with error: %+v", topic, err)
 			return err
 		}
+		p.Lock()
 		t.kafkaConn = kafkaConn
+		p.Unlock()
 	}
 	n, err := t.kafkaConn.WriteMessages(kafka.Message{
 		Key:   key,
@@ -104,7 +106,9 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 	if err != nil {
 		// WriteMessage to kafka has failed, resetting topic's connection struct
 		// next attempt to write message to the failed topic, will trigger attemp to re-dial to the topic's leader.
+		p.Lock()
 		t.kafkaConn = nil
+		p.Unlock()
 		glog.Errorf("Failed to write test message to the topic %s with error: %+v", topic, err)
 		return err
 	}

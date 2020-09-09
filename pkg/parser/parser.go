@@ -21,7 +21,6 @@ func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{
 
 func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 	perPerHeaderLen := 0
-	// var jsonMsg []byte
 	var bmpMsg bmp.Message
 	// Loop through all found Common Headers in the slice and process them
 	for p := 0; p < len(b); {

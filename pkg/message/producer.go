@@ -45,7 +45,7 @@ func (p *producer) producingWorker(msg bmp.Message) {
 	case *bmp.RouteMonitor:
 		p.produceRouteMonitorMessage(msg)
 	default:
-		glog.Warningf("got Unknown message %T to push to kafka, ignoring it...", obj)
+		glog.Warningf("got Unknown message %T to push to the producer, ignoring it...", obj)
 	}
 }
 
