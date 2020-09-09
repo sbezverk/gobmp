@@ -31,11 +31,9 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	if ph.FlagV {
 		// IPv6 specific conversions
 		msg.PeerIP = net.IP(ph.PeerAddress).To16().String()
-		msg.IsIPv4 = false
 	} else {
 		// IPv4 specific conversions
 		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-		msg.IsIPv4 = true
 	}
 	msg.Protocol = link.GetLinkProtocolID()
 	msg.ProtocolID = link.ProtocolID
