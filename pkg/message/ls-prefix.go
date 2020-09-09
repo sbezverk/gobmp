@@ -43,8 +43,10 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	pr := prfx.Prefix.GetPrefixIPReachability(ipv4).Prefix
 	if !ipv4 {
 		msg.Prefix = net.IP(pr).To16().String()
+		msg.IsIPv4 = false
 	} else {
 		msg.Prefix = net.IP(pr).To4().String()
+		msg.IsIPv4 = true
 	}
 	lsprefix, err := update.GetNLRI29()
 	if err == nil {
