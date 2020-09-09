@@ -197,7 +197,9 @@ sudo docker run --net=host sbezverk/ris2bmp:1
 
 Sample output :
 
+```
 gobmp: 06:36:26.088307 {MsgType:7 MsgHash: Msg:{"action":"add","base_attrs":{"base_attr_hash":"c447165a4239db770f610e30dc5df7a7","origin":"igp","as_path":[49697,41047,24961,33891,58453,9808,56048],"as_path_count":7,"nexthop":"80.81.195.241","is_atomic_agg":false,"community_list":"49697:2302, 49697:2500","large_community_list":"24961:1:276, 24961:2:1, 24961:2:150, 24961:2:155, 24961:2:276, 24961:3:1, 24961:4:9002, 24961:5:9002, 24961:6:1, 24961:7:33891, 24961:9:4"},"peer_hash":"75fdb22262697e4b0fcc06f7a8d1496c","peer_ip":"80.81.195.241","peer_asn":49697,"timestamp":"Sep  9 06:34:58.000000","prefix":"223.104.44.0","prefix_len":24,"is_ipv4":true,"origin_as":56048,"nexthop":"80.81.195.241","is_nexthop_ipv4":true,"isprepolicy":false,"is_adj_rib_in":false}}
+```
 
 ## Status
 
