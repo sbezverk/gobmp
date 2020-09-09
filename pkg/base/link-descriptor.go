@@ -62,16 +62,19 @@ func (l *LinkDescriptor) GetLinkIPv6NeighborAddr() string {
 }
 
 // GetLinkMTID returns Link Multi-Topology identifiers
-func (l *LinkDescriptor) GetLinkMTID() []uint16 {
+func (l *LinkDescriptor) GetLinkMTID() uint16 {
 	if tlv, ok := l.LinkTLV[263]; ok {
 		m, err := UnmarshalMultiTopologyIdentifierTLV(tlv.Value)
 		if err != nil {
-			return nil
+			return 0
 		}
-		return m.GetMTID()
+		if m == nil {
+			return 0
+		}
+		return m.GetMTID()[0]
 	}
 
-	return nil
+	return 0
 }
 
 // UnmarshalLinkDescriptor build Link Descriptor object

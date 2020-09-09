@@ -55,15 +55,15 @@ func (sr *SIDNLRI) GetSRv6SIDASN() uint32 {
 }
 
 // GetSRv6SIDMTID returns Multi-Topology identifiers
-func (sr *SIDNLRI) GetSRv6SIDMTID() []uint16 {
+func (sr *SIDNLRI) GetSRv6SIDMTID() uint16 {
 	if sr.SRv6SID == nil {
-		return nil
+		return 0
 	}
 	if sr.SRv6SID.MultiTopologyIdentifier == nil {
-		return nil
+		return 0
 	}
 
-	return sr.SRv6SID.MultiTopologyIdentifier.GetMTID()
+	return sr.SRv6SID.MultiTopologyIdentifier.GetMTID()[0]
 }
 
 // GetSRv6SID returns a slice of SIDs
