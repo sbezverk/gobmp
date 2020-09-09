@@ -33,7 +33,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			PathID:         int32(pr.PathID),
 			BaseAttributes: update.BaseAttributes,
 		}
-		if ases := update.GetAttrASPath(); len(ases) != 0 {
+		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 			// Last element in AS_PATH would be the AS of the origin
 			prfx.OriginAS = int32(ases[len(ases)-1])
 		}
@@ -41,7 +41,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			// IPv6 specific conversions
 			prfx.IsIPv4 = false
 			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-			prfx.Nexthop = net.IP(update.GetAttrNextHop()).To16().String()
+			prfx.Nexthop = net.IP(update.BaseAttributes.Nexthop).To16().String()
 			prfx.IsNexthopIPv4 = false
 			a := make([]byte, 16)
 			copy(a, pr.Prefix)
@@ -50,7 +50,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			// IPv4 specific conversions
 			prfx.IsIPv4 = true
 			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-			prfx.Nexthop = net.IP(update.GetAttrNextHop()).To4().String()
+			prfx.Nexthop = net.IP(update.BaseAttributes.Nexthop).To4().String()
 			prfx.IsNexthopIPv4 = true
 			a := make([]byte, 4)
 			copy(a, pr.Prefix)
