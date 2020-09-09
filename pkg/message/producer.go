@@ -11,6 +11,11 @@ const (
 	peerDown
 )
 
+const (
+	// NumberOfWorkers is maximum number of concurrent go routines created by the processor to process mesages.
+	NumberOfWorkers = 102400
+)
+
 // Producer defines methods to act as a message producer
 type Producer interface {
 	Producer(queue chan bmp.Message, stop chan struct{})
@@ -25,10 +30,13 @@ type producer struct {
 
 // Producer dispatches kafka workers upon request received from the channel
 func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
+	pool := make(chan struct{}, NumberOfWorkers)
 	for {
 		select {
 		case msg := <-queue:
-			go p.producingWorker(msg)
+			// Writing to Pool channel to reserve a worker slot
+			pool <- struct{}{}
+			go p.producingWorker(msg, pool)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
@@ -36,7 +44,11 @@ func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
 	}
 }
 
-func (p *producer) producingWorker(msg bmp.Message) {
+func (p *producer) producingWorker(msg bmp.Message, pool chan struct{}) {
+	defer func() {
+		// Reading from Pool channel to release the worker slot
+		<-pool
+	}()
 	switch obj := msg.Payload.(type) {
 	case *bmp.PeerUpMessage:
 		p.producePeerMessage(peerUP, msg)
@@ -45,7 +57,7 @@ func (p *producer) producingWorker(msg bmp.Message) {
 	case *bmp.RouteMonitor:
 		p.produceRouteMonitorMessage(msg)
 	default:
-		glog.Warningf("got Unknown message %T to push to kafka, ignoring it...", obj)
+		glog.Warningf("got Unknown message %T to push to the producer, ignoring it...", obj)
 	}
 }
 

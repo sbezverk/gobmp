@@ -6,12 +6,20 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+const (
+	// NumberOfWorkers is maximum number of concurrent go routines created by the processor to process mesages.
+	NumberOfWorkers = 102400
+)
+
 // Parser dispatches workers upon request received from the channel
 func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}) {
+	pool := make(chan struct{}, NumberOfWorkers)
 	for {
 		select {
 		case msg := <-queue:
-			go parsingWorker(msg, producerQueue)
+			// Writing to Pool channel to reserve a worker slot
+			pool <- struct{}{}
+			go parsingWorker(msg, producerQueue, pool)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
@@ -19,9 +27,12 @@ func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{
 	}
 }
 
-func parsingWorker(b []byte, producerQueue chan bmp.Message) {
+func parsingWorker(b []byte, producerQueue chan bmp.Message, pool chan struct{}) {
+	defer func() {
+		// Reading from Pool channel to release the worker slot
+		<-pool
+	}()
 	perPerHeaderLen := 0
-	// var jsonMsg []byte
 	var bmpMsg bmp.Message
 	// Loop through all found Common Headers in the slice and process them
 	for p := 0; p < len(b); {
