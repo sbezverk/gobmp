@@ -18,7 +18,7 @@ func MessageHex(b []byte) string {
 	copy(buffer[p:], []byte("[ "))
 	p += 2
 	for i := 0; i < len(b); i++ {
-		copy(buffer[p:], []byte("0x"+convertToHex(b[i])))
+		copy(buffer[p:], []byte("0x"+ConvertToHex(b[i])))
 		p += 4
 		if i < len(b)-1 {
 			copy(buffer[p:], []byte(", "))
@@ -30,11 +30,12 @@ func MessageHex(b []byte) string {
 	return string(buffer)
 }
 
-func convertToHex(b byte) string {
+// ConvertToHex returns a hexadecimal string representation of a byte
+func ConvertToHex(b byte) string {
 	f := getHex(int(b / 16))
 	s := getHex(int(b % 16))
 
-	return string(f) + string(s)
+	return string([]byte{f, s})
 }
 
 func getHex(i int) byte {

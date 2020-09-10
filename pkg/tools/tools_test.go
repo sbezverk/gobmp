@@ -31,7 +31,7 @@ func TestMessageHex(t *testing.T) {
 
 func TestConvertToHex(t *testing.T) {
 	for b := 0; b <= 0xff; b++ {
-		s := convertToHex(byte(b))
+		s := ConvertToHex(byte(b))
 		v, _ := hex.DecodeString(s)
 		if int(v[0]) != b {
 			t.Errorf("original %d and decoded %d values do not match", b, v)
