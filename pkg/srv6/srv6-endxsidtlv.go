@@ -30,7 +30,9 @@ const (
 
 // UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object
 func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
-	glog.V(6).Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
+	}
 	if len(b) < EndXSIDTLVMinLen {
 		return nil, fmt.Errorf("invalid length of data %d, expected minimum of %d", len(b), EndXSIDTLVMinLen)
 	}

@@ -20,7 +20,9 @@ type LocatorTLV struct {
 
 // UnmarshalSRv6LocatorTLV builds a SRv6 Locator object
 func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
-	glog.V(6).Infof("SRv6 Locator TLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SRv6 Locator TLV Raw: %s", tools.MessageHex(b))
+	}
 	p := 0
 	loc := LocatorTLV{}
 	loc.Flag = b[p]

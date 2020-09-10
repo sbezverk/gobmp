@@ -14,7 +14,9 @@ type Capability struct {
 
 // UnmarshalSRCapability builds SR Capability object
 func UnmarshalSRCapability(b []byte) (*Capability, error) {
-	glog.V(6).Infof("SR Capability Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SR Capability Raw: %s", tools.MessageHex(b))
+	}
 	cap := Capability{}
 	p := 0
 	cap.Flags = b[p]

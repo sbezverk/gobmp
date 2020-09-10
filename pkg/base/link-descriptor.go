@@ -79,7 +79,9 @@ func (l *LinkDescriptor) GetLinkMTID() uint16 {
 
 // UnmarshalLinkDescriptor build Link Descriptor object
 func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
-	glog.V(6).Infof("LinkDescriptor Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("LinkDescriptor Raw: %s", tools.MessageHex(b))
+	}
 	ld := LinkDescriptor{}
 	p := 0
 	ltlv, err := UnmarshalTLV(b[p : p+len(b)])

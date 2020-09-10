@@ -91,10 +91,14 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 			}
 		case bmp.TerminationMsg:
 			glog.V(5).Infof("Termination message")
-			glog.V(6).Infof("Message: %+v", b)
+			if glog.V(6) {
+				glog.Infof("Content: %s", tools.MessageHex(b))
+			}
 		case bmp.RouteMirrorMsg:
 			glog.V(5).Infof("Route Mirroring message")
-			glog.V(6).Infof("Message: %+v", b)
+			if glog.V(6) {
+				glog.Infof("Content:%s", tools.MessageHex(b))
+			}
 		}
 		perPerHeaderLen = 0
 		p += (int(ch.MessageLength) - bmp.CommonHeaderLength)

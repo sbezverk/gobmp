@@ -49,7 +49,7 @@ func main() {
 		glog.Errorf("fail to initialize Kafka publisher with error: %+v", err)
 		os.Exit(1)
 	}
-	glog.V(6).Infof("Kafka publisher has been successfully initialized.")
+	glog.V(5).Infof("Kafka publisher has been successfully initialized.")
 	defer publisher.Stop()
 
 	msgs, err := loadMessages(f)

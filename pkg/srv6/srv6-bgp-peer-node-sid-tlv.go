@@ -18,7 +18,9 @@ type BGPPeerNodeSID struct {
 
 // UnmarshalSRv6BGPPeerNodeSIDTLV builds SRv6 BGP Peer Node SID TLV object
 func UnmarshalSRv6BGPPeerNodeSIDTLV(b []byte) (*BGPPeerNodeSID, error) {
-	glog.V(6).Infof("SRv6 BGP Peer Node SID TLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SRv6 BGP Peer Node SID TLV Raw: %s", tools.MessageHex(b))
+	}
 	bgp := BGPPeerNodeSID{}
 	p := 0
 	bgp.Flag = b[p]

@@ -18,7 +18,9 @@ type LocalBlockTLV struct {
 
 // UnmarshalSRLocalBlockTLV builds SR LocalBlock TLV object
 func UnmarshalSRLocalBlockTLV(b []byte) ([]LocalBlockTLV, error) {
-	glog.V(6).Infof("SR LocalBlock TLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SR LocalBlock TLV Raw: %s", tools.MessageHex(b))
+	}
 	tlvs := make([]LocalBlockTLV, 0)
 	for p := 0; p < len(b); {
 		tlv := LocalBlockTLV{}

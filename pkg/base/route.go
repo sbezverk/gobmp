@@ -25,11 +25,13 @@ type Route struct {
 
 // UnmarshalRoutes builds BGP Withdrawn routes object
 func UnmarshalRoutes(b []byte) ([]Route, error) {
+	if glog.V(6) {
+		glog.Infof("Routes Raw: %s", tools.MessageHex(b))
+	}
 	routes := make([]Route, 0)
 	if len(b) == 0 {
 		return nil, nil
 	}
-	glog.V(6).Infof("Routes Raw: %s", tools.MessageHex(b))
 	for p := 0; p < len(b); {
 		route := Route{}
 		route.Length = b[p]

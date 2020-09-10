@@ -16,7 +16,9 @@ type SIDInformationTLV struct {
 
 // UnmarshalSRv6SIDInformationTLV builds SRv6 SID Information TLV slice
 func UnmarshalSRv6SIDInformationTLV(b []byte) ([]SIDInformationTLV, error) {
-	glog.V(6).Infof("SRv6 SID Information TLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SRv6 SID Information TLV Raw: %s", tools.MessageHex(b))
+	}
 	tlvs := make([]SIDInformationTLV, 0)
 	for p := 0; p < len(b); {
 		tlv := SIDInformationTLV{}

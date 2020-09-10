@@ -112,7 +112,9 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 		glog.Errorf("Failed to write test message to the topic %s with error: %+v", topic, err)
 		return err
 	}
-	glog.V(6).Infof("Successfully wrote %d bytes to Kafka topic %s", n, topic)
+	if glog.V(6) {
+		glog.Infof("Successfully wrote %d bytes to Kafka topic %s", n, topic)
+	}
 
 	return nil
 }

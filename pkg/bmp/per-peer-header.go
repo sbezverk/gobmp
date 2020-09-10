@@ -69,7 +69,9 @@ func (p *PerPeerHeader) Serialize() ([]byte, error) {
 
 // UnmarshalPerPeerHeader processes Per-Peer header
 func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
-	glog.V(6).Infof("BMP Per Peer Header Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("BMP Per Peer Header Raw: %s", tools.MessageHex(b))
+	}
 	pph := &PerPeerHeader{
 		PeerDistinguisher: make([]byte, 8), // newPeerDistinguisher(),
 		PeerAddress:       make([]byte, 16),

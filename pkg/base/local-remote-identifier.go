@@ -24,7 +24,9 @@ func (lri *LocalRemoteIdentifierTLV) GetLinkID(local bool) uint32 {
 
 // UnmarshalLocalRemoteIdentifierTLV builds Link Descriptor Local/Remote Identifiers TLV object
 func UnmarshalLocalRemoteIdentifierTLV(b []byte) (*LocalRemoteIdentifierTLV, error) {
-	glog.V(6).Infof("LocalRemoteIdentifierTLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("LocalRemoteIdentifierTLV Raw: %s", tools.MessageHex(b))
+	}
 	l := make([]byte, 4)
 	copy(l, b[:4])
 	r := make([]byte, 4)

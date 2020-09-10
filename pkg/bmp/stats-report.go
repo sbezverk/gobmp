@@ -16,7 +16,9 @@ type StatsReport struct {
 
 // UnmarshalBMPStatsReportMessage builds BMP Stats Reports object
 func UnmarshalBMPStatsReportMessage(b []byte) (*StatsReport, error) {
-	glog.V(6).Infof("BMP Stats Report Message Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("BMP Stats Report Message Raw: %s", tools.MessageHex(b))
+	}
 	sr := StatsReport{}
 	p := 0
 	l := int32(binary.BigEndian.Uint32(b[p : p+4]))

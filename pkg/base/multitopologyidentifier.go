@@ -27,7 +27,9 @@ func (mti *MultiTopologyIdentifierTLV) GetMTID() []uint16 {
 
 // UnmarshalMultiTopologyIdentifierTLV builds Multi Topology Identifier TLV object
 func UnmarshalMultiTopologyIdentifierTLV(b []byte) (*MultiTopologyIdentifierTLV, error) {
-	glog.V(6).Infof("MultiTopologyIdentifierTLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("MultiTopologyIdentifierTLV Raw: %s", tools.MessageHex(b))
+	}
 	mti := MultiTopologyIdentifierTLV{
 		MTI: make([]MultiTopologyIdentifier, 0),
 	}

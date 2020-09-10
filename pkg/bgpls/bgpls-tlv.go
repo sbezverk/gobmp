@@ -17,7 +17,9 @@ type TLV struct {
 
 // UnmarshalBGPLSTLV builds Collection of BGP-LS TLVs
 func UnmarshalBGPLSTLV(b []byte) ([]TLV, error) {
-	glog.V(6).Infof("BGPLSTLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("BGPLSTLV Raw: %s", tools.MessageHex(b))
+	}
 	lstlvs := make([]TLV, 0)
 	for p := 0; p < len(b); {
 		lstlv := TLV{}

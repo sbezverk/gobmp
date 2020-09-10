@@ -14,7 +14,9 @@ type IPReachabilityInformation struct {
 
 // UnmarshalIPReachabilityInformation builds IP Reachability Information TLV object
 func UnmarshalIPReachabilityInformation(b []byte) (*IPReachabilityInformation, error) {
-	glog.V(6).Infof("IPReachabilityInformationTLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("IPReachabilityInformationTLV Raw: %s", tools.MessageHex(b))
+	}
 	ipr := IPReachabilityInformation{
 		LengthInBits: b[0],
 	}

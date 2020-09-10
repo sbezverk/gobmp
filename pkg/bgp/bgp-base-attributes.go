@@ -45,7 +45,9 @@ type BaseAttributes struct {
 // UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
 // and instantiates BaseAttributes object
 func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
-	glog.V(6).Infof("UnmarshalBGPBaseAttributes RAW: %+v", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("UnmarshalBGPBaseAttributes RAW: %+v", tools.MessageHex(b))
+	}
 	baseAttr := BaseAttributes{}
 	for p := 0; p < len(b); {
 		flag := b[p]

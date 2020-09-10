@@ -15,7 +15,9 @@ type AdjacencySIDTLV struct {
 
 // UnmarshalAdjacencySIDTLV builds Adjacency SID TLV Object
 func UnmarshalAdjacencySIDTLV(b []byte) (*AdjacencySIDTLV, error) {
-	glog.V(6).Infof("Adjacency SID Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("Adjacency SID Raw: %s", tools.MessageHex(b))
+	}
 	asid := AdjacencySIDTLV{}
 	p := 0
 	asid.Flags = b[p]
