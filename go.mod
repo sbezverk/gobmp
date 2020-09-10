@@ -8,7 +8,7 @@ require (
 	github.com/go-test/deep v1.0.6
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/segmentio/kafka-go v0.3.6
+	github.com/segmentio/kafka-go v0.4.2
 	golang.org/x/crypto v0.0.0-20190510104115-cbcb75029529 // indirect
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9 // indirect
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208

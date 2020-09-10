@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -79,37 +80,38 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 
 func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 	p.Lock()
+	defer p.Unlock()
 	t, ok := p.topics[topic]
-	p.Unlock()
 	if !ok {
 		return fmt.Errorf("topic %s in not initialized", topic)
 	}
-	var kafkaConn *kafka.Conn
 	var err error
 	// Check the state of the connection to kafka's topic
 	if t.kafkaConn == nil {
+		var kafkaConn *kafka.Conn
 		leaderAddr := fmt.Sprintf("%s:%d", t.partitions[0].Leader.Host, t.partitions[0].Leader.Port)
 		kafkaConn, err = kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, t.partitions[0].Topic, t.partitions[0].Leader.ID)
 		if err != nil {
 			glog.Errorf("Failed to connect to the topic %s's partition leader with error: %+v", topic, err)
 			return err
 		}
-		p.Lock()
 		t.kafkaConn = kafkaConn
-		p.Unlock()
 	}
+	t.kafkaConn.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
 	n, err := t.kafkaConn.WriteMessages(kafka.Message{
 		Key:   key,
 		Value: msg,
 		Time:  time.Now(),
 	})
 	if err != nil {
-		// WriteMessage to kafka has failed, resetting topic's connection struct
-		// next attempt to write message to the failed topic, will trigger attemp to re-dial to the topic's leader.
-		p.Lock()
-		t.kafkaConn = nil
-		p.Unlock()
 		glog.Errorf("Failed to write test message to the topic %s with error: %+v", topic, err)
+		for {
+			e := errors.Unwrap(err)
+			if e == nil {
+				break
+			}
+			glog.Errorf("kafka unwrapped error: %+v", e)
+		}
 		return err
 	}
 	if glog.V(6) {
