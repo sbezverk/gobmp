@@ -2,7 +2,6 @@
   <img src="https://github.com/sbezverk/gobmp/blob/master/Hudson_Go_BMP_logo.png?raw=true" width="40%" height="40%">
 </p>
 
-# goBMP
 
  
 
@@ -29,15 +28,11 @@ List of currently supported NLRI and AFI/SAFI:
    </td>
    <td>1/1
    </td>
-   <td>
-   </td>
   </tr>
   <tr>
    <td>IPv4 Labeled Unicast
    </td>
    <td>1/4
-   </td>
-   <td>
    </td>
   </tr>
   <tr>
@@ -45,15 +40,11 @@ List of currently supported NLRI and AFI/SAFI:
    </td>
    <td>2/1
    </td>
-   <td>
-   </td>
   </tr>
   <tr>
    <td>IPv6 Labeled Unicast
    </td>
    <td>2/4
-   </td>
-   <td>
    </td>
   </tr>
   <tr>
@@ -61,15 +52,11 @@ List of currently supported NLRI and AFI/SAFI:
    </td>
    <td>1/128
    </td>
-   <td>
-   </td>
   </tr>
   <tr>
    <td>VPnv6 unicast
    </td>
    <td>2/128
-   </td>
-   <td>
    </td>
   </tr>
   <tr>
@@ -77,23 +64,17 @@ List of currently supported NLRI and AFI/SAFI:
    </td>
    <td>16388/71
    </td>
-   <td>
-   </td>
   </tr>
   <tr>
    <td>L2VPN (VPLS)
    </td>
    <td>25/65
    </td>
-   <td>
-   </td>
   </tr>
   <tr>
    <td>L2VPN (EVPN)
    </td>
    <td>25/70
-   </td>
-   <td>
    </td>
   </tr>
 </table>
@@ -113,19 +94,22 @@ For the complete list of supported extensions and drafts follow this link: [Supp
 
 The structure of the each record which is published to kafka, stored in the message file or printed to standard output, is defined in the package **_message_** [file types.go](https://github.com/sbezverk/gobmp/blob/master/pkg/message/types.go)
 
-To build goBMP:
+## Building goBMP
 
+```
 git clone [https://github.com/sbezverk/gobmp](https://github.com/sbezverk/gobmp)
 
 cd   gobmp
 
 make gobmp
+```
 
-The linux statically linked binary will be stored in ./bin sub folder.
 
-To run goBMP:
+The statically linked linux binary will be stored in ./bin sub folder.
 
-As a binary:
+## Running goBMP
+
+### As a binary
 
 ```
 ./bin/gobmp {list of parameters}
@@ -181,7 +165,31 @@ Port to listen for incoming BMP messages (default 5000)
 
 Log level, please use --v=6 for debugging. Level 6 prints in hexadecimal format the incoming message. 
 
-## Docker quick start with RIS Live feed from RIPE
+### As a kubernetes deployment
+
+**goBMP*** can be ran as a kubernetes workload. The deployment yaml file is located in *./deployment* folder. **goBMP** deployment exposes 2 ports,
+first port (by default 5000) is used for incoming BMP sessions, second port (56767) is used for performance monitoring, **goBMP** exposes standard golang 
+**pprof** endpoints.
+
+```
+kubectl create -f ./deployment/gobmp-standalone.yaml
+```
+
+To check the status of a deployment and services
+
+```
+kubectl get pod | grep gobmp
+
+
+kubectl get svc | grep gobmp
+
+
+```
+
+
+### As a Docker container
+
+#### Quick start with RIS Live feed from RIPE
 
 Start gobmp daemon :
 
