@@ -178,11 +178,26 @@ kubectl create -f ./deployment/gobmp-standalone.yaml
 To check the status of a deployment and services
 
 ```
-kubectl get pod | grep gobmp
+kubectl get pod
+```
 
+Expected output gobmp pod
 
-kubectl get svc | grep gobmp
+```
+NAME                                READY   STATUS    RESTARTS   AGE
+gobmp-765db4dcd9-6nh2c              1/1     Running   0          12h
 
+```
+
+```
+kubectl get svc 
+```
+
+Expected output for gobmp service
+
+```
+NAME               TYPE        CLUSTER-IP       EXTERNAL-IP                 PORT(S)                      AGE
+gobmp              ClusterIP   10.224.249.86    192.168.80.254              5000/TCP,56767/TCP           17h
 
 ```
 
