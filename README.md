@@ -167,7 +167,7 @@ Log level, please use --v=6 for debugging. Level 6 prints in hexadecimal format 
 
 ### As a kubernetes deployment
 
-**goBMP*** can be ran as a kubernetes workload. The deployment yaml file is located in *./deployment* folder. **goBMP** deployment exposes 2 ports,
+**goBMP** can be ran as a kubernetes workload. The deployment yaml file is located in *./deployment* folder. **goBMP** deployment exposes 2 ports,
 first port (by default 5000) is used for incoming BMP sessions, second port (56767) is used for performance monitoring, **goBMP** exposes standard golang 
 **pprof** endpoints.
 
@@ -181,7 +181,7 @@ To check the status of a deployment and services
 kubectl get pod
 ```
 
-Expected output gobmp pod
+Expected output for gobmp pod
 
 ```
 NAME                                READY   STATUS    RESTARTS   AGE
