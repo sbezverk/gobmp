@@ -201,6 +201,7 @@ gobmp              ClusterIP   10.224.249.86    192.168.80.254              5000
 
 ```
 
+In order to establish BMP session between an external BMP speaker and **goBMP** application running in kubernetes, goBMP's port must be exposed externally, as in the case of the output provided above, where 192.168.80.254 is external address. The external BMP speaker will need to use **192.168.80.254:5000** to reach goBMP application.
 
 ### As a Docker container
 
