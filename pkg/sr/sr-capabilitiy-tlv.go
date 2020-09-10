@@ -17,7 +17,9 @@ type CapabilityTLV struct {
 
 // UnmarshalSRCapabilityTLV builds SR Capability TLV object
 func UnmarshalSRCapabilityTLV(b []byte) ([]CapabilityTLV, error) {
-	glog.V(6).Infof("SR Capability TLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SR Capability TLV Raw: %s", tools.MessageHex(b))
+	}
 	caps := make([]CapabilityTLV, 0)
 	for p := 0; p < len(b); {
 		cap := CapabilityTLV{}

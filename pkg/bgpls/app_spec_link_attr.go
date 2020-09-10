@@ -21,7 +21,9 @@ type AppSpecLinkAttr struct {
 
 // UnmarshalAppSpecLinkAttr builds Application Specific Link Attributes object
 func UnmarshalAppSpecLinkAttr(b []byte) (*AppSpecLinkAttr, error) {
-	glog.V(6).Infof("App SpecLink Attr Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("App SpecLink Attr Raw: %s", tools.MessageHex(b))
+	}
 	if len(b) < 4 {
 		return nil, fmt.Errorf("invalid length %d of FlexAlgo definition tlv", len(b))
 	}

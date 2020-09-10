@@ -13,7 +13,9 @@ type MSDTV struct {
 
 // UnmarshalMSDTV builds slice of MSD Type Value tuples
 func UnmarshalMSDTV(b []byte) ([]*MSDTV, error) {
-	glog.V(6).Infof("UnmarshalMSDTV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("UnmarshalMSDTV Raw: %s", tools.MessageHex(b))
+	}
 	tvs := make([]*MSDTV, 0)
 	for p := 0; p < len(b); {
 		tv := &MSDTV{}

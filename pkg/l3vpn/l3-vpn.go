@@ -12,7 +12,9 @@ import (
 
 // UnmarshalL3VPNNLRI instantiates a L3 VPN NLRI object
 func UnmarshalL3VPNNLRI(b []byte, srv6 ...bool) (*base.MPNLRI, error) {
-	glog.V(6).Infof("L3VPN NLRI Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("L3VPN NLRI Raw: %s", tools.MessageHex(b))
+	}
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}

@@ -17,7 +17,9 @@ type SIDDescriptor struct {
 
 // UnmarshalSRv6SIDDescriptor build SRv6 Descriptor Object
 func UnmarshalSRv6SIDDescriptor(b []byte) (*SIDDescriptor, error) {
-	glog.V(6).Infof("SRv6 SID Descriptor Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SRv6 SID Descriptor Raw: %s", tools.MessageHex(b))
+	}
 	srd := SIDDescriptor{}
 	for p := 0; p < len(b); {
 		t := binary.BigEndian.Uint16(b[p : p+2])

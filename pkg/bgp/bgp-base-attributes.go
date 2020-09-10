@@ -3,9 +3,10 @@ package bgp
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -45,7 +46,9 @@ type BaseAttributes struct {
 // UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
 // and instantiates BaseAttributes object
 func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
-	glog.V(6).Infof("UnmarshalBGPBaseAttributes RAW: %+v", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("UnmarshalBGPBaseAttributes RAW: %+v", tools.MessageHex(b))
+	}
 	baseAttr := BaseAttributes{}
 	for p := 0; p < len(b); {
 		flag := b[p]
@@ -110,7 +113,8 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 	if err != nil {
 		return nil, err
 	}
-	baseAttr.BaseAttrHash = fmt.Sprintf("%x", md5.Sum(ba))
+	s := md5.Sum(ba)
+	baseAttr.BaseAttrHash = hex.EncodeToString(s[:])
 
 	return &baseAttr, nil
 }
@@ -243,7 +247,7 @@ func unmarshalAttrCommunity(b []byte) string {
 	var communities string
 	cs := getCommunity(b)
 	for i, c := range cs {
-		communities += fmt.Sprintf("%d:%d", (0xffff0000&c)>>16, 0xffff&c)
+		communities += strconv.Itoa(int((0xffff0000&c)>>16)) + ":" + strconv.Itoa(int(0xffff&c))
 		if i < len(cs)-1 {
 			communities += ", "
 		}

@@ -14,7 +14,9 @@ type LocalBlock struct {
 
 // UnmarshalSRLocalBlock builds SR Local Block object
 func UnmarshalSRLocalBlock(b []byte) (*LocalBlock, error) {
-	glog.V(6).Infof("SR Local BLock Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SR Local BLock Raw: %s", tools.MessageHex(b))
+	}
 	lb := LocalBlock{}
 	p := 0
 	lb.Flags = b[p]

@@ -18,7 +18,7 @@ func MessageHex(b []byte) string {
 	copy(buffer[p:], []byte("[ "))
 	p += 2
 	for i := 0; i < len(b); i++ {
-		copy(buffer[p:], []byte(fmt.Sprintf("0x%02x", b[i])))
+		copy(buffer[p:], []byte("0x"+ConvertToHex(b[i])))
 		p += 4
 		if i < len(b)-1 {
 			copy(buffer[p:], []byte(", "))
@@ -28,6 +28,22 @@ func MessageHex(b []byte) string {
 	copy(buffer[p:], []byte(" ]"))
 
 	return string(buffer)
+}
+
+// ConvertToHex returns a hexadecimal string representation of a byte
+func ConvertToHex(b byte) string {
+	f := getHex(int(b / 16))
+	s := getHex(int(b % 16))
+
+	return string([]byte{f, s})
+}
+
+func getHex(i int) byte {
+	table := []byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'}
+	if i > len(table) {
+		return table[0]
+	}
+	return table[i]
 }
 
 // HostAddrValidator parser host address passed as a string, and make sure it follows X.X.X.X:YYZZ format

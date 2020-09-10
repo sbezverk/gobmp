@@ -20,7 +20,9 @@ type PeerUpMessage struct {
 
 // UnmarshalPeerUpMessage processes Peer Up message and returns BMPPeerUpMessage object
 func UnmarshalPeerUpMessage(b []byte) (*PeerUpMessage, error) {
-	glog.V(6).Infof("BMP Peer Up Message Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("BMP Peer Up Message Raw: %s", tools.MessageHex(b))
+	}
 	var err error
 	pu := &PeerUpMessage{
 		LocalAddress: make([]byte, 16),

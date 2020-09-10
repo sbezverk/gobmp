@@ -74,7 +74,9 @@ func (o *OpenMessage) IsMultiLabelCapable() bool {
 
 // UnmarshalBGPOpenMessage validate information passed in byte slice and returns BGPOpenMessage object
 func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
-	glog.V(6).Infof("BGPOpenMessage Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("BGPOpenMessage Raw: %s", tools.MessageHex(b))
+	}
 	var err error
 	p := 0
 	m := OpenMessage{

@@ -15,7 +15,9 @@ type PeerDownMessage struct {
 
 // UnmarshalPeerDownMessage processes Peer Down message and returns BMPPeerDownMessage object
 func UnmarshalPeerDownMessage(b []byte) (*PeerDownMessage, error) {
-	glog.V(6).Infof("BMP Peer Down Message Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("BMP Peer Down Message Raw: %s", tools.MessageHex(b))
+	}
 	pdw := &PeerDownMessage{
 		Data: make([]byte, len(b)-1),
 	}

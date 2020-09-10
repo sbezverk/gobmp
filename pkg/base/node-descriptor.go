@@ -79,7 +79,9 @@ func (nd *NodeDescriptor) GetConfedMemberASN() uint32 {
 
 // UnmarshalNodeDescriptor build Node Descriptor object
 func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {
-	glog.V(6).Infof("NodeDescriptor Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("NodeDescriptor Raw: %s", tools.MessageHex(b))
+	}
 	nd := NodeDescriptor{}
 	p := 0
 	//	nd.Type = binary.BigEndian.Uint16(b[p : p+2])

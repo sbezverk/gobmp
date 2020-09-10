@@ -83,7 +83,7 @@ func main() {
 			glog.Errorf("restarting gobmp...")
 			os.Exit(1)
 		}
-		glog.V(6).Infof("Kafka publisher has been successfully initialized.")
+		glog.V(5).Infof("Kafka publisher has been successfully initialized.")
 	}
 
 	// Initializing bmp server

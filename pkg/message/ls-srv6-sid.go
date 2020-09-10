@@ -3,7 +3,6 @@ package message
 import (
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/srv6"
@@ -38,7 +37,6 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 	msg.SRv6SID = nlri6.GetSRv6SID()
 	ls, err := update.GetNLRI29()
 	if err == nil {
-		glog.V(6).Infof("nlri29 attributes: %+v", ls.GetAllAttribute())
 		msg.SRv6EndpointBehavior = ls.GetSRv6EndpointBehavior()
 		msg.SRv6BGPPeerNodeSID = ls.GetSRv6BGPPeerNodeSID()
 		msg.SRv6SIDStructure = ls.GetSRv6SIDStructure()

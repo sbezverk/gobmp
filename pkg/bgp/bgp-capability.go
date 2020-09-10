@@ -21,8 +21,10 @@ type Capability struct {
 
 // UnmarshalBGPInformationalTLVCapability builds BGP Capability Information TLV object
 func UnmarshalBGPInformationalTLVCapability(b []byte) ([]Capability, error) {
+	if glog.V(6) {
+		glog.Infof("BGPInformationalTLVCapability Raw: %s", tools.MessageHex(b))
+	}
 	caps := make([]Capability, 0)
-	glog.V(6).Infof("BGPInformationalTLVCapability Raw: %s", tools.MessageHex(b))
 	for p := 0; p < len(b); {
 		cap := Capability{}
 		cap.Code = b[p]

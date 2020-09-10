@@ -113,7 +113,9 @@ func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 
 // UnmarshalMPUnReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPUnReachNLRI(b []byte) (MPNLRI, error) {
-	glog.V(6).Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
+	}
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}

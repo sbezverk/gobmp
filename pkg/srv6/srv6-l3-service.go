@@ -170,7 +170,9 @@ func (l3s *L3Service) UnmarshalJSON(b []byte) error {
 
 // UnmarshalSRv6L3Service instantiate from the slice of byte SRv6 L3 Service Object
 func UnmarshalSRv6L3Service(b []byte) (*L3Service, error) {
-	glog.V(6).Infof("SRv6 L3 Service Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SRv6 L3 Service Raw: %s", tools.MessageHex(b))
+	}
 	l3 := L3Service{
 		SubTLVs: make(map[uint8][]SubTLV),
 	}

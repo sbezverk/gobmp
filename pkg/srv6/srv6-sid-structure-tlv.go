@@ -16,7 +16,9 @@ type SIDStructure struct {
 
 // UnmarshalSRv6SIDStructureTLV builds SRv6 SID Structure TLV object
 func UnmarshalSRv6SIDStructureTLV(b []byte) (*SIDStructure, error) {
-	glog.V(6).Infof("SRv6 SID Structure TLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SRv6 SID Structure TLV Raw: %s", tools.MessageHex(b))
+	}
 	st := SIDStructure{}
 	p := 0
 	st.LBLength = b[p]

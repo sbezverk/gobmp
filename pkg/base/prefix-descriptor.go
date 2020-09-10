@@ -123,7 +123,9 @@ func (pd *PrefixDescriptor) GetPrefixOSPFForwardAddr() string {
 
 // UnmarshalPrefixDescriptor build Prefix Descriptor object
 func UnmarshalPrefixDescriptor(b []byte) (*PrefixDescriptor, error) {
-	glog.V(6).Infof("PrefixDescriptor Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("PrefixDescriptor Raw: %s", tools.MessageHex(b))
+	}
 	pd := PrefixDescriptor{}
 	p := 0
 	ptlv, err := UnmarshalTLV(b[p : p+len(b)])

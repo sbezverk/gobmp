@@ -17,7 +17,9 @@ type EndpointBehavior struct {
 
 // UnmarshalSRv6EndpointBehaviorTLV builds SRv6 Endpoint Behavior TLV object
 func UnmarshalSRv6EndpointBehaviorTLV(b []byte) (*EndpointBehavior, error) {
-	glog.V(6).Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
+	}
 	e := EndpointBehavior{}
 	p := 0
 	e.EndpointBehavior = binary.BigEndian.Uint16(b[p : p+2])

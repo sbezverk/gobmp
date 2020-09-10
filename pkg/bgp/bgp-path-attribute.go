@@ -17,7 +17,9 @@ type PathAttribute struct {
 
 // UnmarshalBGPPathAttributes builds BGP Path attributes slice
 func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, error) {
-	glog.V(6).Infof("BGPPathAttributes Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("BGPPathAttributes Raw: %s", tools.MessageHex(b))
+	}
 	attrs := make([]PathAttribute, 0)
 
 	for p := 0; p < len(b); {

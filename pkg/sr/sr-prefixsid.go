@@ -15,7 +15,9 @@ type PrefixSIDTLV struct {
 
 // UnmarshalPrefixSIDTLV builds Prefix SID TLV Object
 func UnmarshalPrefixSIDTLV(b []byte) (*PrefixSIDTLV, error) {
-	glog.V(6).Infof("Prefix SID TLV Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("Prefix SID TLV Raw: %s", tools.MessageHex(b))
+	}
 	psid := PrefixSIDTLV{}
 	p := 0
 	psid.Flags = b[p]

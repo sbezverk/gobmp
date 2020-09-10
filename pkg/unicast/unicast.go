@@ -12,7 +12,9 @@ import (
 
 // UnmarshalUnicastNLRI builds MP NLRI object from the slice of bytes
 func UnmarshalUnicastNLRI(b []byte) (*base.MPNLRI, error) {
-	glog.V(6).Infof("MP Unicast NLRI Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("MP Unicast NLRI Raw: %s", tools.MessageHex(b))
+	}
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
@@ -43,7 +45,9 @@ func UnmarshalUnicastNLRI(b []byte) (*base.MPNLRI, error) {
 
 // UnmarshalLUNLRI builds MP NLRI object from the slice of bytes
 func UnmarshalLUNLRI(b []byte) (*base.MPNLRI, error) {
-	glog.V(6).Infof("MP Label Unicast NLRI Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("MP Label Unicast NLRI Raw: %s", tools.MessageHex(b))
+	}
 	mpnlri := base.MPNLRI{
 		NLRI: make([]base.Route, 0),
 	}

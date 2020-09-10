@@ -22,7 +22,9 @@ type FlexAlgoDefinition struct {
 
 // UnmarshalFlexAlgoDefinition builds Flexible Algorithm Definition (FAD) TLV object
 func UnmarshalFlexAlgoDefinition(b []byte) (*FlexAlgoDefinition, error) {
-	glog.V(6).Infof("FlexAlgo Definition Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("FlexAlgo Definition Raw: %s", tools.MessageHex(b))
+	}
 	if len(b) < 4 {
 		return nil, fmt.Errorf("invalid length %d of FlexAlgo definition tlv", len(b))
 	}
@@ -60,7 +62,9 @@ type FlexAlgoPrefixMetric struct {
 
 // UnmarshalFlexAlgoPrefixMetric builds Flexible Algorithm Prefix Metric TLV object
 func UnmarshalFlexAlgoPrefixMetric(b []byte) (*FlexAlgoPrefixMetric, error) {
-	glog.V(6).Infof("FlexAlgo Prefix Metric Raw: %s", tools.MessageHex(b))
+	if glog.V(6) {
+		glog.Infof("FlexAlgo Prefix Metric Raw: %s", tools.MessageHex(b))
+	}
 	if len(b) < 8 {
 		return nil, fmt.Errorf("invalid length %d of FlexAlgo prefix metric tlv", len(b))
 	}

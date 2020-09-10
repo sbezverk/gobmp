@@ -109,8 +109,9 @@ func (up *Update) HasPrefixSID() bool {
 
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
 func UnmarshalBGPUpdate(b []byte) (*Update, error) {
-	glog.V(6).Infof("BGPUpdate Raw: %s", tools.MessageHex(b))
-
+	if glog.V(6) {
+		glog.Infof("BGPUpdate Raw: %s", tools.MessageHex(b))
+	}
 	p := 0
 	u := Update{}
 	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
