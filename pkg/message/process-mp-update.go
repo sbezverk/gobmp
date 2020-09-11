@@ -144,7 +144,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		case 6:
 			s, ok := e.LS.(*srv6.SIDNLRI)
 			if !ok {
-				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
 				continue
 			}
 			msg, err := p.lsSRv6SID(s, nlri.GetNextHop(), operation, ph, update)

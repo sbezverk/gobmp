@@ -25,7 +25,7 @@ type BaseAttributes struct {
 	LocalPref        uint32   `json:"local_pref,omitempty"`
 	IsAtomicAgg      bool     `json:"is_atomic_agg"`
 	Aggregator       []byte   `json:"aggregator,omitempty"`
-	CommunityList    string   `json:"community_list,omitempty"`
+	CommunityList    []string `json:"community_list,omitempty"`
 	OriginatorID     string   `json:"originator_id,omitempty"`
 	ClusterList      string   `json:"cluster_list,omitempty"`
 	ExtCommunityList []string `json:"ext_community_list,omitempty"`
@@ -38,7 +38,7 @@ type BaseAttributes struct {
 	// IPv6SpecExtCommunity
 	// AIGP
 	// PEDistinguisherLable
-	LgCommunityList string `json:"large_community_list,omitempty"`
+	LgCommunityList []string `json:"large_community_list,omitempty"`
 	// SecPath
 	// AttrSet
 }
@@ -243,17 +243,14 @@ func getCommunity(b []byte) []uint32 {
 }
 
 // unmarshalAttrCommunity returns the string with comma separated communities.
-func unmarshalAttrCommunity(b []byte) string {
-	var communities string
+func unmarshalAttrCommunity(b []byte) []string {
 	cs := getCommunity(b)
+	s := make([]string, len(cs))
 	for i, c := range cs {
-		communities += strconv.Itoa(int((0xffff0000&c)>>16)) + ":" + strconv.Itoa(int(0xffff&c))
-		if i < len(cs)-1 {
-			communities += ", "
-		}
+		s[i] += strconv.Itoa(int((0xffff0000&c)>>16)) + ":" + strconv.Itoa(int(0xffff&c))
 	}
 
-	return communities
+	return s
 }
 
 // unmarshalAttrOriginatorID returns the value of ORIGINATOR_ID attribute
@@ -309,17 +306,14 @@ func unmarshalAttrExtCommunity(b []byte) []string {
 }
 
 // unmarshalAttrLgCommunity returns a slice with all large communities found in bgp update
-func unmarshalAttrLgCommunity(b []byte) string {
+func unmarshalAttrLgCommunity(b []byte) []string {
 	lg, err := UnmarshalBGPLgCommunity(b)
 	if err != nil {
-		return ""
+		return nil
 	}
-	var s string
+	s := make([]string, len(lg))
 	for i, c := range lg {
-		s += c.String()
-		if i < len(lg)-1 {
-			s += ", "
-		}
+		s[i] += c.String()
 	}
 
 	return s
