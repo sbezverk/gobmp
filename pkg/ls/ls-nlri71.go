@@ -10,6 +10,14 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+const (
+	LS_NLRI_NODE_TYPE     = 1
+	LS_NLRI_LINK_TYPE     = 2
+	LS_NLRI_IPV4_PFX_TYPE = 3
+	LS_NLRI_IPV6_PFX_TYPE = 4
+	LS_NLRI_SRV6_PFX_TYPE = 6
+)
+
 // Element defines a generic NLRI object carried in NLRI type 71,
 // the type of the object will be used to cast it into a corresponding to a specific type structure.
 type Element struct {
@@ -46,36 +54,41 @@ func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 		p += 2
 
 		switch el.Type {
-		case 1:
+		case LS_NLRI_NODE_TYPE:
 			n, err := base.UnmarshalNodeNLRI(b[p : p+int(el.Length)])
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
-		case 2:
+			
+		case LS_NLRI_LINK_TYPE:
 			n, err := base.UnmarshalLinkNLRI(b[p : p+int(el.Length)])
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
-		case 3:
+			
+		case LS_NLRI_IPV4_PFX_TYPE:
 			n, err := base.UnmarshalPrefixNLRI(b[p:p+int(el.Length)], true)
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
-		case 4:
+			
+		case LS_NLRI_IPV6_PFX_TYPE:
 			n, err := base.UnmarshalPrefixNLRI(b[p:p+int(el.Length)], false)
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
-		case 6:
+			
+		case LS_NLRI_SRV6_PFX_TYPE:
 			n, err := srv6.UnmarshalSRv6SIDNLRI(b[p : p+int(el.Length)])
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
+			
 		default:
 			el.LS = make([]byte, el.Length)
 			if p+int(el.Length) <= len(b) {
