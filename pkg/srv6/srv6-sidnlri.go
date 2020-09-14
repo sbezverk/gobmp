@@ -27,9 +27,6 @@ func (sr *SIDNLRI) GetAllAttribute() []uint16 {
 	for _, attr := range sr.LocalNode.SubTLV {
 		attrs = append(attrs, attr.Type)
 	}
-	for _, attr := range sr.SRv6SID.TLV {
-		attrs = append(attrs, attr.Type)
-	}
 
 	return attrs
 }
@@ -67,13 +64,8 @@ func (sr *SIDNLRI) GetSRv6SIDMTID() uint16 {
 }
 
 // GetSRv6SID returns a slice of SIDs
-func (sr *SIDNLRI) GetSRv6SID() []string {
-	sids := make([]string, 0)
-	for _, sid := range sr.SRv6SID.TLV {
-		sids = append(sids, net.IP(sid.SID).To16().String())
-	}
-
-	return sids
+func (sr *SIDNLRI) GetSRv6SID() string {
+	return net.IP(sr.SRv6SID.SID).To16().String()
 }
 
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object

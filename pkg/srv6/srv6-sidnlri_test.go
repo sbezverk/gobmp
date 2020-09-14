@@ -39,13 +39,7 @@ func TestUnmarshalSIDNLRI(t *testing.T) {
 					},
 				},
 				SRv6SID: &SIDDescriptor{
-					TLV: []SIDInformationTLV{
-						{
-							Type:   518,
-							Length: 16,
-							SID:    []byte{0x01, 0x92, 0x01, 0x68, 0x00, 147, 0x00, 0x00, 0x00, 17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-						},
-					},
+					SID: []byte{0x01, 0x92, 0x01, 0x68, 0x00, 147, 0x00, 0x00, 0x00, 17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 					MultiTopologyIdentifier: &base.MultiTopologyIdentifierTLV{
 						MTI: []base.MultiTopologyIdentifier{263},
 					},
