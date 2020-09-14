@@ -11,7 +11,7 @@ import (
 
 // SIDDescriptor defines SRv6 SID Descriptor Object
 type SIDDescriptor struct {
-	TLV                     []SIDInformationTLV
+	SID                     []byte `json:"srv6_sid,omitempty"`
 	MultiTopologyIdentifier *base.MultiTopologyIdentifierTLV
 }
 
@@ -27,11 +27,8 @@ func UnmarshalSRv6SIDDescriptor(b []byte) (*SIDDescriptor, error) {
 		switch t {
 		case 518:
 			l = binary.BigEndian.Uint16(b[p+2 : p+4])
-			inf, err := UnmarshalSRv6SIDInformationTLV(b[p : p+int(l)])
-			if err != nil {
-				return nil, err
-			}
-			srd.TLV = inf
+			srd.SID = make([]byte, int(l))
+			copy(srd.SID, b[p+4:p+4+int(l)])
 		case 263:
 			l = binary.BigEndian.Uint16(b[p+2 : p+4])
 			mti, err := base.UnmarshalMultiTopologyIdentifierTLV(b[p : p+int(l)])

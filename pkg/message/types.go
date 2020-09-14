@@ -269,7 +269,7 @@ type LSSRv6SID struct {
 	PrefixLen            int32                  `json:"prefix_len,omitempty"`
 	IsPrepolicy          bool                   `json:"isprepolicy"`
 	IsAdjRIBIn           bool                   `json:"is_adj_rib_in"`
-	SRv6SID              []string               `json:"srv6_sid,omitempty"`
+	SRv6SID              string                 `json:"srv6_sid,omitempty"`
 	SRv6EndpointBehavior *srv6.EndpointBehavior `json:"srv6_endpoint_behavior,omitempty"`
 	SRv6BGPPeerNodeSID   *srv6.BGPPeerNodeSID   `json:"srv6_bgp_peer_node_sid,omitempty"`
 	SRv6SIDStructure     *srv6.SIDStructure     `json:"srv6_sid_structure,omitempty"`
