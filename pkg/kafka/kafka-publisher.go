@@ -103,7 +103,7 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 	}
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
-	config.Version = sarama.V2_5_0_0
+	config.Version = sarama.V0_11_0_0
 
 	br := sarama.NewBroker(kafkaSrv)
 	if err := br.Open(config); err != nil {
@@ -174,16 +174,11 @@ func validator(addr string) error {
 func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	tout := time.NewTimer(timeout)
-	retention := "0"
 	topic := &sarama.CreateTopicsRequest{
 		TopicDetails: map[string]*sarama.TopicDetail{
 			topicName: {
 				NumPartitions:     1,
 				ReplicationFactor: 1,
-				ConfigEntries: map[string]*string{
-					"retention.ms":        &retention,
-					"delete.retention.ms": &retention,
-				},
 			},
 		},
 	}
