@@ -1,19 +1,16 @@
 package kafka
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"math"
 	"net"
 	"strconv"
-	"sync"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/pub"
-	kafka "github.com/segmentio/kafka-go"
 )
 
 // Define constants for each topic name
@@ -26,6 +23,11 @@ const (
 	lsPrefixMessageTopic  = "gobmp.parsed.ls_prefix"
 	lsSRv6SIDMessageTopic = "gobmp.parsed.ls_srv6_sid"
 	evpnMessageTopic      = "gobmp.parsed.evpn"
+)
+
+var (
+	brockerConnectTimeout = 10 * time.Second
+	topicCreateTimeout    = 1 * time.Second
 )
 
 var (
@@ -43,16 +45,11 @@ var (
 	}
 )
 
-// topicConnection defines per topic connection and connection related information
-type topicConnection struct {
-	kafkaConn  *kafka.Conn
-	partitions []kafka.Partition
-}
-
 type publisher struct {
-	sync.Mutex
-	// topics is map of topics' connections, keyed by the topic name
-	topics map[string]*topicConnection
+	broker   *sarama.Broker
+	config   *sarama.Config
+	producer sarama.AsyncProducer
+	stopCh   chan struct{}
 }
 
 func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
@@ -79,50 +76,22 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 }
 
 func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
-	p.Lock()
-	defer p.Unlock()
-	t, ok := p.topics[topic]
-	if !ok {
-		return fmt.Errorf("topic %s in not initialized", topic)
-	}
-	var err error
-	// Check the state of the connection to kafka's topic
-	if t.kafkaConn == nil {
-		var kafkaConn *kafka.Conn
-		leaderAddr := fmt.Sprintf("%s:%d", t.partitions[0].Leader.Host, t.partitions[0].Leader.Port)
-		kafkaConn, err = kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, t.partitions[0].Topic, t.partitions[0].Leader.ID)
-		if err != nil {
-			glog.Errorf("Failed to connect to the topic %s's partition leader with error: %+v", topic, err)
-			return err
-		}
-		t.kafkaConn = kafkaConn
-	}
-	t.kafkaConn.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
-	n, err := t.kafkaConn.WriteMessages(kafka.Message{
-		Key:   key,
-		Value: msg,
-		Time:  time.Now(),
-	})
-	if err != nil {
-		glog.Errorf("Failed to write test message to the topic %s with error: %+v", topic, err)
-		for {
-			e := errors.Unwrap(err)
-			if e == nil {
-				break
-			}
-			glog.Errorf("kafka unwrapped error: %+v", e)
-		}
-		return err
-	}
-	if glog.V(6) {
-		glog.Infof("Successfully wrote %d bytes to Kafka topic %s", n, topic)
+	k := sarama.ByteEncoder{}
+	k = key
+	m := sarama.ByteEncoder{}
+	m = msg
+	p.producer.Input() <- &sarama.ProducerMessage{
+		Topic: topic,
+		Key:   k,
+		Value: m,
 	}
 
 	return nil
 }
 
 func (p *publisher) Stop() {
-
+	close(p.stopCh)
+	p.broker.Close()
 }
 
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
@@ -132,79 +101,52 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 		glog.Errorf("Failed to validate Kafka server address %s with error: %+v", kafkaSrv, err)
 		return nil, err
 	}
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = true
+	config.Version = sarama.V2_5_0_0
 
-	conn, err := kafka.Dial("tcp", kafkaSrv)
-	if err != nil {
-		glog.Errorf("Failed to dial to Kafka with error: %+v", err)
-		return nil, err
-	}
-	glog.V(5).Infof("Connected to Kafka server at: %s", conn.RemoteAddr().String())
-
-	topics, err := initTopic(conn)
-	if err != nil {
-		glog.Errorf("Failed to initialize topics with error: %+v", err)
-		return nil, err
-	}
-
-	return &publisher{
-		topics: topics,
-	}, nil
-}
-
-func initTopic(conn *kafka.Conn) (map[string]*topicConnection, error) {
-	topics := make(map[string]*topicConnection)
-	for _, tn := range topicNames {
-		t := kafka.TopicConfig{
-			Topic:             tn,
-			NumPartitions:     1,
-			ReplicationFactor: 1,
-		}
-		// Getting Topic from Kafka
-		p, err := conn.ReadPartitions(t.Topic)
-		if err != nil {
-			// Topic is not found, attempting to Create it
-			if err := conn.CreateTopics(t); err != nil {
-				glog.Errorf("Failed to create Kafka topic with error: %+v", err)
-				return nil, err
-			}
-			glog.V(5).Infof("Create Kafka topic %s succeeded", t.Topic)
-			// Getting Topic from Kafka again, if failing again, then give up and return an error.
-			// TODO, after the topic gets created, there is a leader election which might take some time, during which
-			// ReadPartitions will return error: [5] Leader Not Available. Need to add more sophisticated retry logic.
-			for retry := 1; ; {
-				p, err = conn.ReadPartitions(t.Topic)
-				if err == nil {
-					break
-				}
-				if err != nil && retry >= 5 {
-					glog.Errorf("Failed to read particions for Kafka topic with error: %+v", err)
-					return nil, err
-				}
-				glog.Warningf("Failed to read particions for Kafka topic %s with error: %+v, retry: %d", t.Topic, err, retry)
-				retry++
-				time.Sleep(6 * time.Second)
-			}
-		} else {
-			glog.V(5).Infof("Kafka topic %s already exists", t.Topic)
-		}
-
-		glog.V(5).Infof("Getting partitions for Kafka topic %s succeeded", t.Topic)
-
-		leaderAddr := fmt.Sprintf("%s:%d", p[0].Leader.Host, p[0].Leader.Port)
-		kafkaConn, err := kafka.DefaultDialer.DialLeader(context.TODO(), "tcp", leaderAddr, p[0].Topic, p[0].Leader.ID)
-		if err != nil {
+	br := sarama.NewBroker(kafkaSrv)
+	if err := br.Open(config); err != nil {
+		if err != sarama.ErrAlreadyConnected {
 			return nil, err
 		}
-		// Adding topic and its connection properties into the map
-		topics[tn] = &topicConnection{
-			// TODO kafkaConn represents connection to the topic leader at the time of initialization
-			// what if leader changes later? COnsider adding leader connection refresh logic.
-			kafkaConn:  kafkaConn,
-			partitions: p,
+	}
+	if err := waitForBrokerConnection(br, brockerConnectTimeout); err != nil {
+		glog.Errorf("failed to open connection to the broker with error: %+v\n", err)
+		return nil, err
+	}
+	glog.V(5).Infof("Connected to broker: %s id: %d\n", br.Addr(), br.ID())
+
+	for _, t := range topicNames {
+		if err := ensureTopic(br, topicCreateTimeout, t); err != nil {
+			return nil, err
 		}
 	}
+	producer, err := sarama.NewAsyncProducer([]string{kafkaSrv}, config)
+	if err != nil {
+		return nil, err
+	}
+	glog.V(5).Infof("Initialized Kafka Async producer")
+	stopCh := make(chan struct{})
+	go func(producer sarama.AsyncProducer, stopCh <-chan struct{}) {
+		for {
+			select {
+			case <-producer.Successes():
+			case err := <-producer.Errors():
+				glog.Errorf("failed to produce message with error: %+v", *err)
+			case <-stopCh:
+				producer.Close()
+				return
+			}
+		}
+	}(producer, stopCh)
 
-	return topics, nil
+	return &publisher{
+		stopCh:   stopCh,
+		broker:   br,
+		config:   config,
+		producer: producer,
+	}, nil
 }
 
 func validator(addr string) error {
@@ -227,4 +169,64 @@ func validator(addr string) error {
 		return fmt.Errorf("the value of port is invalid")
 	}
 	return nil
+}
+
+func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	tout := time.NewTimer(timeout)
+	retention := "0"
+	topic := &sarama.CreateTopicsRequest{
+		TopicDetails: map[string]*sarama.TopicDetail{
+			topicName: {
+				NumPartitions:     1,
+				ReplicationFactor: 1,
+				ConfigEntries: map[string]*string{
+					"retention.ms":        &retention,
+					"delete.retention.ms": &retention,
+				},
+			},
+		},
+	}
+
+	for {
+		t, err := br.CreateTopics(topic)
+		if err != nil {
+			return err
+		}
+		if e, ok := t.TopicErrors[topicName]; ok {
+			if e.Err == sarama.ErrTopicAlreadyExists || e.Err == sarama.ErrNoError {
+				return nil
+			}
+			if e.Err != sarama.ErrRequestTimedOut {
+				return e
+			}
+		}
+		select {
+		case <-ticker.C:
+			continue
+		case <-tout.C:
+			return fmt.Errorf("timeout waiting for topic %s", topicName)
+		}
+	}
+}
+
+func waitForBrokerConnection(br *sarama.Broker, timeout time.Duration) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	tout := time.NewTimer(timeout)
+	for {
+		ok, err := br.Connected()
+		if ok {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		select {
+		case <-ticker.C:
+			continue
+		case <-tout.C:
+			return fmt.Errorf("timeout waiting for the connection to the broker %s", br.Addr())
+		}
+	}
+
 }
