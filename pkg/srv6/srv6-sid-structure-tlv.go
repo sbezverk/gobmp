@@ -8,10 +8,10 @@ import (
 // SIDStructure defines SRv6 SID Structure TLV object
 // No RFC yet
 type SIDStructure struct {
-	LBLength  uint8
-	LNLength  uint8
-	FunLength uint8
-	ArgLength uint8
+	LBLength  uint8 `json:"locator_block_length"`
+	LNLength  uint8 `json:"locator_node_length"`
+	FunLength uint8 `json:"function_length"`
+	ArgLength uint8 `json:"argument_length"`
 }
 
 // UnmarshalSRv6SIDStructureTLV builds SRv6 SID Structure TLV object

@@ -10,9 +10,9 @@ import (
 // EndpointBehavior defines SRv6 Endpoint Behavior TLV object
 // No RFC yet
 type EndpointBehavior struct {
-	EndpointBehavior uint16
-	Flag             uint8
-	Algorithm        uint8
+	EndpointBehavior uint16 `json:"endpoint_behavior"`
+	Flag             uint8  `json:"flag"`
+	Algorithm        uint8  `json:"algo"`
 }
 
 // UnmarshalSRv6EndpointBehaviorTLV builds SRv6 Endpoint Behavior TLV object
