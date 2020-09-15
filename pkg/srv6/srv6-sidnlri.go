@@ -16,8 +16,8 @@ import (
 type SIDNLRI struct {
 	ProtocolID    base.ProtoID
 	Identifier    []byte
-	LocalNode     *base.NodeDescriptor
-	SRv6SID       *SIDDescriptor
+	LocalNode     *base.NodeDescriptor `json:"local_node_descriptor,omitempty"`
+	SRv6SID       *SIDDescriptor       `json:"sid_descriptor,omitempty"`
 	LocalNodeHash string
 }
 
