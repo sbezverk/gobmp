@@ -10,10 +10,10 @@ import (
 // BGPPeerNodeSID defines SRv6 BGP Peer Node SID TLV object
 // No RFC yet
 type BGPPeerNodeSID struct {
-	Flag    uint8
-	Weight  uint8
-	PeerASN uint32
-	PeerID  []byte
+	Flag    uint8  `json:"flag"`
+	Weight  uint8  `json:"weight"`
+	PeerASN uint32 `json:"peer_asn"`
+	PeerID  []byte `json:"peer_id"`
 }
 
 // UnmarshalSRv6BGPPeerNodeSIDTLV builds SRv6 BGP Peer Node SID TLV object
