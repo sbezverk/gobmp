@@ -31,7 +31,7 @@ const (
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type PrefixNLRI struct {
 	ProtocolID    ProtoID
-	Identifier    []byte
+	Identifier    []byte `json:"domain_id,omitempty"`
 	LocalNode     *NodeDescriptor
 	Prefix        *PrefixDescriptor
 	LocalNodeHash string
@@ -55,6 +55,11 @@ func (p *PrefixNLRI) GetAllAttribute() []uint16 {
 // GetPrefixProtocolID returns a string representation of Prefix NLRI ProtocolID field
 func (p *PrefixNLRI) GetPrefixProtocolID() string {
 	return ProtocolIDString(p.ProtocolID)
+}
+
+// GetIdentifier returns value of Identifier as int64
+func (p *PrefixNLRI) GetIdentifier() int64 {
+	return int64(binary.BigEndian.Uint64(p.Identifier))
 }
 
 // GetPrefixASN returns Autonomous System Number used to uniquely identify BGP-LS domain

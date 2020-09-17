@@ -85,6 +85,7 @@ type LSNode struct {
 	Sequence            int                         `json:"sequence,omitempty"`
 	Hash                string                      `json:"hash,omitempty"`
 	RouterHash          string                      `json:"router_hash,omitempty"`
+	DomainID            int64                       `json:"domain_id"`
 	RouterIP            string                      `json:"router_ip,omitempty"`
 	PeerHash            string                      `json:"peer_hash,omitempty"`
 	PeerIP              string                      `json:"peer_ip,omitempty"`
@@ -121,6 +122,7 @@ type LSLink struct {
 	Hash                  string                   `json:"hash,omitempty"`
 	RouterHash            string                   `json:"router_hash,omitempty"`
 	RouterIP              string                   `json:"router_ip,omitempty"`
+	DomainID              int64                    `json:"domain_id"`
 	PeerHash              string                   `json:"peer_hash,omitempty"`
 	PeerIP                string                   `json:"peer_ip,omitempty"`
 	PeerASN               int32                    `json:"peer_asn,omitempty"`
@@ -207,6 +209,7 @@ type LSPrefix struct {
 	Hash                 string                        `json:"hash,omitempty"`
 	RouterHash           string                        `json:"router_hash,omitempty"`
 	RouterIP             string                        `json:"router_ip,omitempty"`
+	DomainID             int64                         `json:"domain_id"`
 	PeerHash             string                        `json:"peer_hash,omitempty"`
 	PeerIP               string                        `json:"peer_ip,omitempty"`
 	PeerASN              int32                         `json:"peer_asn,omitempty"`
@@ -245,6 +248,7 @@ type LSSRv6SID struct {
 	Hash                 string                 `json:"hash,omitempty"`
 	RouterHash           string                 `json:"router_hash,omitempty"`
 	RouterIP             string                 `json:"router_ip,omitempty"`
+	DomainID             int64                  `json:"domain_id"`
 	PeerHash             string                 `json:"peer_hash,omitempty"`
 	PeerIP               string                 `json:"peer_ip,omitempty"`
 	PeerASN              int32                  `json:"peer_asn,omitempty"`
