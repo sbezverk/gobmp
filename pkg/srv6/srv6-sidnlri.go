@@ -15,7 +15,7 @@ import (
 // no RFC yet
 type SIDNLRI struct {
 	ProtocolID    base.ProtoID
-	Identifier    []byte
+	Identifier    []byte               `json:"domain_id,omitempty"`
 	LocalNode     *base.NodeDescriptor `json:"local_node_descriptor,omitempty"`
 	SRv6SID       *SIDDescriptor       `json:"sid_descriptor,omitempty"`
 	LocalNodeHash string
@@ -29,6 +29,11 @@ func (sr *SIDNLRI) GetAllAttribute() []uint16 {
 	}
 
 	return attrs
+}
+
+// GetIdentifier returns value of Identifier as int64
+func (sr *SIDNLRI) GetIdentifier() int64 {
+	return int64(binary.BigEndian.Uint64(sr.Identifier))
 }
 
 // GetSRv6SIDProtocolID returns a string representation of LinkNLRI ProtocolID field

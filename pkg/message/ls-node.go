@@ -26,6 +26,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,
 		Timestamp:  ph.GetPeerTimestamp(),
+		DomainID:   node.GetIdentifier(),
 	}
 	if ph.FlagV {
 		// IPv6 specific conversions

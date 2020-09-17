@@ -26,6 +26,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,
 		Timestamp:  ph.GetPeerTimestamp(),
+		DomainID:   prfx.GetIdentifier(),
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()

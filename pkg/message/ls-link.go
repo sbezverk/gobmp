@@ -26,6 +26,7 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,
 		Timestamp:  ph.GetPeerTimestamp(),
+		DomainID:   link.GetIdentifier(),
 	}
 	msg.Nexthop = nextHop
 	if ph.FlagV {

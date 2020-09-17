@@ -13,7 +13,7 @@ import (
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type LinkNLRI struct {
 	ProtocolID     ProtoID
-	Identifier     []byte
+	Identifier     []byte `json:"domain_id,omitempty"`
 	LocalNode      *NodeDescriptor
 	RemoteNode     *NodeDescriptor
 	Link           *LinkDescriptor
@@ -41,6 +41,11 @@ func (l *LinkNLRI) GetAllAttribute() []uint16 {
 // GetLinkProtocolID returns a string representation of LinkNLRI ProtocolID field
 func (l *LinkNLRI) GetLinkProtocolID() string {
 	return ProtocolIDString(l.ProtocolID)
+}
+
+// GetIdentifier returns value of Identifier as int64
+func (l *LinkNLRI) GetIdentifier() int64 {
+	return int64(binary.BigEndian.Uint64(l.Identifier))
 }
 
 // GetLinkLSID returns a value of Link Descriptor TLV BGP-LS Identifier
