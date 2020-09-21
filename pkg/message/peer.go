@@ -19,9 +19,9 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		glog.Errorf("got invalid Payload type in bmp.Message")
 		return
 	}
-	action := "up"
+	action := "add"
 	if op == peerDown {
-		action = "down"
+		action = "del"
 	}
 
 	var m PeerStateChange

@@ -14,7 +14,7 @@ type PeerStateChange struct {
 	Key              string `json:"_key,omitempty"`
 	ID               string `json:"_id,omitempty"`
 	Rev              string `json:"_rev,omitempty"`
-	Action           string `json:"action,omitempty"` // Action can be "up" or "down"
+	Action           string `json:"action,omitempty"` // Action can be "add" for peer up and "del" for peer down message
 	Sequence         int    `json:"sequence,omitempty"`
 	Hash             string `json:"hash,omitempty"`
 	RouterHash       string `json:"router_hash,omitempty"`
