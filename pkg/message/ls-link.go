@@ -89,6 +89,16 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		if adj, err := lslink.GetSRAdjacencySID(); err == nil {
 			msg.LSAdjacencySID = adj
 		}
+		switch link.ProtocolID {
+		case base.ISISL1:
+			fallthrough
+		case base.ISISL2:
+			msg.AreaID = lslink.GetISISAreaID()
+		case base.OSPFv2:
+			fallthrough
+		case base.OSPFv3:
+			msg.AreaID = link.LocalNode.GetOSPFAreaID()
+		}
 	}
 
 	return &msg, nil

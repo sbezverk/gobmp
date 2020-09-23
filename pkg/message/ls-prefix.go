@@ -67,6 +67,16 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		if loc, err := lsprefix.GetLSSRv6Locator(); err == nil {
 			msg.SRv6Locator = loc
 		}
+		switch prfx.ProtocolID {
+		case base.ISISL1:
+			fallthrough
+		case base.ISISL2:
+			msg.AreaID = lsprefix.GetISISAreaID()
+		case base.OSPFv2:
+			fallthrough
+		case base.OSPFv3:
+			msg.AreaID = prfx.LocalNode.GetOSPFAreaID()
+		}
 	}
 
 	return &msg, nil
