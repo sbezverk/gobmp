@@ -93,7 +93,11 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		case base.ISISL1:
 			fallthrough
 		case base.ISISL2:
-			msg.AreaID = lslink.GetISISAreaID()
+			// Proposed by Peter Psenak <ppsenak@cisco.com>
+			// 1027 TLV is not sent for ISIS links/prefixes, because ISIS has no
+			// concept of areas. The proposal is to use generic representation,
+			// so include area-id and always set to 0 for ISIS.
+			msg.AreaID = "0"
 		case base.OSPFv2:
 			fallthrough
 		case base.OSPFv3:
