@@ -55,7 +55,6 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		case base.OSPFv3:
 			msg.OSPFAreaID = node.GetNodeOSPFAreaID()
 		}
-		msg.ISISAreaID = lsnode.GetISISAreaID()
 		if ph.FlagV {
 			msg.RouterID = lsnode.GetLocalIPv6RouterID()
 		} else {

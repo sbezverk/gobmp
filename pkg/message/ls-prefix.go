@@ -67,6 +67,20 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		if loc, err := lsprefix.GetLSSRv6Locator(); err == nil {
 			msg.SRv6Locator = loc
 		}
+		switch prfx.ProtocolID {
+		case base.ISISL1:
+			fallthrough
+		case base.ISISL2:
+			// Proposed by Peter Psenak <ppsenak@cisco.com>
+			// 1027 TLV is not sent for ISIS links/prefixes, because ISIS has no
+			// concept of areas. The proposal is to use generic representation,
+			// so include area-id and always set to 0 for ISIS.
+			msg.AreaID = "0"
+		case base.OSPFv2:
+			fallthrough
+		case base.OSPFv3:
+			msg.AreaID = prfx.LocalNode.GetOSPFAreaID()
+		}
 	}
 
 	return &msg, nil
