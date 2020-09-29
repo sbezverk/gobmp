@@ -8,6 +8,35 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+// BGPCapabilities lists registered and active BGP Capabilities as defined in
+// https://www.iana.org/assignments/capability-codes/capability-codes.xhtml
+var BGPCapabilities = map[int]string{
+	1:   "Multiprotocol Extensions for BGP-4",
+	2:   "Route Refresh Capability for BGP-4",
+	3:   "Outbound Route Filtering Capability",
+	4:   "Multiple routes to a destination capability (deprecated)",
+	5:   "Extended Next Hop Encoding",
+	6:   "BGP Extended Message",
+	7:   "BGPsec Capability",
+	8:   "Multiple Labels Capability",
+	9:   "BGP Role (TEMPORARY)",
+	64:  "Graceful Restart Capability",
+	65:  "Support for 4-octet AS number capability",
+	67:  "Support for Dynamic Capability (capability specific)",
+	68:  "Multisession BGP Capability",
+	69:  "ADD-PATH Capability",
+	70:  "Enhanced Route Refresh Capability",
+	71:  "Long-Lived Graceful Restart (LLGR) Capability",
+	72:  "Routing Policy Distribution",
+	73:  "FQDN Capability",
+	128: "Prestandard Route Refresh (deprecated)",
+	129: "Prestandard Outbound Route Filtering (deprecated)",
+	130: "Prestandard Outbound Route Filtering (deprecated)",
+	131: "Prestandard Multisession (deprecated)",
+	184: "Prestandard FQDN (deprecated)",
+	185: "Prestandard OPERATIONAL message (deprecated)",
+}
+
 // Capability Defines a structure for BGP Capability TLV which is sent as a part
 // Informational TLVs in Open Message
 // Known capability codes: https://www.iana.org/assignments/capability-codes/capability-codes.xhtml
