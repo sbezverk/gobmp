@@ -23,47 +23,30 @@ type OpenMessage struct {
 	BGPID              []byte
 	OptParamLen        byte
 	OptionalParameters []InformationalTLV
+	Capabilities       Capability
 }
 
 // GetCapabilities returns a slice of Capabilities attributes found in Informational TLV slice
-func (o *OpenMessage) GetCapabilities() (Capability, error) {
-	for _, t := range o.OptionalParameters {
-		if t.Type != 2 {
-			continue
-		}
-		return UnmarshalBGPCapability(t.Value)
-	}
-
-	return nil, fmt.Errorf("not found")
+func (o *OpenMessage) GetCapabilities() Capability {
+	return o.Capabilities
 }
 
 // Is4BytesASCapable returns true or false if Open message originated by 4 bytes AS capable speaker
 // in case of true, it also returns 4 bytes Autonomous System Number.
 func (o *OpenMessage) Is4BytesASCapable() (int32, bool) {
-	for _, t := range o.OptionalParameters {
-		if t.Type != 2 {
-			continue
-		}
-		caps, err := UnmarshalBGPCapability(t.Value)
-		if err != nil {
-			continue
-		}
-		cap, ok := caps[65]
-		if !ok {
-			return 0, false
-		}
-		return int32(binary.BigEndian.Uint32(cap.Value)), true
+	v, ok := o.Capabilities[65]
+	if !ok {
+		return 0, false
 	}
-	return 0, false
+
+	return int32(binary.BigEndian.Uint32(v.Value)), true
 }
 
 // IsMultiLabelCapable returns true or false if Open message originated by a bgp speaker
 // supporting Multiple Label Capability
 func (o *OpenMessage) IsMultiLabelCapable() bool {
-	for _, t := range o.OptionalParameters {
-		if t.Type == 8 {
-			return true
-		}
+	if _, ok := o.Capabilities[8]; ok {
+		return true
 	}
 
 	return false
@@ -103,8 +86,7 @@ func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 	m.OptParamLen = b[p]
 	p++
 	if m.OptParamLen != 0 {
-		m.OptionalParameters, err = UnmarshalBGPTLV(b[p : p+int(m.OptParamLen)])
-		if err != nil {
+		if m.OptionalParameters, m.Capabilities, err = UnmarshalBGPTLV(b[p : p+int(m.OptParamLen)]); err != nil {
 			return nil, err
 		}
 	}
