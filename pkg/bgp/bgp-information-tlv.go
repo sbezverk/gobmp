@@ -50,6 +50,15 @@ func UnmarshalBGPTLV(b []byte) ([]InformationalTLV, Capability, error) {
 
 func copyCapabilitiyMap(s, d Capability) {
 	for k, v := range s {
-		d[k] = v
+		src := make([]*capabilityData, len(v))
+		for i, c := range v {
+			src[i] = c
+		}
+		dst, ok := d[k]
+		if !ok {
+			dst = make([]*capabilityData, 0)
+		}
+		dst = append(dst, src...)
+		d[k] = dst
 	}
 }

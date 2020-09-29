@@ -46,7 +46,7 @@ type capabilityData struct {
 // Informational TLVs in Open Message
 // Known capability codes: https://www.iana.org/assignments/capability-codes/capability-codes.xhtml
 // Capability structure: https://tools.ietf.org/html/rfc5492#section-4
-type Capability map[uint8]*capabilityData
+type Capability map[uint8][]*capabilityData
 
 func getAFISAFIString(afi uint16, safi uint8) string {
 	var afiStr, safiStr string
@@ -97,7 +97,6 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 		if !ok {
 			capData.Description = "Unknown capability " + strconv.Itoa(int(code))
 		}
-		caps[code] = capData
 		switch code {
 		case 1:
 			// According RFC https://tools.ietf.org/html/rfc2858#section-7 Length will always be 4 bytes.
@@ -105,6 +104,12 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 			safi := capData.Value[3]
 			capData.Description += getAFISAFIString(afi, safi)
 		}
+		c, ok := caps[code]
+		if !ok {
+			c = make([]*capabilityData, 0)
+		}
+		c = append(c, capData)
+		caps[code] = c
 		p += int(length)
 	}
 

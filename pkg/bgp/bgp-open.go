@@ -39,7 +39,7 @@ func (o *OpenMessage) Is4BytesASCapable() (int32, bool) {
 		return 0, false
 	}
 
-	return int32(binary.BigEndian.Uint32(v.Value)), true
+	return int32(binary.BigEndian.Uint32(v[0].Value)), true
 }
 
 // IsMultiLabelCapable returns true or false if Open message originated by a bgp speaker
