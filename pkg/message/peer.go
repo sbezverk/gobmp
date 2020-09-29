@@ -68,19 +68,11 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			// Both peers are AS 4 bytes capable
 			p.as4Capable = true
 		}
-		sCaps := peerUpMsg.SentOpen.GetCapabilities()
-		rCaps := peerUpMsg.ReceivedOpen.GetCapabilities()
-		for i, cap := range sCaps {
-			m.AdvCapabilities += cap.Description
-			if i < len(sCaps)-1 {
-				m.AdvCapabilities += ", "
-			}
+		if sCaps, err := peerUpMsg.SentOpen.GetCapabilities(); err == nil {
+			m.AdvCapabilities = sCaps
 		}
-		for i, cap := range rCaps {
-			m.RcvCapabilities += cap.Description
-			if i < len(rCaps)-1 {
-				m.RcvCapabilities += ", "
-			}
+		if rCaps, err := peerUpMsg.ReceivedOpen.GetCapabilities(); err == nil {
+			m.RcvCapabilities = rCaps
 		}
 	} else {
 		peerDownMsg, ok := msg.Payload.(*bmp.PeerDownMessage)

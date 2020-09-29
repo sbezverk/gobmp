@@ -8,6 +8,11 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+const (
+	// BGPMinOpenMessageLength defines a minimum length of BGP Open Message
+	BGPMinOpenMessageLength = 29
+)
+
 // OpenMessage defines BGP Open Message structure
 type OpenMessage struct {
 	Length             int16
@@ -21,20 +26,15 @@ type OpenMessage struct {
 }
 
 // GetCapabilities returns a slice of Capabilities attributes found in Informational TLV slice
-func (o *OpenMessage) GetCapabilities() []Capability {
-	cap := make([]Capability, 0)
+func (o *OpenMessage) GetCapabilities() (Capability, error) {
 	for _, t := range o.OptionalParameters {
 		if t.Type != 2 {
 			continue
 		}
-		c, err := UnmarshalBGPInformationalTLVCapability(t.Value)
-		if err != nil {
-			continue
-		}
-		cap = append(cap, c...)
+		return UnmarshalBGPCapability(t.Value)
 	}
 
-	return cap
+	return nil, fmt.Errorf("not found")
 }
 
 // Is4BytesASCapable returns true or false if Open message originated by 4 bytes AS capable speaker
@@ -44,19 +44,16 @@ func (o *OpenMessage) Is4BytesASCapable() (int32, bool) {
 		if t.Type != 2 {
 			continue
 		}
-		caps, err := UnmarshalBGPInformationalTLVCapability(t.Value)
+		caps, err := UnmarshalBGPCapability(t.Value)
 		if err != nil {
 			continue
 		}
-		for _, cap := range caps {
-			// 65 is 4 Bytes AS Capability code
-			if cap.Code != 65 {
-				continue
-			}
-			return int32(binary.BigEndian.Uint32(cap.Value)), true
+		cap, ok := caps[65]
+		if !ok {
+			return 0, false
 		}
+		return int32(binary.BigEndian.Uint32(cap.Value)), true
 	}
-
 	return 0, false
 }
 
@@ -76,6 +73,9 @@ func (o *OpenMessage) IsMultiLabelCapable() bool {
 func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 	if glog.V(6) {
 		glog.Infof("BGPOpenMessage Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) < BGPMinOpenMessageLength {
+		return nil, fmt.Errorf("BGP Open Message length %d is invalid")
 	}
 	var err error
 	p := 0
