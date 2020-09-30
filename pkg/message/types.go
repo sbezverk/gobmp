@@ -265,7 +265,6 @@ type LSSRv6SID struct {
 	Nexthop              string                 `json:"nexthop,omitempty"`
 	LocalNodeHash        string                 `json:"local_node_hash,omitempty"`
 	MTID                 uint16                 `json:"mt_id,omitempty"`
-	OSPFRouteType        uint8                  `json:"ospf_route_type,omitempty"`
 	IGPFlags             uint8                  `json:"igp_flags"`
 	IGPRouteTag          uint8                  `json:"route_tag,omitempty"`
 	IGPExtRouteTag       uint8                  `json:"ext_route_tag,omitempty"`
