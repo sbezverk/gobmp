@@ -1,7 +1,7 @@
 REGISTRY_NAME?=docker.io/sbezverk
 IMAGE_VERSION?=0.0.0
 
-.PHONY: all gobmp topology container push clean test
+.PHONY: all gobmp player container push clean test
 
 ifdef V
 TESTARGS = -v -args -alsologtostderr -v 5
@@ -15,10 +15,6 @@ gobmp:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/gobmp compile-gobmp
 
-topology:
-	mkdir -p bin
-	$(MAKE) -C ./cmd/topology compile-topology
-
 player:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/player compile-player
@@ -26,17 +22,11 @@ player:
 container: gobmp
 	docker build -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile .
 
-topology-container: topology
-	docker build -t $(REGISTRY_NAME)/l3vpn-topology:$(IMAGE_VERSION) -f ./build/Dockerfile.topology .
-
 player-container: player
 	docker build -t $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION) -f ./build/Dockerfile.player .
 
 push: container
 	docker push $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION)
-
-topology-push: topology-container
-	docker push $(REGISTRY_NAME)/l3vpn-topology:$(IMAGE_VERSION)
 
 player-push: player-container
 	docker push $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION)
