@@ -4,7 +4,7 @@ dist: bionic
 
 language: go
 go:
-  - "1.14"
+  - "1.15"
 
 script:
   # Check whether files are syntactically correct.
@@ -12,5 +12,4 @@ script:
   # Check whether files were not gofmt'ed.
   - "gosrc=$(find . -name '*.go' | tr '\\n' ' '); [ $(gofmt -l $gosrc 2>&- | wc -l) -eq 0 ] || (echo 'gofmt was not run on these files:'; gofmt -l $gosrc 2>&-; false)"
   - make gobmp
-  - make topology 
-  - go test ./... 
+  - go test ./...
