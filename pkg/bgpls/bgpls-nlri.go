@@ -3,6 +3,7 @@ package bgpls
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"net"
 
 	"github.com/golang/glog"
@@ -369,7 +370,7 @@ func (ls *NLRI) GetMaxLinkBandwidth() uint32 {
 		if tlv.Type != 1089 {
 			continue
 		}
-		return binary.BigEndian.Uint32(tlv.Value)
+		return uint32(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value)))
 	}
 
 	return 0
@@ -381,7 +382,7 @@ func (ls *NLRI) GetMaxReservableLinkBandwidth() uint32 {
 		if tlv.Type != 1090 {
 			continue
 		}
-		return binary.BigEndian.Uint32(tlv.Value)
+		return uint32(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value)))
 	}
 
 	return 0
@@ -395,7 +396,7 @@ func (ls *NLRI) GetUnreservedLinkBandwidth() []uint32 {
 			continue
 		}
 		for p := 0; p < len(tlv.Value); {
-			unResrved = append(unResrved, binary.BigEndian.Uint32(tlv.Value[p:p+4]))
+			unResrved = append(unResrved, uint32(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value[p:p+4]))))
 			p += 4
 		}
 		return unResrved
