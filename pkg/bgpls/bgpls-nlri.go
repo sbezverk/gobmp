@@ -3,6 +3,7 @@ package bgpls
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"net"
 
 	"github.com/golang/glog"
@@ -363,31 +364,31 @@ func (ls *NLRI) GetIGPMetric() uint32 {
 	return 0
 }
 
-// GetMaxLinkBandwidth returns value of Maximum Link Bandwidth encoded in 32 bits in IEEE floating point format
+// GetMaxLinkBandwidth returns value of Maximum Link Bandwidth in bps
 func (ls *NLRI) GetMaxLinkBandwidth() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1089 {
 			continue
 		}
-		return binary.BigEndian.Uint32(tlv.Value)
+		return uint32(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value))) * 8
 	}
 
 	return 0
 }
 
-// GetMaxReservableLinkBandwidth returns value of Maximum Reservable Link Bandwidth encoded in 32 bits in IEEE floating point format
+// GetMaxReservableLinkBandwidth returns value of Maximum Reservable Link Bandwidth in bps
 func (ls *NLRI) GetMaxReservableLinkBandwidth() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1090 {
 			continue
 		}
-		return binary.BigEndian.Uint32(tlv.Value)
+		return uint32(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value))) * 8
 	}
 
 	return 0
 }
 
-// GetUnreservedLinkBandwidth returns eight 32-bit IEEE floating point numbers
+// GetUnreservedLinkBandwidth returns eight 32-bit number in bps
 func (ls *NLRI) GetUnreservedLinkBandwidth() []uint32 {
 	unResrved := make([]uint32, 8)
 	for _, tlv := range ls.LS {
@@ -395,7 +396,7 @@ func (ls *NLRI) GetUnreservedLinkBandwidth() []uint32 {
 			continue
 		}
 		for p := 0; p < len(tlv.Value); {
-			unResrved = append(unResrved, binary.BigEndian.Uint32(tlv.Value[p:p+4]))
+			unResrved = append(unResrved, uint32(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value[p:p+4])))*8)
 			p += 4
 		}
 		return unResrved
