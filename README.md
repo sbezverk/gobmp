@@ -97,7 +97,7 @@ The structure of the each record which is published to kafka, stored in the mess
 ## Building goBMP
 
 ```
-git clone [https://github.com/sbezverk/gobmp](https://github.com/sbezverk/gobmp)
+git clone https://github.com/sbezverk/gobmp
 
 cd   gobmp
 
