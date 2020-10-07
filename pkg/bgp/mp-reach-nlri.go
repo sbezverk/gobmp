@@ -55,6 +55,7 @@ func (mp *MPReachNLRI) IsNextHopIPv6() bool {
 
 // GetNextHop return a string representation of the next hop ip address.
 func (mp *MPReachNLRI) GetNextHop() string {
+	glog.Infof("Nexthop length: %d, next hop value: %s", tools.MessageHex(mp.NextHopAddress))
 	switch mp.NextHopAddressLength {
 	case 4:
 		// IPv4
