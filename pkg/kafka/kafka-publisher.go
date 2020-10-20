@@ -28,6 +28,8 @@ const (
 var (
 	brockerConnectTimeout = 10 * time.Second
 	topicCreateTimeout    = 1 * time.Second
+	// goBMP topic's retention timer is 15 minutes
+	topicRetention = "900000"
 )
 
 var (
@@ -172,17 +174,19 @@ func validator(addr string) error {
 }
 
 func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) error {
-	ticker := time.NewTicker(100 * time.Millisecond)
-	tout := time.NewTimer(timeout)
 	topic := &sarama.CreateTopicsRequest{
 		TopicDetails: map[string]*sarama.TopicDetail{
 			topicName: {
 				NumPartitions:     1,
 				ReplicationFactor: 1,
+				ConfigEntries: map[string]*string{
+					"retention.ms": &topicRetention,
+				},
 			},
 		},
 	}
-
+	ticker := time.NewTicker(100 * time.Millisecond)
+	tout := time.NewTimer(timeout)
 	for {
 		t, err := br.CreateTopics(topic)
 		if err != nil {
