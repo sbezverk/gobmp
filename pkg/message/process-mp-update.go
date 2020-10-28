@@ -11,7 +11,6 @@ import (
 func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
 	labeled := false
 	labeledSet := false
-
 	switch nlri.GetAFISAFIType() {
 	case 1:
 		// MP_REACH_NLRI AFI 1 SAFI 1
@@ -46,7 +45,15 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		}
 		// Loop through and publish all collected messages
 		for _, m := range msgs {
-			if err := p.marshalAndPublish(&m, bmp.UnicastPrefixMsg, []byte(m.RouterHash), false); err != nil {
+			topicType := bmp.UnicastPrefixMsg
+			if p.splitAF {
+				if m.IsIPv4 {
+					topicType = bmp.UnicastPrefixV4Msg
+				} else {
+					topicType = bmp.UnicastPrefixV6Msg
+				}
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
 				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
 			}
@@ -59,8 +66,16 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 			glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
 			return
 		}
-		for _, msg := range msgs {
-			if err := p.marshalAndPublish(&msg, bmp.L3VPNMsg, []byte(msg.RouterHash), false); err != nil {
+		for _, m := range msgs {
+			topicType := bmp.L3VPNMsg
+			if p.splitAF {
+				if m.IsIPv4 {
+					topicType = bmp.L3VPNV4Msg
+				} else {
+					topicType = bmp.L3VPNV6Msg
+				}
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
 				glog.Errorf("failed to process L3VPN message with error: %+v", err)
 				return
 			}

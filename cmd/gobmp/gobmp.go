@@ -87,7 +87,8 @@ func main() {
 	}
 
 	// Initializing bmp server
-	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, intercept, publisher)
+	// TODO (sbezverk) consider adding a parameter to split or not to split Address Families, for now hard coding to true
+	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, intercept, publisher, true)
 	if err != nil {
 		glog.Errorf("fail to setup new gobmp server with error: %+v", err)
 		os.Exit(1)

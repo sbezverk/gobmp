@@ -53,6 +53,10 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		}
 		p.processMPUpdate(nlri, DelPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 	default:
+		t := bmp.UnicastPrefixMsg
+		if p.splitAF {
+			t = bmp.UnicastPrefixV4Msg
+		}
 		// Original BGP's NLRI messages processing
 		msgs := make([]UnicastPrefix, 0)
 		if routeMonitorMsg.Update.WithdrawnRoutesLength != 0 {
@@ -71,7 +75,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		msgs = append(msgs, msg...)
 		// Loop through and publish all collected messages
 		for _, m := range msgs {
-			if err := p.marshalAndPublish(&m, bmp.UnicastPrefixMsg, []byte(m.RouterHash), false); err != nil {
+			if err := p.marshalAndPublish(&m, t, []byte(m.RouterHash), false); err != nil {
 				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
 			}
