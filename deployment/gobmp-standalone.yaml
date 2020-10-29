@@ -22,7 +22,6 @@ spec:
     app: gobmp
   type: ClusterIP
   externalIPs:
-    - 192.168.80.254
     - 10.1.1.100
 metadata:
   name: gobmp
@@ -46,7 +45,7 @@ spec:
             - "5"
             - --kafka-server
             - "kafka:9092"
-          image: docker.io/sbezverk/gobmp:wip
+          image: docker.io/sbezverk/gobmp:wip_af
           imagePullPolicy: Always
           name: gobmp
           ports:
