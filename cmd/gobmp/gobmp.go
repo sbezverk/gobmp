@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"net/http"
@@ -24,7 +25,8 @@ var (
 	srcPort   int
 	perfPort  int
 	kafkaSrv  string
-	intercept bool
+	intercept string
+	splitAF   string
 	dump      string
 	file      string
 )
@@ -34,7 +36,8 @@ func init() {
 	flag.IntVar(&srcPort, "source-port", 5000, "port exposed to outside")
 	flag.IntVar(&dstPort, "destination-port", 5050, "port openBMP is listening")
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
-	flag.BoolVar(&intercept, "intercept", false, "Mode of operation, in intercept mode, when intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
+	flag.StringVar(&intercept, "intercept", "false", "When intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
+	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" (default) ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 56767, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\" or to the standard output when \"dump=console\"")
 	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path anf file name to store messages when \"dump=file\"")
@@ -87,8 +90,17 @@ func main() {
 	}
 
 	// Initializing bmp server
-	// TODO (sbezverk) consider adding a parameter to split or not to split Address Families, for now hard coding to true
-	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, intercept, publisher, true)
+	interceptFlag, err := strconv.ParseBool(intercept)
+	if err != nil {
+		glog.Errorf("fail to parse to bool the value of the intercept flag with error: %+v", err)
+		os.Exit(1)
+	}
+	splitAFFlag, err := strconv.ParseBool(splitAF)
+	if err != nil {
+		glog.Errorf("fail to parse to bool the value of the intercept flag with error: %+v", err)
+		os.Exit(1)
+	}
+	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag)
 	if err != nil {
 		glog.Errorf("fail to setup new gobmp server with error: %+v", err)
 		os.Exit(1)
