@@ -22,6 +22,10 @@ const (
 	RouteMirrorMsg = 6
 	// UnicastPrefixMsg defines a subtype of BMP Route Monitoring message
 	UnicastPrefixMsg = 7
+	// UnicastPrefixV4Msg defines a subtype of BMP Route Monitoring message
+	UnicastPrefixV4Msg = 74
+	// UnicastPrefixV6Msg defines a subtype of BMP Route Monitoring message
+	UnicastPrefixV6Msg = 76
 	// LSNodeMsg defines a subtype of BMP Route Monitoring message
 	LSNodeMsg = 8
 	// LSLinkMsg defines a subtype of BMP Route Monitoring message
@@ -30,6 +34,10 @@ const (
 	PeerStateChangeMsg = 10
 	// L3VPNMsg defines BMP Peer Layer 3 VPN message
 	L3VPNMsg = 11
+	// L3VPNV4Msg defines BMP Peer Layer 3 VPN message
+	L3VPNV4Msg = 114
+	// L3VPNV6Msg defines BMP Peer Layer 3 VPN message
+	L3VPNV6Msg = 116
 	// LSPrefixMsg defines BMP Route Monitoring message carrying Prefix NLRI
 	LSPrefixMsg = 12
 	// LSSRv6SIDMsg defines BMP Route Monitoring message carrying SRv6 SID NLRI

@@ -41,7 +41,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			// IPv6 specific conversions
 			prfx.IsIPv4 = false
 			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-			prfx.Nexthop = net.IP(update.BaseAttributes.Nexthop).To16().String()
+			prfx.Nexthop = update.BaseAttributes.Nexthop
 			prfx.IsNexthopIPv4 = false
 			a := make([]byte, 16)
 			copy(a, pr.Prefix)
@@ -50,7 +50,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			// IPv4 specific conversions
 			prfx.IsIPv4 = true
 			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-			prfx.Nexthop = net.IP(update.BaseAttributes.Nexthop).To4().String()
+			prfx.Nexthop = update.BaseAttributes.Nexthop
 			prfx.IsNexthopIPv4 = true
 			a := make([]byte, 4)
 			copy(a, pr.Prefix)

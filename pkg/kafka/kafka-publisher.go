@@ -3,6 +3,7 @@ package kafka
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"net"
 	"strconv"
 	"time"
@@ -17,9 +18,13 @@ import (
 const (
 	peerTopic             = "gobmp.parsed.peer"
 	unicastMessageTopic   = "gobmp.parsed.unicast_prefix"
+	unicastMessageV4Topic = "gobmp.parsed.unicast_prefix_v4"
+	unicastMessageV6Topic = "gobmp.parsed.unicast_prefix_v6"
 	lsNodeMessageTopic    = "gobmp.parsed.ls_node"
 	lsLinkMessageTopic    = "gobmp.parsed.ls_link"
 	l3vpnMessageTopic     = "gobmp.parsed.l3vpn"
+	l3vpnMessageV4Topic   = "gobmp.parsed.l3vpn_v4"
+	l3vpnMessageV6Topic   = "gobmp.parsed.l3vpn_v6"
 	lsPrefixMessageTopic  = "gobmp.parsed.ls_prefix"
 	lsSRv6SIDMessageTopic = "gobmp.parsed.ls_srv6_sid"
 	evpnMessageTopic      = "gobmp.parsed.evpn"
@@ -38,9 +43,13 @@ var (
 	topicNames = []string{
 		peerTopic,
 		unicastMessageTopic,
+		unicastMessageV4Topic,
+		unicastMessageV6Topic,
 		lsNodeMessageTopic,
 		lsLinkMessageTopic,
 		l3vpnMessageTopic,
+		l3vpnMessageV4Topic,
+		l3vpnMessageV6Topic,
 		lsPrefixMessageTopic,
 		lsSRv6SIDMessageTopic,
 		evpnMessageTopic,
@@ -60,12 +69,20 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 		return p.produceMessage(peerTopic, key, msg)
 	case bmp.UnicastPrefixMsg:
 		return p.produceMessage(unicastMessageTopic, key, msg)
+	case bmp.UnicastPrefixV4Msg:
+		return p.produceMessage(unicastMessageV4Topic, key, msg)
+	case bmp.UnicastPrefixV6Msg:
+		return p.produceMessage(unicastMessageV6Topic, key, msg)
 	case bmp.LSNodeMsg:
 		return p.produceMessage(lsNodeMessageTopic, key, msg)
 	case bmp.LSLinkMsg:
 		return p.produceMessage(lsLinkMessageTopic, key, msg)
 	case bmp.L3VPNMsg:
 		return p.produceMessage(l3vpnMessageTopic, key, msg)
+	case bmp.L3VPNV4Msg:
+		return p.produceMessage(l3vpnMessageV4Topic, key, msg)
+	case bmp.L3VPNV6Msg:
+		return p.produceMessage(l3vpnMessageV6Topic, key, msg)
 	case bmp.LSPrefixMsg:
 		return p.produceMessage(lsPrefixMessageTopic, key, msg)
 	case bmp.LSSRv6SIDMsg:
@@ -104,6 +121,7 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 		return nil, err
 	}
 	config := sarama.NewConfig()
+	config.ClientID = "gobmp-producer" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Producer.Return.Successes = true
 	config.Version = sarama.V0_11_0_0
 
@@ -121,11 +139,13 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 
 	for _, t := range topicNames {
 		if err := ensureTopic(br, topicCreateTimeout, t); err != nil {
+			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 			return nil, err
 		}
 	}
 	producer, err := sarama.NewAsyncProducer([]string{kafkaSrv}, config)
 	if err != nil {
+		glog.Errorf("New Kafka publisher failed to start new async producer with error: %+v", err)
 		return nil, err
 	}
 	glog.V(5).Infof("Initialized Kafka Async producer")
