@@ -3,6 +3,7 @@ package kafka
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"net"
 	"strconv"
 	"time"
@@ -120,6 +121,7 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 		return nil, err
 	}
 	config := sarama.NewConfig()
+	config.ClientID = "gobmp-producer" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Producer.Return.Successes = true
 	config.Version = sarama.V0_11_0_0
 
@@ -137,11 +139,13 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 
 	for _, t := range topicNames {
 		if err := ensureTopic(br, topicCreateTimeout, t); err != nil {
+			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 			return nil, err
 		}
 	}
 	producer, err := sarama.NewAsyncProducer([]string{kafkaSrv}, config)
 	if err != nil {
+		glog.Errorf("New Kafka publisher failed to start new async producer with error: %+v", err)
 		return nil, err
 	}
 	glog.V(5).Infof("Initialized Kafka Async producer")
