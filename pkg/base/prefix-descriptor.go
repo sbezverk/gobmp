@@ -15,19 +15,19 @@ type PrefixDescriptor struct {
 }
 
 // GetPrefixMTID returns Multi-Topology identifiers
-func (pd *PrefixDescriptor) GetPrefixMTID() uint16 {
+func (pd *PrefixDescriptor) GetPrefixMTID() *MultiTopologyIdentifier {
 	if tlv, ok := pd.PrefixTLV[263]; ok {
 		m, err := UnmarshalMultiTopologyIdentifierTLV(tlv.Value)
 		if err != nil {
-			return 0
+			return nil
 		}
 		if m == nil {
-			return 0
+			return nil
 		}
-		return m.GetMTID()[0]
+		return m[0]
 	}
 
-	return 0
+	return nil
 }
 
 // GetPrefixIPReachability returns BGP route struct encoded in Prefix Descriptor TLV

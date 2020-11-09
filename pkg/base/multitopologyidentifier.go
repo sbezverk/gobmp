@@ -8,35 +8,29 @@ import (
 )
 
 // MultiTopologyIdentifier defines Multi Topology Identifier whcih is alias of uint16
-type MultiTopologyIdentifier uint16
-
-// MultiTopologyIdentifierTLV defines Multi Topology Identifier TLV object
-// RFC7752
-type MultiTopologyIdentifierTLV struct {
-	MTI []MultiTopologyIdentifier
-}
-
-// GetMTID returns a slice of MTI found in Multi Topology Identifier object
-func (mti *MultiTopologyIdentifierTLV) GetMTID() []uint16 {
-	mtis := make([]uint16, 0)
-	for _, m := range mti.MTI {
-		mtis = append(mtis, uint16(m))
-	}
-	return mtis
+type MultiTopologyIdentifier struct {
+	FlagO bool   `json:"flag_o"`
+	FlagA bool   `json:"flag_a"`
+	MTID  uint16 `json:"mt_id"`
 }
 
 // UnmarshalMultiTopologyIdentifierTLV builds Multi Topology Identifier TLV object
-func UnmarshalMultiTopologyIdentifierTLV(b []byte) (*MultiTopologyIdentifierTLV, error) {
+func UnmarshalMultiTopologyIdentifierTLV(b []byte) ([]*MultiTopologyIdentifier, error) {
 	if glog.V(6) {
 		glog.Infof("MultiTopologyIdentifierTLV Raw: %s", tools.MessageHex(b))
 	}
-	mti := MultiTopologyIdentifierTLV{
-		MTI: make([]MultiTopologyIdentifier, 0),
-	}
-	for p := 0; p < len(b); {
-		mti.MTI = append(mti.MTI, MultiTopologyIdentifier(binary.BigEndian.Uint16(b[p:p+2])))
+	p := 0
+	// number of mt_id entries length / 2
+	mti := make([]*MultiTopologyIdentifier, len(b)/2)
+	for i := 0; i < int(len(b)/2); i++ {
+		m := &MultiTopologyIdentifier{}
+		d := binary.BigEndian.Uint16(b[p : p+2])
+		m.MTID = d & 0x0ffff
+		m.FlagO = d&0x8000 == 0x8000
+		m.FlagA = d&0x4000 == 0x4000
+		mti[i] = m
 		p += 2
 	}
 
-	return &mti, nil
+	return mti, nil
 }
