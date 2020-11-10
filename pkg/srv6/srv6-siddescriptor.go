@@ -11,8 +11,13 @@ import (
 
 // SIDDescriptor defines SRv6 SID Descriptor Object
 type SIDDescriptor struct {
-	SID                     []byte `json:"srv6_sid,omitempty"`
-	MultiTopologyIdentifier *base.MultiTopologyIdentifierTLV
+	SID             []byte `json:"srv6_sid,omitempty"`
+	MultiTopologyID []*base.MultiTopologyIdentifier
+}
+
+// GetMTID returns a slice of MTI found in Multi Topology Identifier object
+func (sd *SIDDescriptor) GetMTID() []*base.MultiTopologyIdentifier {
+	return sd.MultiTopologyID
 }
 
 // UnmarshalSRv6SIDDescriptor build SRv6 Descriptor Object
@@ -31,11 +36,11 @@ func UnmarshalSRv6SIDDescriptor(b []byte) (*SIDDescriptor, error) {
 			copy(srd.SID, b[p+4:p+4+int(l)])
 		case 263:
 			l = binary.BigEndian.Uint16(b[p+2 : p+4])
-			mti, err := base.UnmarshalMultiTopologyIdentifierTLV(b[p : p+int(l)])
+			mti, err := base.UnmarshalMultiTopologyIdentifierTLV(b[p+4 : p+4+int(l)])
 			if err != nil {
 				return nil, err
 			}
-			srd.MultiTopologyIdentifier = mti
+			srd.MultiTopologyID = mti
 		default:
 			return nil, fmt.Errorf("invalid SRv6 SID Descriptor Type: %d", t)
 		}

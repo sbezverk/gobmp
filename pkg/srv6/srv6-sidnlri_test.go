@@ -40,8 +40,12 @@ func TestUnmarshalSIDNLRI(t *testing.T) {
 				},
 				SRv6SID: &SIDDescriptor{
 					SID: []byte{0x01, 0x92, 0x01, 0x68, 0x00, 147, 0x00, 0x00, 0x00, 17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-					MultiTopologyIdentifier: &base.MultiTopologyIdentifierTLV{
-						MTI: []base.MultiTopologyIdentifier{263},
+					MultiTopologyID: []*base.MultiTopologyIdentifier{
+						{
+							FlagO: false,
+							FlagA: false,
+							MTID:  2,
+						},
 					},
 				},
 				LocalNodeHash: "ae68e174edda04ddf80610d2bec9c522",
@@ -57,6 +61,7 @@ func TestUnmarshalSIDNLRI(t *testing.T) {
 			// fmt.Printf("got: \n%+v\n expect:\n%+v\n", *got, *tt.expect)
 			// fmt.Printf("got local: \n%+v\n expect local:\n%+v\n", *got.LocalNode, *tt.expect.LocalNode)
 			// fmt.Printf("got sid: \n%+v\n expect sid:\n%+v\n", *got.SRv6SID, *tt.expect.SRv6SID)
+			// fmt.Printf("got mtid: \n%+v\n expect mtid:\n%+v\n", got.SRv6SID.MultiTopologyID, tt.expect.SRv6SID.MultiTopologyID)
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Fatalf("test failed as expected nlri %+v does not match actual nlri %+v", tt.expect, got)
 			}

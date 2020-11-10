@@ -57,15 +57,15 @@ func (sr *SIDNLRI) GetSRv6SIDASN() uint32 {
 }
 
 // GetSRv6SIDMTID returns Multi-Topology identifiers
-func (sr *SIDNLRI) GetSRv6SIDMTID() uint16 {
+func (sr *SIDNLRI) GetSRv6SIDMTID() *base.MultiTopologyIdentifier {
 	if sr.SRv6SID == nil {
-		return 0
+		return nil
 	}
-	if sr.SRv6SID.MultiTopologyIdentifier == nil {
-		return 0
+	if len(sr.SRv6SID.MultiTopologyID) == 0 {
+		return nil
 	}
 
-	return sr.SRv6SID.MultiTopologyIdentifier.GetMTID()[0]
+	return sr.SRv6SID.GetMTID()[0]
 }
 
 // GetSRv6SID returns a slice of SIDs
@@ -85,8 +85,6 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 	p := 0
 	sr.ProtocolID = base.ProtoID(b[p])
 	p++
-	// Skip reserved bytes
-	//	p += 3
 	sr.Identifier = make([]byte, 8)
 	copy(sr.Identifier, b[p:p+8])
 	p += 8

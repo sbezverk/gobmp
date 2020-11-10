@@ -21,7 +21,7 @@ type NLRI struct {
 
 // GetMTID returns string of MT-ID TLV containing the array of MT-IDs of all
 // topologies where the node is reachable is allowed
-func (ls *NLRI) GetMTID() []uint16 {
+func (ls *NLRI) GetMTID() []*base.MultiTopologyIdentifier {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 263 {
 			continue
@@ -33,7 +33,7 @@ func (ls *NLRI) GetMTID() []uint16 {
 		if err != nil {
 			return nil
 		}
-		return mtid.GetMTID()
+		return mtid
 	}
 
 	return nil
