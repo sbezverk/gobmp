@@ -56,7 +56,7 @@ https://www.snas.io/docs/
 24: (bgp_error_sub_code): 4
 25: (error_text): Administratively reset
 26: (is_l): 0
-27: (isprepolicy): 1
+27: (is_prepolicy): 1
 28: (is_ipv4): 1
 29: (is_locrib): 0
 30: (is_locrib_filtered): 0
@@ -90,7 +90,7 @@ https://www.snas.io/docs/
 24: (bgp_error_sub_code): 
 25: (error_text): 
 26: (is_l): 0
-27: (isprepolicy): 1
+27: (is_prepolicy): 1
 28: (is_ipv4): 1
 29: (is_locrib): 0
 30: (is_locrib_filtered): 0
@@ -135,7 +135,7 @@ https://www.snas.io/docs/
 27: (originator_id): 
 28: (path_id): 0
 29: (labels): 
-30: (isprepolicy): 1
+30: (is_prepolicy): 1
 31: (is_adj_rib_in): 1
 
 // add unicast_prefix
@@ -169,7 +169,7 @@ https://www.snas.io/docs/
 27: (originator_id): 
 28: (path_id): 0
 29: (labels): 
-30: (isprepolicy): 1
+30: (is_prepolicy): 1
 31: (is_adj_rib_in): 1
 ```
 
@@ -201,7 +201,7 @@ https://www.snas.io/docs/
 22: (med): 0
 23: (nexthop): 10.0.0.1
 24: (name): R00
-25: (isprepolicy): 1
+25: (is_prepolicy): 1
 26: (is_adj_rib_in): 1
 27: (ls_sr_capabilities): I 64000 100000
 
@@ -249,7 +249,7 @@ Future:
 22: (med): 0
 23: (nexthop): 
 24: (name): 
-25: (isprepolicy): 1
+25: (is_prepolicy): 1
 26: (is_adj_rib_in): 1
 27: (ls_sr_capabilities): 
 
@@ -301,7 +301,7 @@ Future:
 41: (local_node_asn): 100000
 42: (remote_node_asn): 100000
 43: (peer_node_sid): 
-44: (isprepolicy): 1
+44: (is_prepolicy): 1
 45: (is_adj_rib_in): 1
 46: (ls_adjacency_sid): BVL 0 24004, VL 0 24005
 
@@ -379,7 +379,7 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 41: (local_node_asn): 100000
 42: (remote_node_asn): 100000
 43: (peer_node_sid): 
-44: (isprepolicy): 1
+44: (is_prepolicy): 1
 45: (is_adj_rib_in): 1
 46: (ls_adjacency_sid): 
 
@@ -420,7 +420,7 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 29: (igp_metric): 0
 30: (prefix): 10.0.0.2
 31: (prefix_len): 32
-32: (isprepolicy): 1
+32: (is_prepolicy): 1
 33: (is_adj_rib_in): 1
 34: (ls_prefix_sid): N SPF 2
 
@@ -457,7 +457,7 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 29: (igp_metric): 0
 30: (prefix): 10.0.0.1
 31: (prefix_len): 32
-32: (isprepolicy): 1
+32: (is_prepolicy): 1
 33: (is_adj_rib_in): 1
 34: (ls_prefix_sid): 
 
@@ -541,7 +541,7 @@ BGP-LS TLVs:
 27: (originator_id): 
 28: (path_id): 0
 29: (labels): 24000
-30: (isprepolicy): 1
+30: (is_prepolicy): 1
 31: (is_adj_rib_in): 1
 32: (vpn_rd): 100100:100
 33: (vpn_rd_type): 0
@@ -577,7 +577,7 @@ BGP-LS TLVs:
 27: (originator_id): 
 28: (path_id): 0
 29: (labels): 524288
-30: (isprepolicy): 1
+30: (is_prepolicy): 1
 31: (is_adj_rib_in): 1
 32: (vpn_rd): 100100:100
 33: (vpn_rd_type): 0
@@ -606,7 +606,7 @@ BGP-LS TLVs:
 23: (is_nexthop_ipv4): 
 24: (originator_id): 
 25: (path_id): 
-26: (isprepolicy): 
+26: (is_prepolicy): 
 27: (is_adj_rib_in): 
 28: (rd): 
 29: (rd_type): 
@@ -655,7 +655,7 @@ BGP-LS TLVs:
 27: (originator_id): 
 28: (path_id): 0
 29: (labels): 1072,0                                  // VPN label should be replaced with SRv6-VPN SID: 2001:1:1:f003:43::/128        
-30: (isprepolicy): 1
+30: (is_prepolicy): 1
 31: (is_adj_rib_in): 1
 32: (vpn_rd): 1679764780:167976478                    // ? should be 300:10
 33: (vpn_rd_type): 0
@@ -750,7 +750,7 @@ Wed Mar 25 22:52:03.008 UTC
 27: (originator_id): 
 28: (path_id): 0
 29: (labels): 524288
-30: (isprepolicy): 1
+30: (is_prepolicy): 1
 31: (is_adj_rib_in): 1
 32: (vpn_rd): 10300:10
 33: (vpn_rd_type): 0
