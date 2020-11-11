@@ -25,7 +25,7 @@ func UnmarshalMultiTopologyIdentifierTLV(b []byte) ([]*MultiTopologyIdentifier, 
 	for i := 0; i < int(len(b)/2); i++ {
 		m := &MultiTopologyIdentifier{}
 		d := binary.BigEndian.Uint16(b[p : p+2])
-		m.MTID = d & 0x0ffff
+		m.MTID = d & 0x0fff
 		m.FlagO = d&0x8000 == 0x8000
 		m.FlagA = d&0x4000 == 0x4000
 		mti[i] = m
