@@ -192,18 +192,17 @@ https://www.snas.io/docs/
 13: (routing_id): 0
 14: (ls_id): 0
 15: (mt_id): 0, 2
-16: (ospf_area_id):
-17: (isis_area_id): 49.0901
-18: (protocol): IS-IS_L2
-19: (flags):
-20: (as_path):
-21: (local_pref): 100
-22: (med): 0
-23: (nexthop): 10.0.0.1
-24: (name): R00
-25: (is_prepolicy): 1
-26: (is_adj_rib_in): 1
-27: (ls_sr_capabilities): I 64000 100000
+16: (area_id):
+17: (protocol): IS-IS_L2
+18: (flags):
+19: (as_path):
+20: (local_pref): 100
+21: (med): 0
+22: (nexthop): 10.0.0.1
+23: (name): R00
+24: (is_prepolicy): 1
+25: (is_adj_rib_in): 1
+26: (ls_sr_capabilities): I 64000 100000
 
 Additional segment routing and SRv6 items not accounted for by OpenBMP:
 
@@ -240,18 +239,17 @@ Future:
 13: (routing_id): 0
 14: (ls_id): 0
 15: (mt_id):
-16: (ospf_area_id):
-17: (isis_area_id):
-18: (protocol): IS-IS_L2
-19: (flags):
-20: (as_path):
-21: (local_pref): 0
-22: (med): 0
-23: (nexthop):
-24: (name):
-25: (is_prepolicy): 1
-26: (is_adj_rib_in): 1
-27: (ls_sr_capabilities):
+16: (area_id):
+17: (protocol): IS-IS_L2
+18: (flags):
+19: (as_path):
+20: (local_pref): 0
+21: (med): 0
+22: (nexthop):
+23: (name):
+24: (is_prepolicy): 1
+25: (is_adj_rib_in): 1
+26: (ls_sr_capabilities):
 
 ```
 #### BMP ls_link message:
@@ -272,38 +270,37 @@ Future:
 12: (router_id): 10.0.0.2
 13: (routing_id): 0
 14: (ls_id): 0
-15: (ospf_area_id):
-16: (isis_area_id):
-17: (protocol): IS-IS_L2
-18: (as_path):
-19: (local_pref): 100
-20: (med): 0
-21: (nexthop): 10.0.0.1
-22: (mt_id): 0
-23: (local_link_id): 0
-24: (remote_link_id): 0
-25: (intf_ip): 10.1.1.3
-26: (nei_ip): 10.1.1.2
-27: (igp_metric): 1
-28: (admin_group): 0
-29: (max_link_bw): 1000000
-30: (max_resv_bw): 0
-31: (unresv_bw): 0, 0, 0, 0, 0, 0, 0, 0
-32: (te_default_metric): 1
-33: (link_protection):
-34: (mpls_proto_mask):
-35: (srlg):
-36: (link_name):
-37: (remote_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
-38: (local_node_hash): c2679dc1c0d5615c23b3ec45f59f6b15
-39: (remote_igp_router_id): 0000.0000.0000.0000
-40: (remote_router_id): 10.0.0.0
-41: (local_node_asn): 100000
-42: (remote_node_asn): 100000
-43: (peer_node_sid):
-44: (is_prepolicy): 1
-45: (is_adj_rib_in): 1
-46: (ls_adjacency_sid): BVL 0 24004, VL 0 24005
+15: (area_id): 0
+16: (protocol): IS-IS_L2
+17: (as_path):
+18: (local_pref): 100
+19: (med): 0
+20: (nexthop): 10.0.0.1
+21: (mt_id): 0
+22: (local_link_id): 0
+23: (remote_link_id): 0
+24: (intf_ip): 10.1.1.3
+25: (nei_ip): 10.1.1.2
+26: (igp_metric): 1
+27: (admin_group): 0
+28: (max_link_bw): 1000000
+29: (max_resv_bw): 0
+30: (unresv_bw): 0, 0, 0, 0, 0, 0, 0, 0
+31: (te_default_metric): 1
+32: (link_protection):
+33: (mpls_proto_mask):
+34: (srlg):
+35: (link_name):
+36: (remote_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
+37: (local_node_hash): c2679dc1c0d5615c23b3ec45f59f6b15
+38: (remote_igp_router_id): 0000.0000.0000.0000
+39: (remote_router_id): 10.0.0.0
+40: (local_node_asn): 100000
+41: (remote_node_asn): 100000
+42: (peer_node_sid):
+43: (is_prepolicy): 1
+44: (is_adj_rib_in): 1
+45: (ls_adjacency_sid): BVL 0 24004, VL 0 24005
 
 Additional segment routing not accounted for by OpenBMP:
 
@@ -350,38 +347,37 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 12: (router_id): ::
 13: (routing_id): 0
 14: (ls_id): 0
-15: (ospf_area_id):
-16: (isis_area_id):
-17: (protocol): IS-IS_L2
-18: (as_path):
-19: (local_pref): 0
-20: (med): 0
-21: (nexthop):
-22: (mt_id): 2
-23: (local_link_id): 0
-24: (remote_link_id): 0
-25: (intf_ip): 10:1:1::
-26: (nei_ip): 10:1:1::1
-27: (igp_metric): 0
-28: (admin_group): 0
-29: (max_link_bw): 0
-30: (max_resv_bw): 0
-31: (unresv_bw):
-32: (te_default_metric): 0
-33: (link_protection):
-34: (mpls_proto_mask):
-35: (srlg):
-36: (link_name):
-37: (remote_node_hash): 9b20947913e9b23f4d5ccf4174e9eba4
-38: (local_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
-39: (remote_igp_router_id): 0000.0000.0001.0000
-40: (remote_router_id): ::
-41: (local_node_asn): 100000
-42: (remote_node_asn): 100000
-43: (peer_node_sid):
-44: (is_prepolicy): 1
-45: (is_adj_rib_in): 1
-46: (ls_adjacency_sid):
+15: (area_id):
+16: (protocol): IS-IS_L2
+17: (as_path):
+18: (local_pref): 0
+19: (med): 0
+20: (nexthop):
+21: (mt_id): 2
+22: (local_link_id): 0
+23: (remote_link_id): 0
+24: (intf_ip): 10:1:1::
+25: (nei_ip): 10:1:1::1
+26: (igp_metric): 0
+27: (admin_group): 0
+28: (max_link_bw): 0
+29: (max_resv_bw): 0
+30: (unresv_bw):
+31: (te_default_metric): 0
+32: (link_protection):
+33: (mpls_proto_mask):
+34: (srlg):
+35: (link_name):
+36: (remote_node_hash): 9b20947913e9b23f4d5ccf4174e9eba4
+37: (local_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
+38: (remote_igp_router_id): 0000.0000.0001.0000
+39: (remote_router_id): ::
+40: (local_node_asn): 100000
+41: (remote_node_asn): 100000
+42: (peer_node_sid):
+43: (is_prepolicy): 1
+44: (is_adj_rib_in): 1
+45: (ls_adjacency_sid):
 
 ```
 #### BMP ls_prefix message:
@@ -403,26 +399,25 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 12: (router_id): 0.0.0.0
 13: (routing_id): 0
 14: (ls_id): 0
-15: (ospf_area_id):
-16: (isis_area_id):
-17: (protocol): IS-IS_L2
-18: (as_path):
-19: (local_pref): 100
-20: (med): 0
-21: (nexthop): 10.0.0.1
-22: (local_node_hash): c2679dc1c0d5615c23b3ec45f59f6b15
-23: (mt_id): 0
-24: (ospf_route_type):
-25: (igp_flags):
-26: (route_tag): 0
-27: (ext_route_tag): 0
-28: (ospf_fwd_addr): 0.0.0.0
-29: (igp_metric): 0
-30: (prefix): 10.0.0.2
-31: (prefix_len): 32
-32: (is_prepolicy): 1
-33: (is_adj_rib_in): 1
-34: (ls_prefix_sid): N SPF 2
+15: (area_id):
+16: (protocol): IS-IS_L2
+17: (as_path):
+18: (local_pref): 100
+19: (med): 0
+20: (nexthop): 10.0.0.1
+21: (local_node_hash): c2679dc1c0d5615c23b3ec45f59f6b15
+22: (mt_id): 0
+23: (ospf_route_type):
+24: (igp_flags):
+25: (route_tag): 0
+26: (ext_route_tag): 0
+27: (ospf_fwd_addr): 0.0.0.0
+28: (igp_metric): 0
+29: (prefix): 10.0.0.2
+30: (prefix_len): 32
+31: (is_prepolicy): 1
+32: (is_adj_rib_in): 1
+33: (ls_prefix_sid): N SPF 2
 
 // delete ls_prefix
 
@@ -440,26 +435,25 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 12: (router_id): 0.0.0.0
 13: (routing_id): 0
 14: (ls_id): 0
-15: (ospf_area_id):
-16: (isis_area_id):
-17: (protocol): IS-IS_L2
-18: (as_path):
-19: (local_pref): 0
-20: (med): 0
-21: (nexthop):
-22: (local_node_hash): 9b20947913e9b23f4d5ccf4174e9eba4
-23: (mt_id): 0
-24: (ospf_route_type):
-25: (igp_flags):
-26: (route_tag): 0
-27: (ext_route_tag): 0
-28: (ospf_fwd_addr): 0.0.0.0
-29: (igp_metric): 0
-30: (prefix): 10.0.0.1
-31: (prefix_len): 32
-32: (is_prepolicy): 1
-33: (is_adj_rib_in): 1
-34: (ls_prefix_sid):
+15: (area_id):
+16: (protocol): IS-IS_L2
+17: (as_path):
+18: (local_pref): 0
+29: (med): 0
+20: (nexthop):
+21: (local_node_hash): 9b20947913e9b23f4d5ccf4174e9eba4
+22: (mt_id): 0
+23: (ospf_route_type):
+24: (igp_flags):
+25: (route_tag): 0
+26: (ext_route_tag): 0
+27: (ospf_fwd_addr): 0.0.0.0
+28: (igp_metric): 0
+39: (prefix): 10.0.0.1
+30: (prefix_len): 32
+31: (is_prepolicy): 1
+32: (is_adj_rib_in): 1
+33: (ls_prefix_sid):
 
 ```
 #### BMP ls_srv6_sid message:
