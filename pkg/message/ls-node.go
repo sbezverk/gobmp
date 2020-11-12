@@ -49,11 +49,11 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		case base.ISISL1:
 			fallthrough
 		case base.ISISL2:
-			msg.ISISAreaID = lsnode.GetISISAreaID()
+			msg.AreaID = lsnode.GetISISAreaID()
 		case base.OSPFv2:
 			fallthrough
 		case base.OSPFv3:
-			msg.OSPFAreaID = node.GetNodeOSPFAreaID()
+			msg.AreaID = node.GetNodeOSPFAreaID()
 		}
 		if ph.FlagV {
 			msg.RouterID = lsnode.GetLocalIPv6RouterID()

@@ -40,7 +40,7 @@ type PeerStateChange struct {
 	BMPErrorSubCode  int            `json:"bmp_error_sub_code,omitempty"`
 	ErrorText        string         `json:"error_text,omitempty"`
 	IsL3VPN          bool           `json:"is_l"`
-	IsPrepolicy      bool           `json:"isprepolicy"`
+	IsPrepolicy      bool           `json:"is_prepolicy"`
 	IsIPv4           bool           `json:"is_ipv4"`
 	IsLocRIB         bool           `json:"is_locrib"`
 	IsLocRIBFiltered bool           `json:"is_locrib_filtered"`
@@ -71,7 +71,7 @@ type UnicastPrefix struct {
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
-	IsPrepolicy    bool                `json:"isprepolicy"`
+	IsPrepolicy    bool                `json:"is_prepolicy"`
 	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
 	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
 }
@@ -96,8 +96,7 @@ type LSNode struct {
 	ASN                 uint32                          `json:"asn,omitempty"`
 	LSID                uint32                          `json:"ls_id,omitempty"`
 	MTID                []*base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
-	OSPFAreaID          string                          `json:"ospf_area_id,omitempty"`
-	ISISAreaID          string                          `json:"isis_area_id,omitempty"`
+	AreaID              string                          `json:"area_id,omitempty"`
 	Protocol            string                          `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID                    `json:"protocol_id,omitempty"`
 	NodeFlags           uint8                           `json:"node_flags"`
@@ -108,7 +107,7 @@ type LSNode struct {
 	SRv6CapabilitiesTLV *srv6.CapabilityTLV             `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             []*base.MSDTV                   `json:"node_msd,omitempty"`
 	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition     `json:"flex_algo_definition,omitempty"`
-	IsPrepolicy         bool                            `json:"isprepolicy"`
+	IsPrepolicy         bool                            `json:"is_prepolicy"`
 	IsAdjRIBIn          bool                            `json:"is_adj_rib_in"`
 }
 
@@ -193,7 +192,7 @@ type L3VPNPrefix struct {
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
-	IsPrepolicy    bool                `json:"isprepolicy"`
+	IsPrepolicy    bool                `json:"is_prepolicy"`
 	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
 	VPNRD          string              `json:"vpn_rd,omitempty"`
 	VPNRDType      uint16              `json:"vpn_rd_type"`
@@ -232,7 +231,7 @@ type LSPrefix struct {
 	IGPMetric            uint32                        `json:"igp_metric,omitempty"`
 	Prefix               string                        `json:"prefix,omitempty"`
 	PrefixLen            int32                         `json:"prefix_len,omitempty"`
-	IsPrepolicy          bool                          `json:"isprepolicy"`
+	IsPrepolicy          bool                          `json:"is_prepolicy"`
 	IsAdjRIBIn           bool                          `json:"is_adj_rib_in"`
 	LSPrefixSID          []*sr.PrefixSIDTLV            `json:"ls_prefix_sid,omitempty"`
 	PrefixAttrFlags      uint8                         `json:"prefix_attr_flags"`
@@ -259,8 +258,7 @@ type LSSRv6SID struct {
 	LocalNodeASN         uint32                        `json:"local_node_asn,omitempty"`
 	RouterID             string                        `json:"router_id,omitempty"`
 	LSID                 uint32                        `json:"ls_id,omitempty"`
-	OSPFAreaID           string                        `json:"ospf_area_id,omitempty"`
-	ISISAreaID           string                        `json:"isis_area_id,omitempty"`
+	AreaID               string                        `json:"area_id,omitempty"`
 	Protocol             string                        `json:"protocol,omitempty"`
 	Nexthop              string                        `json:"nexthop,omitempty"`
 	LocalNodeHash        string                        `json:"local_node_hash,omitempty"`
@@ -272,7 +270,7 @@ type LSSRv6SID struct {
 	IGPMetric            uint32                        `json:"igp_metric,omitempty"`
 	Prefix               string                        `json:"prefix,omitempty"`
 	PrefixLen            int32                         `json:"prefix_len,omitempty"`
-	IsPrepolicy          bool                          `json:"isprepolicy"`
+	IsPrepolicy          bool                          `json:"is_prepolicy"`
 	IsAdjRIBIn           bool                          `json:"is_adj_rib_in"`
 	SRv6SID              string                        `json:"srv6_sid,omitempty"`
 	SRv6EndpointBehavior *srv6.EndpointBehavior        `json:"srv6_endpoint_behavior,omitempty"`
@@ -302,7 +300,7 @@ type EVPNPrefix struct {
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
-	IsPrepolicy    bool                `json:"isprepolicy"`
+	IsPrepolicy    bool                `json:"is_prepolicy"`
 	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
 	VPNRD          string              `json:"vpn_rd,omitempty"`
 	VPNRDType      uint16              `json:"vpn_rd_type"`
