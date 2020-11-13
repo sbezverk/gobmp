@@ -9,6 +9,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/evpn"
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
+	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/tools"
 	"github.com/sbezverk/gobmp/pkg/unicast"
 )
@@ -49,6 +50,20 @@ func (mp *MPUnReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 			return nil, err
 		}
 		return nlri71, nil
+	}
+
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRI73 check for presense of NLRI 73 in the NLRI 14 NLRI data and if exists, instantiate NLRI73 object
+func (mp *MPUnReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
+	if mp.SubAddressFamilyID == 73 {
+		nlri73, err := srpolicy.UnmarshalLSNLRI73(mp.WithdrawnRoutes)
+		if err != nil {
+			return nil, err
+		}
+		return nlri73, nil
 	}
 
 	// TODO return new type of errors to be able to check for the code

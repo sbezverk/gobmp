@@ -27,7 +27,7 @@ type NLRI71 struct {
 	NLRI   []Element
 }
 
-// UnmarshalLSNLRI71 builds Link State NLRI object ofor SAFI 71
+// UnmarshalLSNLRI71 builds Link State NLRI object for SAFI 71
 func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 	if glog.V(6) {
 		glog.Infof("LSNLRI71 Raw: %s ", tools.MessageHex(b))
