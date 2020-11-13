@@ -363,7 +363,9 @@ func (ls *NLRI) GetIGPMetric() uint32 {
 			continue
 		}
 		m := make([]byte, 4)
-		copy(m[1:], tlv.Value)
+		// 1095 TLV has varaible length
+		// 1, 2 or 3 bytes, depending on the length copying the actual value into the right position.
+		copy(m[4-tlv.Length:], tlv.Value)
 		return binary.BigEndian.Uint32(m)
 	}
 
