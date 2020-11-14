@@ -92,6 +92,10 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
+	case 25:
+		fallthrough
+	case 26:
+		glog.Infof("SR Policy NLRI detected")
 	case 71:
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
 	}

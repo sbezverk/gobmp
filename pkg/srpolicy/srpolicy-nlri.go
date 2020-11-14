@@ -4,6 +4,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 const (
@@ -22,6 +25,9 @@ type NLRI73 struct {
 
 // UnmarshalLSNLRI73 builds Link State NLRI object for SAFI 73
 func UnmarshalLSNLRI73(b []byte) (*NLRI73, error) {
+	if glog.V(5) {
+		glog.Infof("NLRI 73 Raw: %s", tools.MessageHex(b))
+	}
 	// Minimum size of NLRI 73 is Length 1 byte, Distinguisher 4 bytes, Color 4 bytes and Endpoint 4 or 16 bytes
 	if len(b) < NLRI73MinLen {
 		return nil, fmt.Errorf("invalid length of byte slice")

@@ -4,6 +4,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/evpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
+	"github.com/sbezverk/gobmp/pkg/srpolicy"
 )
 
 // MPNLRI defines a common interface methind for MP Reach and MP Unreach NLRIs
@@ -14,6 +15,7 @@ type MPNLRI interface {
 	GetNLRIEVPN() (*evpn.Route, error)
 	GetNLRIL3VPN() (*base.MPNLRI, error)
 	GetNLRI71() (*ls.NLRI71, error)
+	GetNLRI73() (*srpolicy.NLRI73, error)
 	GetNextHop() string
 	IsIPv6NLRI() bool
 	IsNextHopIPv6() bool
@@ -48,6 +50,12 @@ func getNLRIMessageType(afi uint16, safi uint8) int {
 	// AFI of 25 (L2VPN) and a SAFI of 70 (EVPN)
 	case afi == 25 && safi == 70:
 		return 24
+		// AFI 1 and SAFI 73 SR Policy v4 NLRI
+	case afi == 1 && safi == 73:
+		return 25
+		// AFI 2 and SAFI 73 SR Policy v6 NLRI
+	case afi == 2 && safi == 73:
+		return 26
 	}
 
 	return 0
