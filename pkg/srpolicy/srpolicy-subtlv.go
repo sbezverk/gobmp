@@ -1,11 +1,38 @@
 package srpolicy
 
+import (
+	"encoding/binary"
+	"fmt"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/tools"
+)
+
 // Preference sub-TLV is used to carry the preference of the SR
 // Policy candidate path.  The contents of this sub-TLV are used by the
 // SRPM.
 type Preference struct {
 	Flags      byte   `json:"flags,omitempty"`
 	Preference uint32 `json:"preference,omitempty"`
+}
+
+// UnmarshalPreferenceSTLV build Preference object from a slice of bytes
+func UnmarshalPreferenceSTLV(b []byte) (*Preference, error) {
+	if glog.V(5) {
+		glog.Infof("SR Policy Preference STLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 6 {
+		return nil, fmt.Errorf("invalid length of preference stlv")
+	}
+	pref := &Preference{}
+	p := 0
+	pref.Flags = b[p]
+	p++
+	//Skip reserved byte
+	p++
+	pref.Preference = binary.BigEndian.Uint32(b[p : p+4])
+
+	return pref, nil
 }
 
 // Weight sub-TLV specifies the weight associated to a given segment
