@@ -56,6 +56,11 @@ type SegmentList struct {
 	Segment []Segment `json:"segment,omitempty"`
 }
 
+// UnmarshalSegmentListSTLV instantiates an instance of SegmentList Sub TLV
+func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
+	return nil, nil
+}
+
 // SegmentFlags defines flags a Segment of Segment list can carry
 type SegmentFlags struct {
 	Vflag bool `json:"v_flag,omitempty"`

@@ -55,7 +55,9 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 	if len(b) < 4 {
 		return nil, fmt.Errorf("invalid data length %d", len(b))
 	}
-	tlv := &TLV{}
+	tlv := &TLV{
+		SegmentList: make([]*SegmentList, 0),
+	}
 	p := 0
 	t := binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
@@ -80,10 +82,18 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			glog.Infof("Segment List Sub TLV")
 			sl = int(binary.BigEndian.Uint16(b[p : p+2]))
 			p += 2
+			l, err := UnmarshalSegmentListSTLV(b[p : p+sl])
+			if err != nil {
+				return nil, err
+			}
+			tlv.SegmentList = append(tlv.SegmentList, l)
 		case BSIDSTLV:
 			glog.Infof("Binding SID Sub TLV")
 			sl = int(b[p])
 			p++
+			if tlv.BindingSID, err = UnmarshalBSIDSTLV(b[p : p+sl]); err != nil {
+				return nil, err
+			}
 		case PREFERENCESTLV:
 			glog.Infof("Preference Sub TLV")
 			sl = int(b[p])
