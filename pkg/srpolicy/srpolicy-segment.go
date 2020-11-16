@@ -2,6 +2,7 @@ package srpolicy
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -56,6 +57,7 @@ const (
 type Segment interface {
 	GetType() SegmentType
 	GetFlags() *SegmentFlags
+	MarshalJSON() ([]byte, error)
 }
 
 // SegmentList sub-TLV encodes a single explicit path towards the
@@ -189,6 +191,24 @@ func (ta *typeASegment) GetS() bool {
 }
 func (ta *typeASegment) GetTTL() byte {
 	return ta.ttl
+}
+
+func (ta *typeASegment) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		SegmentType SegmentType   `json:"segment_type,omitempty"`
+		Flags       *SegmentFlags `json:"flags,omitempty"`
+		Label       uint32        `json:"label,omitempty"`
+		TC          byte          `json:"tc,omitempty"`
+		S           bool          `json:"s,omitempty"`
+		TTL         byte          `json:"ttl,omitempty"`
+	}{
+		SegmentType: TypeA,
+		Flags:       ta.flags,
+		Label:       ta.label,
+		TC:          ta.tc,
+		S:           ta.s,
+		TTL:         ta.ttl,
+	})
 }
 
 // UnmarshalTypeASegment instantiates an instance of Type A Segment sub tlv

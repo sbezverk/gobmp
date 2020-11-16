@@ -136,9 +136,11 @@ func UnmarshalBSIDSTLV(b []byte) (BSID, error) {
 			flags: b[p],
 		}
 	case 6:
+		v := binary.BigEndian.Uint32(b[p+2 : p+2+4])
+		v >>= 12
 		bsid = &labelBSID{
 			flags: b[p],
-			bsid:  binary.BigEndian.Uint32(b[p+2 : p+2+4]),
+			bsid:  v,
 		}
 	case 18:
 		sid := make([]byte, 16)

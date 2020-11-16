@@ -67,6 +67,21 @@ func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	if tlv.BindingSID != nil {
 		prfx.BSID = tlv.BindingSID
 	}
+	if tlv.Preference != nil {
+		prfx.Preference = tlv.Preference
+	}
+	if tlv.Priority != nil {
+		prfx.Priority = tlv.Priority
+	}
+	if tlv.PathName != nil {
+		prfx.PolicyPathName = tlv.PathName.PathName
+	}
+	if tlv.ENLP != nil {
+		prfx.ENLP = tlv.ENLP
+	}
+	if len(tlv.SegmentList) != 0 {
+		prfx.SegmentList = tlv.SegmentList
+	}
 
 	return []*SRPolicy{&prfx}, nil
 }

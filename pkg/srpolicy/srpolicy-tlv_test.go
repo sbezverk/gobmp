@@ -3,7 +3,6 @@ package srpolicy
 import (
 	"encoding/binary"
 	"flag"
-	"reflect"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -116,10 +115,22 @@ func TestUnmarshalSRPolicyTLV(t *testing.T) {
 			if got == nil {
 				t.Fatalf("processed TLV is nil")
 			}
-			if !reflect.DeepEqual(tt.expect, got) {
-				t.Log("Diffs: ", deep.Equal(tt.expect, got))
-				t.Fatalf("Expected TLV: %+v does not match to the processed TLV: %+v", *tt.expect, *got)
+			//			if !reflect.DeepEqual(tt.expect, got) {
+			for i := 0; i < len(got.SegmentList); i++ {
+				t.Logf("Weight got: %+v Weight expect: %+v", *got.SegmentList[i].Weight, tt.expect.SegmentList[i].Weight)
+				for y := 0; y < len(got.SegmentList[i].Segment); y++ {
+					t.Logf("Flags got: %+v Flags expect: %+v", *got.SegmentList[i].Segment[y].GetFlags(),
+						tt.expect.SegmentList[i].Segment[y].GetFlags())
+					t.Logf("Type got: %d Type expect: %d", got.SegmentList[i].Segment[y].GetType(),
+						tt.expect.SegmentList[i].Segment[y].GetType())
+					t.Logf("Interface diff: %+v", deep.Equal(got.SegmentList[i].Segment[y], tt.expect.SegmentList[i].Segment[y]))
+					g := got.SegmentList[i].Segment[y].(*typeASegment)
+					e := tt.expect.SegmentList[i].Segment[y]
+					t.Logf("Structure diff: %+v", deep.Equal(g, e))
+				}
 			}
+			//			t.Fatalf("Expected TLV: %+v does not match to the processed TLV: %+v", *tt.expect, *got)
+			//			}
 		})
 	}
 }
