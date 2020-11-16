@@ -82,6 +82,9 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			glog.Infof("Segment List Sub TLV")
 			sl = int(binary.BigEndian.Uint16(b[p : p+2]))
 			p += 2
+			// Skip reserved byte
+			p++
+			sl--
 			l, err := UnmarshalSegmentListSTLV(b[p : p+sl])
 			if err != nil {
 				return nil, err
@@ -117,7 +120,6 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			glog.Warningf("SR Policy Sub TLV %+v is not supported", st)
 			sl = int(b[p])
 			p++
-			continue
 		}
 		p += sl
 	}

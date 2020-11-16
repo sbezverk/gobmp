@@ -30,6 +30,72 @@ func TestUnmarshalSRPolicyTLV(t *testing.T) {
 					flags: 0x0,
 					bsid:  binary.BigEndian.Uint32([]byte{0xDB, 0xBA, 0x00, 0x00}),
 				},
+				SegmentList: []*SegmentList{
+					{
+						Weight: &Weight{
+							Flags:  0,
+							Weight: 1,
+						},
+						Segment: []Segment{
+							&typeASegment{
+								flags: &SegmentFlags{
+									Vflag: false,
+									Aflag: false,
+									Sflag: false,
+									Bflag: false,
+								},
+								label: 100010,
+								tc:    0,
+								s:     false,
+								ttl:   0,
+							},
+							&typeASegment{
+								flags: &SegmentFlags{
+									Vflag: false,
+									Aflag: false,
+									Sflag: false,
+									Bflag: false,
+								},
+								label: 24001,
+								tc:    0,
+								s:     false,
+								ttl:   0,
+							},
+						},
+					},
+					{
+						Weight: &Weight{
+							Flags:  0,
+							Weight: 3,
+						},
+						Segment: []Segment{
+							&typeASegment{
+								flags: &SegmentFlags{
+									Vflag: false,
+									Aflag: false,
+									Sflag: false,
+									Bflag: false,
+								},
+								label: 100010,
+								tc:    0,
+								s:     false,
+								ttl:   0,
+							},
+							&typeASegment{
+								flags: &SegmentFlags{
+									Vflag: false,
+									Aflag: false,
+									Sflag: false,
+									Bflag: false,
+								},
+								label: 24013,
+								tc:    0,
+								s:     false,
+								ttl:   0,
+							},
+						},
+					},
+				},
 			},
 		},
 	}
