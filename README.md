@@ -77,6 +77,18 @@ List of currently supported NLRI and AFI/SAFI:
    <td>25/70
    </td>
   </tr>
+  <tr>
+   <td>SR Policy for v4
+   </td>
+   <td>1/73
+   </td>
+  </tr>
+  <tr>
+  <td>SR Policy for v6
+   </td>
+   <td>2/73
+   </td>
+  </tr>
 </table>
 
 
