@@ -2,6 +2,7 @@ package srpolicy
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -26,6 +27,7 @@ type BSID interface {
 	GetFlag() byte
 	GetType() BSIDType
 	GetBSID() []byte
+	MarshalJSON() ([]byte, error)
 }
 
 // noBSID defines structure when Binding SID sub tlv carries no SID
@@ -43,6 +45,14 @@ func (n *noBSID) GetType() BSIDType {
 }
 func (n *noBSID) GetBSID() []byte {
 	return nil
+}
+
+func (n *noBSID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Flags byte `json:"flags,omitempty"`
+	}{
+		Flags: n.flags,
+	})
 }
 
 // labelBSID defines structure when Binding SID sub tlv carries a label as Binding SID
@@ -63,6 +73,16 @@ func (l *labelBSID) GetBSID() []byte {
 	bsid := make([]byte, 4)
 	binary.BigEndian.PutUint32(bsid, l.bsid)
 	return bsid
+}
+
+func (l *labelBSID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Flags byte   `json:"flags,omitempty"`
+		BSID  uint32 `json:"label_bsid,omitempty"`
+	}{
+		Flags: l.flags,
+		BSID:  l.bsid,
+	})
 }
 
 // SRv6BSID defines SRv6 BSID specific method
@@ -90,6 +110,16 @@ func (s *srv6BSID) GetBSID() []byte {
 }
 func (s *srv6BSID) GetEndpointBehavior() *srv6.EndpointBehavior {
 	return s.eb
+}
+
+func (s *srv6BSID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Flags byte   `json:"flags,omitempty"`
+		BSID  []byte `json:"srv6_bsid,omitempty"`
+	}{
+		Flags: s.flags,
+		BSID:  s.bsid,
+	})
 }
 
 // UnmarshalBSIDSTLV instantiates Binding SID object depending on

@@ -6,6 +6,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/prefixsid"
 	"github.com/sbezverk/gobmp/pkg/sr"
+	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 )
 
@@ -344,4 +345,6 @@ type SRPolicy struct {
 	Distinguisher  uint32              `json:"distinguisher,omitempty"`
 	Color          uint32              `json:"color,omitempty"`
 	Endpoint       []byte              `json:"endpoint,omitempty"`
+	PolicyName     string              `json:"policy_name,omitempty"`
+	BSID           srpolicy.BSID       `binding_sid,omitempty"`
 }

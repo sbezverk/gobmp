@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/srpolicy"
 )
 
 // evpn process MP_REACH_NLRI AFI 25 SAFI 70 update message and returns
@@ -55,6 +56,17 @@ func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	prfx.Color = sr.Color
 	prfx.Endpoint = make([]byte, len(sr.Endpoint))
 	copy(prfx.Endpoint, sr.Endpoint)
+	// Getting SR Policy TLV encapsulated into Tunnel Encapsulate Attribute of type 15
+	tlv, err := srpolicy.UnmarshalSRPolicyTLV(update.BaseAttributes.TunnelEncapAttr)
+	if err != nil {
+		return nil, err
+	}
+	if tlv.Name != nil {
+		prfx.PolicyName = tlv.Name.PolicyName
+	}
+	if tlv.BindingSID != nil {
+		prfx.BSID = tlv.BindingSID
+	}
 
 	return []*SRPolicy{&prfx}, nil
 }
