@@ -63,8 +63,8 @@ type Segment interface {
 // SegmentList sub-TLV encodes a single explicit path towards the
 // endpoint.
 type SegmentList struct {
-	Weight  *Weight   `json:"weight,omitempty"`
-	Segment []Segment `json:"segment,omitempty"`
+	Weight  *Weight   `json:"weight_subtlv,omitempty"`
+	Segment []Segment `json:"segments,omitempty"`
 }
 
 // UnmarshalSegmentListSTLV instantiates an instance of SegmentList Sub TLV
@@ -80,7 +80,7 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 		t := int(b[p])
 		p++
 		switch t {
-		case 9:
+		case WEIGHTSTLV:
 			if sl.Weight != nil {
 				return nil, fmt.Errorf("Segment List Sub TLV can carry a single instance of Weight")
 			}
@@ -137,10 +137,10 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 
 // SegmentFlags defines flags a Segment of Segment list can carry
 type SegmentFlags struct {
-	Vflag bool `json:"v_flag,omitempty"`
-	Aflag bool `json:"a_flag,omitempty"`
-	Sflag bool `json:"s_flag,omitempty"`
-	Bflag bool `json:"b_flag,omitempty"`
+	Vflag bool `json:"v_flag"`
+	Aflag bool `json:"a_flag"`
+	Sflag bool `json:"s_flag"`
+	Bflag bool `json:"b_flag"`
 }
 
 // NewSegmentFlags creates a new instance of SegmentFlags object

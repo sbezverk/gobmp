@@ -12,7 +12,7 @@ import (
 // Policy candidate path.  The contents of this sub-TLV are used by the
 // SRPM.
 type Preference struct {
-	Flags      byte   `json:"flags,omitempty"`
+	Flags      byte   `json:"flags"`
 	Preference uint32 `json:"preference,omitempty"`
 }
 
@@ -48,22 +48,4 @@ type Weight struct {
 type ENLP struct {
 	Flags byte `json:"flags,omitempty"`
 	ENLP  byte `json:"enlp,omitempty"`
-}
-
-// Priority indicate the order
-// in which the SR policies are re-computed upon topological change.
-type Priority struct {
-	Priority byte `json:"priority,omitempty"`
-}
-
-// PathName is used to attach a symbolic name to the SR Policy candidate path.
-type PathName struct {
-	PathName string `json:"path_name,omitempty"`
-}
-
-//PolicyName is a sub-TLV to associate a symbolic
-// name with the SR Policy for which the candidate path is being
-// advertised via the SR Policy NLRI.
-type PolicyName struct {
-	PolicyName string `json:"policy_name_name,omitempty"`
 }

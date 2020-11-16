@@ -15,10 +15,16 @@ type TLV struct {
 	// BindingSID sub-TLV is used to signal the binding SID related
 	// information of the SR Policy candidate path.  The contents of this
 	// sub-TLV are used by the SRPM
-	BindingSID  BSID           `json:"binding_sid_subtlv,omitempty"`
-	Name        *PolicyName    `json:"policy_name_subtlv,omitempty"`
-	PathName    *PathName      `json:"path_name_subtlv,omitempty"`
-	Priority    *Priority      `json:"priority_subtlv,omitempty"`
+	BindingSID BSID `json:"binding_sid_subtlv,omitempty"`
+	//PolicyName is a sub-TLV to associate a symbolic
+	// name with the SR Policy for which the candidate path is being
+	// advertised via the SR Policy NLRI.
+	Name string `json:"policy_name_subtlv,omitempty"`
+	// PathName is used to attach a symbolic name to the SR Policy candidate path.
+	PathName string `json:"path_name_subtlv,omitempty"`
+	// Priority indicate the order
+	// in which the SR policies are re-computed upon topological change.
+	Priority    byte           `json:"priority_subtlv,omitempty"`
 	ENLP        *ENLP          `json:"enlp_subtlv,omitempty"`
 	SegmentList []*SegmentList `json:"segment_list,omitempty"`
 }
@@ -74,10 +80,6 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 		sl := 0
 		p++
 		switch st {
-		case WEIGHTSTLV:
-			glog.Infof("Weight Sub TLV")
-			sl = int(b[p])
-			p++
 		case SEGMENTLISTSTLV:
 			glog.Infof("Segment List Sub TLV")
 			sl = int(binary.BigEndian.Uint16(b[p : p+2]))
@@ -105,17 +107,26 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 				return nil, err
 			}
 		case ENLPSTLV:
+			if tlv.ENLP != nil {
+				return nil, fmt.Errorf("only 1 instance of ENLP allowed in SR Policy attributes")
+			}
 			glog.Infof("ENLP Sub TLV")
 			sl = int(b[p])
 			p++
+			tlv.ENLP = &ENLP{
+				Flags: b[p],
+				ENLP:  b[p+2],
+			}
 		case PRIORITYSTLV:
 			glog.Infof("Priority Sub TLV")
 			sl = int(b[p])
 			p++
+			tlv.Priority = b[p]
 		case PATHNAMESTLV:
 			glog.Infof("Policy Candidate Path Name Sub TLV")
 			sl = int(b[p])
 			p++
+			tlv.PathName = string(b[p : p+sl])
 		default:
 			glog.Warningf("SR Policy Sub TLV %+v is not supported", st)
 			sl = int(b[p])

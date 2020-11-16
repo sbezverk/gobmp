@@ -348,7 +348,7 @@ type SRPolicy struct {
 	PolicyName     string                  `json:"policy_name,omitempty"`
 	BSID           srpolicy.BSID           `json:"binding_sid,omitempty"`
 	Preference     *srpolicy.Preference    `json:"preference_subtlv,omitempty"`
-	Priority       *srpolicy.Priority      `json:"priority_subtlv,omitempty"`
+	Priority       byte                    `json:"priority_subtlv,omitempty"`
 	PolicyPathName string                  `json:"policy_path_name,omitempty"`
 	ENLP           *srpolicy.ENLP          `json:"enlp_subtlv,omitempty"`
 	SegmentList    []*srpolicy.SegmentList `json:"segment_list_subtlv,omitempty"`
