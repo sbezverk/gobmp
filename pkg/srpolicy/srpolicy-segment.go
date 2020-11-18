@@ -67,6 +67,13 @@ type SegmentList struct {
 	Segment []Segment `json:"segments,omitempty"`
 }
 
+// UnmarshalJSON is custom Unmarshal fuction which will populate Slice of Segment interfaces with correct,
+// depending on the segment type value
+func (sl *SegmentList) UnmarshalJSON(b []byte) error {
+	glog.Infof("Unmarshal Segment List is called with: %s", tools.MessageHex(b))
+	return nil
+}
+
 // UnmarshalSegmentListSTLV instantiates an instance of SegmentList Sub TLV
 func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 	if glog.V(5) {

@@ -15,7 +15,7 @@ type TLV struct {
 	// BindingSID sub-TLV is used to signal the binding SID related
 	// information of the SR Policy candidate path.  The contents of this
 	// sub-TLV are used by the SRPM
-	BindingSID BSID `json:"binding_sid_subtlv,omitempty"`
+	BindingSID *BindingSID `json:"binding_sid_subtlv,omitempty"`
 	//PolicyName is a sub-TLV to associate a symbolic
 	// name with the SR Policy for which the candidate path is being
 	// advertised via the SR Policy NLRI.
@@ -96,9 +96,11 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			glog.Infof("Binding SID Sub TLV")
 			sl = int(b[p])
 			p++
-			if tlv.BindingSID, err = UnmarshalBSIDSTLV(b[p : p+sl]); err != nil {
+			tlv.BindingSID = &BindingSID{}
+			if tlv.BindingSID.BSID, err = UnmarshalBSIDSTLV(b[p : p+sl]); err != nil {
 				return nil, err
 			}
+			tlv.BindingSID.Type = tlv.BindingSID.BSID.GetType()
 		case PREFERENCESTLV:
 			glog.Infof("Preference Sub TLV")
 			sl = int(b[p])

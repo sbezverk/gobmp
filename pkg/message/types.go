@@ -346,7 +346,7 @@ type SRPolicy struct {
 	Color          uint32                  `json:"color,omitempty"`
 	Endpoint       []byte                  `json:"endpoint,omitempty"`
 	PolicyName     string                  `json:"policy_name,omitempty"`
-	BSID           srpolicy.BSID           `json:"binding_sid,omitempty"`
+	BSID           *srpolicy.BindingSID    `json:"binding_sid,omitempty"`
 	Preference     *srpolicy.Preference    `json:"preference_subtlv,omitempty"`
 	Priority       byte                    `json:"priority_subtlv,omitempty"`
 	PolicyPathName string                  `json:"policy_path_name,omitempty"`

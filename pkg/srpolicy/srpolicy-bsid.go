@@ -15,12 +15,67 @@ type BSIDType int
 
 const (
 	// NOBSID subtlv does not carry BSID
-	NOBSID BSIDType = iota
+	NOBSID BSIDType = 1
 	// LABELBSID subtlv carries Label as BSID
-	LABELBSID
+	LABELBSID BSIDType = 2
 	// SRV6BSID subtlv carries SRv6 as BSID
-	SRV6BSID
+	SRV6BSID BSIDType = 3
 )
+
+// BindingSID is an object carry the type of a specific Binding SID and the interface to get value
+// the Binding SID
+type BindingSID struct {
+	Type BSIDType `json:"bsid_type,omitempty"`
+	BSID BSID     `json:"bsid,omitempty"`
+}
+
+// UnmarshalJSON is custom Unmarshal fuction which will populate BSID interface with correct,
+// depending on the BSID type value
+func (bsid *BindingSID) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	glog.Infof("Unmarshal Binding SID is called with: %+v", objmap)
+	// bsid_type is a mandatory field, if missing, then return error
+	var bsidType BSIDType
+	if err := json.Unmarshal(objmap["bsid_type"], &bsidType); err != nil {
+		return err
+	}
+	switch bsidType {
+	case NOBSID:
+		sid := &noBSID{}
+		if b, ok := objmap["bsid"]; ok {
+			if err := json.Unmarshal(b, &sid); err != nil {
+				return err
+			}
+		}
+		bsid.BSID = sid
+		bsid.Type = bsidType
+	case LABELBSID:
+		sid := &labelBSID{}
+		if b, ok := objmap["bsid"]; ok {
+			if err := json.Unmarshal(b, &sid); err != nil {
+				return err
+			}
+		}
+		bsid.BSID = sid
+		bsid.Type = bsidType
+	case SRV6BSID:
+		sid := &srv6BSID{}
+		if b, ok := objmap["bsid"]; ok {
+			if err := json.Unmarshal(b, &sid); err != nil {
+				return err
+			}
+		}
+		bsid.BSID = sid
+		bsid.Type = bsidType
+	default:
+		return fmt.Errorf("unknown type of bsid %d", bsidType)
+	}
+
+	return nil
+}
 
 // BSID defines methods to get type and value of different types of Binding SID
 type BSID interface {

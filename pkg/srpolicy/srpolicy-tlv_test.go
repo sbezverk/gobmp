@@ -25,9 +25,12 @@ func TestUnmarshalSRPolicyTLV(t *testing.T) {
 					Flags:      0x0,
 					Preference: 0x44,
 				},
-				BindingSID: &labelBSID{
-					flags: 0x0,
-					bsid:  binary.BigEndian.Uint32([]byte{0xDB, 0xBA, 0x00, 0x00}),
+				BindingSID: &BindingSID{
+					Type: LABELBSID,
+					BSID: &labelBSID{
+						flags: 0x0,
+						bsid:  binary.BigEndian.Uint32([]byte{0xDB, 0xBA, 0x00, 0x00}),
+					},
 				},
 				SegmentList: []*SegmentList{
 					{
