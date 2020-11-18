@@ -59,6 +59,7 @@ func (bsid *BindingSID) UnmarshalJSON(b []byte) error {
 				return err
 			}
 		}
+		glog.Infof("recovered bsid: %+v", *sid)
 		bsid.BSID = sid
 		bsid.Type = bsidType
 	case SRV6BSID:
@@ -75,6 +76,51 @@ func (bsid *BindingSID) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+// MarshalJSON is custom Marshaller which will generate a slice of bytes from BSID interface,
+// depending on a bsid type.
+func (bsid *BindingSID) MarshalJSON() ([]byte, error) {
+	glog.Infof("Marshal Binding SID is called for type: %d", bsid.Type)
+	switch bsid.Type {
+	case NOBSID:
+		sid := &noBSID{
+			flags: bsid.BSID.GetFlag(),
+		}
+		return json.Marshal(&struct {
+			Type BSIDType `json:"bsid_type,omitempty"`
+			BSID *noBSID  `json:"bsid,omitempty"`
+		}{
+			Type: bsid.Type,
+			BSID: sid,
+		})
+	case LABELBSID:
+		sid := &labelBSID{
+			flags: bsid.BSID.GetFlag(),
+			bsid:  binary.BigEndian.Uint32(bsid.BSID.GetBSID()),
+		}
+		return json.Marshal(&struct {
+			Type BSIDType   `json:"bsid_type,omitempty"`
+			BSID *labelBSID `json:"bsid,omitempty"`
+		}{
+			Type: bsid.Type,
+			BSID: sid,
+		})
+	case SRV6BSID:
+		sid := &srv6BSID{
+			flags: bsid.BSID.GetFlag(),
+			bsid:  bsid.BSID.GetBSID(),
+		}
+		return json.Marshal(&struct {
+			Type BSIDType  `json:"bsid_type,omitempty"`
+			BSID *srv6BSID `json:"bsid,omitempty"`
+		}{
+			Type: bsid.Type,
+			BSID: sid,
+		})
+	default:
+		return nil, fmt.Errorf("unknown type of bsid %d", bsid.Type)
+	}
 }
 
 // BSID defines methods to get type and value of different types of Binding SID
@@ -138,6 +184,26 @@ func (l *labelBSID) MarshalJSON() ([]byte, error) {
 		Flags: l.flags,
 		BSID:  l.bsid,
 	})
+}
+
+func (l *labelBSID) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	glog.Infof("Unmarshal Label binding SID is called with: %+v", objmap)
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &l.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["label_bsid"]; ok {
+		if err := json.Unmarshal(b, &l.bsid); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // SRv6BSID defines SRv6 BSID specific method
