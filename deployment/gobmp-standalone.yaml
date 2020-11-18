@@ -45,7 +45,7 @@ spec:
             - "5"
             - --kafka-server
             - "kafka:9092"
-          image: docker.io/sbezverk/gobmp:wip_af
+          image: docker.io/sbezverk/gobmp:latest
           imagePullPolicy: Always
           name: gobmp
           ports:
