@@ -2,6 +2,7 @@ package srpolicy
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -40,6 +41,26 @@ func UnmarshalPreferenceSTLV(b []byte) (*Preference, error) {
 type Weight struct {
 	Flags  byte   `json:"flags,omitempty"`
 	Weight uint32 `json:"weight,omitempty"`
+}
+
+// UnmarshalSON reconstructs Weight struct from a slice of bytes
+func (w *Weight) UnmarshalSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &w.Flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["weight"]; ok {
+		if err := json.Unmarshal(b, &w.Flags); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ENLP (Explicit NULL Label Policy) sub-TLV is used to indicate

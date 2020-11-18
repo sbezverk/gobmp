@@ -70,7 +70,63 @@ type SegmentList struct {
 // UnmarshalJSON is custom Unmarshal fuction which will populate Slice of Segment interfaces with correct,
 // depending on the segment type value
 func (sl *SegmentList) UnmarshalJSON(b []byte) error {
-	glog.Infof("Unmarshal Segment List is called with: %s", tools.MessageHex(b))
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	if b, ok := objmap["weight_subtlv"]; ok {
+		if err := json.Unmarshal(b, &sl.Weight); err != nil {
+			return err
+		}
+	}
+	segs := make([]Segment, 0)
+	if b, ok := objmap["segments"]; ok {
+		var sgss []map[string]json.RawMessage
+		if err := json.Unmarshal(b, &sgss); err != nil {
+			return err
+		}
+		for _, s := range sgss {
+			var segType SegmentType
+			if err := json.Unmarshal(s["segment_type"], &segType); err != nil {
+				return err
+			}
+			var seg Segment
+			switch segType {
+			case TypeA:
+				t := &typeASegment{}
+				if err := t.unmarshalJSONObj(s); err != nil {
+					return err
+				}
+				seg = t
+			case TypeB:
+				fallthrough
+			case TypeC:
+				fallthrough
+			case TypeD:
+				fallthrough
+			case TypeE:
+				fallthrough
+			case TypeF:
+				fallthrough
+			case TypeG:
+				fallthrough
+			case TypeH:
+				fallthrough
+			case TypeI:
+				fallthrough
+			case TypeJ:
+				fallthrough
+			case TypeK:
+				return fmt.Errorf("unsupported type of segment sub tlv %d", segType)
+			default:
+				return fmt.Errorf("unknown type of segment sub tlv %d", segType)
+
+			}
+			segs = append(segs, seg)
+		}
+	}
+	sl.Segment = segs
+
 	return nil
 }
 
@@ -150,6 +206,36 @@ type SegmentFlags struct {
 	Bflag bool `json:"b_flag"`
 }
 
+// UnmarshalJSON reconstructs Segment Flags object from a slice of bytes.
+func (s *SegmentFlags) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	if b, ok := objmap["v_flag"]; ok {
+		if err := json.Unmarshal(b, &s.Vflag); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["a_flag"]; ok {
+		if err := json.Unmarshal(b, &s.Aflag); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["s_flag"]; ok {
+		if err := json.Unmarshal(b, &s.Sflag); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["b_flag"]; ok {
+		if err := json.Unmarshal(b, &s.Bflag); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // NewSegmentFlags creates a new instance of SegmentFlags object
 func NewSegmentFlags(b byte) *SegmentFlags {
 	f := &SegmentFlags{
@@ -216,6 +302,36 @@ func (ta *typeASegment) MarshalJSON() ([]byte, error) {
 		S:           ta.s,
 		TTL:         ta.ttl,
 	})
+}
+
+func (ta *typeASegment) unmarshalJSONObj(objmap map[string]json.RawMessage) error {
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &ta.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["label"]; ok {
+		if err := json.Unmarshal(b, &ta.label); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["tc"]; ok {
+		if err := json.Unmarshal(b, &ta.tc); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["s"]; ok {
+		if err := json.Unmarshal(b, &ta.s); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["ttl"]; ok {
+		if err := json.Unmarshal(b, &ta.ttl); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // UnmarshalTypeASegment instantiates an instance of Type A Segment sub tlv

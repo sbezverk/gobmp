@@ -36,44 +36,29 @@ func (bsid *BindingSID) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &objmap); err != nil {
 		return err
 	}
-	glog.Infof("Unmarshal Binding SID is called with: %+v", objmap)
 	// bsid_type is a mandatory field, if missing, then return error
 	var bsidType BSIDType
 	if err := json.Unmarshal(objmap["bsid_type"], &bsidType); err != nil {
 		return err
 	}
+	var sid BSID
 	switch bsidType {
 	case NOBSID:
-		sid := &noBSID{}
-		if b, ok := objmap["bsid"]; ok {
-			if err := json.Unmarshal(b, &sid); err != nil {
-				return err
-			}
-		}
-		bsid.BSID = sid
-		bsid.Type = bsidType
+		sid = &noBSID{}
 	case LABELBSID:
-		sid := &labelBSID{}
-		if b, ok := objmap["bsid"]; ok {
-			if err := json.Unmarshal(b, &sid); err != nil {
-				return err
-			}
-		}
-		glog.Infof("recovered bsid: %+v", *sid)
-		bsid.BSID = sid
-		bsid.Type = bsidType
+		sid = &labelBSID{}
 	case SRV6BSID:
-		sid := &srv6BSID{}
-		if b, ok := objmap["bsid"]; ok {
-			if err := json.Unmarshal(b, &sid); err != nil {
-				return err
-			}
-		}
-		bsid.BSID = sid
-		bsid.Type = bsidType
+		sid = &srv6BSID{}
 	default:
 		return fmt.Errorf("unknown type of bsid %d", bsidType)
 	}
+	if b, ok := objmap["bsid"]; ok {
+		if err := json.Unmarshal(b, &sid); err != nil {
+			return err
+		}
+	}
+	bsid.BSID = sid
+	bsid.Type = bsidType
 
 	return nil
 }
@@ -81,7 +66,6 @@ func (bsid *BindingSID) UnmarshalJSON(b []byte) error {
 // MarshalJSON is custom Marshaller which will generate a slice of bytes from BSID interface,
 // depending on a bsid type.
 func (bsid *BindingSID) MarshalJSON() ([]byte, error) {
-	glog.Infof("Marshal Binding SID is called for type: %d", bsid.Type)
 	switch bsid.Type {
 	case NOBSID:
 		sid := &noBSID{
@@ -156,6 +140,20 @@ func (n *noBSID) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (n *noBSID) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &n.flags); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // labelBSID defines structure when Binding SID sub tlv carries a label as Binding SID
 type labelBSID struct {
 	flags byte
@@ -191,7 +189,6 @@ func (l *labelBSID) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &objmap); err != nil {
 		return err
 	}
-	glog.Infof("Unmarshal Label binding SID is called with: %+v", objmap)
 	if b, ok := objmap["flags"]; ok {
 		if err := json.Unmarshal(b, &l.flags); err != nil {
 			return err
@@ -241,6 +238,25 @@ func (s *srv6BSID) MarshalJSON() ([]byte, error) {
 		Flags: s.flags,
 		BSID:  s.bsid,
 	})
+}
+
+func (s *srv6BSID) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &s.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["srv6_bsid"]; ok {
+		if err := json.Unmarshal(b, &s.bsid); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // UnmarshalBSIDSTLV instantiates Binding SID object depending on
