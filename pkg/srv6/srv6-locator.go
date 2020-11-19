@@ -14,7 +14,7 @@ import (
 type LocatorTLV struct {
 	Flag      uint8          `json:"flag"`
 	Algorithm uint8          `json:"algo"`
-	Metric    uint32         `json:"metric,omitempty"`
+	Metric    uint32         `json:"metric"`
 	SubTLV    []*base.SubTLV `json:"sub_tlvs,omitempty"`
 }
 
@@ -51,7 +51,9 @@ func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
 		if err != nil {
 			return nil, err
 		}
-		loc.SubTLV = stlvs
+		if len(stlvs) != 0 {
+			loc.SubTLV = stlvs
+		}
 	}
 
 	return &loc, nil

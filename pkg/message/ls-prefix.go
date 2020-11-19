@@ -35,9 +35,6 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	msg.LSID = prfx.GetPrefixLSID()
 	msg.LocalNodeHash = prfx.LocalNodeHash
 	msg.IGPRouterID = prfx.GetLocalIGPRouterID()
-	msg.IGPMetric = prfx.Prefix.GetPrefixMetric()
-	msg.IGPRouteTag = prfx.Prefix.GetPrefixIGPRouteTag()
-	msg.IGPExtRouteTag = prfx.Prefix.GetPrefixIGPExtRouteTag()
 	msg.MTID = prfx.Prefix.GetPrefixMTID()
 	route := prfx.Prefix.GetPrefixIPReachability(ipv4)
 	msg.PrefixLen = int32(route.Length)
@@ -54,7 +51,10 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		} else {
 			msg.RouterID = lsprefix.GetLocalIPv4RouterID()
 		}
+		msg.PrefixMetric = lsprefix.GetPrefixMetric()
 		msg.IGPMetric = lsprefix.GetIGPMetric()
+		msg.IGPRouteTag = lsprefix.GetPrefixIGPRouteTag()
+		msg.IGPExtRouteTag = lsprefix.GetPrefixIGPExtRouteTag()
 		if ps, err := lsprefix.GetLSPrefixSID(); err == nil {
 			msg.LSPrefixSID = ps
 		}

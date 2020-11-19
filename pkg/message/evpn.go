@@ -12,7 +12,9 @@ import (
 // evpn process MP_REACH_NLRI AFI 25 SAFI 70 update message and returns
 // EVPN prefix object.
 func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]EVPNPrefix, error) {
-	glog.Infof("All attributes in evpn upate: %+v", update.GetAllAttributeID())
+	if glog.V(6) {
+		glog.Infof("All attributes in evpn update: %+v", update.GetAllAttributeID())
+	}
 	evpn, err := nlri.GetNLRIEVPN()
 	if err != nil {
 		return nil, err

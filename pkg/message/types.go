@@ -232,6 +232,7 @@ type LSPrefix struct {
 	IGPMetric            uint32                        `json:"igp_metric,omitempty"`
 	Prefix               string                        `json:"prefix,omitempty"`
 	PrefixLen            int32                         `json:"prefix_len,omitempty"`
+	PrefixMetric         uint32                        `json:"prefix_metric,omitempty"`
 	IsPrepolicy          bool                          `json:"is_prepolicy"`
 	IsAdjRIBIn           bool                          `json:"is_adj_rib_in"`
 	LSPrefixSID          []*sr.PrefixSIDTLV            `json:"ls_prefix_sid,omitempty"`

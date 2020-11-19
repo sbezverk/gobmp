@@ -274,15 +274,20 @@ func (ls *NLRI) GetLSPrefixSID() ([]*sr.PrefixSIDTLV, error) {
 // GetLSSRv6Locator returns a slice of SRv6 locator objects
 func (ls *NLRI) GetLSSRv6Locator() ([]*srv6.LocatorTLV, error) {
 	locs := make([]*srv6.LocatorTLV, 0)
+	found := false
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1162 {
 			continue
 		}
+		found = true
 		loc, err := srv6.UnmarshalSRv6LocatorTLV(tlv.Value)
 		if err != nil {
 			return nil, err
 		}
 		locs = append(locs, loc)
+	}
+	if !found {
+		return nil, fmt.Errorf("no found")
 	}
 
 	return locs, nil
@@ -296,6 +301,7 @@ func (ls *NLRI) GetLSPrefixAttrFlags() (uint8, error) {
 		}
 		return uint8(tlv.Value[0]), nil
 	}
+
 	return 0, fmt.Errorf("not found")
 }
 
@@ -357,8 +363,22 @@ func (ls *NLRI) GetIGPMetric() uint32 {
 			continue
 		}
 		m := make([]byte, 4)
-		copy(m[1:], tlv.Value)
+		// 1095 TLV has varaible length
+		// 1, 2 or 3 bytes, depending on the length copying the actual value into the right position.
+		copy(m[4-tlv.Length:], tlv.Value)
 		return binary.BigEndian.Uint32(m)
+	}
+
+	return 0
+}
+
+// GetPrefixMetric returns  Prefix Metric
+func (ls *NLRI) GetPrefixMetric() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1155 {
+			continue
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
 	}
 
 	return 0
