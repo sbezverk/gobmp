@@ -15,7 +15,7 @@ type RouteMonitor struct {
 
 // UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
 func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
-	if glog.V(5) {
+	if glog.V(6) {
 		glog.Infof("BMP Route Monitor Message Raw: %s length: %d", tools.MessageHex(b), len(b))
 	}
 	rm := RouteMonitor{}

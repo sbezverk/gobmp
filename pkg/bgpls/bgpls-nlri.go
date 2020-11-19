@@ -366,9 +366,7 @@ func (ls *NLRI) GetIGPMetric() uint32 {
 		// 1095 TLV has varaible length
 		// 1, 2 or 3 bytes, depending on the length copying the actual value into the right position.
 		copy(m[4-tlv.Length:], tlv.Value)
-		igp := binary.BigEndian.Uint32(m)
-		glog.Infof("><SB> IGP Metric: %d", igp)
-		return igp
+		return binary.BigEndian.Uint32(m)
 	}
 
 	return 0
@@ -380,9 +378,7 @@ func (ls *NLRI) GetPrefixMetric() uint32 {
 		if tlv.Type != 1155 {
 			continue
 		}
-		igp := binary.BigEndian.Uint32(tlv.Value)
-		glog.Infof("><SB> Prefix Metric: %d", igp)
-		return igp
+		return binary.BigEndian.Uint32(tlv.Value)
 	}
 
 	return 0
