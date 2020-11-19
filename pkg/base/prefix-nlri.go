@@ -89,7 +89,7 @@ func (p *PrefixNLRI) GetLocalASN() uint32 {
 
 // UnmarshalPrefixNLRI builds Prefix NLRI object
 func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
-	if glog.V(6) {
+	if glog.V(5) {
 		glog.Infof("PrefixNLRI Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) == 0 {
