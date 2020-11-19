@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
@@ -13,7 +12,6 @@ import (
 // evpn process MP_REACH_NLRI AFI 25 SAFI 70 update message and returns
 // EVPN prefix object.
 func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*SRPolicy, error) {
-	glog.Infof("All attributes in evpn upate: %+v", update.GetAllAttributeID())
 	sr, err := nlri.GetNLRI73()
 	if err != nil {
 		return nil, err
