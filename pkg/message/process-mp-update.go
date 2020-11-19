@@ -92,6 +92,29 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
+	case 25:
+		fallthrough
+	case 26:
+		glog.Infof("SR Policy NLRI detected")
+		msgs, err := p.srpolicy(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce srpolicy messages with error: %+v", err)
+			return
+		}
+		for _, m := range msgs {
+			topicType := bmp.SRPolicyMsg
+			if p.splitAF {
+				if m.IsIPv4 {
+					topicType = bmp.SRPolicyV4Msg
+				} else {
+					topicType = bmp.SRPolicyV6Msg
+				}
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
+				glog.Errorf("failed to process SRPolicy message with error: %+v", err)
+				return
+			}
+		}
 	case 71:
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
 	}

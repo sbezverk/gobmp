@@ -6,6 +6,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/prefixsid"
 	"github.com/sbezverk/gobmp/pkg/sr"
+	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 )
 
@@ -315,4 +316,40 @@ type EVPNPrefix struct {
 	// TODO Type 3 carries nlri 22
 	// https://tools.ietf.org/html/rfc6514
 	// Add to the message
+}
+
+// SRPolicy defines the structure of SR Policy message
+type SRPolicy struct {
+	Key            string                  `json:"_key,omitempty"`
+	ID             string                  `json:"_id,omitempty"`
+	Rev            string                  `json:"_rev,omitempty"`
+	Action         string                  `json:"action,omitempty"` // Action can be "add" or "del"
+	Sequence       int                     `json:"sequence,omitempty"`
+	Hash           string                  `json:"hash,omitempty"`
+	RouterHash     string                  `json:"router_hash,omitempty"`
+	RouterIP       string                  `json:"router_ip,omitempty"`
+	BaseAttributes *bgp.BaseAttributes     `json:"base_attrs,omitempty"`
+	PeerHash       string                  `json:"peer_hash,omitempty"`
+	PeerIP         string                  `json:"peer_ip,omitempty"`
+	PeerASN        int32                   `json:"peer_asn,omitempty"`
+	Timestamp      string                  `json:"timestamp,omitempty"`
+	IsIPv4         bool                    `json:"is_ipv4"`
+	OriginAS       int32                   `json:"origin_as,omitempty"`
+	Nexthop        string                  `json:"nexthop,omitempty"`
+	ClusterList    string                  `json:"cluster_list,omitempty"`
+	IsNexthopIPv4  bool                    `json:"is_nexthop_ipv4"`
+	PathID         int32                   `json:"path_id,omitempty"`
+	Labels         []uint32                `json:"labels,omitempty"`
+	IsPrepolicy    bool                    `json:"is_prepolicy"`
+	IsAdjRIBIn     bool                    `json:"is_adj_rib_in"`
+	Distinguisher  uint32                  `json:"distinguisher,omitempty"`
+	Color          uint32                  `json:"color,omitempty"`
+	Endpoint       []byte                  `json:"endpoint,omitempty"`
+	PolicyName     string                  `json:"policy_name,omitempty"`
+	BSID           *srpolicy.BindingSID    `json:"binding_sid,omitempty"`
+	Preference     *srpolicy.Preference    `json:"preference_subtlv,omitempty"`
+	Priority       byte                    `json:"priority_subtlv,omitempty"`
+	PolicyPathName string                  `json:"policy_path_name,omitempty"`
+	ENLP           *srpolicy.ENLP          `json:"enlp_subtlv,omitempty"`
+	SegmentList    []*srpolicy.SegmentList `json:"segment_list_subtlv,omitempty"`
 }

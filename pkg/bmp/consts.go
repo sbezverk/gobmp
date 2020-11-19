@@ -44,4 +44,10 @@ const (
 	LSSRv6SIDMsg = 13
 	// EVPNMsg defines BMP Route Monitoring message carrying EVPN NLRI
 	EVPNMsg = 14
+	// SRPolicyMsg defines a subtype of BMP Route Monitoring message for SR Policy NLRI
+	SRPolicyMsg = 15
+	// SRPolicyV4Msg defines a subtype of BMP Route Monitoring message for SR Policy NLRI AFI 1 SAFI 73
+	SRPolicyV4Msg = 154
+	// SRPolicyV6Msg defines a subtype of BMP Route Monitoring message for SR Policy NLRI AFI 2 SAFI 73
+	SRPolicyV6Msg = 156
 )

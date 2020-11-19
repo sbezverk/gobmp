@@ -33,7 +33,7 @@ type BaseAttributes struct {
 	AS4PathCount     int32    `json:"as4_path_count,omitempty"`
 	AS4Aggregator    []byte   `json:"as4_aggregator,omitempty"`
 	// PMSITunnel
-	// TunnelEncapAttr
+	TunnelEncapAttr []byte `json:"-"`
 	// TraficEng
 	// IPv6SpecExtCommunity
 	// AIGP
@@ -95,6 +95,8 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 			baseAttr.AS4Aggregator = unmarshalAttrAS4Aggregator(b[p : p+int(l)])
 		case 22:
 		case 23:
+			baseAttr.TunnelEncapAttr = make([]byte, l)
+			copy(baseAttr.TunnelEncapAttr, b[p:p+int(l)])
 		case 24:
 		case 25:
 		case 26:
