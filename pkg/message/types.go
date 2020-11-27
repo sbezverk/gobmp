@@ -261,6 +261,7 @@ type LSSRv6SID struct {
 	RouterID             string                        `json:"router_id,omitempty"`
 	LSID                 uint32                        `json:"ls_id,omitempty"`
 	AreaID               string                        `json:"area_id,omitempty"`
+	ProtocolID           base.ProtoID                  `json:"protocol_id,omitempty"`
 	Protocol             string                        `json:"protocol,omitempty"`
 	Nexthop              string                        `json:"nexthop,omitempty"`
 	LocalNodeHash        string                        `json:"local_node_hash,omitempty"`
