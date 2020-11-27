@@ -29,6 +29,7 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
+	msg.ProtocolID = nlri6.ProtocolID
 	msg.Protocol = nlri6.GetSRv6SIDProtocolID()
 	msg.LocalNodeHash = nlri6.LocalNodeHash
 	msg.LSID = nlri6.GetSRv6SIDLSID()
