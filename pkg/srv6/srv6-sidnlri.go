@@ -90,12 +90,12 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 	p += 8
 	// Get Node Descriptor's length, skip Node Descriptor Type
 	l := binary.BigEndian.Uint16(b[p+2 : p+4])
-	ln, err := base.UnmarshalNodeDescriptor(b[p : p+int(l)])
+	ln, err := base.UnmarshalNodeDescriptor(b[p : p+int(l)+4])
 	if err != nil {
 		return nil, err
 	}
 	sr.LocalNode = ln
-	sr.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(l)]))
+	sr.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(l)+4]))
 	// Skip Node Descriptor Type and Length 4 bytes
 	p += 4
 	p += int(l)

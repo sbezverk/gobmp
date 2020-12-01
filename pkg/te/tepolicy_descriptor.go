@@ -44,3 +44,14 @@ func UnmarshalPolicyDescriptor(b []byte) (*PolicyDescriptor, error) {
 		TLV: tlvs,
 	}, nil
 }
+
+// Exists returns true if specified as a parameter TLV ID exists in the list of Policy Descriptor TLVs,
+// otherwise it returns false.
+func (p *PolicyDescriptor) Exists(tlvType uint16) bool {
+	for _, t := range p.TLV {
+		if t.Type == tlvType {
+			return true
+		}
+	}
+	return false
+}

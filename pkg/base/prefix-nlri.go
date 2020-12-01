@@ -111,12 +111,12 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 
 	// Get Node Descriptor's length, skip Node Descriptor Type
 	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
-	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
+	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)+4])
 	if err != nil {
 		return nil, err
 	}
 	pr.LocalNode = ln
-	pr.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)]))
+	pr.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)+4]))
 	// Skip Node Descriptor Type and Length 4 bytes
 	p += 4
 	p += int(ndl)

@@ -141,24 +141,24 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	// Local Node Descriptor
 	// Get Node Descriptor's length, skip Node Descriptor Type
 	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
-	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
+	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)+4])
 	if err != nil {
 		return nil, err
 	}
 	l.LocalNode = ln
-	l.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)]))
+	l.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)+4]))
 	// Skip Node Type and Length 4 bytes
 	p += 4
 	p += int(ndl)
 	// Remote Node Descriptor
 	// Get Node Descriptor's length, skip Node Descriptor Type
 	ndl = binary.BigEndian.Uint16(b[p+2 : p+4])
-	rn, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
+	rn, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)+4])
 	if err != nil {
 		return nil, err
 	}
 	l.RemoteNode = rn
-	l.RemoteNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)]))
+	l.RemoteNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)+4]))
 	p += int(ndl)
 	// Skip Node Type and Length 4 bytes
 	p += 4

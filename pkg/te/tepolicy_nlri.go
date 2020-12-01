@@ -54,14 +54,14 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 	if p+int(l) >= len(b) {
 		return nil, fmt.Errorf("not enough bytes to process TE Policy NLRI")
 	}
-	he, err := base.UnmarshalNodeDescriptor(b[p : p+int(l)])
+	he, err := base.UnmarshalNodeDescriptor(b[p : p+int(l)+4])
 	if err != nil {
 		return nil, err
 	}
 	// Since HeadEnd Node Descriptor MUST include 512 and 516 TLVs
 	// TODO Add check and return error if these two TLVs are missing
 	te.HeadEnd = he
-	te.HeadEndHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(l)]))
+	te.HeadEndHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(l)+4]))
 	p += int(l)
 	// TE Policy Descriptor consists of list of TLVs, minimal TLV length is 4 bytes
 	if p+4 < len(b) {
@@ -70,5 +70,6 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 			return nil, err
 		}
 	}
+
 	return &te, nil
 }
