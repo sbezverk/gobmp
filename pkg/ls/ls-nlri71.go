@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/srv6"
+	"github.com/sbezverk/gobmp/pkg/te"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -66,6 +67,14 @@ func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 			el.LS = n
 		case 4:
 			n, err := base.UnmarshalPrefixNLRI(b[p:p+int(el.Length)], false)
+			if err != nil {
+				return nil, err
+			}
+			el.LS = n
+			// TODO (sbezverk)
+			// https://tools.ietf.org/html/draft-ietf-idr-te-lsp-distribution-14#ref-I-D.ietf-spring-segment-routing-policy
+		case 5:
+			n, err := te.UnmarshalTEPolicyNLRI(b[p : p+int(el.Length)])
 			if err != nil {
 				return nil, err
 			}

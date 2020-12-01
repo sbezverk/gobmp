@@ -25,6 +25,10 @@ const (
 	Static ProtoID = 5
 	// OSPFv3 defines protocol id value for OSPFv3
 	OSPFv3 ProtoID = 6
+	// RSVPTE defines protocol id value for RSVP Traffic Engineering
+	RSVPTE ProtoID = 8
+	// SR defines protocol id value for Segment Routing
+	SR ProtoID = 9
 )
 
 // PrefixNLRI defines Prefix NLRI onject
@@ -142,6 +146,10 @@ func ProtocolIDString(id ProtoID) string {
 		return "OSPFv3"
 	case 7:
 		return "BGP"
+	case 8:
+		return "RSVP-TE"
+	case 9:
+		return "Segment Routing"
 	default:
 		return "Unknown"
 	}
