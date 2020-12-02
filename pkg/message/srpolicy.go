@@ -41,14 +41,10 @@ func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	}
 	if ph.FlagV {
 		// IPv6 specific conversions
-		// prfx.IsIPv4 = false
 		prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-		// prfx.IsNexthopIPv4 = false
 	} else {
 		// IPv4 specific conversions
-		// prfx.IsIPv4 = true
 		prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-		// prfx.IsNexthopIPv4 = true
 	}
 	prfx.IsIPv4 = true
 	prfx.IsNexthopIPv4 = true
