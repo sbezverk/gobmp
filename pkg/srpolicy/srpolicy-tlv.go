@@ -58,6 +58,10 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 	if glog.V(5) {
 		glog.Infof("SR Policy TLV Raw: %s", tools.MessageHex(b))
 	}
+	// In case of MP_UNREACH message, SR Policy does not carry any TLVs, so it is valid to have length of 0
+	if len(b) == 0 {
+		return nil, nil
+	}
 	if len(b) < 4 {
 		return nil, fmt.Errorf("invalid data length %d", len(b))
 	}

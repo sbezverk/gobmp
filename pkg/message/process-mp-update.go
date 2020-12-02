@@ -95,7 +95,6 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 	case 25:
 		fallthrough
 	case 26:
-		glog.Infof("SR Policy NLRI detected")
 		msgs, err := p.srpolicy(nlri, operation, ph, update)
 		if err != nil {
 			glog.Errorf("failed to produce srpolicy messages with error: %+v", err)
