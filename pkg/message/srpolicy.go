@@ -41,14 +41,20 @@ func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	}
 	if ph.FlagV {
 		// IPv6 specific conversions
-		prfx.IsIPv4 = false
+		// prfx.IsIPv4 = false
 		prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-		prfx.IsNexthopIPv4 = false
+		// prfx.IsNexthopIPv4 = false
 	} else {
 		// IPv4 specific conversions
-		prfx.IsIPv4 = true
+		// prfx.IsIPv4 = true
 		prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-		prfx.IsNexthopIPv4 = true
+		// prfx.IsNexthopIPv4 = true
+	}
+	prfx.IsIPv4 = true
+	prfx.IsNexthopIPv4 = true
+	if nlri.IsIPv6NLRI() {
+		prfx.IsIPv4 = false
+		prfx.IsNexthopIPv4 = false
 	}
 	prfx.Distinguisher = sr.Distinguisher
 	prfx.Color = sr.Color
@@ -59,20 +65,22 @@ func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	if err != nil {
 		return nil, err
 	}
-	prfx.PolicyName = tlv.Name
-	if tlv.BindingSID != nil {
-		prfx.BSID = tlv.BindingSID
-	}
-	if tlv.Preference != nil {
-		prfx.Preference = tlv.Preference
-	}
-	prfx.Priority = tlv.Priority
-	prfx.PolicyPathName = tlv.PathName
-	if tlv.ENLP != nil {
-		prfx.ENLP = tlv.ENLP
-	}
-	if len(tlv.SegmentList) != 0 {
-		prfx.SegmentList = tlv.SegmentList
+	if tlv != nil {
+		prfx.PolicyName = tlv.Name
+		if tlv.BindingSID != nil {
+			prfx.BSID = tlv.BindingSID
+		}
+		if tlv.Preference != nil {
+			prfx.Preference = tlv.Preference
+		}
+		prfx.Priority = tlv.Priority
+		prfx.PolicyPathName = tlv.PathName
+		if tlv.ENLP != nil {
+			prfx.ENLP = tlv.ENLP
+		}
+		if len(tlv.SegmentList) != 0 {
+			prfx.SegmentList = tlv.SegmentList
+		}
 	}
 
 	return []*SRPolicy{&prfx}, nil
