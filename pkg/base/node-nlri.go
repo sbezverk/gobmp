@@ -73,9 +73,7 @@ func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
 	copy(n.Identifier, b[p:p+8])
 	p += 8
 	// Local Node Descriptor
-	// Get Node Descriptor's length, skip Node Descriptor Type
-	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
-	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)])
+	ln, err := UnmarshalNodeDescriptor(b[p:])
 	if err != nil {
 		return nil, err
 	}

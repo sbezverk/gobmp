@@ -48,7 +48,7 @@ func TestUnmarshalSIDNLRI(t *testing.T) {
 						},
 					},
 				},
-				LocalNodeHash: "ae68e174edda04ddf80610d2bec9c522",
+				LocalNodeHash: "6ba91f7f4f4032d0b82caa898b9fef8d",
 			},
 		},
 	}

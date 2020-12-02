@@ -1,6 +1,8 @@
 package base
 
 import (
+	"encoding/binary"
+	"fmt"
 	"net"
 
 	"github.com/golang/glog"
@@ -13,20 +15,16 @@ type LinkDescriptor struct {
 	LinkTLV map[uint16]TLV
 }
 
-// GetLinkID returns Local or Remote Link ID as a string, depending on passed parameter
-func (l *LinkDescriptor) GetLinkID(local bool) uint32 {
+// GetLinkID returns Local and Remote Link ID as a slice of uint32
+func (l *LinkDescriptor) GetLinkID() ([]uint32, error) {
 	if tlv, ok := l.LinkTLV[258]; ok {
-		id, err := UnmarshalLocalRemoteIdentifierTLV(tlv.Value)
-		if err != nil {
-			return 0
+		if tlv.Length < 8 {
+			return nil, fmt.Errorf("not enough bytes to decode Local Remote Id TLV")
 		}
-		if id == nil {
-			return 0
-		}
-		return id.GetLinkID(local)
+		return []uint32{binary.BigEndian.Uint32(tlv.Value[:4]), binary.BigEndian.Uint32(tlv.Value[4:])}, nil
 	}
 
-	return 0
+	return nil, fmt.Errorf("tlv 258 not found")
 }
 
 // GetLinkIPv4InterfaceAddr returns Link Interface IPv4 address as a string

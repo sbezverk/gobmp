@@ -9,6 +9,13 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+const (
+	// LocalNodeDescriptorType defines a constant for Local Node Descriptor type
+	LocalNodeDescriptorType = 256
+	// RemoteNodeDescriptorType defines a constant for Remote Node Descriptor type
+	RemoteNodeDescriptorType = 257
+)
+
 // NodeDescriptor defines Node Descriptor object
 // https://tools.ietf.org/html/rfc7752#section-3.2.1
 type NodeDescriptor struct {
@@ -82,17 +89,26 @@ func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {
 	if glog.V(6) {
 		glog.Infof("NodeDescriptor Raw: %s", tools.MessageHex(b))
 	}
-	nd := NodeDescriptor{}
+	nd := &NodeDescriptor{}
+	if len(b) < 4 {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Node Descriptor")
+	}
 	p := 0
-	//	nd.Type = binary.BigEndian.Uint16(b[p : p+2])
+	t := binary.BigEndian.Uint16(b[p : p+2])
+	if t != LocalNodeDescriptorType && t != RemoteNodeDescriptorType {
+		return nil, fmt.Errorf("invalid type for Node Descriptors object")
+	}
 	p += 2
-	//	nd.Length = binary.BigEndian.Uint16(b[p : p+2])
+	l := binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	stlv, err := UnmarshalTLV(b[p : p+len(b)])
+	if int(l)+4 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Node Descriptor")
+	}
+	stlv, err := UnmarshalTLV(b[p:])
 	if err != nil {
 		return nil, err
 	}
 	nd.SubTLV = stlv
 
-	return &nd, nil
+	return nd, nil
 }
