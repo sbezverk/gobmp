@@ -39,8 +39,11 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	msg.Protocol = link.GetLinkProtocolID()
 	msg.ProtocolID = link.ProtocolID
 	msg.LSID = link.GetLinkLSID(true)
-	msg.LocalLinkID = link.GetLinkID(true)
-	msg.RemoteLinkID = link.GetLinkID(false)
+	// Attempting to get Link IDs from Link Descriptor TLVs
+	if ids, err := link.GetLinkID(); err == nil {
+		msg.LocalLinkID = ids[0]
+		msg.RemoteLinkID = ids[1]
+	}
 	msg.LocalLinkIP = link.GetLinkInterfaceAddr()
 	msg.RemoteLinkIP = link.GetLinkNeighborAddr()
 	msg.LocalNodeHash = link.LocalNodeHash
@@ -60,6 +63,14 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		}
 		if msd, err := lslink.GetLinkMSD(); err == nil {
 			msg.LinkMSD = msd
+		}
+		// Check if Local and Remote Link ID are already non 0
+		if msg.LocalLinkID == 0 && msg.RemoteLinkID == 0 {
+			// Attempting to get Local and Remote Link IDs from BGP-LS
+			if ids, err := lslink.GetLinkID(); err == nil {
+				msg.LocalLinkID = ids[0]
+				msg.RemoteLinkID = ids[1]
+			}
 		}
 		msg.IGPMetric = lslink.GetIGPMetric()
 		msg.TEDefaultMetric = lslink.GetTEDefaultMetric()

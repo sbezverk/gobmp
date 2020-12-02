@@ -19,6 +19,18 @@ type NLRI struct {
 	LS []TLV
 }
 
+// GetLinkID returns Local and Remote Link ID as a slice of uint32
+func (ls *NLRI) GetLinkID() ([]uint32, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Length < 8 {
+			return nil, fmt.Errorf("not enough bytes to decode Local Remote Id TLV")
+		}
+		return []uint32{binary.BigEndian.Uint32(tlv.Value[:4]), binary.BigEndian.Uint32(tlv.Value[4:])}, nil
+	}
+
+	return nil, fmt.Errorf("tlv 258 not found")
+}
+
 // GetMTID returns string of MT-ID TLV containing the array of MT-IDs of all
 // topologies where the node is reachable is allowed
 func (ls *NLRI) GetMTID() []*base.MultiTopologyIdentifier {

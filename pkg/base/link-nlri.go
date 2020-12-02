@@ -72,9 +72,9 @@ func (l *LinkNLRI) GetLinkOSPFAreaID(local bool) string {
 	return l.RemoteNode.GetOSPFAreaID()
 }
 
-// GetLinkID returns Local or Remote Link ID as a string, depending on passed parameter
-func (l *LinkNLRI) GetLinkID(local bool) uint32 {
-	return l.Link.GetLinkID(local)
+// GetLinkID returns Local and Remote Link ID a slice of int, element 0 carries Local Link ID, element 1 carries Remote Link ID
+func (l *LinkNLRI) GetLinkID() ([]uint32, error) {
+	return l.Link.GetLinkID()
 }
 
 // GetLinkInterfaceAddr returns Link Interface IPv4 address as a string
