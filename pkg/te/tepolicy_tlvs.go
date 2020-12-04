@@ -99,7 +99,7 @@ const (
 	// BGPSRPolicy defines protocol origin of a path instantiated by BGP SR Policy
 	BGPSRPolicy ProtocolOriginType = 2
 	// Local  defines protocol origin of a path instantiated by CLI, Yang model through NETCONF, gRPC
-	Local = 3
+	Local ProtocolOriginType = 3
 )
 
 // https://tools.ietf.org/html/draft-ietf-idr-te-lsp-distribution-14#section-4.5
