@@ -187,9 +187,9 @@ type LocalMPLSCrossConnectSubTLV interface {
 // LocalMPLSCrossConnect defines an object which identifies a local MPLS state in the
 // form of incoming label and interface followed by an outgoing label and interface.
 type LocalMPLSCrossConnect struct {
-	IncomingLabel uint32                        `json:"incoming_label"`
-	OutgoingLabel uint32                        `json:"outgoing_label"`
-	SubTLV        []LocalMPLSCrossConnectSubTLV `json:"subtlv,omitempty"`
+	IncomingLabel uint32                                 `json:"incoming_label"`
+	OutgoingLabel uint32                                 `json:"outgoing_label"`
+	SubTLV        map[uint16]LocalMPLSCrossConnectSubTLV `json:"subtlv,omitempty"`
 }
 
 // UnmarshalLocalMPLSCrossConnect instantiates LocalMPLSCrossConnect object from a slice of bytes
@@ -220,11 +220,11 @@ func UnmarshalLocalMPLSCrossConnect(b []byte) (*LocalMPLSCrossConnect, error) {
 }
 
 // UnmarshalLocalMPLSCrossConnectSubTLV instantiates a slice of LocalMPLSCrossConnect's Sub TLVs
-func UnmarshalLocalMPLSCrossConnectSubTLV(b []byte) ([]LocalMPLSCrossConnectSubTLV, error) {
+func UnmarshalLocalMPLSCrossConnectSubTLV(b []byte) (map[uint16]LocalMPLSCrossConnectSubTLV, error) {
 	if glog.V(6) {
 		glog.Infof("Local MPLS Cross Connect Sub TLVs Raw: %s", tools.MessageHex(b))
 	}
-	s := make([]LocalMPLSCrossConnectSubTLV, 0)
+	s := make(map[uint16]LocalMPLSCrossConnectSubTLV)
 	p := 0
 	for p < len(b) {
 		if p+2 > len(b) {
@@ -247,14 +247,15 @@ func UnmarshalLocalMPLSCrossConnectSubTLV(b []byte) ([]LocalMPLSCrossConnectSubT
 			if v, err = UnmarshalLocalMPLSCrossConnectFEC(b[p : p+int(l)]); err != nil {
 				return nil, err
 			}
+			s[MPLSCrossConnectFECType] = v
 		case MPLSCrossConnectInterfaceType:
 			if v, err = UnmarshalLocalMPLSCrossConnectInterface(b[p : p+int(l)]); err != nil {
 				return nil, err
 			}
+			s[MPLSCrossConnectInterfaceType] = v
 		default:
 			return nil, fmt.Errorf("unexpected Local MPLS Cross Connect Sub TLV type %d", t)
 		}
-		s = append(s, v)
 		p += int(l)
 	}
 
