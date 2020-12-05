@@ -62,21 +62,23 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 	// Skip reserved 2 bytes
 	p += 2
 	l := 0
+	var err error
 	// TODO (sbezverk) the beahaviour for B FLag
-	var err json.InvalidUnmarshalError
 	if bsid.FlagD {
 		// BSID is ipv6 address
 		bsid.BSID, err = UnmarshalSRv6SID(b[p : p+16])
+		if err != nil {
+			return nil, err
+		}
 		l = 16
 	} else {
 		// BSID is MPLS label
-		bsid.BSID = make([]byte, 4)
+		bsid.BSID, err = UnmarshalMPLSLabelSID(b[p : p+4])
+		if err != nil {
+			return nil, err
+		}
 		l = 4
 	}
-	if p+l > len(b) {
-		return nil, fmt.Errorf("not enough bytes to decode SR Binding SID TLV")
-	}
-	copy(bsid.BSID, b[p:p+l])
 	p += l
 	if bsid.FlagU {
 		// Flag U indicates the Provisioned BSID value is unavailable when set.
@@ -87,11 +89,16 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 	}
 	switch l {
 	case 4:
-		bsid.PSID = make([]byte, 4)
+		bsid.PSID, err = UnmarshalMPLSLabelSID(b[p : p+4])
+		if err != nil {
+			return nil, err
+		}
 	case 16:
-		bsid.PSID = make([]byte, 16)
+		bsid.PSID, err = UnmarshalSRv6SID(b[p : p+16])
+		if err != nil {
+			return nil, err
+		}
 	}
-	copy(bsid.PSID, b[p:p+l])
 
 	return bsid, nil
 }
@@ -718,7 +725,7 @@ func (sid *MPLSLabelSID) UnmarshalJSON(b []byte) error {
 
 // SRv6SID defines SID as IPv6 address
 type SRv6SID struct {
-	SID []byte `json:"sid"`
+	SID []byte `json:"srv6_sid"`
 }
 
 // UnmarshalSRv6SID instantiates SRv6 SID object from a slice of bytes
@@ -740,7 +747,7 @@ func UnmarshalSRv6SID(b []byte) (SID, error) {
 // MarshalJSON serializes SRv6SID into a slice of bytes
 func (sid *SRv6SID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		SID []byte `json:"sid"`
+		SID []byte `json:"srv6_sid"`
 	}{
 		SID: sid.SID,
 	})
@@ -757,16 +764,30 @@ func (sid *SRv6SID) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// SegmentDescriptor defines methods common to all SR Segment Descriptor types
+type SegmentDescriptor interface {
+	MarshalJSON() ([]byte, error)
+	UnmarshalJSON([]byte) error
+}
+
+// SRSegmentSubTLV defines methods common SR Segment Sub TLVs
+type SRSegmentSubTLV interface {
+	MarshalJSON() ([]byte, error)
+	UnmarshalJSON([]byte) error
+}
+
 // SRSegment describes a single segment in a SID-List.  One or more instances of this sub-TLV in an ordered
 // manner constitute a SID-List for a SR Policy candidate path.
 type SRSegment struct {
-	Segment SegmentType
-	FlagS   bool `json:"s_flag"`
-	FlagE   bool `json:"e_flag"`
-	FlagV   bool `json:"v_flag"`
-	FlagR   bool `json:"r_flag"`
-	FlagA   bool `json:"a_flag"`
-	SID     SID  `json:"sid"`
+	Segment           SegmentType                `json:"segment_type"`
+	FlagS             bool                       `json:"s_flag"`
+	FlagE             bool                       `json:"e_flag"`
+	FlagV             bool                       `json:"v_flag"`
+	FlagR             bool                       `json:"r_flag"`
+	FlagA             bool                       `json:"a_flag"`
+	SID               SID                        `json:"sid"`
+	SegmentDescriptor SegmentDescriptor          `json:"segment_descriptor,omitempty"`
+	SubTLV            map[uint16]SRSegmentSubTLV `json:"subtlv,omitempty"`
 }
 
 var _ SRSegmentListSubTLV = &SRSegment{}
@@ -776,26 +797,88 @@ func UnmarshalSRSegment(b []byte) (*SRSegment, error) {
 	if glog.V(6) {
 		glog.Infof("SR Segment Sub TLV Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) != 4 {
+	if len(b) < 4 {
 		return nil, fmt.Errorf("not enough bytes to decode SR Segment Sub TLV")
 	}
 	s := &SRSegment{}
+	p := 0
+	// Getting flags first
+	s.FlagS = b[p+2]&0x80 == 0x80
+	s.FlagE = b[p+2]&0x40 == 0x40
+	s.FlagV = b[p+2]&0x20 == 0x20
+	s.FlagR = b[p+2]&0x10 == 0x10
+	s.FlagA = b[p+2]&0x08 == 0x08
+	t := SegmentType(b[p])
+	var err error
+	l := 0
+	switch t {
+	case SegmentType1:
+		s.Segment = SegmentType1
+		if s.FlagS {
+			s.SID, err = UnmarshalMPLSLabelSID(b[p+4 : p+4+4])
+			if err != nil {
+				return nil, err
+			}
+			l = 4
+		}
+	case SegmentType2:
+		s.Segment = SegmentType2
+		if s.FlagS {
+			s.SID, err = UnmarshalSRv6SID(b[p+4 : p+4+16])
+			if err != nil {
+				return nil, err
+			}
+			l = 16
+		}
+	case SegmentType3:
+		fallthrough
+	case SegmentType4:
+		fallthrough
+	case SegmentType5:
+		fallthrough
+	case SegmentType6:
+		fallthrough
+	case SegmentType7:
+		fallthrough
+	case SegmentType8:
+		fallthrough
+	case SegmentType9:
+		fallthrough
+	case SegmentType10:
+		fallthrough
+	case SegmentType11:
+		return nil, fmt.Errorf("segment type %d is not yet implemented", t)
+	default:
+		return nil, fmt.Errorf("unknown segment type %d", t)
+	}
+	p += 4 + l
+	switch t {
+	case SegmentType1:
+	case SegmentType2:
+	}
 	return s, nil
 }
 
 // MarshalJSON serializes SRSegment into a slice of bytes
-func (d *SRSegment) MarshalJSON() ([]byte, error) {
+func (s *SRSegment) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
+		Segment SegmentType `json:"segment_type"`
+		FlagS   bool        `json:"s_flag"`
+		FlagE   bool        `json:"e_flag"`
+		FlagV   bool        `json:"v_flag"`
+		FlagR   bool        `json:"r_flag"`
+		FlagA   bool        `json:"a_flag"`
+		SID     SID         `json:"sid"`
 	}{})
 }
 
 // UnmarshalJSON instantiates SRSegment object from  a slice of bytes
-func (d *SRSegment) UnmarshalJSON(b []byte) error {
+func (s *SRSegment) UnmarshalJSON(b []byte) error {
 	t := &SRSegment{}
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	d = t
+	s = t
 
 	return nil
 }
