@@ -22,6 +22,8 @@ const (
 	SRSegmentListType = 1205
 	// SRSegmentType defines SR Affinity Constraint Sub TLV type
 	SRSegmentType = 1206
+	// SRSegmentListMetricType defines SR Segment List Metric Sub TLV type
+	SRSegmentListMetricType = 1207
 	// SRAffinityConstraintType defines SR Affinity Constraint Sub TLV type
 	SRAffinityConstraintType = 1208
 	// SRSRLGConstraintType defines SR SRLG Constraint Sub TLV type
@@ -627,6 +629,12 @@ func UnmarshalSRSegmentListSubTLV(b []byte) (map[uint16]SRSegmentListSubTLV, err
 				return nil, err
 			}
 			s[SRSegmentType] = stlv
+		case SRSegmentListMetricType:
+			stlv, err := UnmarshalSRSegmentListMetric(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			s[SRSegmentListMetricType] = stlv
 		}
 		p += int(l)
 	}
@@ -667,6 +675,7 @@ const (
 type SID interface {
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON([]byte) error
+	Len() int
 }
 
 // MPLSLabelSID defines SID as MPLS Label
@@ -695,6 +704,11 @@ func UnmarshalMPLSLabelSID(b []byte) (SID, error) {
 	}
 
 	return sid, nil
+}
+
+// Len returns the length of SID object
+func (sid *MPLSLabelSID) Len() int {
+	return 4
 }
 
 // MarshalJSON serializes PLSLabelSID into a slice of bytes
@@ -744,6 +758,11 @@ func UnmarshalSRv6SID(b []byte) (SID, error) {
 	return sid, nil
 }
 
+// Len returns the length of SID object
+func (sid *SRv6SID) Len() int {
+	return 16
+}
+
 // MarshalJSON serializes SRv6SID into a slice of bytes
 func (sid *SRv6SID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
@@ -768,12 +787,85 @@ func (sid *SRv6SID) UnmarshalJSON(b []byte) error {
 type SegmentDescriptor interface {
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON([]byte) error
+	Len() int
+}
+
+var _ SegmentDescriptor = &SRType1Descriptor{}
+
+// SRType1Descriptor defines a descriptor for Type 1 Segment
+type SRType1Descriptor struct {
+	Algorithm uint8 `json:"algorithm"`
+}
+
+// UnmarshalSRType1Descriptor instantiates SR DisjointGroup Constraint object from a slice of bytes
+func UnmarshalSRType1Descriptor(b []byte) (SegmentDescriptor, error) {
+	if glog.V(6) {
+		glog.Infof("SR Type1 Descriptor Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 1 {
+		return nil, fmt.Errorf("invalid length %d of SR Type1 Descriptor", len(b))
+	}
+	p := 0
+	s := &SRType1Descriptor{
+		Algorithm: b[p],
+	}
+	return s, nil
+}
+
+// Len returns the length of Segment Descriptor
+func (d *SRType1Descriptor) Len() int {
+	return 1
+}
+
+// MarshalJSON serializes SRType1Descriptor into a slice of bytes
+func (d *SRType1Descriptor) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Algorithm uint8 `json:"algorithm"`
+	}{
+		Algorithm: d.Algorithm,
+	})
+}
+
+// UnmarshalJSON instantiates SRType1Descriptor object from  a slice of bytes
+func (d *SRType1Descriptor) UnmarshalJSON(b []byte) error {
+	t := &SRType1Descriptor{}
+	if err := json.Unmarshal(b, t); err != nil {
+		return err
+	}
+	d = t
+
+	return nil
 }
 
 // SRSegmentSubTLV defines methods common SR Segment Sub TLVs
 type SRSegmentSubTLV interface {
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON([]byte) error
+}
+
+// UnmarshalSRSegmentSubTLV instantiates a map of SR Segment Sub TLVs from a slice of bytes
+func UnmarshalSRSegmentSubTLV(b []byte) (map[uint16]SRSegmentSubTLV, error) {
+	if glog.V(6) {
+		glog.Infof("SR Segment Sub TLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) < 4 {
+		return nil, fmt.Errorf("not enough bytes to decode SR Segment List Sub TLV")
+	}
+	s := make(map[uint16]SRSegmentSubTLV)
+	p := 0
+	for p < len(b) {
+		t := binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		l := binary.BigEndian.Uint16(b[p : p+2])
+		if p+int(l) > len(b) {
+			return nil, fmt.Errorf("not enough bytes to decode SR Segment Sub TLV")
+		}
+		// No Sub Sub TLVs currently defined
+		switch t {
+		}
+		p += int(l)
+	}
+	return s, nil
 }
 
 // SRSegment describes a single segment in a SID-List.  One or more instances of this sub-TLV in an ordered
@@ -792,8 +884,8 @@ type SRSegment struct {
 
 var _ SRSegmentListSubTLV = &SRSegment{}
 
-// UnmarshalSRSegment instantiates SR DisjointGroup Constraint object from a slice of bytes
-func UnmarshalSRSegment(b []byte) (*SRSegment, error) {
+// UnmarshalSRSegment instantiates SR Segment Sub TLV object from a slice of bytes
+func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 	if glog.V(6) {
 		glog.Infof("SR Segment Sub TLV Raw: %s", tools.MessageHex(b))
 	}
@@ -810,7 +902,6 @@ func UnmarshalSRSegment(b []byte) (*SRSegment, error) {
 	s.FlagA = b[p+2]&0x08 == 0x08
 	t := SegmentType(b[p])
 	var err error
-	l := 0
 	switch t {
 	case SegmentType1:
 		s.Segment = SegmentType1
@@ -819,7 +910,6 @@ func UnmarshalSRSegment(b []byte) (*SRSegment, error) {
 			if err != nil {
 				return nil, err
 			}
-			l = 4
 		}
 	case SegmentType2:
 		s.Segment = SegmentType2
@@ -828,7 +918,6 @@ func UnmarshalSRSegment(b []byte) (*SRSegment, error) {
 			if err != nil {
 				return nil, err
 			}
-			l = 16
 		}
 	case SegmentType3:
 		fallthrough
@@ -847,15 +936,45 @@ func UnmarshalSRSegment(b []byte) (*SRSegment, error) {
 	case SegmentType10:
 		fallthrough
 	case SegmentType11:
-		return nil, fmt.Errorf("segment type %d is not yet implemented", t)
+		return nil, fmt.Errorf("segment of type %d is not yet implemented", t)
 	default:
 		return nil, fmt.Errorf("unknown segment type %d", t)
 	}
-	p += 4 + l
-	switch t {
-	case SegmentType1:
-	case SegmentType2:
+	// Adjust pointer by 4 bytes (Segment Type, Reserved and 2 bytes of Flags) + length of SID
+	p += 4 + s.SID.Len()
+	// Check if the descriptor flag is set, if true then process descriptor
+	if s.FlagA {
+		if p >= len(b) {
+			return nil, fmt.Errorf("invalid condition, with Flag A set but no more bytes to decode")
+		}
+		switch t {
+		case SegmentType1:
+			fallthrough
+		case SegmentType2:
+			// Type 2 shares the same descriptor as Type 1
+			if s.SegmentDescriptor, err = UnmarshalSRType1Descriptor(b[p:]); err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("segment descriptor of type %d is not yet implemented", t)
+		}
+		if s.SegmentDescriptor == nil {
+			return nil, fmt.Errorf("invalid condition, with Flag A set the descriptor cannot be nil")
+		}
+		p += s.SegmentDescriptor.Len()
 	}
+	if p == len(b) {
+		// There is no optional Sub Sub TLVs
+		return s, nil
+	}
+	if p+4 > len(b) {
+		// If left less than 4 bytes (type 2 bytes and length 2 bytes)
+		return nil, fmt.Errorf("not enough bytes to decode SR Segment Sub TLV")
+	}
+	if s.SubTLV, err = UnmarshalSRSegmentSubTLV(b[p:]); err != nil {
+		return nil, err
+	}
+
 	return s, nil
 }
 
@@ -879,6 +998,94 @@ func (s *SRSegment) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	s = t
+
+	return nil
+}
+
+// SRMetricType defines type for SR Metric Type
+type SRMetricType uint8
+
+const (
+	// SRMetricIGP defines IGP Metric type 0
+	SRMetricIGP SRMetricType = iota
+	// SRMetricMinUnidirLinkDelay defines Min Unidirection Link delay Metric type 1
+	SRMetricMinUnidirLinkDelay
+	// SRMetricTE defines TE Metric type 2
+	SRMetricTE
+)
+
+var _ SRSegmentListSubTLV = &SRSegmentListMetric{}
+
+// SRSegmentListMetric defines the metric used for computation of the SID-List.
+type SRSegmentListMetric struct {
+	Metric SRMetricType `json:"metric_type"`
+	FlagM  bool         `json:"m_flag"`
+	FlagA  bool         `json:"a_flag"`
+	FlagB  bool         `json:"b_flag"`
+	FlagV  bool         `json:"v_flag"`
+	Margin uint32       `json:"metric_margine"`
+	Bound  uint32       `json:"metric_bound"`
+	Value  uint32       `json:"metric_value"`
+}
+
+// UnmarshalSRSegmentListMetric instantiates SR DisjointGroup Constraint object from a slice of bytes
+func UnmarshalSRSegmentListMetric(b []byte) (SRSegmentListSubTLV, error) {
+	if glog.V(6) {
+		glog.Infof("SR Segment List Metric Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 16 {
+		return nil, fmt.Errorf("invalid length of SR Segment List Metric")
+	}
+	p := 0
+	s := &SRSegmentListMetric{}
+	s.Metric = SRMetricType(b[p])
+	p++
+	s.FlagM = b[p]&0x80 == 0x80
+	s.FlagA = b[p]&0x40 == 0x40
+	s.FlagB = b[p]&0x20 == 0x20
+	s.FlagV = b[p]&0x10 == 0x10
+	p++
+	// Skip reserved 2 bytes
+	p += 2
+	s.Margin = binary.BigEndian.Uint32(b[p : p+4])
+	p += 4
+	s.Bound = binary.BigEndian.Uint32(b[p : p+4])
+	p += 4
+	s.Value = binary.BigEndian.Uint32(b[p : p+4])
+
+	return s, nil
+}
+
+// MarshalJSON serializes SRSegmentListMetric into a slice of bytes
+func (m *SRSegmentListMetric) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Metric SRMetricType `json:"metric_type"`
+		FlagM  bool         `json:"m_flag"`
+		FlagA  bool         `json:"a_flag"`
+		FlagB  bool         `json:"b_flag"`
+		FlagV  bool         `json:"v_flag"`
+		Margin uint32       `json:"metric_margine"`
+		Bound  uint32       `json:"metric_bound"`
+		Value  uint32       `json:"metric_value"`
+	}{
+		Metric: m.Metric,
+		FlagM:  m.FlagM,
+		FlagA:  m.FlagA,
+		FlagB:  m.FlagB,
+		FlagV:  m.FlagV,
+		Margin: m.Margin,
+		Bound:  m.Bound,
+		Value:  m.Value,
+	})
+}
+
+// UnmarshalJSON instantiates SRSegmentListMetric object from  a slice of bytes
+func (m *SRSegmentListMetric) UnmarshalJSON(b []byte) error {
+	t := &SRSegmentListMetric{}
+	if err := json.Unmarshal(b, t); err != nil {
+		return err
+	}
+	m = t
 
 	return nil
 }
