@@ -1,5 +1,6 @@
 package bgpls
 
+// TEPolicyStateObjects defines the interface common to all TE Policy State objects
 type TEPolicyStateObjects interface {
 }
 
@@ -15,13 +16,17 @@ const (
 	Local ObjectOriginType = 3
 )
 
+// MPLSTEPolicyStateAddressFamilyType defines a type for MPLS Address familes
 type MPLSTEPolicyStateAddressFamilyType uint8
 
 const (
+	// MPLSIPV4 defines MPLS IPv4 type
 	MPLSIPV4 MPLSTEPolicyStateAddressFamilyType = 1
+	// MPLSIPV6 defines MPLS IPv6 type
 	MPLSIPV6 MPLSTEPolicyStateAddressFamilyType = 2
 )
 
+// MPLSTEPolicyState defines MPLS TE Policy State object
 type MPLSTEPolicyState struct {
 	ObjectOrigin  ObjectOriginType                   `json:"object_origin,omitempty"`
 	AddressFamily MPLSTEPolicyStateAddressFamilyType `json:"address_family,omitempty"`
