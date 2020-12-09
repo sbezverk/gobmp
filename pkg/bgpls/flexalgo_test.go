@@ -3,8 +3,6 @@ package bgpls
 import (
 	"reflect"
 	"testing"
-
-	"github.com/sbezverk/gobmp/pkg/base"
 )
 
 func TestUnmarshalFlexAlgoDefinition(t *testing.T) {
@@ -21,13 +19,7 @@ func TestUnmarshalFlexAlgoDefinition(t *testing.T) {
 				MetricType:      0,
 				Priority:        128,
 				CalculationType: 0,
-				SubTLV: []*base.SubTLV{
-					{
-						Type:   1040,
-						Length: 32,
-						Value:  []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00},
-					},
-				},
+				ExcludeAny:      []uint32{0, 0, 0, 0, 0, 0, 0, 0x80000000},
 			},
 		},
 	}
