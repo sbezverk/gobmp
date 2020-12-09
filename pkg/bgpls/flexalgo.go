@@ -13,18 +13,22 @@ import (
 // with the Node NLRI called the Flexible Algorithm Definition (FAD) TLV
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-flex-algo-02#section-3
 type FlexAlgoDefinition struct {
-	FlexAlgorithm   uint8    `json:"flex_algo,omitempty"`
-	MetricType      uint8    `json:"metric_type"`
-	CalculationType uint8    `json:"calculation_type"`
-	Priority        uint8    `json:"priority"`
-	ExcludeAny      []uint32 `json:"exclude_any,omitempty"`
-	IncludeAny      []uint32 `json:"include_any,omitempty"`
-	IncludeAll      []uint32 `json:"include_all,omitempty"`
-	Flags           []uint32 `json:"flags,omitempty"`
-	ExcludeSRLG     []uint32 `json:"exclude_srlg,omitempty"`
+	FlexAlgorithm   uint8      `json:"flex_algo,omitempty"`
+	MetricType      uint8      `json:"metric_type"`
+	CalculationType uint8      `json:"calculation_type"`
+	Priority        uint8      `json:"priority"`
+	SubTLV          *FADSubTLV `json:"sub_tlv,omitempty"`
 }
 
-func getFlexAlgoDefinitionSubTLVValue(tlv *base.SubTLV) ([]uint32, error) {
+type FADSubTLV struct {
+	ExcludeAny  []uint32 `json:"exclude_any,omitempty"`
+	IncludeAny  []uint32 `json:"include_any,omitempty"`
+	IncludeAll  []uint32 `json:"include_all,omitempty"`
+	Flags       []uint32 `json:"flags,omitempty"`
+	ExcludeSRLG []uint32 `json:"exclude_srlg,omitempty"`
+}
+
+func getFADSubTLVValue(tlv *base.SubTLV) ([]uint32, error) {
 	if tlv.Length%4 != 0 {
 		return nil, fmt.Errorf("invalid length %d of FlexAlgo definition subtlv", tlv.Length)
 	}
@@ -60,22 +64,23 @@ func UnmarshalFlexAlgoDefinition(b []byte) (*FlexAlgoDefinition, error) {
 		if err != nil {
 			return nil, err
 		}
+		fad.SubTLV = &FADSubTLV{}
 		for _, tlv := range sstlvs {
-			ints, err := getFlexAlgoDefinitionSubTLVValue(tlv)
+			ints, err := getFADSubTLVValue(tlv)
 			if err != nil {
 				return nil, err
 			}
 			switch tlv.Type {
 			case 1040:
-				fad.ExcludeAny = ints
+				fad.SubTLV.ExcludeAny = ints
 			case 1041:
-				fad.IncludeAny = ints
+				fad.SubTLV.IncludeAny = ints
 			case 1042:
-				fad.IncludeAll = ints
+				fad.SubTLV.IncludeAll = ints
 			case 1043:
-				fad.Flags = ints
+				fad.SubTLV.Flags = ints
 			case 1045: // the type is really TBD in the draft
-				fad.ExcludeSRLG = ints
+				fad.SubTLV.ExcludeSRLG = ints
 			default:
 				return nil, fmt.Errorf("unknown FlexAlgo definition subtlv type %d", tlv.Type)
 			}

@@ -19,7 +19,9 @@ func TestUnmarshalFlexAlgoDefinition(t *testing.T) {
 				MetricType:      0,
 				Priority:        128,
 				CalculationType: 0,
-				ExcludeAny:      []uint32{0, 0, 0, 0, 0, 0, 0, 0x80000000},
+				SubTLV: &FADSubTLV{
+					ExcludeAny: []uint32{0, 0, 0, 0, 0, 0, 0, 0x80000000},
+				},
 			},
 		},
 	}
