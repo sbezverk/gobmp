@@ -47,7 +47,7 @@ func UnmarshalL3VPNNLRI(b []byte, srv6 ...bool) (*base.MPNLRI, error) {
 			up.Label = make([]*base.Label, 0)
 			bos := false
 			for !bos && p < len(b) {
-				l, err := base.MakeLabel(b[p : p+3])
+				l, err := base.MakeLabel(b[p:p+3], srv6Flag)
 				if err != nil {
 					return nil, err
 				}

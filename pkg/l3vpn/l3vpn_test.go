@@ -156,7 +156,7 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 						Length: 32,
 						Label: []*base.Label{
 							{
-								Value: 1056,
+								Value: 16896,
 								Exp:   0,
 								BoS:   false,
 							},
