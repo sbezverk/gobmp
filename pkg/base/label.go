@@ -3,6 +3,9 @@ package base
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
 // Label defines a structure of a single label
@@ -18,14 +21,24 @@ func (l *Label) String() string {
 }
 
 // MakeLabel instantiates a new Label object
-func MakeLabel(b []byte) (*Label, error) {
-	l := Label{}
+func MakeLabel(b []byte, srv6 ...bool) (*Label, error) {
+	if glog.V(6) {
+		glog.Infof("Label Raw: %s", tools.MessageHex(b))
+	}
 	if len(b) != 3 {
 		return nil, fmt.Errorf("invalid length expected 3 got %d", len(b))
 	}
+	srv6Flag := false
+	if len(srv6) != 0 {
+		srv6Flag = srv6[0]
+	}
+	l := Label{}
 	v := make([]byte, 4)
 	copy(v[1:], b)
 	l.Value = binary.BigEndian.Uint32(v)
+	if srv6Flag {
+		return &l, nil
+	}
 	l.Value = l.Value >> 4
 	// Move Exp bits to the beggining of the byte and leave only 3 bits, mask the rest.
 	l.Exp = uint8(b[2]&0x07) >> 1
