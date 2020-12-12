@@ -1,7 +1,6 @@
 package base
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -33,13 +32,11 @@ func MakeLabel(b []byte, srv6 ...bool) (*Label, error) {
 		srv6Flag = srv6[0]
 	}
 	l := Label{}
-	v := make([]byte, 4)
-	copy(v[1:], b)
-	l.Value = binary.BigEndian.Uint32(v)
+	l.Value = uint32(b[0])<<16 | uint32(b[1])<<8 | uint32(b[2]&0xf0)
 	if srv6Flag {
 		return &l, nil
 	}
-	l.Value = l.Value >> 4
+	l.Value >>= 4
 	// Move Exp bits to the beggining of the byte and leave only 3 bits, mask the rest.
 	l.Exp = uint8(b[2]&0x07) >> 1
 	l.BoS = b[2]&0x01 == 1
