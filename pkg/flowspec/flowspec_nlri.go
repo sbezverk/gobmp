@@ -80,10 +80,7 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 		var err error
 		switch SpecType(t) {
 		case Type1:
-			spec, l, err = makePrefixSpec(b[p:])
-			if err != nil {
-				return nil, err
-			}
+			fallthrough
 		case Type2:
 			spec, l, err = makePrefixSpec(b[p:])
 			if err != nil {
@@ -101,11 +98,14 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 			fallthrough
 		case Type8:
 			fallthrough
-		case Type9:
-			fallthrough
 		case Type10:
 			fallthrough
 		case Type11:
+			spec, l, err = makeGenericSpec(b[p:])
+			if err != nil {
+				return nil, err
+			}
+		case Type9:
 			fallthrough
 		case Type12:
 			return nil, fmt.Errorf("not implemented Flowspec type: %+v", t)
@@ -305,6 +305,16 @@ func makeGenericSpec(b []byte) (Spec, int, error) {
 	s.OpVal, err = UnmarshalOpVal(b)
 	if err != nil {
 		return nil, 0, err
+	}
+	// Calculate total Spec length
+	for _, ov := range s.OpVal {
+		if ov == nil {
+			continue
+		}
+		// Operator length of Operator/Value pair - 1 byte
+		p++
+		// Value length of Operator/Value pair
+		p += int(ov.Op.Length)
 	}
 
 	return s, p, nil
