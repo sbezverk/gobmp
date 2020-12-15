@@ -239,10 +239,26 @@ type OpVal struct {
 	Val []byte    `json:"value"`
 }
 
-// GenericSpec defines a structure of Flowspec Types (3,4,5,6,7,8,10,11) specs.
-type GenericSpec struct {
-	SpecType uint8    `json:"type"`
-	OpVal    []*OpVal `json:"op_val_pairs"`
+// UnmarshalJSON unmarshals a slice of bytes into a new Operator/Value pair
+func (o *OpVal) UnmarshalJSON(b []byte) error {
+	ov := &OpVal{}
+	if err := json.Unmarshal(b, ov); err != nil {
+		return err
+	}
+	o = ov
+
+	return nil
+}
+
+// MarshalJSON returns a binary representation of FlowSPec PrefixSpec
+func (o *OpVal) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Op  *Operator `json:"operator"`
+		Val []byte    `json:"value"`
+	}{
+		Op:  o.Op,
+		Val: o.Val,
+	})
 }
 
 // UnmarshalOpVal creates a slice of Operator/Value pairs
@@ -263,7 +279,6 @@ func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
 			Op:  o,
 			Val: make([]byte, o.Length),
 		}
-		opval.Val = make([]byte, o.Length)
 		copy(opval.Val, b[p:p+int(o.Length)])
 		opvals = append(opvals, opval)
 		p += int(o.Length)
@@ -273,6 +288,12 @@ func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
 	}
 
 	return opvals, nil
+}
+
+// GenericSpec defines a structure of Flowspec Types (3,4,5,6,7,8,10,11) specs.
+type GenericSpec struct {
+	SpecType uint8    `json:"type"`
+	OpVal    []*OpVal `json:"op_val_pairs"`
 }
 
 func makeGenericSpec(b []byte) (Spec, int, error) {
@@ -303,8 +324,10 @@ func (t *GenericSpec) UnmarshalJSON(b []byte) error {
 // MarshalJSON returns a binary representation of FlowSPec GenericSpec
 func (t *GenericSpec) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		SpecType uint8 `json:"type"`
+		SpecType uint8    `json:"type"`
+		OpVal    []*OpVal `json:"op_val_pairs"`
 	}{
 		SpecType: t.SpecType,
+		OpVal:    t.OpVal,
 	})
 }
