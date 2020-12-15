@@ -119,6 +119,71 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 	return fs, nil
 }
 
+// Operator defines a data structure representing Flowspec operator byte
+type Operator struct {
+	EOLBit bool
+	ANDBit bool
+	Length uint8
+	LTBit  bool
+	GTBit  bool
+	EQBit  bool
+}
+
+// UnmarshalFlowspecOperator creates an instance of Operator object from a byte
+func UnmarshalFlowspecOperator(b byte) (*Operator, error) {
+	o := &Operator{}
+	if b&0x80 == 0x80 {
+		o.EOLBit = true
+	}
+	if b&0x40 == 0x40 {
+		o.ANDBit = true
+	}
+	l := (b & 0x30) >> 4
+	o.Length = 1 << l
+	if b&0x04 == 0x04 {
+		o.LTBit = true
+	}
+	if b&0x02 == 0x02 {
+		o.GTBit = true
+	}
+	if b&0x01 == 0x01 {
+		o.EQBit = true
+	}
+
+	return o, nil
+}
+
+// MarshalJSON returns a binary representation of Flowspec Operator structure
+func (o *Operator) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		EOLBit bool  `json:"end_of_list_bit"`
+		ANDBit bool  `json:"and_bit"`
+		Length uint8 `json:"value_length"`
+		LTBit  bool  `json:"less_than"`
+		GTBit  bool  `json:"greater_than"`
+		EQBit  bool  `json:"equal"`
+	}{
+		EOLBit: o.EOLBit,
+		ANDBit: o.ANDBit,
+		Length: o.Length,
+		LTBit:  o.LTBit,
+		GTBit:  o.GTBit,
+		EQBit:  o.EQBit,
+	})
+
+}
+
+// UnmarshalJSON creates a new instance of Flowspec Operator
+func (o *Operator) UnmarshalJSON(b []byte) error {
+	t := &Operator{}
+	if err := json.Unmarshal(b, t); err != nil {
+		return err
+	}
+	o = t
+
+	return nil
+}
+
 // PrefixSpec defines a structure of Flowspec Type 1 and Type 2 (Destination/Source Prefix) spec.
 type PrefixSpec struct {
 	SpecType     uint8  `json:"type"`
@@ -131,14 +196,15 @@ func makePrefixSpec(b []byte) (Spec, int, error) {
 	p := 0
 	s.SpecType = b[p]
 	p++
-	s.PrefixLength = b[p] / 8
+	s.PrefixLength = b[p]
+	l := int(s.PrefixLength / 8)
 	if b[p]%8 != 0 {
-		s.PrefixLength++
+		l++
 	}
 	p++
-	s.Prefix = make([]byte, s.PrefixLength)
-	copy(s.Prefix, b[p:p+int(s.PrefixLength)])
-	p += int(s.PrefixLength)
+	s.Prefix = make([]byte, l)
+	copy(s.Prefix, b[p:p+l])
+	p += int(l)
 
 	return s, p, nil
 }
@@ -164,5 +230,81 @@ func (t *PrefixSpec) MarshalJSON() ([]byte, error) {
 		SpecType:     t.SpecType,
 		PrefixLength: t.PrefixLength,
 		Prefix:       t.Prefix,
+	})
+}
+
+// OpVal defines structure of Operator and Value pair
+type OpVal struct {
+	Op  *Operator `json:"operator"`
+	Val []byte    `json:"value"`
+}
+
+// GenericSpec defines a structure of Flowspec Types (3,4,5,6,7,8,10,11) specs.
+type GenericSpec struct {
+	SpecType uint8    `json:"type"`
+	OpVal    []*OpVal `json:"op_val_pairs"`
+}
+
+// UnmarshalOpVal creates a slice of Operator/Value pairs
+func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
+	opvals := make([]*OpVal, 0)
+	p := 0
+	eol := false
+	for !eol && p < len(b) {
+		o := &Operator{}
+		if err := o.UnmarshalJSON(b[p : p+1]); err != nil {
+			return nil, err
+		}
+		p++
+		if p+int(o.Length) > len(b) {
+			return nil, fmt.Errorf("not enough bytes to unmarshal Operator/Value pair")
+		}
+		opval := &OpVal{
+			Op:  o,
+			Val: make([]byte, o.Length),
+		}
+		opval.Val = make([]byte, o.Length)
+		copy(opval.Val, b[p:p+int(o.Length)])
+		opvals = append(opvals, opval)
+		p += int(o.Length)
+		if o.EOLBit {
+			eol = true
+		}
+	}
+
+	return opvals, nil
+}
+
+func makeGenericSpec(b []byte) (Spec, int, error) {
+	s := &GenericSpec{}
+	var err error
+	p := 0
+	s.SpecType = b[p]
+	p++
+	s.OpVal, err = UnmarshalOpVal(b)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return s, p, nil
+}
+
+// UnmarshalJSON unmarshals a slice of bytes into a new FlowSPec GenericSpec
+func (t *GenericSpec) UnmarshalJSON(b []byte) error {
+	s := &GenericSpec{}
+	if err := json.Unmarshal(b, s); err != nil {
+		return err
+	}
+	t = s
+
+	return nil
+}
+
+// MarshalJSON returns a binary representation of FlowSPec GenericSpec
+func (t *GenericSpec) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		SpecType uint8 `json:"type"`
+	}{
+		SpecType: t.SpecType,
 	})
 }
