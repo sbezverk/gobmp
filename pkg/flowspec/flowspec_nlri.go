@@ -2,6 +2,7 @@ package flowspec
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -20,6 +21,7 @@ type NLRI struct {
 	Spec   []Spec
 }
 
+// SpecType defines Flowspec Spec type
 type SpecType uint8
 
 const (
@@ -73,23 +75,94 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 	}
 	for p < len(b) {
 		t := b[p]
+		l := 0
+		var spec Spec
+		var err error
 		switch SpecType(t) {
 		case Type1:
+			spec, l, err = makePrefixSpec(b[p:])
+			if err != nil {
+				return nil, err
+			}
 		case Type2:
+			spec, l, err = makePrefixSpec(b[p:])
+			if err != nil {
+				return nil, err
+			}
 		case Type3:
+			fallthrough
 		case Type4:
+			fallthrough
 		case Type5:
+			fallthrough
 		case Type6:
+			fallthrough
 		case Type7:
+			fallthrough
 		case Type8:
+			fallthrough
 		case Type9:
+			fallthrough
 		case Type10:
+			fallthrough
 		case Type11:
+			fallthrough
 		case Type12:
+			return nil, fmt.Errorf("not implemented Flowspec type: %+v", t)
 		default:
 			return nil, fmt.Errorf("unknown Flowspec type: %+v", t)
 		}
+		fs.Spec = append(fs.Spec, spec)
+		p += l
 	}
 
 	return fs, nil
+}
+
+// PrefixSpec defines a structure of Flowspec Type 1 and Type 2 (Destination/Source Prefix) spec.
+type PrefixSpec struct {
+	SpecType     uint8  `json:"type"`
+	PrefixLength uint8  `json:"prefix_len"`
+	Prefix       []byte `json:"prefix"`
+}
+
+func makePrefixSpec(b []byte) (Spec, int, error) {
+	s := &PrefixSpec{}
+	p := 0
+	s.SpecType = b[p]
+	p++
+	s.PrefixLength = b[p] / 8
+	if b[p]%8 != 0 {
+		s.PrefixLength++
+	}
+	p++
+	s.Prefix = make([]byte, s.PrefixLength)
+	copy(s.Prefix, b[p:p+int(s.PrefixLength)])
+	p += int(s.PrefixLength)
+
+	return s, p, nil
+}
+
+// UnmarshalJSON unmarshals a slice of bytes into a new FlowSPec PrefixSpec
+func (t *PrefixSpec) UnmarshalJSON(b []byte) error {
+	s := &PrefixSpec{}
+	if err := json.Unmarshal(b, s); err != nil {
+		return err
+	}
+	t = s
+
+	return nil
+}
+
+// MarshalJSON returns a binary representation of FlowSPec PrefixSpec
+func (t *PrefixSpec) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		SpecType     uint8  `json:"type"`
+		PrefixLength uint8  `json:"prefix_len"`
+		Prefix       []byte `json:"prefix"`
+	}{
+		SpecType:     t.SpecType,
+		PrefixLength: t.PrefixLength,
+		Prefix:       t.Prefix,
+	})
 }
