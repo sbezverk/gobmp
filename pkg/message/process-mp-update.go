@@ -129,7 +129,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 					topicType = bmp.FlowspecV6Msg
 				}
 			}
-			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), true); err != nil {
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
 				glog.Errorf("failed to process Flowspec message with error: %+v", err)
 				return
 			}

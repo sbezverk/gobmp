@@ -303,7 +303,7 @@ func type6(subType uint8, value []byte) string {
 	return getSubType(evpnSubTypes, subType) + s
 }
 
-// Flow spec redirect/mirror to IP next-hop
+// 0x08 Flow spec redirect/mirror to IP next-hop [draft-simpson-idr-flowspec-redirect] 2012-09-28
 func type8(subType uint8, value []byte) string {
 	return ECPFlowspec + "redirect_to_ip_next_hop"
 }
@@ -331,13 +331,45 @@ func type80(subType uint8, value []byte) string {
 		switch subType {
 		case 0x06:
 			s = fmt.Sprintf("AS: %d Rate: %d bps", binary.BigEndian.Uint16(value[:2]), uint32(math.Float32frombits(binary.BigEndian.Uint32(value[2:])))*8)
+		case 0x08:
+			s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:]))
+		case 0x09:
+			fallthrough
 		case 0x07:
 			// TODO (sbezverk) add corresponding transformation actions
 			fallthrough
+		default:
+			s = tools.MessageHex(value)
+		}
+	} else {
+		s = fmt.Sprintf("invalid value length of %d", len(value))
+	}
+	return getSubType(flowspecSubTypes, subType) + s
+}
+
+func type81(subType uint8, value []byte) string {
+	var s string
+
+	if len(value) == 6 {
+		switch subType {
 		case 0x08:
-			fallthrough
-		case 0x09:
-			fallthrough
+			s = fmt.Sprintf("%s:%d", net.IP(value[0:4]).To4().String(), binary.BigEndian.Uint16(value[4:]))
+		default:
+			s = tools.MessageHex(value)
+		}
+	} else {
+		s = fmt.Sprintf("invalid value length of %d", len(value))
+	}
+	return getSubType(flowspecSubTypes, subType) + s
+}
+
+func type82(subType uint8, value []byte) string {
+	var s string
+
+	if len(value) == 6 {
+		switch subType {
+		case 0x08:
+			s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(value[0:4]), binary.BigEndian.Uint16(value[4:]))
 		default:
 			s = tools.MessageHex(value)
 		}
@@ -357,6 +389,8 @@ var extComm = map[uint8]func(uint8, []byte) string{
 	0x8:  type8,
 	0x40: type40,
 	0x80: type80,
+	0x81: type81,
+	0x82: type82,
 }
 
 func (ext *ExtCommunity) String() string {

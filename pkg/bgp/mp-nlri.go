@@ -61,8 +61,14 @@ func getNLRIMessageType(afi uint16, safi uint8) int {
 		// AFI 1 and SAFI 133 FlowSpec IPv4
 	case afi == 1 && safi == 133:
 		return 27
+		// AFI 2 and SAFI 133 FlowSpec IPv6
+	case afi == 2 && safi == 133:
+		return 27
 		// AFI 1 and SAFI 134 FlowSpec VPNv4
 	case afi == 1 && safi == 134:
+		return 27
+		// AFI 2 and SAFI 134 FlowSpec VPNv6
+	case afi == 2 && safi == 134:
 		return 27
 	}
 
