@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/evpn"
+	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
@@ -120,6 +121,16 @@ func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 			return nil, err
 		}
 		return nlri, nil
+	}
+
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetFlowspecNLRI checks for presense of NLRI 133 IPv4 Flowspec in the NLRI 15 NLRI data and if exists, instantiate NLRI object
+func (mp *MPUnReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
+	if mp.SubAddressFamilyID == 133 {
+		return flowspec.UnmarshalFlowspecNLRI(mp.WithdrawnRoutes)
 	}
 
 	// TODO return new type of errors to be able to check for the code

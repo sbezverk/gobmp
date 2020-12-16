@@ -106,4 +106,18 @@ const (
 	ECPLinkBandwidth = "link-bw="
 	// ECPVNIID extended community prefix for Virtual-Network Identifier Extended Community	[draft-drao-bgp-l3vpn-virtual-network-overlays]
 	ECPVNIID = "vni="
+
+	// ECPFlowspec extended community prefix for Flowspec extended community
+	ECPFlowspec = "flowspec="
+
+	// Flowspec Sub Types
+
+	// CPFlowspecTrafficRate defines Flowspec Traffic rate Sub type
+	CPFlowspecTrafficRate = "flowspec-traffic-rate="
+	// CPFlowspecTrafficAction defines Flowspec Traffic action Sub type
+	CPFlowspecTrafficAction = "flowspec-traffic-action="
+	// CPFlowspecRedirect defines Flowspec Redirect Sub type
+	CPFlowspecRedirect = "flowspec-redirect="
+	// CPFlowspecTrafficRemarking defines Flowspec Traffic Remarking Sub type
+	CPFlowspecTrafficRemarking = "flowspec-traffic-remarking="
 )

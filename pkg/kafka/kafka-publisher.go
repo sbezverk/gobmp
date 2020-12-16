@@ -31,6 +31,9 @@ const (
 	srPolicyMessageTopic   = "gobmp.parsed.sr_policy"
 	srPolicyMessageV4Topic = "gobmp.parsed.sr_policy_v4"
 	srPolicyMessageV6Topic = "gobmp.parsed.sr_policy_v6"
+	flowspecMessageTopic   = "gobmp.parsed.flowspec"
+	flowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
+	flowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
 )
 
 var (
@@ -59,6 +62,9 @@ var (
 		srPolicyMessageTopic,
 		srPolicyMessageV4Topic,
 		srPolicyMessageV6Topic,
+		flowspecMessageTopic,
+		flowspecMessageV4Topic,
+		flowspecMessageV6Topic,
 	}
 )
 
@@ -101,6 +107,12 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 		return p.produceMessage(srPolicyMessageV4Topic, key, msg)
 	case bmp.SRPolicyV6Msg:
 		return p.produceMessage(srPolicyMessageV6Topic, key, msg)
+	case bmp.FlowspecMsg:
+		return p.produceMessage(flowspecMessageTopic, key, msg)
+	case bmp.FlowspecV4Msg:
+		return p.produceMessage(flowspecMessageV4Topic, key, msg)
+	case bmp.FlowspecV6Msg:
+		return p.produceMessage(flowspecMessageV6Topic, key, msg)
 	}
 
 	return fmt.Errorf("not implemented")

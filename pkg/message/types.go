@@ -4,6 +4,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
+	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/prefixsid"
 	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
@@ -354,4 +355,28 @@ type SRPolicy struct {
 	PolicyPathName string                  `json:"policy_path_name,omitempty"`
 	ENLP           *srpolicy.ENLP          `json:"enlp_subtlv,omitempty"`
 	SegmentList    []*srpolicy.SegmentList `json:"segment_list_subtlv,omitempty"`
+}
+
+// Flowspec defines the structure of SR Policy message
+type Flowspec struct {
+	Key            string              `json:"_key,omitempty"`
+	ID             string              `json:"_id,omitempty"`
+	Rev            string              `json:"_rev,omitempty"`
+	Action         string              `json:"action,omitempty"` // Action can be "add" or "del"
+	Sequence       int                 `json:"sequence,omitempty"`
+	Hash           string              `json:"hash,omitempty"`
+	RouterHash     string              `json:"router_hash,omitempty"`
+	RouterIP       string              `json:"router_ip,omitempty"`
+	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash       string              `json:"peer_hash,omitempty"`
+	PeerIP         string              `json:"peer_ip,omitempty"`
+	PeerASN        int32               `json:"peer_asn,omitempty"`
+	Timestamp      string              `json:"timestamp,omitempty"`
+	IsIPv4         bool                `json:"is_ipv4"`
+	OriginAS       int32               `json:"origin_as,omitempty"`
+	Nexthop        string              `json:"nexthop,omitempty"`
+	ClusterList    string              `json:"cluster_list,omitempty"`
+	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
+	PathID         int32               `json:"path_id,omitempty"`
+	Spec           []flowspec.Spec     `json:"spec,omitempty"`
 }
