@@ -53,7 +53,7 @@ const (
 
 // UnmarshalFlowspecNLRI creates an instance of Flowspec NLRI from a slice of bytes
 func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
-	if glog.V(6) {
+	if glog.V(5) {
 		glog.Infof("Flowspec NLRI Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) == 0 {

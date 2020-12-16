@@ -16,7 +16,7 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 	}
 	peerUpMsg, ok := msg.Payload.(*bmp.PeerUpMessage)
 	if !ok {
-		glog.Errorf("got invalid Payload type in bmp.Message")
+		glog.Errorf("got invalid Payload type in bmp.Message %+v", msg.Payload)
 		return
 	}
 	action := "add"

@@ -114,6 +114,26 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
+	case 27:
+		msgs, err := p.flowspec(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce flowspec messages with error: %+v", err)
+			return
+		}
+		for _, m := range msgs {
+			topicType := bmp.FlowspecMsg
+			if p.splitAF {
+				if m.IsIPv4 {
+					topicType = bmp.FlowspecV4Msg
+				} else {
+					topicType = bmp.FlowspecV6Msg
+				}
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
+				glog.Errorf("failed to process Flowspec message with error: %+v", err)
+				return
+			}
+		}
 	case 71:
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
 	}

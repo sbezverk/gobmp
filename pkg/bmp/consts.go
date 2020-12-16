@@ -50,4 +50,10 @@ const (
 	SRPolicyV4Msg = 154
 	// SRPolicyV6Msg defines a subtype of BMP Route Monitoring message for SR Policy NLRI AFI 2 SAFI 73
 	SRPolicyV6Msg = 156
+	// FlowspecMsg efines BMP Route Monitoring message carrying Flowspec NLRI
+	FlowspecMsg = 16
+	// FlowspecV4Msg defines BMP Route Monitoring message carrying Flowspec NLRI
+	FlowspecV4Msg = 164
+	// FlowspecV6Msg defines BMP Route Monitoring message carrying Flowspec NLRI
+	FlowspecV6Msg = 166
 )
