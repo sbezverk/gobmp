@@ -29,6 +29,29 @@ func TestUnmarshalFlowspecNLRI(t *testing.T) {
 			},
 			fail: false,
 		},
+		{
+			name:  "Type 3 (IP Protocol)",
+			input: []byte{0x03, 0x03, 0x81, 0x2F},
+			expect: &NLRI{
+				Length: 3,
+				Spec: []Spec{
+					&GenericSpec{
+						SpecType: 3,
+						OpVal: []*OpVal{
+							{
+								Op: &Operator{
+									EOLBit: true,
+									Length: 1,
+									EQBit:  true,
+								},
+								Val: []byte{0x2f},
+							},
+						},
+					},
+				},
+			},
+			fail: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

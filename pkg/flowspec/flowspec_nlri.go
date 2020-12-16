@@ -265,10 +265,12 @@ func (o *OpVal) MarshalJSON() ([]byte, error) {
 func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
 	opvals := make([]*OpVal, 0)
 	p := 0
+	// Skip type
+	p++
 	eol := false
 	for !eol && p < len(b) {
-		o := &Operator{}
-		if err := o.UnmarshalJSON(b[p : p+1]); err != nil {
+		o, err := UnmarshalFlowspecOperator(b[p])
+		if err != nil {
 			return nil, err
 		}
 		p++
