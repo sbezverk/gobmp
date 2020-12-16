@@ -227,6 +227,18 @@ var nonTransAS2SubTypes = map[uint8]string{
 	0x80: ECPVNIID,
 }
 
+// Generic Transitive Experimental Use Extended Community Sub-Types
+// 0x06               Flow spec traffic-rate
+// 0x07               Flow spec traffic-action (Use of the "Value" field is defined in the "Traffic Action Fields" registry)
+// 0x08               Flow spec redirect
+// 0x09               Flow spec traffic-remarking
+var flowspecSubTypes = map[uint8]string{
+	0x6: CPFlowspecTrafficRate,
+	0x7: CPFlowspecTrafficAction,
+	0x8: CPFlowspecRedirect,
+	0x9: CPFlowspecTrafficRemarking,
+}
+
 func getSubType(m map[uint8]string, subType uint8) string {
 	s := "Subtype unknown="
 	var ok bool
@@ -293,7 +305,7 @@ func type6(subType uint8, value []byte) string {
 
 // Flow spec redirect/mirror to IP next-hop
 func type8(subType uint8, value []byte) string {
-	return ECPFLOWSPEC + "redirect_to_ip_next_hop"
+	return ECPFlowspec + "redirect_to_ip_next_hop"
 }
 
 // Non-Transitive Two-Octet AS-Specific Extended Community
@@ -311,6 +323,30 @@ func type40(subType uint8, value []byte) string {
 	return getSubType(nonTransAS2SubTypes, subType) + s
 }
 
+// Flowspec Extended Community
+func type80(subType uint8, value []byte) string {
+	var s string
+
+	if len(value) == 6 {
+		switch subType {
+		case 0x06:
+			s = fmt.Sprintf("AS: %d Rate: %d bps", binary.BigEndian.Uint16(value[:2]), uint32(math.Float32frombits(binary.BigEndian.Uint32(value[2:])))*8)
+		case 0x07:
+			// TODO (sbezverk) add corresponding transformation actions
+			fallthrough
+		case 0x08:
+			fallthrough
+		case 0x09:
+			fallthrough
+		default:
+			s = tools.MessageHex(value)
+		}
+	} else {
+		s = fmt.Sprintf("invalid value length of %d", len(value))
+	}
+	return getSubType(flowspecSubTypes, subType) + s
+}
+
 // extComm defines a map with Extended Community as a key, it return a function to process a type specific sub type.
 var extComm = map[uint8]func(uint8, []byte) string{
 	0x0:  type0,
@@ -320,6 +356,7 @@ var extComm = map[uint8]func(uint8, []byte) string{
 	0x6:  type6,
 	0x8:  type8,
 	0x40: type40,
+	0x80: type80,
 }
 
 func (ext *ExtCommunity) String() string {
