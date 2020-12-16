@@ -21,6 +21,11 @@ func TestExtendedCommunity(t *testing.T) {
 			input:  []byte{0x00, 0x02, 0x00, 0x05, 0x00, 0x00, 0xfd, 0xeb},
 			expect: "rt=5:65003",
 		},
+		{
+			name:   "type 8 community",
+			input:  []byte{0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			expect: "flowspec=redirect_to_ip_next_hop",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

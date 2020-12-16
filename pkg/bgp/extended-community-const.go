@@ -106,4 +106,6 @@ const (
 	ECPLinkBandwidth = "link-bw="
 	// ECPVNIID extended community prefix for Virtual-Network Identifier Extended Community	[draft-drao-bgp-l3vpn-virtual-network-overlays]
 	ECPVNIID = "vni="
+	// ECPFLOWSPEC extended community prefix for Flowspec extended community
+	ECPFLOWSPEC = "flowspec="
 )

@@ -156,12 +156,12 @@ func UnmarshalFlowspecOperator(b byte) (*Operator, error) {
 // MarshalJSON returns a binary representation of Flowspec Operator structure
 func (o *Operator) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		EOLBit bool  `json:"end_of_list_bit"`
-		ANDBit bool  `json:"and_bit"`
-		Length uint8 `json:"value_length"`
-		LTBit  bool  `json:"less_than"`
-		GTBit  bool  `json:"greater_than"`
-		EQBit  bool  `json:"equal"`
+		EOLBit bool  `json:"end_of_list_bit,omitempty"`
+		ANDBit bool  `json:"and_bit,omitempty"`
+		Length uint8 `json:"value_length,omitempty"`
+		LTBit  bool  `json:"less_than,omitempty"`
+		GTBit  bool  `json:"greater_than,omitempty"`
+		EQBit  bool  `json:"equal,omitempty"`
 	}{
 		EOLBit: o.EOLBit,
 		ANDBit: o.ANDBit,
@@ -235,8 +235,8 @@ func (t *PrefixSpec) MarshalJSON() ([]byte, error) {
 
 // OpVal defines structure of Operator and Value pair
 type OpVal struct {
-	Op  *Operator `json:"operator"`
-	Val []byte    `json:"value"`
+	Op  *Operator `json:"operator,omitempty"`
+	Val []byte    `json:"value,omitempty"`
 }
 
 // UnmarshalJSON unmarshals a slice of bytes into a new Operator/Value pair
@@ -253,8 +253,8 @@ func (o *OpVal) UnmarshalJSON(b []byte) error {
 // MarshalJSON returns a binary representation of FlowSPec PrefixSpec
 func (o *OpVal) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Op  *Operator `json:"operator"`
-		Val []byte    `json:"value"`
+		Op  *Operator `json:"operator,omitempty"`
+		Val []byte    `json:"value,omitempty"`
 	}{
 		Op:  o.Op,
 		Val: o.Val,
@@ -294,8 +294,8 @@ func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
 
 // GenericSpec defines a structure of Flowspec Types (3,4,5,6,7,8,10,11) specs.
 type GenericSpec struct {
-	SpecType uint8    `json:"type"`
-	OpVal    []*OpVal `json:"op_val_pairs"`
+	SpecType uint8    `json:"type,omitempty"`
+	OpVal    []*OpVal `json:"op_val_pairs,omitempty"`
 }
 
 func makeGenericSpec(b []byte) (Spec, int, error) {
@@ -336,8 +336,8 @@ func (t *GenericSpec) UnmarshalJSON(b []byte) error {
 // MarshalJSON returns a binary representation of FlowSPec GenericSpec
 func (t *GenericSpec) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		SpecType uint8    `json:"type"`
-		OpVal    []*OpVal `json:"op_val_pairs"`
+		SpecType uint8    `json:"type,omitempty"`
+		OpVal    []*OpVal `json:"op_val_pairs,omitempty"`
 	}{
 		SpecType: t.SpecType,
 		OpVal:    t.OpVal,

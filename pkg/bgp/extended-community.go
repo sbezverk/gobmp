@@ -291,6 +291,11 @@ func type6(subType uint8, value []byte) string {
 	return getSubType(evpnSubTypes, subType) + s
 }
 
+// Flow spec redirect/mirror to IP next-hop
+func type8(subType uint8, value []byte) string {
+	return ECPFLOWSPEC + "redirect_to_ip_next_hop"
+}
+
 // Non-Transitive Two-Octet AS-Specific Extended Community
 func type40(subType uint8, value []byte) string {
 	var s string
@@ -313,6 +318,7 @@ var extComm = map[uint8]func(uint8, []byte) string{
 	0x2:  type2,
 	0x3:  type3,
 	0x6:  type6,
+	0x8:  type8,
 	0x40: type40,
 }
 
