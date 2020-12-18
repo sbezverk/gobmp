@@ -1,7 +1,9 @@
 package flowspec
 
 import (
+	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -17,8 +19,14 @@ type Spec interface {
 
 // NLRI defines Flowspec NLRI structure
 type NLRI struct {
-	Length uint16
-	Spec   []Spec
+	Length   uint16
+	Spec     []Spec
+	SpecHash string
+}
+
+// GetSpecHash returns calculated MD5 for Flowspec NLRI's Spec
+func (fs *NLRI) GetSpecHash() string {
+	return fs.SpecHash
 }
 
 // SpecType defines Flowspec Spec type
@@ -115,6 +123,14 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 		fs.Spec = append(fs.Spec, spec)
 		p += l
 	}
+
+	// Calculating hash of all recovered spec
+	sp, err := json.Marshal(fs.Spec)
+	if err != nil {
+		return nil, err
+	}
+	s := md5.Sum(sp)
+	fs.SpecHash = hex.EncodeToString(s[:])
 
 	return fs, nil
 }
