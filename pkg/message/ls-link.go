@@ -44,8 +44,12 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.LocalLinkID = ids[0]
 		msg.RemoteLinkID = ids[1]
 	}
-	msg.LocalLinkIP = link.GetLinkInterfaceAddr()
-	msg.RemoteLinkIP = link.GetLinkNeighborAddr()
+	if a := link.GetLinkInterfaceAddr(); a != nil {
+		msg.LocalLinkIP = a.String()
+	}
+	if a := link.GetLinkNeighborAddr(); a != nil {
+		msg.RemoteLinkIP = a.String()
+	}
 	msg.LocalNodeHash = link.LocalNodeHash
 	msg.RemoteNodeHash = link.RemoteNodeHash
 	msg.LocalNodeASN = link.GetLocalASN()

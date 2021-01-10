@@ -138,8 +138,8 @@ type LSLink struct {
 	MTID                  *base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
 	LocalLinkID           uint32                        `json:"local_link_id,omitempty"`
 	RemoteLinkID          uint32                        `json:"remote_link_id,omitempty"`
-	LocalLinkIP           []string                      `json:"local_link_ip,omitempty"`
-	RemoteLinkIP          []string                      `json:"remote_link_ip,omitempty"`
+	LocalLinkIP           string                        `json:"local_link_ip,omitempty"`
+	RemoteLinkIP          string                        `json:"remote_link_ip,omitempty"`
 	IGPMetric             uint32                        `json:"igp_metric,omitempty"`
 	AdminGroup            uint32                        `json:"admin_group,omitempty"`
 	MaxLinkBW             uint32                        `json:"max_link_bw,omitempty"`
