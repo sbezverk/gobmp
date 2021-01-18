@@ -98,7 +98,7 @@ type LSNode struct {
 	ASN                 uint32                          `json:"asn,omitempty"`
 	LSID                uint32                          `json:"ls_id,omitempty"`
 	MTID                []*base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
-	AreaID              string                          `json:"area_id,omitempty"`
+	AreaID              string                          `json:"area_id"`
 	Protocol            string                          `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID                    `json:"protocol_id,omitempty"`
 	NodeFlags           uint8                           `json:"node_flags"`

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -41,9 +42,9 @@ func (nd *NodeDescriptor) GetLSID() uint32 {
 // GetOSPFAreaID returns OSPF Area-ID found in Node Descriptor sub tlv
 func (nd *NodeDescriptor) GetOSPFAreaID() string {
 	if tlv, ok := nd.SubTLV[514]; ok {
-		return net.IP(tlv.Value).To4().String()
+		return strconv.Itoa(int(binary.BigEndian.Uint32(tlv.Value)))
 	}
-	return ""
+	return "err"
 }
 
 // GetIGPRouterID returns a value of Node Descriptor sub TLV IGP Router ID
