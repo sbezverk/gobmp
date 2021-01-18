@@ -168,7 +168,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		case 2:
 			l, ok := e.LS.(*base.LinkNLRI)
 			if !ok {
-				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue
 			}
 			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update)
@@ -186,7 +186,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		case 4:
 			prfx, ok := e.LS.(*base.PrefixNLRI)
 			if !ok {
-				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
 				continue
 			}
 			msg, err := p.lsPrefix(prfx, nlri.GetNextHop(), operation, ph, update, ipv4Flag)

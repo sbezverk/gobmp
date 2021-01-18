@@ -69,6 +69,7 @@ func (ls *NLRI) GetNodeFlags() uint8 {
 		}
 		return uint8(tlv.Value[0])
 	}
+
 	return 0
 }
 

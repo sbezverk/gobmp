@@ -28,35 +28,35 @@ func (l *LinkDescriptor) GetLinkID() ([]uint32, error) {
 }
 
 // GetLinkIPv4InterfaceAddr returns Link Interface IPv4 address as a string
-func (l *LinkDescriptor) GetLinkIPv4InterfaceAddr() string {
+func (l *LinkDescriptor) GetLinkIPv4InterfaceAddr() net.IP {
 	if tlv, ok := l.LinkTLV[259]; ok {
-		return net.IP(tlv.Value).To4().String()
+		return net.IP(tlv.Value).To4()
 	}
-	return ""
+	return nil
 }
 
 // GetLinkIPv4NeighborAddr returns Link's neighbor IPv4 address as a string
-func (l *LinkDescriptor) GetLinkIPv4NeighborAddr() string {
+func (l *LinkDescriptor) GetLinkIPv4NeighborAddr() net.IP {
 	if tlv, ok := l.LinkTLV[260]; ok {
-		return net.IP(tlv.Value).To4().String()
+		return net.IP(tlv.Value).To4()
 	}
-	return ""
+	return nil
 }
 
 // GetLinkIPv6InterfaceAddr returns Link Interface IPv6 address as a string
-func (l *LinkDescriptor) GetLinkIPv6InterfaceAddr() string {
+func (l *LinkDescriptor) GetLinkIPv6InterfaceAddr() net.IP {
 	if tlv, ok := l.LinkTLV[261]; ok {
-		return net.IP(tlv.Value).To16().String()
+		return net.IP(tlv.Value).To16()
 	}
-	return ""
+	return nil
 }
 
 // GetLinkIPv6NeighborAddr returns Link's neighbor IPv6 address as a string
-func (l *LinkDescriptor) GetLinkIPv6NeighborAddr() string {
+func (l *LinkDescriptor) GetLinkIPv6NeighborAddr() net.IP {
 	if tlv, ok := l.LinkTLV[262]; ok {
-		return net.IP(tlv.Value).To16().String()
+		return net.IP(tlv.Value).To16()
 	}
-	return ""
+	return nil
 }
 
 // GetLinkMTID returns Link Multi-Topology identifiers

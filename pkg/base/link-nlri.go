@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"fmt"
+	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
@@ -78,27 +79,19 @@ func (l *LinkNLRI) GetLinkID() ([]uint32, error) {
 }
 
 // GetLinkInterfaceAddr returns Link Interface IPv4 address as a string
-func (l *LinkNLRI) GetLinkInterfaceAddr() []string {
-	addr := make([]string, 0)
-	if a := l.Link.GetLinkIPv4InterfaceAddr(); a != "" {
-		addr = append(addr, a)
+func (l *LinkNLRI) GetLinkInterfaceAddr() net.IP {
+	if a := l.Link.GetLinkIPv4InterfaceAddr(); a != nil {
+		return a
 	}
-	if a := l.Link.GetLinkIPv6InterfaceAddr(); a != "" {
-		addr = append(addr, a)
-	}
-	return addr
+	return l.Link.GetLinkIPv6InterfaceAddr()
 }
 
 // GetLinkNeighborAddr returns Link's neighbor IPv4 address as a string
-func (l *LinkNLRI) GetLinkNeighborAddr() []string {
-	addr := make([]string, 0)
-	if a := l.Link.GetLinkIPv4NeighborAddr(); a != "" {
-		addr = append(addr, a)
+func (l *LinkNLRI) GetLinkNeighborAddr() net.IP {
+	if a := l.Link.GetLinkIPv4NeighborAddr(); a != nil {
+		return a
 	}
-	if a := l.Link.GetLinkIPv6NeighborAddr(); a != "" {
-		addr = append(addr, a)
-	}
-	return addr
+	return l.Link.GetLinkIPv6NeighborAddr()
 }
 
 // GetLocalASN returns value of Local Node's ASN

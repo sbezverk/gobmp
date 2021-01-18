@@ -98,7 +98,7 @@ type LSNode struct {
 	ASN                 uint32                          `json:"asn,omitempty"`
 	LSID                uint32                          `json:"ls_id,omitempty"`
 	MTID                []*base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
-	AreaID              string                          `json:"area_id,omitempty"`
+	AreaID              string                          `json:"area_id"`
 	Protocol            string                          `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID                    `json:"protocol_id,omitempty"`
 	NodeFlags           uint8                           `json:"node_flags"`
@@ -138,8 +138,8 @@ type LSLink struct {
 	MTID                  *base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
 	LocalLinkID           uint32                        `json:"local_link_id,omitempty"`
 	RemoteLinkID          uint32                        `json:"remote_link_id,omitempty"`
-	LocalLinkIP           []string                      `json:"local_link_ip,omitempty"`
-	RemoteLinkIP          []string                      `json:"remote_link_ip,omitempty"`
+	LocalLinkIP           string                        `json:"local_link_ip,omitempty"`
+	RemoteLinkIP          string                        `json:"remote_link_ip,omitempty"`
 	IGPMetric             uint32                        `json:"igp_metric,omitempty"`
 	AdminGroup            uint32                        `json:"admin_group,omitempty"`
 	MaxLinkBW             uint32                        `json:"max_link_bw,omitempty"`
