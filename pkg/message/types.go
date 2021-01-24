@@ -156,6 +156,11 @@ type LSLink struct {
 	RemoteRouterID        string                        `json:"remote_router_id,omitempty"`
 	LocalNodeASN          uint32                        `json:"local_node_asn,omitempty"`
 	RemoteNodeASN         uint32                        `json:"remote_node_asn,omitempty"`
+	BGPRouterID           uint32                        `json:"bgp_router_id,omitempty"` // Node Descriptor's TLV 516
+	MemberAS              uint32                        `json:"member_as,omitempty"`     // Node Descriptor's TLV 517
+	PeerNodeSID           *sr.PeerSID                   `json:"peer_node_sid,omitempty"`
+	PeerAdjSID            *sr.PeerSID                   `json:"peer_adj_sid,omitempty"`
+	PeerSetSID            *sr.PeerSID                   `json:"peer_set_sid,omitempty"`
 	SRv6BGPPeerNodeSID    *srv6.BGPPeerNodeSID          `json:"srv6_bgp_peer_node_sid,omitempty"`
 	SRv6ENDXSID           []*srv6.EndXSIDTLV            `json:"srv6_endx_sid,omitempty"`
 	LSAdjacencySID        []*sr.AdjacencySIDTLV         `json:"ls_adjacency_sid,omitempty"`

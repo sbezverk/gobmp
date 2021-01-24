@@ -3,6 +3,7 @@ package message
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -70,6 +71,10 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		fallthrough
 	case base.OSPFv3:
 		msg.AreaID = link.LocalNode.GetOSPFAreaID()
+	case base.BGP:
+		msg.AreaID = strconv.Itoa(int(link.LocalNode.GetASN()))
+	default:
+		msg.AreaID = "0"
 	}
 	if lslink, err := update.GetNLRI29(); err == nil {
 		if ph.FlagV {

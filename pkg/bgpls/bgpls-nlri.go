@@ -492,6 +492,45 @@ func (ls *NLRI) GetLinkName() string {
 	return ""
 }
 
+// GetPeerNodeSID returns PeerNode SID TLV includes a SID associated with the BGP peer node
+// that is described by a BGP-LS Link NLRI
+func (ls *NLRI) GetPeerNodeSID() (*sr.PeerSID, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1101 {
+			continue
+		}
+		return sr.UnmarshalPeerSID(tlv.Value)
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
+// GetPeerAdjSID returns PeerAdj SID TLV includes a SID associated with the BGP peer node
+// that is described by a BGP-LS Link NLRI
+func (ls *NLRI) GetPeerAdjSID() (*sr.PeerSID, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1102 {
+			continue
+		}
+		return sr.UnmarshalPeerSID(tlv.Value)
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
+// GetPeerSetSID returns PeerSet SID TLV includes a SID associated with the BGP peer node
+// that is described by a BGP-LS Link NLRI
+func (ls *NLRI) GetPeerSetSID() (*sr.PeerSID, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1103 {
+			continue
+		}
+		return sr.UnmarshalPeerSID(tlv.Value)
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
 // GetSRv6EndpointBehavior returns SRv6 SID NLRI Endpoint behavior object
 func (ls *NLRI) GetSRv6EndpointBehavior() *srv6.EndpointBehavior {
 	for _, tlv := range ls.LS {
