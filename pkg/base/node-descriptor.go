@@ -70,11 +70,11 @@ func (nd *NodeDescriptor) GetIGPRouterID() string {
 }
 
 //GetBGPRouterID returns BGP Router ID found in Node Descriptor sub tlv
-func (nd *NodeDescriptor) GetBGPRouterID() uint32 {
+func (nd *NodeDescriptor) GetBGPRouterID() []byte {
 	if tlv, ok := nd.SubTLV[516]; ok {
-		return binary.BigEndian.Uint32(tlv.Value)
+		return tlv.Value
 	}
-	return 0
+	return nil
 }
 
 // GetConfedMemberASN returns Confederation Member ASN (Member-ASN)

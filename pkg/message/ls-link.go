@@ -73,8 +73,8 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.AreaID = link.LocalNode.GetOSPFAreaID()
 	case base.BGP:
 		msg.AreaID = strconv.Itoa(int(link.LocalNode.GetASN()))
-		msg.BGPRouterID = link.LocalNode.GetBGPRouterID()
-		msg.BGPRemoteRouterID = link.RemoteNode.GetBGPRouterID()
+		msg.BGPRouterID = net.IP(link.LocalNode.GetBGPRouterID()).To4().String()
+		msg.BGPRemoteRouterID = net.IP(link.RemoteNode.GetBGPRouterID()).To4().String()
 		msg.MemberAS = link.LocalNode.GetConfedMemberASN()
 	default:
 		msg.AreaID = "0"
