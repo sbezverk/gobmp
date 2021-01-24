@@ -73,6 +73,9 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.AreaID = link.LocalNode.GetOSPFAreaID()
 	case base.BGP:
 		msg.AreaID = strconv.Itoa(int(link.LocalNode.GetASN()))
+		msg.BGPRouterID = link.LocalNode.GetBGPRouterID()
+		msg.BGPRemoteRouterID = link.RemoteNode.GetBGPRouterID()
+		msg.MemberAS = link.LocalNode.GetConfedMemberASN()
 	default:
 		msg.AreaID = "0"
 	}
@@ -122,6 +125,17 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.UnidirResidualBW = lslink.GetUnidirResidualBandwidth()
 		if adj, err := lslink.GetSRAdjacencySID(); err == nil {
 			msg.LSAdjacencySID = adj
+		}
+		if msg.ProtocolID == base.BGP {
+			if sid, err := lslink.GetPeerNodeSID(); err == nil {
+				msg.PeerNodeSID = sid
+			}
+			if sid, err := lslink.GetPeerAdjSID(); err == nil {
+				msg.PeerAdjSID = sid
+			}
+			if sid, err := lslink.GetPeerSetSID(); err == nil {
+				msg.PeerSetSID = sid
+			}
 		}
 	}
 
