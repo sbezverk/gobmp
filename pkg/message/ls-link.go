@@ -3,6 +3,7 @@ package message
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -70,6 +71,13 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		fallthrough
 	case base.OSPFv3:
 		msg.AreaID = link.LocalNode.GetOSPFAreaID()
+	case base.BGP:
+		msg.AreaID = strconv.Itoa(int(link.LocalNode.GetASN()))
+		msg.BGPRouterID = net.IP(link.LocalNode.GetBGPRouterID()).To4().String()
+		msg.BGPRemoteRouterID = net.IP(link.RemoteNode.GetBGPRouterID()).To4().String()
+		msg.MemberAS = link.LocalNode.GetConfedMemberASN()
+	default:
+		msg.AreaID = "0"
 	}
 	if lslink, err := update.GetNLRI29(); err == nil {
 		if ph.FlagV {
@@ -117,6 +125,17 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.UnidirResidualBW = lslink.GetUnidirResidualBandwidth()
 		if adj, err := lslink.GetSRAdjacencySID(); err == nil {
 			msg.LSAdjacencySID = adj
+		}
+		if msg.ProtocolID == base.BGP {
+			if sid, err := lslink.GetPeerNodeSID(); err == nil {
+				msg.PeerNodeSID = sid
+			}
+			if sid, err := lslink.GetPeerAdjSID(); err == nil {
+				msg.PeerAdjSID = sid
+			}
+			if sid, err := lslink.GetPeerSetSID(); err == nil {
+				msg.PeerSetSID = sid
+			}
 		}
 	}
 

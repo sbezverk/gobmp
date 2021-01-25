@@ -25,6 +25,9 @@ const (
 	Static ProtoID = 5
 	// OSPFv3 defines protocol id value for OSPFv3
 	OSPFv3 ProtoID = 6
+	// BGP defines protocol id value for carrying BGP information from the BGP-LS
+	// NLRIs carrying IGP link-state information defined in [RFC7752]
+	BGP ProtoID = 7
 	// RSVPTE defines protocol id value for RSVP Traffic Engineering
 	RSVPTE ProtoID = 8
 	// SR defines protocol id value for Segment Routing
