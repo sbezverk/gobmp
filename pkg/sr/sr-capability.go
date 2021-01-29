@@ -8,8 +8,8 @@ import (
 // Capability defines SR Capability object
 // https://datatracker.ietf.org/doc/draft-ietf-idr-bgp-ls-segment-routing-ext/?include_text=1 Section 2.1.2
 type Capability struct {
-	Flags uint8           `json:"sr_capability_flags,omitempty"`
-	TLV   []CapabilityTLV `json:"sr_capability_tlv,omitempty"`
+	Flags  uint8              `json:"sr_capability_flags,omitempty"`
+	SubTLV []CapabilitySubTLV `json:"sr_capability_subtlv,omitempty"`
 }
 
 // UnmarshalSRCapability builds SR Capability object
@@ -23,11 +23,11 @@ func UnmarshalSRCapability(b []byte) (*Capability, error) {
 	p++
 	// Skip reserved byte
 	p++
-	tlvs, err := UnmarshalSRCapabilityTLV(b[p:])
+	tlvs, err := UnmarshalSRCapabilitySubTLV(b[p:])
 	if err != nil {
 		return nil, err
 	}
-	cap.TLV = tlvs
+	cap.SubTLV = tlvs
 
 	return &cap, nil
 }

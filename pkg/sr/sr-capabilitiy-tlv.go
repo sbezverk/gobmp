@@ -8,21 +8,21 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
-// CapabilityTLV defines SR Capability TLV object
+// CapabilitySubTLV defines SR Capability TLV object
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-segment-routing-ext-08#section-2.1.2
-type CapabilityTLV struct {
-	Range uint32  `json:"range,omitempty"`
-	SID   *SIDTLV `json:"sid_tlv,omitempty"`
+type CapabilitySubTLV struct {
+	Range uint32 `json:"range,omitempty"`
+	SID   uint32 `json:"sid,omitempty"`
 }
 
-// UnmarshalSRCapabilityTLV builds SR Capability TLV object
-func UnmarshalSRCapabilityTLV(b []byte) ([]CapabilityTLV, error) {
+// UnmarshalSRCapabilitySubTLV builds SR Capability TLV object
+func UnmarshalSRCapabilitySubTLV(b []byte) ([]CapabilitySubTLV, error) {
 	if glog.V(6) {
 		glog.Infof("SR Capability TLV Raw: %s", tools.MessageHex(b))
 	}
-	caps := make([]CapabilityTLV, 0)
+	caps := make([]CapabilitySubTLV, 0)
 	for p := 0; p < len(b); {
-		cap := CapabilityTLV{}
+		cap := CapabilitySubTLV{}
 		r := make([]byte, 4)
 		// Copy 3 bytes of Range into 4 byte slice to convert it into uint32
 		copy(r[1:], b[p:p+3])
@@ -33,20 +33,23 @@ func UnmarshalSRCapabilityTLV(b []byte) ([]CapabilityTLV, error) {
 		p += 2
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		v := make([]byte, l)
-		copy(v, b[p:p+int(l)])
-		p += int(l)
 		switch t {
+		// Sanity check for supported Capability Sub TLV types
 		case 1161:
-			// SID Subtlv
-			cap.SID = &SIDTLV{
-				Type:   t,
-				Length: l,
-				Value:  v,
-			}
 		default:
-			return nil, fmt.Errorf("unknown SR Capability tlv %d", t)
+			return nil, fmt.Errorf("unknown SR Capability tlv type %d", t)
 		}
+		s := make([]byte, 4)
+		switch l {
+		case 3:
+			copy(s[1:], b[p:p+int(l)])
+		case 4:
+			copy(s, b[p:p+int(l)])
+		default:
+			return nil, fmt.Errorf("invalid length %d for Prefix SID TLV", len(b))
+		}
+		cap.SID = binary.BigEndian.Uint32(s)
+		p += int(l)
 		caps = append(caps, cap)
 	}
 

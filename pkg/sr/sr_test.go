@@ -18,14 +18,10 @@ func TestUnmarshalSRCapabilities(t *testing.T) {
 			raw:  []byte{0x80, 0x00, 0x00, 0xfa, 0x00, 0x04, 0x89, 0x00, 0x03, 0x01, 0x86, 0xa0},
 			expected: &Capability{
 				Flags: 0x80,
-				TLV: []CapabilityTLV{
+				SubTLV: []CapabilitySubTLV{
 					{
 						Range: 64000,
-						SID: &SIDTLV{
-							Type:   1161,
-							Length: 3,
-							Value:  []byte{0x01, 0x86, 0xa0},
-						},
+						SID:   100000,
 					},
 				},
 			},
