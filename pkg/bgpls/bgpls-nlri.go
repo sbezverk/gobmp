@@ -318,6 +318,25 @@ func (ls *NLRI) GetLSPrefixAttrFlags() (uint8, error) {
 	return 0, fmt.Errorf("not found")
 }
 
+// GetLSSourceRouterID returns a Prefix Source Router ID
+func (ls *NLRI) GetLSSourceRouterID() (string, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1171 {
+			continue
+		}
+		switch len(tlv.Value) {
+		case 4:
+			return net.IP(tlv.Value).To4().String(), nil
+		case 16:
+			return net.IP(tlv.Value).To16().String(), nil
+		default:
+			return "", fmt.Errorf("invalid length %d of Source Router ID TLV", len(tlv.Value))
+		}
+	}
+
+	return "", fmt.Errorf("not found")
+}
+
 // GetLSSRv6ENDXSID returns SRv6 END.X SID TLV
 func (ls *NLRI) GetLSSRv6ENDXSID() ([]*srv6.EndXSIDTLV, error) {
 	endxs := make([]*srv6.EndXSIDTLV, 0)
