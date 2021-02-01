@@ -82,6 +82,9 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 			msg.OSPFRouteType = prfx.Prefix.GetPrefixOSPFRouteType()
 			msg.AreaID = prfx.LocalNode.GetOSPFAreaID()
 		}
+		if s, err := lsprefix.GetLSSourceRouterID(); err == nil {
+			msg.SourceRouterID = s
+		}
 	}
 
 	return &msg, nil
