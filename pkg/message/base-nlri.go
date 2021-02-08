@@ -12,16 +12,18 @@ import (
 // a slice of UnicatPrefix.
 func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
 	var operation string
+	routes := update.NLRI
 	switch op {
 	case 0:
 		operation = "add"
 	case 1:
 		operation = "del"
+		routes = update.WithdrawnRoutes
 	default:
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	prfxs := make([]UnicastPrefix, 0)
-	for _, pr := range update.NLRI {
+	for _, pr := range routes {
 		prfx := UnicastPrefix{
 			Action:         operation,
 			RouterHash:     p.speakerHash,
