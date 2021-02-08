@@ -33,12 +33,13 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	if routeMonitorMsg.Update == nil {
 		return
 	}
-	if len(routeMonitorMsg.Update.PathAttributes) == 0 {
-		// There is no Path Attributes, just return
-		return
+	attrType := uint8(0)
+	if len(routeMonitorMsg.Update.PathAttributes) != 0 {
+		// If PathAttribute is present in Update, then take the value of Attribute Type
+		attrType = routeMonitorMsg.Update.PathAttributes[0].AttributeType
 	}
 	// Using first attribute type to select which nlri processor to call
-	switch routeMonitorMsg.Update.PathAttributes[0].AttributeType {
+	switch attrType {
 	case 14:
 		nlri, err := bgp.UnmarshalMPReachNLRI(routeMonitorMsg.Update.PathAttributes[0].Attribute, routeMonitorMsg.Update.HasPrefixSID())
 		if err != nil {
@@ -75,7 +76,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		msgs = append(msgs, msg...)
 		// Loop through and publish all collected messages
 		for _, m := range msgs {
-			if err := p.marshalAndPublish(&m, t, []byte(m.RouterHash), true); err != nil {
+			if err := p.marshalAndPublish(&m, t, []byte(m.RouterHash), false); err != nil {
 				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
 			}
