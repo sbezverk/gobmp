@@ -75,7 +75,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		msgs = append(msgs, msg...)
 		// Loop through and publish all collected messages
 		for _, m := range msgs {
-			if err := p.marshalAndPublish(&m, t, []byte(m.RouterHash), false); err != nil {
+			if err := p.marshalAndPublish(&m, t, []byte(m.RouterHash), true); err != nil {
 				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
 			}
