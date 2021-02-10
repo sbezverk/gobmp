@@ -56,7 +56,7 @@ func (nd *NodeDescriptor) GetIGPRouterID() string {
 			return net.IP(tlv.Value).To4().String()
 		}
 		for p := 0; p < len(tlv.Value); p++ {
-			s += fmt.Sprintf("%02d", tlv.Value[p])
+			s += fmt.Sprintf("%02x", tlv.Value[p])
 			if i == 1 && p < len(tlv.Value)-1 {
 				s += "."
 				i = 0
