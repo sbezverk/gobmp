@@ -19,28 +19,43 @@ func TestGetIdentifier(t *testing.T) {
 					SubTLV: map[uint16]TLV{
 						515: {
 							Type:   515,
-							Length: 8,
-							Value:  []byte{0, 0, 0, 0, 0, 0, 0, 0},
+							Length: 6,
+							Value:  []byte{0, 0, 0, 0, 0, 0},
 						},
 					},
 				},
 			},
-			expected: "0000.0000.0000.0000",
+			expected: "0000.0000.0000",
 		},
 		{
-			name: "8 bytes all zeros",
+			name: "isis igp router id  0000.0000.0010",
 			node: &NodeNLRI{
 				LocalNode: &NodeDescriptor{
 					SubTLV: map[uint16]TLV{
 						515: {
 							Type:   515,
-							Length: 8,
-							Value:  []byte{0, 0, 0, 0, 0, 0, 0xf, 1},
+							Length: 6,
+							Value:  []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x10},
 						},
 					},
 				},
 			},
-			expected: "0000.0000.0000.1501",
+			expected: "0000.0000.0010",
+		},
+		{
+			name: "isis igp router id 1514.1312.1110",
+			node: &NodeNLRI{
+				LocalNode: &NodeDescriptor{
+					SubTLV: map[uint16]TLV{
+						515: {
+							Type:   515,
+							Length: 6,
+							Value:  []byte{0x15, 0x14, 0x13, 0x12, 0x11, 0x10},
+						},
+					},
+				},
+			},
+			expected: "1514.1312.1110",
 		},
 		{
 			name: "4 bytes all zeros",

@@ -55,8 +55,9 @@ func (nd *NodeDescriptor) GetIGPRouterID() string {
 		if tlv.Length == 4 {
 			return net.IP(tlv.Value).To4().String()
 		}
+		glog.Infof("><SB> igp route id length: %d value %s", len(tlv.Value), tools.MessageHex(tlv.Value))
 		for p := 0; p < len(tlv.Value); p++ {
-			s += fmt.Sprintf("%02d", tlv.Value[p])
+			s += fmt.Sprintf("%02x", tlv.Value[p])
 			if i == 1 && p < len(tlv.Value)-1 {
 				s += "."
 				i = 0
