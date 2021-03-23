@@ -14,19 +14,18 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return
 	}
-	peerUpMsg, ok := msg.Payload.(*bmp.PeerUpMessage)
-	if !ok {
-		glog.Errorf("got invalid Payload type in bmp.Message %+v", msg.Payload)
-		return
-	}
 	action := "add"
 	if op == peerDown {
 		action = "del"
 	}
 
 	var m PeerStateChange
-
 	if op == peerUP {
+		peerUpMsg, ok := msg.Payload.(*bmp.PeerUpMessage)
+		if !ok {
+			glog.Errorf("got invalid Payload type in bmp.Message %+v", msg.Payload)
+			return
+		}
 		m = PeerStateChange{
 			Action:         action,
 			RemoteASN:      msg.PeerHeader.PeerAS,
