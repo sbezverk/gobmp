@@ -23,10 +23,48 @@ type PrefixSIDTLV struct {
 	SID       uint32         `json:"prefix_sid,omitempty"`
 }
 
+func (p *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
+	switch p.Flags.(type) {
+	case *ISISFlags:
+		f := p.Flags.(*ISISFlags)
+		return json.Marshal(struct {
+			Flags     *ISISFlags `json:"flags,omitempty"`
+			Algorithm uint8      `json:"algo"`
+			SID       uint32     `json:"prefix_sid,omitempty"`
+		}{
+			Flags:     f,
+			Algorithm: p.Algorithm,
+			SID:       p.SID,
+		})
+	case *OSPFFlags:
+		f := p.Flags.(*OSPFFlags)
+		return json.Marshal(struct {
+			Flags     *OSPFFlags `json:"flags,omitempty"`
+			Algorithm uint8      `json:"algo"`
+			SID       uint32     `json:"prefix_sid,omitempty"`
+		}{
+			Flags:     f,
+			Algorithm: p.Algorithm,
+			SID:       p.SID,
+		})
+	default:
+		f := p.Flags.(*UnknownProtoFlags)
+		return json.Marshal(struct {
+			Flags     *UnknownProtoFlags `json:"flags,omitempty"`
+			Algorithm uint8              `json:"algo"`
+			SID       uint32             `json:"prefix_sid,omitempty"`
+		}{
+			Flags:     f,
+			Algorithm: p.Algorithm,
+			SID:       p.SID,
+		})
+	}
+}
+
 // UnmarshalPrefixSIDTLV builds Prefix SID TLV Object
 func UnmarshalPrefixSIDTLV(b []byte, proto base.ProtoID) (*PrefixSIDTLV, error) {
-	if glog.V(6) {
-		glog.Infof("Prefix SID TLV Raw: %s", tools.MessageHex(b))
+	if glog.V(5) {
+		glog.Infof("Prefix SID TLV Raw: %s for proto: %+v", tools.MessageHex(b), proto)
 	}
 	psid := PrefixSIDTLV{}
 	p := 0
@@ -34,22 +72,22 @@ func UnmarshalPrefixSIDTLV(b []byte, proto base.ProtoID) (*PrefixSIDTLV, error) 
 	case base.ISISL1:
 		fallthrough
 	case base.ISISL2:
-		f := &ISISFlags{}
-		if err := f.UnmarshalJSON(b[p : p+1]); err != nil {
+		f, err := UnmarshalISISFlags(b[p : p+1])
+		if err != nil {
 			return nil, err
 		}
 		psid.Flags = f
 	case base.OSPFv2:
 		fallthrough
 	case base.OSPFv3:
-		f := &OSPFFlags{}
-		if err := f.UnmarshalJSON(b[p : p+1]); err != nil {
+		f, err := UnmarshalOSPFFlags(b[p : p+1])
+		if err != nil {
 			return nil, err
 		}
 		psid.Flags = f
 	default:
-		f := &UnknownProtoFlags{}
-		if err := f.UnmarshalJSON(b[p : p+1]); err != nil {
+		f, err := UnmarshalUnknownProtoFlags(b[p : p+1])
+		if err != nil {
 			return nil, err
 		}
 		psid.Flags = f
@@ -72,6 +110,46 @@ func UnmarshalPrefixSIDTLV(b []byte, proto base.ProtoID) (*PrefixSIDTLV, error) 
 	psid.SID = binary.BigEndian.Uint32(s)
 
 	return &psid, nil
+}
+
+// UnmarshalJSON instantiates a new instance of isis Flags object
+func UnmarshalISISFlags(b []byte) (*ISISFlags, error) {
+	if len(b) < 1 {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid ISIS Flags")
+	}
+	nf := &ISISFlags{}
+	nf.RFlag = b[0]&0x80 == 0x80
+	nf.NFlag = b[0]&0x40 == 0x40
+	nf.PFlag = b[0]&0x20 == 0x20
+	nf.EFlag = b[0]&0x10 == 0x10
+	nf.VFlag = b[0]&0x08 == 0x08
+	nf.LFlag = b[0]&0x04 == 0x04
+
+	return nf, nil
+}
+
+func UnmarshalOSPFFlags(b []byte) (*OSPFFlags, error) {
+	if len(b) < 1 {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid OSPF Flags")
+	}
+	nf := &OSPFFlags{}
+	nf.NPFlag = b[0]&0x40 == 0x40
+	nf.MFlag = b[0]&0x20 == 0x20
+	nf.EFlag = b[0]&0x10 == 0x10
+	nf.VFlag = b[0]&0x08 == 0x08
+	nf.LFlag = b[0]&0x04 == 0x04
+
+	return nf, nil
+}
+
+func UnmarshalUnknownProtoFlags(b []byte) (*UnknownProtoFlags, error) {
+	if len(b) < 1 {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid Flags")
+	}
+	nf := &UnknownProtoFlags{}
+	nf.Flags = b[0]
+
+	return nf, nil
 }
 
 //IS-IS Extensions for Segment Routing RFC 8667 Section 2.1.1.
@@ -110,18 +188,12 @@ func (f *ISISFlags) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON instantiates a new instance of isis Flags object
 func (f *ISISFlags) UnmarshalJSON(b []byte) error {
-	if len(b) < 1 {
-		return fmt.Errorf("not enough bytes to unmarshal Prefix Sid ISIS Flags")
+	type isisFlags ISISFlags
+	nf := &isisFlags{}
+	if err := json.Unmarshal(b, nf); err != nil {
+		return err
 	}
-	nf := &ISISFlags{}
-	nf.RFlag = b[0]&0x80 == 0x80
-	nf.NFlag = b[0]&0x40 == 0x40
-	nf.PFlag = b[0]&0x20 == 0x20
-	nf.EFlag = b[0]&0x10 == 0x10
-	nf.VFlag = b[0]&0x08 == 0x08
-	nf.LFlag = b[0]&0x04 == 0x04
-
-	*f = *nf
+	*f = ISISFlags(*nf)
 
 	return nil
 }
@@ -159,22 +231,18 @@ func (f *OSPFFlags) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON instantiates a new instance of ospf Flags object
 func (f *OSPFFlags) UnmarshalJSON(b []byte) error {
-	if len(b) < 1 {
-		return fmt.Errorf("not enough bytes to unmarshal Prefix Sid OSPF Flags")
+	type ospfFlags OSPFFlags
+	nf := &ospfFlags{}
+	if err := json.Unmarshal(b, nf); err != nil {
+		return err
 	}
-	nf := &OSPFFlags{}
-	nf.NPFlag = b[0]&0x40 == 0x40
-	nf.MFlag = b[0]&0x20 == 0x20
-	nf.EFlag = b[0]&0x10 == 0x10
-	nf.VFlag = b[0]&0x08 == 0x08
-	nf.LFlag = b[0]&0x04 == 0x04
+	*f = OSPFFlags(*nf)
 
-	*f = *nf
 	return nil
 }
 
 type UnknownProtoFlags struct {
-	flags byte `json:"flags"`
+	Flags byte `json:"flags"`
 }
 
 // MarshalJSON returns a binary representation of ospf flags obeject
@@ -182,17 +250,17 @@ func (f *UnknownProtoFlags) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Flags uint8 `json:"flags"`
 	}{
-		Flags: f.flags,
+		Flags: f.Flags,
 	})
 }
 
 // UnmarshalJSON instantiates a new instance of ospf Flags object
 func (f *UnknownProtoFlags) UnmarshalJSON(b []byte) error {
-	if len(b) < 1 {
-		return fmt.Errorf("not enough bytes to unmarshal Prefix Sid Flags")
+	type unknownProtoFlags UnknownProtoFlags
+	nf := &unknownProtoFlags{}
+	if err := json.Unmarshal(b, nf); err != nil {
+		return err
 	}
-	nf := &UnknownProtoFlags{}
-	nf.flags = b[0]
-	*f = *nf
+	*f = UnknownProtoFlags(*nf)
 	return nil
 }
