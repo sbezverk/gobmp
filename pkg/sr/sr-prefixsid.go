@@ -63,7 +63,7 @@ func (p *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
 
 // UnmarshalPrefixSIDTLV builds Prefix SID TLV Object
 func UnmarshalPrefixSIDTLV(b []byte, proto base.ProtoID) (*PrefixSIDTLV, error) {
-	if glog.V(5) {
+	if glog.V(6) {
 		glog.Infof("Prefix SID TLV Raw: %s for proto: %+v", tools.MessageHex(b), proto)
 	}
 	psid := PrefixSIDTLV{}
