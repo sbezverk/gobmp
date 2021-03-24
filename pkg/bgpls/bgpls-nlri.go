@@ -268,13 +268,13 @@ func (ls *NLRI) GetFlexAlgoPrefixMetric() ([]*FlexAlgoPrefixMetric, error) {
 }
 
 // GetLSPrefixSID returns a slice of  Prefix SID TLV objects
-func (ls *NLRI) GetLSPrefixSID() ([]*sr.PrefixSIDTLV, error) {
+func (ls *NLRI) GetLSPrefixSID(proto base.ProtoID) ([]*sr.PrefixSIDTLV, error) {
 	ps := make([]*sr.PrefixSIDTLV, 0)
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1158 {
 			continue
 		}
-		p, err := sr.UnmarshalPrefixSIDTLV(tlv.Value)
+		p, err := sr.UnmarshalPrefixSIDTLV(tlv.Value, proto)
 		if err != nil {
 			return nil, err
 		}
