@@ -20,12 +20,16 @@ type FlexAlgoDefinition struct {
 	SubTLV          *FADSubTLV `json:"sub_tlv,omitempty"`
 }
 
+type FADSubTLVFlags struct {
+	MFLag bool `json:"m_flag"`
+}
+
 type FADSubTLV struct {
-	ExcludeAny  []uint32 `json:"exclude_any,omitempty"`
-	IncludeAny  []uint32 `json:"include_any,omitempty"`
-	IncludeAll  []uint32 `json:"include_all,omitempty"`
-	Flags       []uint32 `json:"flags,omitempty"`
-	ExcludeSRLG []uint32 `json:"exclude_srlg,omitempty"`
+	ExcludeAny  []uint32        `json:"exclude_any,omitempty"`
+	IncludeAny  []uint32        `json:"include_any,omitempty"`
+	IncludeAll  []uint32        `json:"include_all,omitempty"`
+	Flags       *FADSubTLVFlags `json:"flags,omitempty"`
+	ExcludeSRLG []uint32        `json:"exclude_srlg,omitempty"`
 }
 
 func getFADSubTLVValue(tlv *base.SubTLV) ([]uint32, error) {
@@ -78,7 +82,11 @@ func UnmarshalFlexAlgoDefinition(b []byte) (*FlexAlgoDefinition, error) {
 			case 1042:
 				fad.SubTLV.IncludeAll = ints
 			case 1043:
-				fad.SubTLV.Flags = ints
+				fad.SubTLV.Flags = &FADSubTLVFlags{}
+				if tlv.Length < 1 {
+					return nil, fmt.Errorf("not enough bytes to decode FlexAlgo definition Sub TLV Flag")
+				}
+				fad.SubTLV.Flags.MFLag = tlv.Value[0]&0x80 == 0x80
 			case 1045: // the type is really TBD in the draft
 				fad.SubTLV.ExcludeSRLG = ints
 			default:
