@@ -61,6 +61,57 @@ func (p *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (p *PrefixSIDTLV) UnmarshalJSON(b []byte) error {
+	result := &PrefixSIDTLV{}
+	var objVal map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objVal); err != nil {
+		return err
+	}
+	// Flags     PrefixSIDFlags `json:"flags,omitempty"`
+	if v, ok := objVal["flags"]; ok {
+		var flags interface{}
+		if err := json.Unmarshal(v, &flags); err != nil {
+			return err
+		}
+		if _, ok := flags.(map[string]interface{})["r_flag"]; ok {
+			// ISIS flags
+			f := &ISISFlags{}
+			if err := json.Unmarshal(v, &f); err != nil {
+				return err
+			}
+			result.Flags = f
+		} else if _, ok := flags.(map[string]interface{})["np_flag"]; ok {
+			// OSPF flags
+			f := &OSPFFlags{}
+			if err := json.Unmarshal(v, &f); err != nil {
+				return err
+			}
+			result.Flags = f
+		} else {
+			f := &UnknownProtoFlags{}
+			if err := json.Unmarshal(v, &f); err != nil {
+				return err
+			}
+			result.Flags = f
+		}
+	}
+	// Algorithm uint8          `json:"algo"`
+	if v, ok := objVal["algo"]; ok {
+		if err := json.Unmarshal(v, &result.Algorithm); err != nil {
+			return err
+		}
+	}
+	// SID       uint32         `json:"prefix_sid,omitempty"`
+	if v, ok := objVal["prefix_sid"]; ok {
+		if err := json.Unmarshal(v, &result.SID); err != nil {
+			return err
+		}
+	}
+	*p = *result
+
+	return nil
+}
+
 // UnmarshalPrefixSIDTLV builds Prefix SID TLV Object
 func UnmarshalPrefixSIDTLV(b []byte, proto base.ProtoID) (*PrefixSIDTLV, error) {
 	if glog.V(6) {

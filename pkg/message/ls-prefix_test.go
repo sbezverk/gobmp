@@ -35,8 +35,9 @@ func TestRoundTripLSPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("TestRoundTripLSPrefix Marshal failed with error: %+v but supposed to succeed", err)
 	}
+
 	recovered := &LSPrefix{}
-	if err := recovered.UnmarshalJSON(b); err != nil {
+	if err := json.Unmarshal(b, recovered); err != nil {
 		t.Fatalf("TestRoundTripLSPrefix Unmarshal failed with error: %+v but supposed to succeed", err)
 	}
 	if !reflect.DeepEqual(original, recovered) {
