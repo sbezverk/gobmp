@@ -11,8 +11,7 @@ import (
 )
 
 type PrefixSIDFlags interface {
-	MarshalJSON() ([]byte, error)
-	UnmarshalJSON([]byte) error
+	GetPrefixSIDFlagByte() byte
 }
 
 // PrefixSIDTLV defines Prefix SID TLV Object
@@ -208,7 +207,7 @@ func UnmarshalUnknownProtoFlags(b []byte) (*UnknownProtoFlags, error) {
 // +-+-+-+-+-+-+-+-+
 // |R|N|P|E|V|L|   |
 // +-+-+-+-+-+-+-+-+
-// isisFlags defines a structure of ISIS Prefix SID flags
+// ISISFlags defines a structure of ISIS Prefix SID flags
 type ISISFlags struct {
 	RFlag bool `json:"r_flag"`
 	NFlag bool `json:"n_flag"`
@@ -218,35 +217,29 @@ type ISISFlags struct {
 	LFlag bool `json:"l_flag"`
 }
 
-// MarshalJSON returns a binary representation of isis flags obeject
-func (f *ISISFlags) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		RFlag bool `json:"r_flag"`
-		NFlag bool `json:"n_flag"`
-		PFlag bool `json:"p_flag"`
-		EFlag bool `json:"e_flag"`
-		VFlag bool `json:"v_flag"`
-		LFlag bool `json:"l_flag"`
-	}{
-		RFlag: f.RFlag,
-		NFlag: f.NFlag,
-		PFlag: f.PFlag,
-		EFlag: f.EFlag,
-		VFlag: f.VFlag,
-		LFlag: f.LFlag,
-	})
-}
-
-// UnmarshalJSON instantiates a new instance of isis Flags object
-func (f *ISISFlags) UnmarshalJSON(b []byte) error {
-	type isisFlags ISISFlags
-	nf := &isisFlags{}
-	if err := json.Unmarshal(b, nf); err != nil {
-		return err
+//GetPrefixSIDFlagByte returns a byte represenation for ISIS flags
+func (f *ISISFlags) GetPrefixSIDFlagByte() byte {
+	b := byte(0)
+	if f.RFlag {
+		b += 0x80
 	}
-	*f = ISISFlags(*nf)
+	if f.NFlag {
+		b += 0x40
+	}
+	if f.PFlag {
+		b += 0x20
+	}
+	if f.EFlag {
+		b += 0x10
+	}
+	if f.VFlag {
+		b += 0x08
+	}
+	if f.LFlag {
+		b += 0x04
+	}
 
-	return nil
+	return b
 }
 
 // OSPF Extensions for Segment Routing RFC 8665, Section 5
@@ -254,7 +247,7 @@ func (f *ISISFlags) UnmarshalJSON(b []byte) error {
 // +--+--+--+--+--+--+--+--+
 // |  |NP|M |E |V |L |  |  |
 // +--+--+--+--+--+--+--+--+
-// ospfFlags defines a structure of OSPF Prefix SID flags
+// OSPFFlags defines a structure of OSPF Prefix SID flags
 type OSPFFlags struct {
 	NPFlag bool `json:"np_flag"`
 	MFlag  bool `json:"m_flag"`
@@ -263,55 +256,35 @@ type OSPFFlags struct {
 	LFlag  bool `json:"l_flag"`
 }
 
-// MarshalJSON returns a binary representation of ospf flags obeject
-func (f *OSPFFlags) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		NPFlag bool `json:"np_flag"`
-		MFlag  bool `json:"m_flag"`
-		EFlag  bool `json:"e_flag"`
-		VFlag  bool `json:"v_flag"`
-		LFlag  bool `json:"l_flag"`
-	}{
-		NPFlag: f.NPFlag,
-		MFlag:  f.MFlag,
-		EFlag:  f.EFlag,
-		VFlag:  f.VFlag,
-		LFlag:  f.LFlag,
-	})
-}
+//GetPrefixSIDFlagByte returns a byte represenation for OSPF flags
+func (f *OSPFFlags) GetPrefixSIDFlagByte() byte {
+	b := byte(0)
 
-// UnmarshalJSON instantiates a new instance of ospf Flags object
-func (f *OSPFFlags) UnmarshalJSON(b []byte) error {
-	type ospfFlags OSPFFlags
-	nf := &ospfFlags{}
-	if err := json.Unmarshal(b, nf); err != nil {
-		return err
+	if f.NPFlag {
+		b += 0x40
 	}
-	*f = OSPFFlags(*nf)
+	if f.MFlag {
+		b += 0x20
+	}
+	if f.EFlag {
+		b += 0x10
+	}
+	if f.VFlag {
+		b += 0x08
+	}
+	if f.LFlag {
+		b += 0x04
+	}
 
-	return nil
+	return b
 }
 
+// UnknownProtoFlags defines a structure of Unknown protocol of Prefix SID flags
 type UnknownProtoFlags struct {
 	Flags byte `json:"flags"`
 }
 
-// MarshalJSON returns a binary representation of ospf flags obeject
-func (f *UnknownProtoFlags) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Flags uint8 `json:"flags"`
-	}{
-		Flags: f.Flags,
-	})
-}
-
-// UnmarshalJSON instantiates a new instance of ospf Flags object
-func (f *UnknownProtoFlags) UnmarshalJSON(b []byte) error {
-	type unknownProtoFlags UnknownProtoFlags
-	nf := &unknownProtoFlags{}
-	if err := json.Unmarshal(b, nf); err != nil {
-		return err
-	}
-	*f = UnknownProtoFlags(*nf)
-	return nil
+//GetPrefixSIDFlagByte returns a byte represenation for OSPF flags
+func (f *UnknownProtoFlags) GetPrefixSIDFlagByte() byte {
+	return f.Flags
 }
