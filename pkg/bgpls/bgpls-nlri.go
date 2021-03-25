@@ -707,14 +707,14 @@ func (ls *NLRI) GetAppSpecLinkAttr() ([]*AppSpecLinkAttr, error) {
 }
 
 // GetSRAdjacencySID returns SR Adjacency SID object
-func (ls *NLRI) GetSRAdjacencySID() ([]*sr.AdjacencySIDTLV, error) {
+func (ls *NLRI) GetSRAdjacencySID(proto base.ProtoID) ([]*sr.AdjacencySIDTLV, error) {
 	adjs := make([]*sr.AdjacencySIDTLV, 0)
 	// It appears Path Attributes can carry multiple entries of SR Adjacency SID
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1099 {
 			continue
 		}
-		adj, err := sr.UnmarshalAdjacencySIDTLV(tlv.Value)
+		adj, err := sr.UnmarshalAdjacencySIDTLV(tlv.Value, proto)
 		if err != nil {
 			return nil, err
 		}
