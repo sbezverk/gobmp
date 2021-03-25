@@ -10,6 +10,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+// PrefixSIDFlags defines PrefixSID Flag interface
 type PrefixSIDFlags interface {
 	GetPrefixSIDFlagByte() byte
 }
@@ -162,7 +163,7 @@ func UnmarshalPrefixSIDTLV(b []byte, proto base.ProtoID) (*PrefixSIDTLV, error) 
 	return &psid, nil
 }
 
-// UnmarshalJSON instantiates a new instance of isis Flags object
+// UnmarshalISISFlags build Prefix SID ISIS Flag Object
 func UnmarshalISISFlags(b []byte) (*ISISFlags, error) {
 	if len(b) < 1 {
 		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid ISIS Flags")
@@ -178,6 +179,7 @@ func UnmarshalISISFlags(b []byte) (*ISISFlags, error) {
 	return nf, nil
 }
 
+// UnmarshalOSPFFlags build Prefix SID OSPF Flag Object
 func UnmarshalOSPFFlags(b []byte) (*OSPFFlags, error) {
 	if len(b) < 1 {
 		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid OSPF Flags")
@@ -192,6 +194,7 @@ func UnmarshalOSPFFlags(b []byte) (*OSPFFlags, error) {
 	return nf, nil
 }
 
+// UnmarshalUnknownProtoFlags build Prefix SID Flag Object if protocol is neither ISIS nor OSPF
 func UnmarshalUnknownProtoFlags(b []byte) (*UnknownProtoFlags, error) {
 	if len(b) < 1 {
 		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid Flags")
