@@ -73,14 +73,14 @@ func (a *AdjacencySIDTLV) UnmarshalJSON(b []byte) error {
 		if err := json.Unmarshal(v, &flags); err != nil {
 			return err
 		}
-		if _, ok := flags.(map[string]interface{})["r_flag"]; ok {
+		if _, ok := flags.(map[string]interface{})["f_flag"]; ok {
 			// ISIS flags
 			f := &AdjISISFlags{}
 			if err := json.Unmarshal(v, &f); err != nil {
 				return err
 			}
 			result.Flags = f
-		} else if _, ok := flags.(map[string]interface{})["np_flag"]; ok {
+		} else if _, ok := flags.(map[string]interface{})["g_flag"]; ok {
 			// OSPF flags
 			f := &AdjOSPFFlags{}
 			if err := json.Unmarshal(v, &f); err != nil {
