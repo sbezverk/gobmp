@@ -72,7 +72,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		msg.IGPMetric = lsprefix.GetIGPMetric()
 		msg.IGPRouteTag = lsprefix.GetPrefixIGPRouteTag()
 		msg.IGPExtRouteTag = lsprefix.GetPrefixIGPExtRouteTag()
-		if ps, err := lsprefix.GetLSPrefixSID(); err == nil {
+		if ps, err := lsprefix.GetLSPrefixSID(prfx.ProtocolID); err == nil {
 			msg.LSPrefixSID = ps
 		}
 		if paf, err := lsprefix.GetLSPrefixAttrFlags(); err == nil {
