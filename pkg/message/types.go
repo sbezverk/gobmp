@@ -232,7 +232,7 @@ type LSPrefix struct {
 	LocalNodeHash        string                        `json:"local_node_hash,omitempty"`
 	MTID                 *base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
 	OSPFRouteType        uint8                         `json:"ospf_route_type,omitempty"`
-	IGPFlags             uint8                         `json:"igp_flags"`
+	IGPFlags             *bgpls.IGPFlags               `json:"igp_flags,omitempty"`
 	IGPRouteTag          []uint32                      `json:"route_tag,omitempty"`
 	IGPExtRouteTag       []uint64                      `json:"ext_route_tag,omitempty"`
 	OSPFFwdAddr          string                        `json:"ospf_fwd_addr,omitempty"`
