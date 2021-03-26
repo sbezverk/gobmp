@@ -2,19 +2,20 @@ package bgpls
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 )
 
 // GetPrefixIGPFlags returns  IGP Flags
-func (ls *NLRI) GetPrefixIGPFlags() uint8 {
+func (ls *NLRI) GetPrefixIGPFlags() (*IGPFlag, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1152 {
 			continue
 		}
-		return uint8(tlv.Value[0])
+		return UnmarshalIGPFlags(tlv.Value)
 	}
 
-	return 0
+	return nil, fmt.Errorf("not found")
 }
 
 // GetPrefixIGPRouteTag returns a slice of Route Tags
