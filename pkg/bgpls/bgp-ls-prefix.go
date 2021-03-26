@@ -7,7 +7,7 @@ import (
 )
 
 // GetPrefixIGPFlags returns  IGP Flags
-func (ls *NLRI) GetPrefixIGPFlags() (*IGPFlag, error) {
+func (ls *NLRI) GetPrefixIGPFlags() (*IGPFlags, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1152 {
 			continue
