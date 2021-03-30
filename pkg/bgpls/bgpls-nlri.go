@@ -22,6 +22,9 @@ type NLRI struct {
 // GetLinkID returns Local and Remote Link ID as a slice of uint32
 func (ls *NLRI) GetLinkID() ([]uint32, error) {
 	for _, tlv := range ls.LS {
+		if tlv.Type != 258 {
+			continue
+		}
 		if tlv.Length < 8 {
 			return nil, fmt.Errorf("not enough bytes to decode Local Remote Id TLV")
 		}
@@ -307,15 +310,15 @@ func (ls *NLRI) GetLSSRv6Locator() ([]*srv6.LocatorTLV, error) {
 }
 
 // GetLSPrefixAttrFlags returns a Prefix Attribute Flags interface
-func (ls *NLRI) GetLSPrefixAttrFlags() (uint8, error) {
+func (ls *NLRI) GetLSPrefixAttrFlags(proto base.ProtoID) (PrefixAttrFlags, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1170 {
 			continue
 		}
-		return uint8(tlv.Value[0]), nil
+		return UnmarshalPrefixAttrFlags(tlv.Value, proto)
 	}
 
-	return 0, fmt.Errorf("not found")
+	return nil, fmt.Errorf("not found")
 }
 
 // GetLSSourceRouterID returns a Prefix Source Router ID

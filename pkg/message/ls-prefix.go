@@ -75,20 +75,23 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 			msg.IGPFlags = f
 		}
 		msg.IGPExtRouteTag = lsprefix.GetPrefixIGPExtRouteTag()
-		if ps, err := lsprefix.GetLSPrefixSID(prfx.ProtocolID); err == nil {
-			msg.LSPrefixSID = ps
-		}
-		if paf, err := lsprefix.GetLSPrefixAttrFlags(); err == nil {
-			msg.PrefixAttrFlags = paf
+		//		if ps, err := lsprefix.GetLSPrefixSID(prfx.ProtocolID); err == nil {
+		//			msg.LSPrefixSID = ps
+		//		}
+		//		if paf, err := lsprefix.GetLSPrefixAttrFlags(); err == nil {
+		//			msg.PrefixAttrFlags = paf
+		//		}
+		//		if s, err := lsprefix.GetLSSourceRouterID(); err == nil {
+		//			msg.SourceRouterID = s
+		//		}
+		if s, err := lsprefix.GetPrefixAttrTLVs(prfx.ProtocolID); err == nil {
+			msg.PrefixAttrTLVs = s
 		}
 		if fap, err := lsprefix.GetFlexAlgoPrefixMetric(); err == nil {
 			msg.FlexAlgoPrefixMetric = fap
 		}
 		if loc, err := lsprefix.GetLSSRv6Locator(); err == nil {
 			msg.SRv6Locator = loc
-		}
-		if s, err := lsprefix.GetLSSourceRouterID(); err == nil {
-			msg.SourceRouterID = s
 		}
 	}
 
