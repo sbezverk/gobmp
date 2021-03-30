@@ -34,7 +34,9 @@ func (p *PrefixAttrTLVs) MarshalJSON() ([]byte, error) {
 			Flags          *ISISFlags         `json:"flags,omitempty"`
 			SourceRouterID string             `json:"source_router_id,omitempty"`
 		}{
-			Flags: f,
+			Flags:          f,
+			LSPrefixSID:    p.LSPrefixSID,
+			SourceRouterID: p.SourceRouterID,
 		})
 	case *OSPFFlags:
 		f := p.Flags.(*OSPFFlags)
@@ -43,16 +45,28 @@ func (p *PrefixAttrTLVs) MarshalJSON() ([]byte, error) {
 			Flags          *OSPFFlags         `json:"flags,omitempty"`
 			SourceRouterID string             `json:"source_router_id,omitempty"`
 		}{
-			Flags: f,
+			Flags:          f,
+			LSPrefixSID:    p.LSPrefixSID,
+			SourceRouterID: p.SourceRouterID,
 		})
-	default:
+	case *UnknownProtoFlags:
 		f := p.Flags.(*UnknownProtoFlags)
 		return json.Marshal(struct {
 			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
 			Flags          *UnknownProtoFlags `json:"flags,omitempty"`
 			SourceRouterID string             `json:"source_router_id,omitempty"`
 		}{
-			Flags: f,
+			Flags:          f,
+			LSPrefixSID:    p.LSPrefixSID,
+			SourceRouterID: p.SourceRouterID,
+		})
+	default:
+		return json.Marshal(struct {
+			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
+			SourceRouterID string             `json:"source_router_id,omitempty"`
+		}{
+			LSPrefixSID:    p.LSPrefixSID,
+			SourceRouterID: p.SourceRouterID,
 		})
 	}
 }
@@ -69,14 +83,14 @@ func (p *PrefixAttrTLVs) UnmarshalJSON(b []byte) error {
 		if err := json.Unmarshal(v, &flags); err != nil {
 			return err
 		}
-		if _, ok := flags.(map[string]interface{})["r_flag"]; ok {
+		if _, ok := flags.(map[string]interface{})["x_flag"]; ok {
 			// ISIS flags
 			f := &ISISFlags{}
 			if err := json.Unmarshal(v, &f); err != nil {
 				return err
 			}
 			result.Flags = f
-		} else if _, ok := flags.(map[string]interface{})["np_flag"]; ok {
+		} else if _, ok := flags.(map[string]interface{})["a_flag"]; ok {
 			// OSPF flags
 			f := &OSPFFlags{}
 			if err := json.Unmarshal(v, &f); err != nil {
@@ -98,7 +112,7 @@ func (p *PrefixAttrTLVs) UnmarshalJSON(b []byte) error {
 		}
 	}
 	// SourceRouterID string             `json:"source_router_id,omitempty"`
-	if v, ok := objVal["prefix_sid"]; ok {
+	if v, ok := objVal["source_router_id"]; ok {
 		if err := json.Unmarshal(v, &result.SourceRouterID); err != nil {
 			return err
 		}
@@ -134,12 +148,9 @@ func UnmarshalISISFlags(b []byte) (*ISISFlags, error) {
 		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid ISIS Flags")
 	}
 	nf := &ISISFlags{}
-	nf.RFlag = b[0]&0x80 == 0x80
-	nf.NFlag = b[0]&0x40 == 0x40
-	nf.PFlag = b[0]&0x20 == 0x20
-	nf.EFlag = b[0]&0x10 == 0x10
-	nf.VFlag = b[0]&0x08 == 0x08
-	nf.LFlag = b[0]&0x04 == 0x04
+	nf.XFlag = b[0]&0x80 == 0x80
+	nf.RFlag = b[0]&0x40 == 0x40
+	nf.NFlag = b[0]&0x20 == 0x20
 
 	return nf, nil
 }
@@ -150,11 +161,8 @@ func UnmarshalOSPFFlags(b []byte) (*OSPFFlags, error) {
 		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid OSPF Flags")
 	}
 	nf := &OSPFFlags{}
-	nf.NPFlag = b[0]&0x40 == 0x40
-	nf.MFlag = b[0]&0x20 == 0x20
-	nf.EFlag = b[0]&0x10 == 0x10
-	nf.VFlag = b[0]&0x08 == 0x08
-	nf.LFlag = b[0]&0x04 == 0x04
+	nf.AFlag = b[0]&0x80 == 0x80
+	nf.NFlag = b[0]&0x40 == 0x40
 
 	return nf, nil
 }
@@ -170,78 +178,50 @@ func UnmarshalUnknownProtoFlags(b []byte) (*UnknownProtoFlags, error) {
 	return nf, nil
 }
 
-//IS-IS Extensions for Segment Routing RFC 8667 Section 2.1.1.
-// 0 1 2 3 4 5 6 7
-// +-+-+-+-+-+-+-+-+
-// |R|N|P|E|V|L|   |
-// +-+-+-+-+-+-+-+-+
-// ISISFlags defines a structure of ISIS Prefix SID flags
+// https://datatracker.ietf.org/doc/html/rfc7794#section-2.1
+// 0 1 2 3 4 5 6 7...
+// +-+-+-+-+-+-+-+-+...
+// |X|R|N|          ...
+// +-+-+-+-+-+-+-+-+...
+// ISISFlags defines a structure of ISIS Prefix Attr flags
 type ISISFlags struct {
+	XFlag bool `json:"x_flag"`
 	RFlag bool `json:"r_flag"`
 	NFlag bool `json:"n_flag"`
-	PFlag bool `json:"p_flag"`
-	EFlag bool `json:"e_flag"`
-	VFlag bool `json:"v_flag"`
-	LFlag bool `json:"l_flag"`
 }
 
 //GetPrefixAttrFlagsByte returns a byte represenation for ISIS flags
 func (f *ISISFlags) GetPrefixAttrFlagsByte() byte {
 	b := byte(0)
-	if f.RFlag {
+	if f.XFlag {
 		b += 0x80
 	}
-	if f.NFlag {
+	if f.RFlag {
 		b += 0x40
 	}
-	if f.PFlag {
+	if f.NFlag {
 		b += 0x20
-	}
-	if f.EFlag {
-		b += 0x10
-	}
-	if f.VFlag {
-		b += 0x08
-	}
-	if f.LFlag {
-		b += 0x04
 	}
 
 	return b
 }
 
-// OSPF Extensions for Segment Routing RFC 8665, Section 5
-// 0  1  2  3  4  5  6  7
-// +--+--+--+--+--+--+--+--+
-// |  |NP|M |E |V |L |  |  |
-// +--+--+--+--+--+--+--+--+
-// OSPFFlags defines a structure of OSPF Prefix SID flags
+// https://datatracker.ietf.org/doc/html/rfc7684#section-2.1
+// OSPFFlags defines a structure of OSPF Prefix Attr flags
 type OSPFFlags struct {
-	NPFlag bool `json:"np_flag"`
-	MFlag  bool `json:"m_flag"`
-	EFlag  bool `json:"e_flag"`
-	VFlag  bool `json:"v_flag"`
-	LFlag  bool `json:"l_flag"`
+	AFlag bool `json:"a_flag"`
+	NFlag bool `json:"n_flag"`
 }
 
 //GetPrefixAttrFlagsByte returns a byte represenation for OSPF flags
 func (f *OSPFFlags) GetPrefixAttrFlagsByte() byte {
 	b := byte(0)
 
-	if f.NPFlag {
-		b += 0x40
+	if f.AFlag {
+		b += 0x80
 	}
-	if f.MFlag {
+	if f.NFlag {
 		b += 0x20
-	}
-	if f.EFlag {
-		b += 0x10
-	}
-	if f.VFlag {
-		b += 0x08
-	}
-	if f.LFlag {
-		b += 0x04
 	}
 
 	return b
