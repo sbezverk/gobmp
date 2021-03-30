@@ -15,7 +15,7 @@ import (
 type PrefixAttrTLVs struct {
 	LSPrefixSID []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
 	// TODO (sbezverk) Add "Range" TLV 1159
-	Flags          PrefixAttrFlags `json:"prefix_attr_flags"`
+	Flags          PrefixAttrFlags `json:"flags,omitempty"`
 	SourceRouterID string          `json:"source_router_id,omitempty"`
 	// TODO (sbezverk) Add "Source OSPF Router-ID" TLV 1174
 }
@@ -145,7 +145,7 @@ func UnmarshalPrefixAttrFlags(b []byte, proto base.ProtoID) (PrefixAttrFlags, er
 // UnmarshalISISFlags build Prefix SID ISIS Flag Object
 func UnmarshalISISFlags(b []byte) (*ISISFlags, error) {
 	if len(b) < 1 {
-		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid ISIS Flags")
+		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Attr ISIS Flags")
 	}
 	nf := &ISISFlags{}
 	nf.XFlag = b[0]&0x80 == 0x80
@@ -158,7 +158,7 @@ func UnmarshalISISFlags(b []byte) (*ISISFlags, error) {
 // UnmarshalOSPFFlags build Prefix SID OSPF Flag Object
 func UnmarshalOSPFFlags(b []byte) (*OSPFFlags, error) {
 	if len(b) < 1 {
-		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid OSPF Flags")
+		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Attr OSPF Flags")
 	}
 	nf := &OSPFFlags{}
 	nf.AFlag = b[0]&0x80 == 0x80
@@ -170,7 +170,7 @@ func UnmarshalOSPFFlags(b []byte) (*OSPFFlags, error) {
 // UnmarshalUnknownProtoFlags build Prefix SID Flag Object if protocol is neither ISIS nor OSPF
 func UnmarshalUnknownProtoFlags(b []byte) (*UnknownProtoFlags, error) {
 	if len(b) < 1 {
-		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Sid Flags")
+		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Attr Flags")
 	}
 	nf := &UnknownProtoFlags{}
 	nf.Flags = b[0]
@@ -227,7 +227,7 @@ func (f *OSPFFlags) GetPrefixAttrFlagsByte() byte {
 	return b
 }
 
-// UnknownProtoFlags defines a structure of Unknown protocol of Prefix SID flags
+// UnknownProtoFlags defines a structure of Unknown protocol of Prefix Attr flags
 type UnknownProtoFlags struct {
 	Flags byte `json:"flags"`
 }
@@ -239,6 +239,7 @@ func (f *UnknownProtoFlags) GetPrefixAttrFlagsByte() byte {
 
 func (ls *NLRI) GetPrefixAttrTLVs(proto base.ProtoID) (*PrefixAttrTLVs, error) {
 	pr := &PrefixAttrTLVs{}
+
 	if ps, err := ls.GetLSPrefixSID(proto); err == nil {
 		pr.LSPrefixSID = ps
 	}
@@ -247,6 +248,11 @@ func (ls *NLRI) GetPrefixAttrTLVs(proto base.ProtoID) (*PrefixAttrTLVs, error) {
 	}
 	if s, err := ls.GetLSSourceRouterID(); err == nil {
 		pr.SourceRouterID = s
+	}
+	// Do not want to return instantiated but empty object if non of attributes present
+	// returning instantiated object if there is at least 1 initialized attribute.
+	if len(pr.LSPrefixSID) == 0 && pr.Flags == nil && pr.SourceRouterID == "" {
+		return nil, fmt.Errorf("none of prefix attribute tlvs is present")
 	}
 
 	return pr, nil
