@@ -259,7 +259,7 @@ func (f *OSPFFlags) GetPrefixAttrFlagsByte() byte {
 // +--+--+--+--+--+--+--+--+
 // |  |  | N|DN| P| x|LA|NU|
 // +--+--+--+--+--+--+--+--+
-// OSPFFlags defines a structure of OSPFv3 Prefix Attr flags
+// OSPFv3Flags defines a structure of OSPFv3 Prefix Attr flags
 type OSPFv3Flags struct {
 	NFlag  bool `json:"n_flag"`
 	DNFlag bool `json:"dn_flag"`
