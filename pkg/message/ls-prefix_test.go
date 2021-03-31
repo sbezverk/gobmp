@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/sbezverk/gobmp/pkg/base"
+	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/sr"
 )
 
@@ -16,18 +17,20 @@ func TestRoundTripLSPrefix(t *testing.T) {
 		ID:         "ID",
 		Rev:        "Rev",
 		ProtocolID: base.ISISL1,
-		LSPrefixSID: []*sr.PrefixSIDTLV{
-			{
-				Flags: &sr.ISISFlags{
-					RFlag: false,
-					NFlag: true,
-					PFlag: false,
-					EFlag: false,
-					VFlag: false,
-					LFlag: false,
+		PrefixAttrTLVs: &bgpls.PrefixAttrTLVs{
+			LSPrefixSID: []*sr.PrefixSIDTLV{
+				{
+					Flags: &sr.ISISFlags{
+						RFlag: false,
+						NFlag: true,
+						PFlag: false,
+						EFlag: false,
+						VFlag: false,
+						LFlag: false,
+					},
+					Algorithm: 129,
+					SID:       20007,
 				},
-				Algorithm: 129,
-				SID:       20007,
 			},
 		},
 	}

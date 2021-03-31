@@ -242,11 +242,9 @@ type LSPrefix struct {
 	PrefixMetric         uint32                        `json:"prefix_metric,omitempty"`
 	IsPrepolicy          bool                          `json:"is_prepolicy"`
 	IsAdjRIBIn           bool                          `json:"is_adj_rib_in"`
-	LSPrefixSID          []*sr.PrefixSIDTLV            `json:"ls_prefix_sid,omitempty"`
-	PrefixAttrFlags      uint8                         `json:"prefix_attr_flags"`
+	PrefixAttrTLVs       *bgpls.PrefixAttrTLVs         `json:"prefix_attr_tlvs,omitempty"`
 	FlexAlgoPrefixMetric []*bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
 	SRv6Locator          []*srv6.LocatorTLV            `json:"srv6_locator,omitempty"`
-	SourceRouterID       string                        `json:"source_router_id,omitempty"`
 }
 
 // LSSRv6SID defines a structure of LS SRv6 SID message

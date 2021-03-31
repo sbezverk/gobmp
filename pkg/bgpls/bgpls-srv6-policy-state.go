@@ -352,7 +352,7 @@ func (a *SRAffinityConstraint) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	a = t
+	*a = *t
 
 	return nil
 }
@@ -402,7 +402,7 @@ func (s *SRSRLGConstraint) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	s = t
+	*s = *t
 
 	return nil
 }
@@ -444,7 +444,7 @@ func (w *SRBandwidthConstraint) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	w = t
+	*w = *t
 
 	return nil
 }
@@ -534,7 +534,7 @@ func (d *SRDisjointGroupConstraint) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	d = t
+	*d = *t
 
 	return nil
 }
@@ -732,7 +732,7 @@ func (sid *MPLSLabelSID) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	sid = t
+	*sid = *t
 
 	return nil
 }
@@ -778,7 +778,7 @@ func (sid *SRv6SID) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	sid = t
+	*sid = *t
 
 	return nil
 }
@@ -832,7 +832,7 @@ func (d *SRType1Descriptor) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	d = t
+	*d = *t
 
 	return nil
 }
@@ -997,7 +997,7 @@ func (s *SRSegment) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	s = t
+	*s = *t
 
 	return nil
 }
@@ -1085,7 +1085,7 @@ func (m *SRSegmentListMetric) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	m = t
+	*m = *t
 
 	return nil
 }
