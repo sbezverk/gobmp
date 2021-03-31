@@ -26,6 +26,11 @@ type PrefixAttrFlags interface {
 }
 
 func (p *PrefixAttrTLVs) MarshalJSON() ([]byte, error) {
+	// Do not want to return instantiated but empty object if non of attributes present
+	// returning instantiated object if there is at least 1 initialized attribute.
+	if len(p.LSPrefixSID) == 0 && p.Flags == nil && p.SourceRouterID == "" {
+		return nil, nil
+	}
 	switch p.Flags.(type) {
 	case *ISISFlags:
 		f := p.Flags.(*ISISFlags)
@@ -83,16 +88,23 @@ func (p *PrefixAttrTLVs) UnmarshalJSON(b []byte) error {
 		if err := json.Unmarshal(v, &flags); err != nil {
 			return err
 		}
+		// Presence of `x_flag` indicates ISIS's flags structure
 		if _, ok := flags.(map[string]interface{})["x_flag"]; ok {
-			// ISIS flags
 			f := &ISISFlags{}
 			if err := json.Unmarshal(v, &f); err != nil {
 				return err
 			}
 			result.Flags = f
+			// Presence of `a_flag` indicates OSPF's flags structure
 		} else if _, ok := flags.(map[string]interface{})["a_flag"]; ok {
-			// OSPF flags
 			f := &OSPFFlags{}
+			if err := json.Unmarshal(v, &f); err != nil {
+				return err
+			}
+			result.Flags = f
+			// Presence of `a_flag` indicates OSPFv3's flags structure
+		} else if _, ok := flags.(map[string]interface{})["nu_flag"]; ok {
+			f := &OSPFv3Flags{}
 			if err := json.Unmarshal(v, &f); err != nil {
 				return err
 			}
@@ -134,9 +146,9 @@ func UnmarshalPrefixAttrFlags(b []byte, proto base.ProtoID) (PrefixAttrFlags, er
 	case base.ISISL2:
 		return UnmarshalISISFlags(b[p : p+1])
 	case base.OSPFv2:
-		fallthrough
-	case base.OSPFv3:
 		return UnmarshalOSPFFlags(b[p : p+1])
+	case base.OSPFv3:
+		return UnmarshalOSPFv3Flags(b[p : p+1])
 	default:
 		return UnmarshalUnknownProtoFlags(b[p : p+1])
 	}
@@ -155,7 +167,7 @@ func UnmarshalISISFlags(b []byte) (*ISISFlags, error) {
 	return nf, nil
 }
 
-// UnmarshalOSPFFlags build Prefix SID OSPF Flag Object
+// UnmarshalOSPFFlags build Prefix Attr OSPF Flags Object
 func UnmarshalOSPFFlags(b []byte) (*OSPFFlags, error) {
 	if len(b) < 1 {
 		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Attr OSPF Flags")
@@ -167,7 +179,23 @@ func UnmarshalOSPFFlags(b []byte) (*OSPFFlags, error) {
 	return nf, nil
 }
 
-// UnmarshalUnknownProtoFlags build Prefix SID Flag Object if protocol is neither ISIS nor OSPF
+// UnmarshalOSPFv3Flags build Prefix Attr OSPFv3 Flags Object
+func UnmarshalOSPFv3Flags(b []byte) (*OSPFv3Flags, error) {
+	if len(b) < 1 {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Attr OSPF Flags")
+	}
+	nf := &OSPFv3Flags{}
+
+	nf.NFlag = b[0]&0x20 == 0x20
+	nf.DNFlag = b[0]&0x10 == 0x10
+	nf.PFlag = b[0]&0x08 == 0x08
+	nf.LAFlag = b[0]&0x02 == 0x02
+	nf.NUFlag = b[0]&0x01 == 0x01
+
+	return nf, nil
+}
+
+// UnmarshalUnknownProtoFlags build Prefix Attr Flags Object if protocol is neither ISIS nor OSPF
 func UnmarshalUnknownProtoFlags(b []byte) (*UnknownProtoFlags, error) {
 	if len(b) < 1 {
 		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Attr Flags")
@@ -222,6 +250,42 @@ func (f *OSPFFlags) GetPrefixAttrFlagsByte() byte {
 	}
 	if f.NFlag {
 		b += 0x20
+	}
+
+	return b
+}
+
+//   0  1  2  3  4  5  6  7
+// +--+--+--+--+--+--+--+--+
+// |  |  | N|DN| P| x|LA|NU|
+// +--+--+--+--+--+--+--+--+
+// OSPFFlags defines a structure of OSPFv3 Prefix Attr flags
+type OSPFv3Flags struct {
+	NFlag  bool `json:"n_flag"`
+	DNFlag bool `json:"dn_flag"`
+	PFlag  bool `json:"p_flag"`
+	LAFlag bool `json:"la_flag"`
+	NUFlag bool `json:"nu_flag"`
+}
+
+//GetPrefixAttrFlagsByte returns a byte represenation for OSPF flags
+func (f *OSPFv3Flags) GetPrefixAttrFlagsByte() byte {
+	b := byte(0)
+
+	if f.NFlag {
+		b += 0x20
+	}
+	if f.DNFlag {
+		b += 0x10
+	}
+	if f.PFlag {
+		b += 0x08
+	}
+	if f.LAFlag {
+		b += 0x02
+	}
+	if f.NUFlag {
+		b += 0x01
 	}
 
 	return b
