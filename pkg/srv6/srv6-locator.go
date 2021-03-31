@@ -9,10 +9,26 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+// LocatorFlags defines a structure for SRv6 Locator's flags
+// https://tools.ietf.org/html/draft-ietf-idr-bgpls-srv6-ext-07#section-5.1
+type LocatorFlags struct {
+	DFlag bool `json:"d_flag"`
+}
+
+// UnmarshalLocatorFlags builds a new SRv6 Locator's flags object
+func UnmarshalLocatorFlags(b []byte) (*LocatorFlags, error) {
+	if len(b) < 1 {
+		return nil, fmt.Errorf("not enough bytes to unmarshal SRv6 Locator Flags")
+	}
+	return &LocatorFlags{
+		DFlag: b[0]&0x80 == 0x80,
+	}, nil
+}
+
 // LocatorTLV defines SRv6 Locator TLV object
 // No RFC yet
 type LocatorTLV struct {
-	Flag      uint8          `json:"flag"`
+	Flag      *LocatorFlags  `json:"flags,omitempty"`
 	Algorithm uint8          `json:"algo"`
 	Metric    uint32         `json:"metric"`
 	SubTLV    []*base.SubTLV `json:"sub_tlvs,omitempty"`
@@ -25,7 +41,11 @@ func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
 	}
 	p := 0
 	loc := LocatorTLV{}
-	loc.Flag = b[p]
+	f, err := UnmarshalLocatorFlags(b[p : p+1])
+	if err != nil {
+		return nil, err
+	}
+	loc.Flag = f
 	if p+1 > len(b) {
 		return nil, fmt.Errorf("invalid input %s", tools.MessageHex(b))
 	}
