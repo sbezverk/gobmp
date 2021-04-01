@@ -193,12 +193,12 @@ func (ls *NLRI) GetLinkMSD() ([]*base.MSDTV, error) {
 }
 
 // GetNodeSRCapabilities returns string representation of SR Capabilities
-func (ls *NLRI) GetNodeSRCapabilities() (*sr.Capability, error) {
+func (ls *NLRI) GetNodeSRCapabilities(proto base.ProtoID) (*sr.Capability, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1034 {
 			continue
 		}
-		return sr.UnmarshalSRCapability(tlv.Value)
+		return sr.UnmarshalSRCapability(tlv.Value, proto)
 	}
 
 	return nil, fmt.Errorf("not found")

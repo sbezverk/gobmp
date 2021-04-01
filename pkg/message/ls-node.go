@@ -66,7 +66,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		if msd, err := lsnode.GetNodeMSD(); err == nil {
 			msg.NodeMSD = msd
 		}
-		if cap, err := lsnode.GetNodeSRCapabilities(); err == nil {
+		if cap, err := lsnode.GetNodeSRCapabilities(msg.ProtocolID); err == nil {
 			msg.SRCapabilities = cap
 		}
 		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
