@@ -7,6 +7,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+// PeerFlags defines Flags structure for SR Peer SID object
 type PeerFlags struct {
 	VFlag bool `json:"v_flag"`
 	LFlag bool `json:"l_flag"`

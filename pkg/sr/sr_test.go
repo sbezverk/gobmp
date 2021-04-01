@@ -5,19 +5,25 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/sbezverk/gobmp/pkg/base"
 )
 
 func TestUnmarshalSRCapabilities(t *testing.T) {
 	tests := []struct {
 		name     string
 		raw      []byte
+		proto    base.ProtoID
 		expected *Capability
 	}{
 		{
-			name: "real data",
-			raw:  []byte{0x80, 0x00, 0x00, 0xfa, 0x00, 0x04, 0x89, 0x00, 0x03, 0x01, 0x86, 0xa0},
+			name:  "real data",
+			raw:   []byte{0x80, 0x00, 0x00, 0xfa, 0x00, 0x04, 0x89, 0x00, 0x03, 0x01, 0x86, 0xa0},
+			proto: base.ISISL1,
 			expected: &Capability{
-				Flags: 0x80,
+				Flags: &ISISCapFlags{
+					IFlag: true,
+					VFlag: false,
+				},
 				SubTLV: []CapabilitySubTLV{
 					{
 						Range: 64000,
@@ -29,7 +35,7 @@ func TestUnmarshalSRCapabilities(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := UnmarshalSRCapability(tt.raw)
+			got, err := UnmarshalSRCapability(tt.raw, tt.proto)
 			if err != nil {
 				t.Errorf("failed with error: %+v", err)
 			}
