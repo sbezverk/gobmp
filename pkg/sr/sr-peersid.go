@@ -1,19 +1,37 @@
 package sr
 
 import (
+	"fmt"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+type PeerFlags struct {
+	VFlag bool `json:"v_flag"`
+	LFlag bool `json:"l_flag"`
+	BFlag bool `json:"b_flag"`
+	PFlag bool `json:"p_flag"`
+}
+
+func UnmarshalPeerFlags(b []byte) (*PeerFlags, error) {
+	if len(b) < 1 {
+		return nil, fmt.Errorf("not enough bytes to unmarshal SR Peer Flags")
+	}
+	return &PeerFlags{
+		VFlag: b[0]&0x80 == 0x80,
+		LFlag: b[0]&0x40 == 0x40,
+		BFlag: b[0]&0x20 == 0x20,
+		PFlag: b[0]&0x10 == 0x10,
+	}, nil
+}
+
 // PeerSID defines Peer SID TLV Object
 // https://datatracker.ietf.org/doc/draft-ietf-idr-bgpls-segment-routing-epe Section 4
 type PeerSID struct {
-	FlagV  bool   `json:"v_flag"`
-	FlagL  bool   `json:"l_flag"`
-	FlagB  bool   `json:"b_flag"`
-	FlagP  bool   `json:"p_flag"`
-	Weight uint8  `json:"weight"`
-	SID    []byte `json:"prefix_sid,omitempty"`
+	Flags  *PeerFlags `json:"flags"`
+	Weight uint8      `json:"weight"`
+	SID    []byte     `json:"prefix_sid,omitempty"`
 }
 
 // UnmarshalPeerSID builds PeerSID TLV Object
@@ -23,10 +41,11 @@ func UnmarshalPeerSID(b []byte) (*PeerSID, error) {
 	}
 	psid := PeerSID{}
 	p := 0
-	psid.FlagV = b[p]&0x80 == 0x80
-	psid.FlagL = b[p]&0x40 == 0x40
-	psid.FlagB = b[p]&0x20 == 0x20
-	psid.FlagP = b[p]&0x10 == 0x10
+	f, err := UnmarshalPeerFlags(b[p : p+1])
+	if err != nil {
+		return nil, err
+	}
+	psid.Flags = f
 	p++
 	psid.Weight = b[p]
 	p++
