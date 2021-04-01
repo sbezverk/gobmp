@@ -32,13 +32,19 @@ func (c *Capability) MarshalJSON() ([]byte, error) {
 			Flags:  f,
 			SubTLV: c.SubTLV,
 		})
-	default:
+	case *UnknownProtoFlags:
 		f := c.Flags.(*UnknownProtoFlags)
 		return json.Marshal(struct {
 			Flags  *UnknownProtoFlags `json:"flags,omitempty"`
 			SubTLV []CapabilitySubTLV `json:"sr_capability_subtlv,omitempty"`
 		}{
 			Flags:  f,
+			SubTLV: c.SubTLV,
+		})
+	default:
+		return json.Marshal(struct {
+			SubTLV []CapabilitySubTLV `json:"sr_capability_subtlv,omitempty"`
+		}{
 			SubTLV: c.SubTLV,
 		})
 	}
