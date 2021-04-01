@@ -42,8 +42,8 @@ func TestUnmarshalSIDNLRI(t *testing.T) {
 					SID: []byte{0x01, 0x92, 0x01, 0x68, 0x00, 147, 0x00, 0x00, 0x00, 17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 					MultiTopologyID: []*base.MultiTopologyIdentifier{
 						{
-							FlagO: false,
-							FlagA: false,
+							OFlag: false,
+							AFlag: false,
 							MTID:  2,
 						},
 					},
