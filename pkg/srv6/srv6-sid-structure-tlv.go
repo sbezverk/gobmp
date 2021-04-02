@@ -8,10 +8,20 @@ import (
 // SIDStructure defines SRv6 SID Structure TLV object
 // No RFC yet
 type SIDStructure struct {
-	LBLength  uint8 `json:"locator_block_length"`
-	LNLength  uint8 `json:"locator_node_length"`
-	FunLength uint8 `json:"function_length"`
-	ArgLength uint8 `json:"argument_length"`
+	Type      uint16 `json:"type"`
+	Length    uint16 `json:"length"`
+	LBLength  uint8  `json:"locator_block_length"`
+	LNLength  uint8  `json:"locator_node_length"`
+	FunLength uint8  `json:"function_length"`
+	ArgLength uint8  `json:"argument_length"`
+}
+
+func (s *SIDStructure) GetType() uint16 {
+	return s.Type
+}
+
+func (s *SIDStructure) GetLen() uint16 {
+	return s.Length
 }
 
 // UnmarshalSRv6SIDStructureTLV builds SRv6 SID Structure TLV object

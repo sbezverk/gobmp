@@ -45,10 +45,10 @@ func UnmarshalSIDStructureSubSubTLV(b []byte) (*SIDStructureSubSubTLV, error) {
 // InformationSubTLV defines a structure of SRv6 Information Sub TLV (type 1)
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2.1.1
 type InformationSubTLV struct {
-	SID              string                `json:"sid,omitempty"`
-	Flags            uint8                 `json:"flags,omitempty"`
-	EndpointBehavior uint16                `json:"endpoint_behavior,omitempty"`
-	SubSubTLVs       map[uint8][]SubSubTLV `json:"sub_sub_tlvs,omitempty"`
+	SID              string                   `json:"sid,omitempty"`
+	Flags            uint8                    `json:"flags,omitempty"`
+	EndpointBehavior uint16                   `json:"endpoint_behavior,omitempty"`
+	SubSubTLVs       map[uint8][]SvcSubSubTLV `json:"sub_sub_tlvs,omitempty"`
 }
 
 // UnmarshalJSON unmarshals a slice of byte into SRv6 InformationSubTLV object
@@ -57,7 +57,7 @@ func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, (*informationSubTLV)(istlv)); err != nil {
 		return err
 	}
-	istlv.SubSubTLVs = make(map[uint8][]SubSubTLV)
+	istlv.SubSubTLVs = make(map[uint8][]SvcSubSubTLV)
 	var objmap map[string]json.RawMessage
 	if err := json.Unmarshal(b, &objmap); err != nil {
 		return err
@@ -73,7 +73,7 @@ func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
 		}
 		sstlvs, ok := istlv.SubSubTLVs[uint8(t)]
 		if !ok {
-			istlv.SubSubTLVs[uint8(t)] = make([]SubSubTLV, 0)
+			istlv.SubSubTLVs[uint8(t)] = make([]SvcSubSubTLV, 0)
 		}
 		switch t {
 		case 1:
@@ -82,7 +82,7 @@ func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
 				return err
 			}
 			for _, e := range istlvs {
-				var s SubTLV = e
+				var s SvcSubTLV = e
 				sstlvs = append(sstlvs, s)
 			}
 		default:
@@ -116,20 +116,20 @@ func UnmarshalInformationSubTLV(b []byte) (*InformationSubTLV, error) {
 }
 
 // SubTLV defines SRv6 Service's Sub TLV object
-type SubTLV interface{}
+type SvcSubTLV interface{}
 
 // SubSubTLV defines SRv6 Service's Sub Sub TLV object
-type SubSubTLV interface{}
+type SvcSubSubTLV interface{}
 
 // L3Service defines SRv6 L3 Service message structure
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2
 type L3Service struct {
-	SubTLVs map[uint8][]SubTLV `json:"sub_tlvs,omitempty"`
+	SubTLVs map[uint8][]SvcSubTLV `json:"sub_tlvs,omitempty"`
 }
 
 // UnmarshalJSON unmarshals a slice of byte into L3Service object
 func (l3s *L3Service) UnmarshalJSON(b []byte) error {
-	l3s.SubTLVs = make(map[uint8][]SubTLV)
+	l3s.SubTLVs = make(map[uint8][]SvcSubTLV)
 	var objmap map[string]json.RawMessage
 	if err := json.Unmarshal(b, &objmap); err != nil {
 		return err
@@ -145,7 +145,7 @@ func (l3s *L3Service) UnmarshalJSON(b []byte) error {
 		}
 		stlvs, ok := l3s.SubTLVs[uint8(t)]
 		if !ok {
-			l3s.SubTLVs[uint8(t)] = make([]SubTLV, 0)
+			l3s.SubTLVs[uint8(t)] = make([]SvcSubTLV, 0)
 		}
 		switch t {
 		case 1:
@@ -154,7 +154,7 @@ func (l3s *L3Service) UnmarshalJSON(b []byte) error {
 				return err
 			}
 			for _, e := range istlvs {
-				var s SubTLV = e
+				var s SvcSubTLV = e
 				stlvs = append(stlvs, s)
 			}
 		default:
@@ -172,7 +172,7 @@ func UnmarshalSRv6L3Service(b []byte) (*L3Service, error) {
 		glog.Infof("SRv6 L3 Service Raw: %s", tools.MessageHex(b))
 	}
 	l3 := L3Service{
-		SubTLVs: make(map[uint8][]SubTLV),
+		SubTLVs: make(map[uint8][]SvcSubTLV),
 	}
 	// Skipping reserved byte
 	stlv, err := UnmarshalSRv6L3ServiceSubTLV(b[1:])
@@ -185,15 +185,15 @@ func UnmarshalSRv6L3Service(b []byte) (*L3Service, error) {
 }
 
 // UnmarshalSRv6L3ServiceSubTLV instantiates L3 Service Sub TLV
-func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]SubTLV, error) {
-	m := make(map[uint8][]SubTLV)
+func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]SvcSubTLV, error) {
+	m := make(map[uint8][]SvcSubTLV)
 	var err error
 	for p := 0; p < len(b); {
 		t := b[p]
 		p++
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		var s SubTLV
+		var s SvcSubTLV
 		switch t {
 		case 1:
 			if s, err = UnmarshalInformationSubTLV(b[p : p+int(l)]); err != nil {
@@ -205,7 +205,7 @@ func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]SubTLV, error) {
 		}
 		stlv, ok := m[t]
 		if !ok {
-			stlv = make([]SubTLV, 0)
+			stlv = make([]SvcSubTLV, 0)
 			m[t] = stlv
 		}
 		stlv = append(stlv, s)
@@ -216,15 +216,15 @@ func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]SubTLV, error) {
 }
 
 // UnmarshalSRv6L3ServiceSubSubTLV instantiates L3 Service Sub TLV
-func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8][]SubSubTLV, error) {
+func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8][]SvcSubSubTLV, error) {
 	var err error
-	m := make(map[uint8][]SubSubTLV)
+	m := make(map[uint8][]SvcSubSubTLV)
 	for p := 1; p < len(b); {
 		t := b[p]
 		p++
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		var s SubSubTLV
+		var s SvcSubSubTLV
 		switch t {
 		case 1:
 			if s, err = UnmarshalSIDStructureSubSubTLV(b[p : p+int(l)]); err != nil {
@@ -236,7 +236,7 @@ func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8][]SubSubTLV, error) {
 		}
 		stlv, ok := m[t]
 		if !ok {
-			stlv = make([]SubSubTLV, 0)
+			stlv = make([]SvcSubSubTLV, 0)
 			m[t] = stlv
 		}
 		stlv = append(stlv, s)

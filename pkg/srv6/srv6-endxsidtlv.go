@@ -6,7 +6,6 @@ import (
 	"net"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
@@ -37,12 +36,12 @@ func UnmarshalEndXSIDFlags(b []byte) (*EndXSIDFlags, error) {
 // EndXSIDTLV defines SRv6 End.X SID TLV object
 // No RFC yet
 type EndXSIDTLV struct {
-	EndpointBehavior uint16         `json:"endpoint_behavior,omitempty"`
-	Flags            *EndXSIDFlags  `json:"flags,omitempty"`
-	Algorithm        uint8          `json:"algorithm,omitempty"`
-	Weight           uint8          `json:"weight,omitempty"`
-	SID              string         `json:"sid,omitempty"`
-	SubTLVs          []*base.SubTLV `json:"sub_tlvs,omitempty"`
+	EndpointBehavior uint16        `json:"endpoint_behavior,omitempty"`
+	Flags            *EndXSIDFlags `json:"flags,omitempty"`
+	Algorithm        uint8         `json:"algorithm,omitempty"`
+	Weight           uint8         `json:"weight,omitempty"`
+	SID              string        `json:"sid,omitempty"`
+	SubTLVs          []SubTLV      `json:"sub_tlvs,omitempty"`
 }
 
 const (
@@ -99,7 +98,7 @@ func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
 	e.SID = sid.To16().String()
 	p += 16
 	if len(b) > p {
-		stlvs, err := base.UnmarshalSubTLV(b[p:])
+		stlvs, err := UnmarshalAllSRv6SubTLV(b[p:])
 		if err != nil {
 			return nil, err
 		}
