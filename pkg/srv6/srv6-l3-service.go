@@ -82,8 +82,7 @@ func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
 				return err
 			}
 			for _, e := range istlvs {
-				var s SubTLV
-				s = e
+				var s SubTLV = e
 				sstlvs = append(sstlvs, s)
 			}
 		default:
@@ -155,8 +154,7 @@ func (l3s *L3Service) UnmarshalJSON(b []byte) error {
 				return err
 			}
 			for _, e := range istlvs {
-				var s SubTLV
-				s = e
+				var s SubTLV = e
 				stlvs = append(stlvs, s)
 			}
 		default:
@@ -230,6 +228,7 @@ func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8][]SubSubTLV, error) {
 		switch t {
 		case 1:
 			if s, err = UnmarshalSIDStructureSubSubTLV(b[p : p+int(l)]); err != nil {
+				return nil, err
 			}
 		default:
 			s = make([]byte, l)
