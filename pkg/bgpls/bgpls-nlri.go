@@ -65,15 +65,14 @@ func (ls *NLRI) GetAllAttribute() []uint16 {
 }
 
 // GetNodeFlags reeturns Flag Bits TLV carries a bit mask describing node attributes.
-func (ls *NLRI) GetNodeFlags() uint8 {
+func (ls *NLRI) GetNodeFlags() (*NodeAttrFlags, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1024 {
 			continue
 		}
-		return uint8(tlv.Value[0])
+		return UnmarshalNodeAttrFlags(tlv.Value)
 	}
-
-	return 0
+	return nil, fmt.Errorf("node found")
 }
 
 // GetNodeName returns Value field identifies the symbolic name of the router node
