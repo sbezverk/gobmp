@@ -49,7 +49,9 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 
 	lsnode, err := update.GetNLRI29()
 	if err == nil {
-		msg.NodeFlags = lsnode.GetNodeFlags()
+		if f, err := lsnode.GetNodeFlags(); err == nil {
+			msg.NodeFlags = f
+		}
 		msg.Name = lsnode.GetNodeName()
 		msg.MTID = lsnode.GetMTID()
 		switch node.ProtocolID {
