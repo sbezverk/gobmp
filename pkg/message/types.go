@@ -101,7 +101,7 @@ type LSNode struct {
 	AreaID              string                          `json:"area_id"`
 	Protocol            string                          `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID                    `json:"protocol_id,omitempty"`
-	NodeFlags           *bgpls.NodeAttrFlags            `json:"node_flags"`
+	NodeFlags           *bgpls.NodeAttrFlags            `json:"node_flags,omitempty"`
 	Name                string                          `json:"name,omitempty"`
 	SRCapabilities      *sr.Capability                  `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         []int                           `json:"sr_algorithm,omitempty"`
