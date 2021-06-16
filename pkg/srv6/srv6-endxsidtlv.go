@@ -2,12 +2,17 @@ package srv6
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/tools"
+)
+
+const (
+	// EndXSIDTLVMinLen defines minimum valid length of End.X SID TLV
+	EndXSIDTLVMinLen = 22
 )
 
 // EndXSIDFlags defines a structure of SRv6 End X SID's Flags
@@ -37,22 +42,92 @@ func UnmarshalEndXSIDFlags(b []byte) (*EndXSIDFlags, error) {
 // EndXSIDTLV defines SRv6 End.X SID TLV object
 // No RFC yet
 type EndXSIDTLV struct {
-	EndpointBehavior uint16         `json:"endpoint_behavior,omitempty"`
-	Flags            *EndXSIDFlags  `json:"flags,omitempty"`
-	Algorithm        uint8          `json:"algorithm,omitempty"`
-	Weight           uint8          `json:"weight,omitempty"`
-	SID              string         `json:"sid,omitempty"`
-	SubTLVs          []*base.SubTLV `json:"sub_tlvs,omitempty"`
+	Type             uint16        `json:"type,omitempty"`
+	Length           uint16        `json:"length,omitempty"`
+	EndpointBehavior uint16        `json:"endpoint_behavior,omitempty"`
+	Flags            *EndXSIDFlags `json:"flags,omitempty"`
+	Algorithm        uint8         `json:"algorithm,omitempty"`
+	Weight           uint8         `json:"weight,omitempty"`
+	SID              string        `json:"sid,omitempty"`
+	SubTLVs          []SubTLV      `json:"sub_tlvs,omitempty"`
 }
 
-const (
-	// EndXSIDTLVMinLen defines minimum valid length of End.X SID TLV
-	EndXSIDTLVMinLen = 22
-)
+func (e *EndXSIDTLV) GetType() uint16 {
+	return e.Type
+}
+func (e *EndXSIDTLV) GetLen() uint16 {
+	return e.Length
+}
+
+func (e *EndXSIDTLV) UnmarshalJSON(b []byte) error {
+	result := &EndXSIDTLV{}
+	var objVal map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objVal); err != nil {
+		return err
+	}
+
+	// Type             uint16        `json:"type,omitempty"`
+	if v, ok := objVal["type"]; ok {
+		if err := json.Unmarshal(v, &result.Type); err != nil {
+			return err
+		}
+	}
+	// Length           uint16        `json:"length,omitempty"`
+	if v, ok := objVal["length"]; ok {
+		if err := json.Unmarshal(v, &result.Length); err != nil {
+			return err
+		}
+	}
+	// EndpointBehavior uint16        `json:"endpoint_behavior,omitempty"`
+	if v, ok := objVal["endpoint_behavior"]; ok {
+		if err := json.Unmarshal(v, &result.EndpointBehavior); err != nil {
+			return err
+		}
+	}
+	// Flags            *EndXSIDFlags `json:"flags,omitempty"`
+	if v, ok := objVal["flags"]; ok {
+		if err := json.Unmarshal(v, &result.Flags); err != nil {
+			return err
+		}
+	}
+	// Algorithm        uint8         `json:"algorithm,omitempty"`
+	if v, ok := objVal["algorithm"]; ok {
+		if err := json.Unmarshal(v, &result.Algorithm); err != nil {
+			return err
+		}
+	}
+	// Weight           uint8         `json:"weight,omitempty"`
+	if v, ok := objVal["weigh"]; ok {
+		if err := json.Unmarshal(v, &result.Weight); err != nil {
+			return err
+		}
+	}
+	// SID              string        `json:"sid,omitempty"`
+	if v, ok := objVal["sid"]; ok {
+		if err := json.Unmarshal(v, &result.SID); err != nil {
+			return err
+		}
+	}
+	if v, ok := objVal["sub_tlvs"]; ok {
+		var stlvs []map[string]json.RawMessage
+		if err := json.Unmarshal(v, &stlvs); err != nil {
+			return err
+		}
+		var err error
+		result.SubTLVs, err = UnmarshalJSONAllSubTLV(stlvs)
+		if err != nil {
+			return err
+		}
+	}
+
+	*e = *result
+
+	return nil
+}
 
 // UnmarshalSRv6EndXSIDTLV builds SRv6 End.X SID TLV object
 func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
-	if glog.V(6) {
+	if glog.V(5) {
 		glog.Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < EndXSIDTLVMinLen {
@@ -99,7 +174,7 @@ func UnmarshalSRv6EndXSIDTLV(b []byte) (*EndXSIDTLV, error) {
 	e.SID = sid.To16().String()
 	p += 16
 	if len(b) > p {
-		stlvs, err := base.UnmarshalSubTLV(b[p:])
+		stlvs, err := UnmarshalAllSRv6SubTLV(b[p:])
 		if err != nil {
 			return nil, err
 		}
