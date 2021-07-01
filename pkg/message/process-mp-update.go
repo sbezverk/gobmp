@@ -53,7 +53,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 					topicType = bmp.UnicastPrefixV6Msg
 				}
 			}
-			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), true); err != nil {
 				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
 			}
