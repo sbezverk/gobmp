@@ -1,5 +1,5 @@
-REGISTRY_NAME?=docker.io/sbezverk
-IMAGE_VERSION?=0.0.0
+REGISTRY_NAME?=docker.io/codebgp
+IMAGE_VERSION?=0.0.1
 
 .PHONY: all gobmp player container push clean test
 
