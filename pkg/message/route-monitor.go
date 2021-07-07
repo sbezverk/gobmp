@@ -36,7 +36,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	attrType := uint8(0)
 	if len(routeMonitorMsg.Update.PathAttributes) != 0 {
 		// If PathAttribute is present in Update, then take the value of Attribute Type
-		attrType = routeMonitorMsg.Update.PathAttributes[0].AttributeType
+		attrType = routeMonitorMsg.Update.GetNLRIType()
 	}
 	// Using first attribute type to select which nlri processor to call
 	switch attrType {

@@ -13,6 +13,12 @@ import (
 	"github.com/sbezverk/gobmp/pkg/tools"
 )
 
+const (
+	MP_REACH_NLRI   = 14
+	MP_UNREACH_NLRI = 15
+	BGP4_NLRI       = 0
+)
+
 // Update defines a structure of BGP Update message
 type Update struct {
 	WithdrawnRoutesLength    uint16
@@ -105,6 +111,23 @@ func (up *Update) HasPrefixSID() bool {
 	}
 
 	return false
+}
+
+func (up *Update) GetNLRIType() uint8 {
+	if len(up.PathAttributes) == 0 {
+		// Fall back to default NLRI
+		return BGP4_NLRI
+	}
+	for _, p := range up.PathAttributes {
+		switch p.AttributeType {
+		case MP_REACH_NLRI:
+			return MP_REACH_NLRI
+		case MP_UNREACH_NLRI:
+			return MP_UNREACH_NLRI
+		}
+	}
+
+	return BGP4_NLRI
 }
 
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
