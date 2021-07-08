@@ -57,6 +57,14 @@ func TestUnmarshalBGPUpdate(t *testing.T) {
 				t.Logf("differences: %+v", deep.Equal(tt.expect, actual))
 				t.Fatal("the expected object does not match the actual")
 			}
+			// Validate if Update carries valid attributes and values
+			nlri, index := actual.GetNLRIType()
+			if nlri != MP_REACH_NLRI {
+				t.Fatal("Update carries unexpected type")
+			}
+			if index != 2 {
+				t.Fatal("no MP_REACH attribute at expected position on Path Attributes array")
+			}
 		})
 	}
 }

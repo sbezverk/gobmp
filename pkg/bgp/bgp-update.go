@@ -113,21 +113,21 @@ func (up *Update) HasPrefixSID() bool {
 	return false
 }
 
-func (up *Update) GetNLRIType() uint8 {
+func (up *Update) GetNLRIType() (uint8, int) {
 	if len(up.PathAttributes) == 0 {
 		// Fall back to default NLRI
-		return BGP4_NLRI
+		return BGP4_NLRI, 0
 	}
-	for _, p := range up.PathAttributes {
+	for i, p := range up.PathAttributes {
 		switch p.AttributeType {
 		case MP_REACH_NLRI:
-			return MP_REACH_NLRI
+			return MP_REACH_NLRI, i
 		case MP_UNREACH_NLRI:
-			return MP_UNREACH_NLRI
+			return MP_UNREACH_NLRI, i
 		}
 	}
 
-	return BGP4_NLRI
+	return BGP4_NLRI, 0
 }
 
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided
