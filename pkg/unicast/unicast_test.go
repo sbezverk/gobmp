@@ -143,6 +143,18 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "issue_173",
+			input: []byte{0x10, 0x20, 0x01},
+			expect: &base.MPNLRI{
+				NLRI: []base.Route{
+					{
+						Length: 16,
+						Prefix: []byte{0x20, 0x01},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
