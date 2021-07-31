@@ -1,6 +1,7 @@
 package sr
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -32,13 +33,16 @@ func UnmarshalPeerFlags(b []byte) (*PeerFlags, error) {
 type PeerSID struct {
 	Flags  *PeerFlags `json:"flags"`
 	Weight uint8      `json:"weight"`
-	SID    []byte     `json:"prefix_sid,omitempty"`
+	SID    uint32     `json:"prefix_sid,omitempty"`
 }
 
 // UnmarshalPeerSID builds PeerSID TLV Object
 func UnmarshalPeerSID(b []byte) (*PeerSID, error) {
 	if glog.V(6) {
 		glog.Infof("Peer SID TLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 7 && len(b) != 8 {
+		return nil, fmt.Errorf("invalid length %d of data to decode peer sid tlv", len(b))
 	}
 	psid := PeerSID{}
 	p := 0
@@ -51,10 +55,26 @@ func UnmarshalPeerSID(b []byte) (*PeerSID, error) {
 	psid.Weight = b[p]
 	p++
 	// SID length would be Length of b - Flags 1 byte - Weight 1 byte - 2 bytes Reserved
-	sl := len(b) - 4
-	psid.SID = make([]byte, len(b)-4)
 	p += 2
-	copy(psid.SID, b[p:p+sl])
+	l := len(b) - 4
+	s := make([]byte, 4)
+	switch l {
+	case 3:
+		if !psid.Flags.VFlag {
+			// When sid is 3 bytes, V flag MUST be set to "true", if not, error out
+			return nil, fmt.Errorf("sid length is 3 bytes but V flag is NOT set to \"true\"")
+		}
+		copy(s[1:], b[p:p+3])
+	case 4:
+		if psid.Flags.VFlag {
+			// When sid is 4 bytes, V flag must NOT be set tp "true", if not, error out
+			return nil, fmt.Errorf("sid length is 4 bytes but V flag is set to \"true\"")
+		}
+		copy(s, b[p:p+4])
+	default:
+		return nil, fmt.Errorf("software bug in peer sid processing logic, byte slice: %s", tools.MessageHex(b))
+	}
+	psid.SID = binary.BigEndian.Uint32(s)
 
 	return &psid, nil
 }

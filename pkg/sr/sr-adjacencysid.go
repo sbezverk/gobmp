@@ -30,7 +30,7 @@ func (a *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
 		return json.Marshal(struct {
 			Flags  *AdjISISFlags `json:"flags,omitempty"`
 			Weight uint8         `json:"weight"`
-			SID    uint32        `json:"prefix_sid,omitempty"`
+			SID    uint32        `json:"sid,omitempty"`
 		}{
 			Flags:  f,
 			Weight: a.Weight,
