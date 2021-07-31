@@ -67,7 +67,7 @@ func UnmarshalPeerSID(b []byte) (*PeerSID, error) {
 		copy(s[1:], b[p:p+3])
 	case 4:
 		if psid.Flags.VFlag {
-			// When sid is 4 bytes, V flag must NOT be set tp "true", if not, error out
+			// When sid is 4 bytes, V flag must NOT be set to "true", if not, error out
 			return nil, fmt.Errorf("sid length is 4 bytes but V flag is set to \"true\"")
 		}
 		copy(s, b[p:p+4])
