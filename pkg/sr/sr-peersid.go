@@ -33,7 +33,7 @@ func UnmarshalPeerFlags(b []byte) (*PeerFlags, error) {
 type PeerSID struct {
 	Flags  *PeerFlags `json:"flags"`
 	Weight uint8      `json:"weight"`
-	SID    uint32     `json:"prefix_sid,omitempty"`
+	SID    uint32     `json:"sid,omitempty"`
 }
 
 // UnmarshalPeerSID builds PeerSID TLV Object
