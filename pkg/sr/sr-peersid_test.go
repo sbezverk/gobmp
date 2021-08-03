@@ -37,6 +37,9 @@ func TestUnmarshalPeerSID(t *testing.T) {
 				t.Logf("Diffs: %+v", deep.Equal(tt.expect, r))
 				t.Fatalf("expected peer sid %+v does not match to he actual %+v", tt.expect, r)
 			}
+			if err == nil {
+				t.Logf("Peer SID: %s", r)
+			}
 		})
 	}
 }

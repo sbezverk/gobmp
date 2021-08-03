@@ -2,6 +2,7 @@ package sr
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -34,6 +35,11 @@ type PeerSID struct {
 	Flags  *PeerFlags `json:"flags"`
 	Weight uint8      `json:"weight"`
 	SID    uint32     `json:"sid,omitempty"`
+}
+
+func (p *PeerSID) String() string {
+	s, _ := json.Marshal(p)
+	return string(s)
 }
 
 // UnmarshalPeerSID builds PeerSID TLV Object
