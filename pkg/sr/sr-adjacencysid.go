@@ -41,7 +41,7 @@ func (a *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
 		return json.Marshal(struct {
 			Flags  *AdjOSPFFlags `json:"flags,omitempty"`
 			Weight uint8         `json:"weight"`
-			SID    uint32        `json:"prefix_sid,omitempty"`
+			SID    uint32        `json:"sid,omitempty"`
 		}{
 			Flags:  f,
 			Weight: a.Weight,
@@ -52,7 +52,7 @@ func (a *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
 		return json.Marshal(struct {
 			Flags  *UnknownProtoFlags `json:"flags,omitempty"`
 			Weight uint8              `json:"weight"`
-			SID    uint32             `json:"prefix_sid,omitempty"`
+			SID    uint32             `json:"sid,omitempty"`
 		}{
 			Flags:  f,
 			Weight: a.Weight,
@@ -101,8 +101,8 @@ func (a *AdjacencySIDTLV) UnmarshalJSON(b []byte) error {
 			return err
 		}
 	}
-	// SID       uint32         `json:"prefix_sid,omitempty"`
-	if v, ok := objVal["prefix_sid"]; ok {
+	// SID       uint32         `json:"sid,omitempty"`
+	if v, ok := objVal["sid"]; ok {
 		if err := json.Unmarshal(v, &result.SID); err != nil {
 			return err
 		}
