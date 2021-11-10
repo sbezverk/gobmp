@@ -1,4 +1,6 @@
-FROM scratch
+FROM alpine:3.14
+
+RUN apk add --no-cache curl
 
 ENV GOMAXPROCS=1
 COPY ./bin/gobmp /gobmp
