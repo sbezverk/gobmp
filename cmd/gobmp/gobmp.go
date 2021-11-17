@@ -16,6 +16,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/dumper"
 	"github.com/sbezverk/gobmp/pkg/filer"
 	"github.com/sbezverk/gobmp/pkg/gobmpsrv"
+	"github.com/sbezverk/gobmp/pkg/healthcheck"
 	"github.com/sbezverk/gobmp/pkg/kafka"
 	"github.com/sbezverk/gobmp/pkg/pub"
 )
@@ -109,7 +110,13 @@ func main() {
 	bmpSrv.Start()
 
 	stopCh := setupSignalHandler()
-	<-stopCh
+	healthCh := healthcheck.EnableProvider(func() error { return nil }, stopCh)
+
+	// Block until signal or health provider fails
+	select {
+	case <-stopCh:
+	case <-healthCh:
+	}
 
 	bmpSrv.Stop()
 	os.Exit(0)
