@@ -57,7 +57,7 @@ func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 	if glog.V(6) {
 		glog.Infof("BGPOpenMessage Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) < BGPMinOpenMessageLength {
+	if len(b) < BGPMinOpenMessageLength-16 {
 		return nil, fmt.Errorf("BGP Open Message length %d is invalid", len(b))
 	}
 	var err error
