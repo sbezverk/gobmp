@@ -83,7 +83,7 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 	if glog.V(6) {
 		glog.Infof("UnmarshalBGPCapability Raw: %s", tools.MessageHex(b))
 	}
-	caps := make(Capability, 0)
+	caps := make(Capability)
 	for p := 0; p < len(b); {
 		code := b[p]
 		p++

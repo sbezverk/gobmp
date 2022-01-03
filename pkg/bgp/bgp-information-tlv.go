@@ -18,7 +18,7 @@ func UnmarshalBGPTLV(b []byte) ([]InformationalTLV, Capability, error) {
 		glog.Infof("BGPTLV Raw: %s", tools.MessageHex(b))
 	}
 	tlvs := make([]InformationalTLV, 0)
-	caps := make(Capability, 0)
+	caps := make(Capability)
 	for p := 0; p < len(b); {
 		t := b[p]
 		p++
@@ -51,9 +51,7 @@ func UnmarshalBGPTLV(b []byte) ([]InformationalTLV, Capability, error) {
 func copyCapabilitiyMap(s, d Capability) {
 	for k, v := range s {
 		src := make([]*capabilityData, len(v))
-		for i, c := range v {
-			src[i] = c
-		}
+		copy(src, v)
 		dst, ok := d[k]
 		if !ok {
 			dst = make([]*capabilityData, 0)

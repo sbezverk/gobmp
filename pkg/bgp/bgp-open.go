@@ -33,13 +33,13 @@ func (o *OpenMessage) GetCapabilities() Capability {
 
 // Is4BytesASCapable returns true or false if Open message originated by 4 bytes AS capable speaker
 // in case of true, it also returns 4 bytes Autonomous System Number.
-func (o *OpenMessage) Is4BytesASCapable() (int32, bool) {
+func (o *OpenMessage) Is4BytesASCapable() (uint32, bool) {
 	v, ok := o.Capabilities[65]
 	if !ok {
 		return 0, false
 	}
 
-	return int32(binary.BigEndian.Uint32(v[0].Value)), true
+	return binary.BigEndian.Uint32(v[0].Value), true
 }
 
 // IsMultiLabelCapable returns true or false if Open message originated by a bgp speaker
