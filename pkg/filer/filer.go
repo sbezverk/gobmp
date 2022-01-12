@@ -42,14 +42,14 @@ func (p *pubfiler) Stop() {
 }
 
 // NewFiler returns a new instance of message filer
-func NewFiler(file string) pub.Publisher {
+func NewFiler(file string) (pub.Publisher, error) {
 	f, err := os.Create(file)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	pw := pubfiler{
 		file: f,
 	}
 
-	return &pw
+	return &pw, nil
 }
