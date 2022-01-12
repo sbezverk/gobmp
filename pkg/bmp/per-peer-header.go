@@ -119,7 +119,7 @@ func (p *PerPeerHeader) GetPeerTimestamp() string {
 	tms := time.Duration(int(binary.BigEndian.Uint32(p.PeerTimestamp[4:8])))
 	t = t.Add(ts)
 	t = t.Add(tms)
-	return t.Format(time.StampMicro)
+	return t.Format(time.RFC3339Nano)
 }
 
 // GetPeerHash calculates Peer Hash and returns as a hex string
