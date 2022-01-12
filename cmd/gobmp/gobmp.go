@@ -76,9 +76,21 @@ func main() {
 	var err error
 	switch strings.ToLower(dump) {
 	case "file":
-		publisher = filer.NewFiler(file)
+		publisher, err = filer.NewFiler(file)
+		if err != nil {
+			glog.Errorf("fail to initialize file publisher with error: %+v", err)
+			glog.Errorf("restarting gobmp...")
+			os.Exit(1)
+		}
+		glog.V(5).Infof("file publisher has been successfully initialized.")
 	case "console":
-		publisher = dumper.NewDumper()
+		publisher, err = dumper.NewDumper()
+		if err != nil {
+			glog.Errorf("fail to initialize console publisher with error: %+v", err)
+			glog.Errorf("restarting gobmp...")
+			os.Exit(1)
+		}
+		glog.V(5).Infof("console publisher has been successfully initialized.")
 	default:
 		publisher, err = kafka.NewKafkaPublisher(kafkaSrv)
 		if err != nil {
