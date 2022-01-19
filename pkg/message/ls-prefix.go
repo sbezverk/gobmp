@@ -69,7 +69,6 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 			msg.RouterID = lsprefix.GetLocalIPv4RouterID()
 		}
 		msg.PrefixMetric = lsprefix.GetPrefixMetric()
-		msg.IGPMetric = lsprefix.GetIGPMetric()
 		msg.IGPRouteTag = lsprefix.GetPrefixIGPRouteTag()
 		if f, err := lsprefix.GetPrefixIGPFlags(); err == nil {
 			msg.IGPFlags = f
