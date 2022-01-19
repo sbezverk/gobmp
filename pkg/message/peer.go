@@ -55,7 +55,7 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m.RouterIP = p.speakerIP
 		m.RouterHash = p.speakerHash
 
-		m.LocalASN = int32(peerUpMsg.SentOpen.MyAS)
+		m.LocalASN = uint32(peerUpMsg.SentOpen.MyAS)
 		if lasn, ok := peerUpMsg.SentOpen.Is4BytesASCapable(); ok {
 			// Local BGP speaker is 4 bytes AS capable
 			m.LocalASN = lasn

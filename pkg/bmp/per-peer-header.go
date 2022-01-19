@@ -25,7 +25,7 @@ type PerPeerHeader struct {
 	FlagO             bool
 	PeerDistinguisher []byte // *PeerDistinguisher
 	PeerAddress       []byte
-	PeerAS            int32
+	PeerAS            uint32
 	PeerBGPID         []byte
 	PeerTimestamp     []byte
 }
@@ -103,7 +103,7 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	// Peer Address 16 bytes but for IPv4 case only last 4 bytes needed
 	copy(pph.PeerAddress, b[p:p+16])
 	p += 16
-	pph.PeerAS = int32(binary.BigEndian.Uint32(b[p : p+4]))
+	pph.PeerAS = binary.BigEndian.Uint32(b[p : p+4])
 	p += 4
 	copy(pph.PeerBGPID, b[p:p+4])
 	p += 4

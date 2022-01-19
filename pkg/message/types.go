@@ -24,11 +24,11 @@ type PeerStateChange struct {
 	RemoteBGPID      string         `json:"remote_bgp_id,omitempty"`
 	RouterIP         string         `json:"router_ip,omitempty"`
 	Timestamp        string         `json:"timestamp,omitempty"`
-	RemoteASN        int32          `json:"remote_asn,omitempty"`
+	RemoteASN        uint32         `json:"remote_asn,omitempty"`
 	RemoteIP         string         `json:"remote_ip,omitempty"`
 	PeerRD           string         `json:"peer_rd,omitempty"`
 	RemotePort       int            `json:"remote_port,omitempty"`
-	LocalASN         int32          `json:"local_asn,omitempty"`
+	LocalASN         uint32         `json:"local_asn,omitempty"`
 	LocalIP          string         `json:"local_ip,omitempty"`
 	LocalPort        int            `json:"local_port,omitempty"`
 	LocalBGPID       string         `json:"local_bgp_id,omitempty"`
@@ -63,7 +63,7 @@ type UnicastPrefix struct {
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
 	PeerHash       string              `json:"peer_hash,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
-	PeerASN        int32               `json:"peer_asn,omitempty"`
+	PeerASN        uint32              `json:"peer_asn,omitempty"`
 	Timestamp      string              `json:"timestamp,omitempty"`
 	Prefix         string              `json:"prefix,omitempty"`
 	PrefixLen      int32               `json:"prefix_len,omitempty"`
@@ -91,7 +91,7 @@ type LSNode struct {
 	RouterIP            string                          `json:"router_ip,omitempty"`
 	PeerHash            string                          `json:"peer_hash,omitempty"`
 	PeerIP              string                          `json:"peer_ip,omitempty"`
-	PeerASN             int32                           `json:"peer_asn,omitempty"`
+	PeerASN             uint32                          `json:"peer_asn,omitempty"`
 	Timestamp           string                          `json:"timestamp,omitempty"`
 	IGPRouterID         string                          `json:"igp_router_id,omitempty"`
 	RouterID            string                          `json:"router_id,omitempty"`
@@ -126,7 +126,7 @@ type LSLink struct {
 	DomainID              int64                         `json:"domain_id"`
 	PeerHash              string                        `json:"peer_hash,omitempty"`
 	PeerIP                string                        `json:"peer_ip,omitempty"`
-	PeerASN               int32                         `json:"peer_asn,omitempty"`
+	PeerASN               uint32                        `json:"peer_asn,omitempty"`
 	Timestamp             string                        `json:"timestamp,omitempty"`
 	IGPRouterID           string                        `json:"igp_router_id,omitempty"`
 	RouterID              string                        `json:"router_id,omitempty"`
@@ -189,7 +189,7 @@ type L3VPNPrefix struct {
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
 	PeerHash       string              `json:"peer_hash,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
-	PeerASN        int32               `json:"peer_asn,omitempty"`
+	PeerASN        uint32              `json:"peer_asn,omitempty"`
 	Timestamp      string              `json:"timestamp,omitempty"`
 	Prefix         string              `json:"prefix,omitempty"`
 	PrefixLen      int32               `json:"prefix_len,omitempty"`
@@ -220,7 +220,7 @@ type LSPrefix struct {
 	DomainID             int64                         `json:"domain_id"`
 	PeerHash             string                        `json:"peer_hash,omitempty"`
 	PeerIP               string                        `json:"peer_ip,omitempty"`
-	PeerASN              int32                         `json:"peer_asn,omitempty"`
+	PeerASN              uint32                        `json:"peer_asn,omitempty"`
 	Timestamp            string                        `json:"timestamp,omitempty"`
 	IGPRouterID          string                        `json:"igp_router_id,omitempty"`
 	RouterID             string                        `json:"router_id,omitempty"`
@@ -236,7 +236,6 @@ type LSPrefix struct {
 	IGPRouteTag          []uint32                      `json:"route_tag,omitempty"`
 	IGPExtRouteTag       []uint64                      `json:"ext_route_tag,omitempty"`
 	OSPFFwdAddr          string                        `json:"ospf_fwd_addr,omitempty"`
-	IGPMetric            uint32                        `json:"igp_metric,omitempty"`
 	Prefix               string                        `json:"prefix,omitempty"`
 	PrefixLen            int32                         `json:"prefix_len,omitempty"`
 	PrefixMetric         uint32                        `json:"prefix_metric,omitempty"`
@@ -260,7 +259,7 @@ type LSSRv6SID struct {
 	DomainID             int64                         `json:"domain_id"`
 	PeerHash             string                        `json:"peer_hash,omitempty"`
 	PeerIP               string                        `json:"peer_ip,omitempty"`
-	PeerASN              int32                         `json:"peer_asn,omitempty"`
+	PeerASN              uint32                        `json:"peer_asn,omitempty"`
 	Timestamp            string                        `json:"timestamp,omitempty"`
 	IGPRouterID          string                        `json:"igp_router_id,omitempty"`
 	LocalNodeASN         uint32                        `json:"local_node_asn,omitempty"`
@@ -300,7 +299,7 @@ type EVPNPrefix struct {
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
 	PeerHash       string              `json:"peer_hash,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
-	PeerASN        int32               `json:"peer_asn,omitempty"`
+	PeerASN        uint32              `json:"peer_asn,omitempty"`
 	Timestamp      string              `json:"timestamp,omitempty"`
 	IsIPv4         bool                `json:"is_ipv4"`
 	OriginAS       int32               `json:"origin_as,omitempty"`
@@ -339,7 +338,7 @@ type SRPolicy struct {
 	BaseAttributes *bgp.BaseAttributes     `json:"base_attrs,omitempty"`
 	PeerHash       string                  `json:"peer_hash,omitempty"`
 	PeerIP         string                  `json:"peer_ip,omitempty"`
-	PeerASN        int32                   `json:"peer_asn,omitempty"`
+	PeerASN        uint32                  `json:"peer_asn,omitempty"`
 	Timestamp      string                  `json:"timestamp,omitempty"`
 	IsIPv4         bool                    `json:"is_ipv4"`
 	OriginAS       int32                   `json:"origin_as,omitempty"`
@@ -372,7 +371,7 @@ type Flowspec struct {
 	RouterIP       string              `json:"router_ip,omitempty"`
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
-	PeerASN        int32               `json:"peer_asn,omitempty"`
+	PeerASN        uint32              `json:"peer_asn,omitempty"`
 	Timestamp      string              `json:"timestamp,omitempty"`
 	IsIPv4         bool                `json:"is_ipv4"`
 	OriginAS       int32               `json:"origin_as,omitempty"`

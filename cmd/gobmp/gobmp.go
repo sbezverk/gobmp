@@ -77,14 +77,23 @@ func main() {
 	var err error
 	switch strings.ToLower(dump) {
 	case "file":
-		publisher = filer.NewFiler(file)
+		publisher, err = filer.NewFiler(file)
+		if err != nil {
+			glog.Errorf("failed to initialize file publisher with error: %+v", err)
+			os.Exit(1)
+		}
+		glog.V(5).Infof("file publisher has been successfully initialized.")
 	case "console":
-		publisher = dumper.NewDumper()
+		publisher, err = dumper.NewDumper()
+		if err != nil {
+			glog.Errorf("failed to initialize console publisher with error: %+v", err)
+			os.Exit(1)
+		}
+		glog.V(5).Infof("console publisher has been successfully initialized.")
 	default:
 		publisher, err = kafka.NewKafkaPublisher(kafkaSrv)
 		if err != nil {
-			glog.Errorf("fail to initialize Kafka publisher with error: %+v", err)
-			glog.Errorf("restarting gobmp...")
+			glog.Errorf("failed to initialize Kafka publisher with error: %+v", err)
 			os.Exit(1)
 		}
 		glog.V(5).Infof("Kafka publisher has been successfully initialized.")
@@ -93,17 +102,17 @@ func main() {
 	// Initializing bmp server
 	interceptFlag, err := strconv.ParseBool(intercept)
 	if err != nil {
-		glog.Errorf("fail to parse to bool the value of the intercept flag with error: %+v", err)
+		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
 		os.Exit(1)
 	}
 	splitAFFlag, err := strconv.ParseBool(splitAF)
 	if err != nil {
-		glog.Errorf("fail to parse to bool the value of the intercept flag with error: %+v", err)
+		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
 		os.Exit(1)
 	}
 	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag)
 	if err != nil {
-		glog.Errorf("fail to setup new gobmp server with error: %+v", err)
+		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
 		os.Exit(1)
 	}
 	// Starting Interceptor server
