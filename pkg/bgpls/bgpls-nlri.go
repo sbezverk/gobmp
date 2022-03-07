@@ -287,25 +287,15 @@ func (ls *NLRI) GetLSPrefixSID(proto base.ProtoID) ([]*sr.PrefixSIDTLV, error) {
 }
 
 // GetLSSRv6Locator returns a slice of SRv6 locator objects
-func (ls *NLRI) GetLSSRv6Locator() ([]*srv6.LocatorTLV, error) {
-	locs := make([]*srv6.LocatorTLV, 0)
-	found := false
+func (ls *NLRI) GetLSSRv6Locator() (*srv6.LocatorTLV, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1162 {
 			continue
 		}
-		found = true
-		loc, err := srv6.UnmarshalSRv6LocatorTLV(tlv.Value)
-		if err != nil {
-			return nil, err
-		}
-		locs = append(locs, loc)
-	}
-	if !found {
-		return nil, fmt.Errorf("no found")
+		return srv6.UnmarshalSRv6LocatorTLV(tlv.Value)
 	}
 
-	return locs, nil
+	return nil, fmt.Errorf("not found")
 }
 
 // GetLSPrefixAttrFlags returns a Prefix Attribute Flags interface
