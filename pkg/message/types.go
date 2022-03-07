@@ -243,7 +243,7 @@ type LSPrefix struct {
 	IsAdjRIBIn           bool                          `json:"is_adj_rib_in"`
 	PrefixAttrTLVs       *bgpls.PrefixAttrTLVs         `json:"prefix_attr_tlvs,omitempty"`
 	FlexAlgoPrefixMetric []*bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
-	SRv6Locator          []*srv6.LocatorTLV            `json:"srv6_locator,omitempty"`
+	SRv6Locator          *srv6.LocatorTLV              `json:"srv6_locator,omitempty"`
 }
 
 // LSSRv6SID defines a structure of LS SRv6 SID message
