@@ -41,6 +41,7 @@ func UnmarshalSRv6SubTLV(b []byte) (SubTLV, error) {
 	t := binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	l := binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
 	if p+int(l) > len(b) {
 		return nil, fmt.Errorf("not enough bytes to unmarshal SRv6 Sub TLV")
 	}
