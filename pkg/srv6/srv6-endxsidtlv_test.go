@@ -28,9 +28,10 @@ func TestUnmarshalSRv6EndXSIDTLV(t *testing.T) {
 				SubTLVs: []SubTLV{&SIDStructure{
 					Type:      1252,
 					Length:    8,
-					LNLength:  4,
-					FunLength: 40,
-					ArgLength: 24,
+					LBLength:  40,
+					LNLength:  24,
+					FunLength: 16,
+					ArgLength: 0,
 				}},
 			},
 		},
