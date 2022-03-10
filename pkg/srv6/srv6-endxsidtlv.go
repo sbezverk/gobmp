@@ -44,10 +44,10 @@ func UnmarshalEndXSIDFlags(b []byte) (*EndXSIDFlags, error) {
 type EndXSIDTLV struct {
 	Type             uint16        `json:"type,omitempty"`
 	Length           uint16        `json:"length,omitempty"`
-	EndpointBehavior uint16        `json:"endpoint_behavior,omitempty"`
+	EndpointBehavior uint16        `json:"endpoint_behavior"`
 	Flags            *EndXSIDFlags `json:"flags,omitempty"`
-	Algorithm        uint8         `json:"algorithm,omitempty"`
-	Weight           uint8         `json:"weight,omitempty"`
+	Algorithm        uint8         `json:"algorithm"`
+	Weight           uint8         `json:"weight"`
 	SID              string        `json:"sid,omitempty"`
 	SubTLVs          []SubTLV      `json:"sub_tlvs,omitempty"`
 }
