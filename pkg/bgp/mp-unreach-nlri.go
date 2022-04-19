@@ -20,6 +20,7 @@ type MPUnReachNLRI struct {
 	AddressFamilyID    uint16
 	SubAddressFamilyID uint8
 	WithdrawnRoutes    []byte
+	EndOfRIB           bool
 }
 
 // GetAFISAFIType returns underlaying NLRI's type based on AFI/SAFI
@@ -46,6 +47,9 @@ func (mp *MPUnReachNLRI) IsNextHopIPv6() bool {
 // GetNLRI71 check for presense of NLRI 71 in the NLRI 14 NLRI data and if exists, instantiate NLRI71 object
 func (mp *MPUnReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 	if mp.SubAddressFamilyID == 71 {
+		if mp.EndOfRIB {
+			return &ls.NLRI71{}, nil
+		}
 		nlri71, err := ls.UnmarshalLSNLRI71(mp.WithdrawnRoutes)
 		if err != nil {
 			return nil, err
@@ -60,6 +64,9 @@ func (mp *MPUnReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 // GetNLRI73 check for presense of NLRI 73 in the NLRI 14 NLRI data and if exists, instantiate NLRI73 object
 func (mp *MPUnReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
 	if mp.SubAddressFamilyID == 73 {
+		if mp.EndOfRIB {
+			return &srpolicy.NLRI73{}, nil
+		}
 		nlri73, err := srpolicy.UnmarshalLSNLRI73(mp.WithdrawnRoutes)
 		if err != nil {
 			return nil, err
@@ -74,6 +81,9 @@ func (mp *MPUnReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
 // GetNLRIL3VPN check for presense of NLRI L3VPN AFI 1 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
 func (mp *MPUnReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 128 {
+		if mp.EndOfRIB {
+			return &base.MPNLRI{}, nil
+		}
 		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.WithdrawnRoutes)
 		if err != nil {
 			return nil, err
@@ -88,6 +98,9 @@ func (mp *MPUnReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 // GetNLRIEVPN check for presense of NLRI EVPN AFI 25 and SAFI 70 in the NLRI 14 NLRI data and if exists, instantiate EVPN object
 func (mp *MPUnReachNLRI) GetNLRIEVPN() (*evpn.Route, error) {
 	if mp.AddressFamilyID == 25 && mp.SubAddressFamilyID == 70 {
+		if mp.EndOfRIB {
+			return &evpn.Route{}, nil
+		}
 		route, err := evpn.UnmarshalEVPNNLRI(mp.WithdrawnRoutes)
 		if err != nil {
 			return nil, err
@@ -102,6 +115,9 @@ func (mp *MPUnReachNLRI) GetNLRIEVPN() (*evpn.Route, error) {
 // GetNLRIUnicast check for presense of NLRI EVPN AFI 1 or 2  and SAFI 1 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
 func (mp *MPUnReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 1 {
+		if mp.EndOfRIB {
+			return &base.MPNLRI{}, nil
+		}
 		nlri, err := unicast.UnmarshalUnicastNLRI(mp.WithdrawnRoutes)
 		if err != nil {
 			return nil, err
@@ -116,6 +132,9 @@ func (mp *MPUnReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 // GetNLRILU check for presense of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
 func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 4 {
+		if mp.EndOfRIB {
+			return &base.MPNLRI{}, nil
+		}
 		nlri, err := unicast.UnmarshalLUNLRI(mp.WithdrawnRoutes)
 		if err != nil {
 			return nil, err
@@ -130,6 +149,9 @@ func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 // GetFlowspecNLRI checks for presense of NLRI 133 IPv4 Flowspec in the NLRI 15 NLRI data and if exists, instantiate NLRI object
 func (mp *MPUnReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	if mp.SubAddressFamilyID == 133 {
+		if mp.EndOfRIB {
+			return &flowspec.NLRI{}, nil
+		}
 		return flowspec.UnmarshalFlowspecNLRI(mp.WithdrawnRoutes)
 	}
 
@@ -151,8 +173,14 @@ func UnmarshalMPUnReachNLRI(b []byte) (MPNLRI, error) {
 	p += 2
 	mp.SubAddressFamilyID = uint8(b[p])
 	p++
-	mp.WithdrawnRoutes = make([]byte, len(b[p:]))
-	copy(mp.WithdrawnRoutes, b[p:])
+	if p < len(b) {
+		mp.WithdrawnRoutes = make([]byte, len(b[p:]))
+		copy(mp.WithdrawnRoutes, b[p:])
+	} else {
+		// https://www.rfc-editor.org/rfc/rfc4724.html#section-2
+		// Marker for End-of-RIB
+		mp.EndOfRIB = true
+	}
 
 	return &mp, nil
 }

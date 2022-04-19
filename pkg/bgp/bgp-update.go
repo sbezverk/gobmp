@@ -139,6 +139,9 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	u := Update{}
 	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
+	if p+int(u.WithdrawnRoutesLength) > len(b) {
+		return nil, fmt.Errorf("invalid length %d of BGP update", len(b))
+	}
 	wdr, err := base.UnmarshalRoutes(b[p : p+int(u.WithdrawnRoutesLength)])
 	if err != nil {
 		return nil, err
