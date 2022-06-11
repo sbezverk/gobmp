@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"runtime"
@@ -44,21 +44,16 @@ func init() {
 }
 
 var (
-	onlyOneSignalHandler = make(chan struct{})
-	shutdownSignals      = []os.Signal{os.Interrupt}
+	shutdownSignals = []os.Signal{os.Interrupt}
 )
 
 func setupSignalHandler() (stopCh <-chan struct{}) {
-	close(onlyOneSignalHandler) // panics when called twice
-
 	stop := make(chan struct{})
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, shutdownSignals...)
+	sigCh := make(chan os.Signal, 0)
+	signal.Notify(sigCh, shutdownSignals...)
 	go func() {
-		<-c
+		<-sigCh
 		close(stop)
-		<-c
-		os.Exit(1) // second signal. Exit directly.
 	}()
 
 	return stop
@@ -66,11 +61,12 @@ func setupSignalHandler() (stopCh <-chan struct{}) {
 
 func main() {
 	flag.Parse()
-	_ = flag.Set("logtostderr", "true")
+	flag.Set("logtostderr", "true")
 	// Starting performance collecting http server
 	go func() {
-		glog.Info(http.ListenAndServe(fmt.Sprintf(":%d", perfPort), nil))
+		glog.Info(http.ListenAndServe(net.JoinHostPort("", strconv.Itoa(perfPort)), nil))
 	}()
+
 	// Initializing publisher
 	var publisher pub.Publisher
 	var err error
@@ -114,12 +110,10 @@ func main() {
 		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
 		os.Exit(1)
 	}
-	// Starting Interceptor server
 	bmpSrv.Start()
 
 	stopCh := setupSignalHandler()
 	<-stopCh
 
 	bmpSrv.Stop()
-	os.Exit(0)
 }
