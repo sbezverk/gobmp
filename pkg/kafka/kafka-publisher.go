@@ -68,6 +68,23 @@ var (
 	}
 )
 
+type TopicsConfig struct {
+	PeerTopic         string
+	UnicastIPv4Topic  string
+	UnicastIPv6Topic  string
+	LSNodeTopic       string
+	LSLinkTopic       string
+	L3VPNIPv4Topic    string
+	L3VPNIPv6Topic    string
+	LSPrefixTopic     string
+	LSSRv6SIDTopic    string
+	EVPNTopic         string
+	SRPolicyIPv4Topic string
+	SRPolicyIPv6Topic string
+	FlowSpecIPv4Topic string
+	FlowSpecIPv6Topic string
+}
+
 type publisher struct {
 	broker   *sarama.Broker
 	config   *sarama.Config
@@ -118,15 +135,11 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 	return fmt.Errorf("not implemented")
 }
 
-func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
-	k := sarama.ByteEncoder{}
-	k = key
-	m := sarama.ByteEncoder{}
-	m = msg
+func (p *publisher) produceMessage(topic string, key sarama.ByteEncoder, msg sarama.ByteEncoder) error {
 	p.producer.Input() <- &sarama.ProducerMessage{
 		Topic: topic,
-		Key:   k,
-		Value: m,
+		Key:   key,
+		Value: msg,
 	}
 
 	return nil
@@ -137,13 +150,41 @@ func (p *publisher) Stop() {
 	p.broker.Close()
 }
 
+func initializeTopics(br *sarama.Broker, tcfg TopicsConfig) error {
+	topics := make(map[string]struct{})
+
+	topics[tcfg.UnicastIPv4Topic] = struct{}{}
+	topics[tcfg.UnicastIPv6Topic] = struct{}{}
+	topics[tcfg.PeerTopic] = struct{}{}
+	topics[tcfg.LSLinkTopic] = struct{}{}
+	topics[tcfg.LSNodeTopic] = struct{}{}
+	topics[tcfg.LSPrefixTopic] = struct{}{}
+	topics[tcfg.EVPNTopic] = struct{}{}
+	topics[tcfg.FlowSpecIPv4Topic] = struct{}{}
+	topics[tcfg.FlowSpecIPv6Topic] = struct{}{}
+	topics[tcfg.SRPolicyIPv4Topic] = struct{}{}
+	topics[tcfg.SRPolicyIPv6Topic] = struct{}{}
+
+	if _, exists := topics[""]; exists {
+		delete(topics, "")
+	}
+
+	for t := range topics {
+		if err := ensureTopic(br, topicCreateTimeout, t); err != nil {
+			return fmt.Errorf("New Kafka publisher failed to ensure requested topics with error: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
-func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
+func NewKafkaPublisher(kafkaSrv string, tcfg TopicsConfig) (pub.Publisher, error) {
 	glog.Infof("Initializing Kafka producer client")
 	if err := validator(kafkaSrv); err != nil {
-		glog.Errorf("Failed to validate Kafka server address %s with error: %+v", kafkaSrv, err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to validate Kafka server address %s with error: %v", kafkaSrv, err)
 	}
+
 	config := sarama.NewConfig()
 	config.ClientID = "gobmp-producer" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Producer.Return.Successes = true
@@ -155,23 +196,22 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 			return nil, err
 		}
 	}
+
 	if err := waitForBrokerConnection(br, brockerConnectTimeout); err != nil {
-		glog.Errorf("failed to open connection to the broker with error: %+v\n", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to open connection to the broker with error: %v", err)
 	}
 	glog.V(5).Infof("Connected to broker: %s id: %d\n", br.Addr(), br.ID())
 
-	for _, t := range topicNames {
-		if err := ensureTopic(br, topicCreateTimeout, t); err != nil {
-			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
-			return nil, err
-		}
+	err := initializeTopics(br, tcfg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize topics: %v", err)
 	}
+
 	producer, err := sarama.NewAsyncProducer([]string{kafkaSrv}, config)
 	if err != nil {
-		glog.Errorf("New Kafka publisher failed to start new async producer with error: %+v", err)
-		return nil, err
+		return nil, fmt.Errorf("New Kafka publisher failed to start new async producer with error: %v", err)
 	}
+
 	glog.V(5).Infof("Initialized Kafka Async producer")
 	stopCh := make(chan struct{})
 	go func(producer sarama.AsyncProducer, stopCh <-chan struct{}) {
