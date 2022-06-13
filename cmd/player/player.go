@@ -31,6 +31,22 @@ func init() {
 	flag.IntVar(&iterations, "iterations", 1, "Number of iterations to replay messages")
 }
 
+var defaultTopicsConfig = kafka.TopicsConfig{
+	UnicastIPv4Topic:  "gobmp.parsed.unicast_prefix",
+	UnicastIPv6Topic:  "gobmp.parsed.unicast_prefix",
+	LSNodeTopic:       "gobmp.parsed.ls_node",
+	LSLinkTopic:       "gobmp.parsed.ls_link",
+	LSPrefixTopic:     "gobmp.parsed.ls_prefix",
+	LSSRv6SIDTopic:    "gobmp.parsed.ls_srv6_sid",
+	L3VPNIPv4Topic:    "gobmp.parsed.l3vpn",
+	L3VPNIPv6Topic:    "gobmp.parsed.l3vpn",
+	EVPNTopic:         "gobmp.parsed.evpn",
+	SRPolicyIPv4Topic: "gobmp.parsed.sr_policy",
+	SRPolicyIPv6Topic: "gobmp.parsed.sr_policy",
+	FlowSpecIPv4Topic: "gobmp.parsed.flowspec",
+	FlowSpecIPv6Topic: "gobmp.parsed.flowspec",
+}
+
 func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
@@ -44,7 +60,7 @@ func main() {
 	defer f.Close()
 
 	// Initializing publisher process
-	publisher, err := kafka.NewKafkaPublisher(msgSrvAddr)
+	publisher, err := kafka.NewKafkaPublisher(msgSrvAddr, defaultTopicsConfig)
 	if err != nil {
 		glog.Errorf("fail to initialize Kafka publisher with error: %+v", err)
 		os.Exit(1)

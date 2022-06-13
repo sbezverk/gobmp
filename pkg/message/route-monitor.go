@@ -55,10 +55,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		}
 		p.processMPUpdate(nlri, DelPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 	default:
-		t := bmp.UnicastPrefixMsg
-		if p.splitAF {
-			t = bmp.UnicastPrefixV4Msg
-		}
+		t := bmp.UnicastPrefixV4Msg
 		// Original BGP's NLRI messages processing
 		msgs := make([]UnicastPrefix, 0)
 		if routeMonitorMsg.Update.WithdrawnRoutesLength != 0 {
