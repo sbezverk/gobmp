@@ -45,14 +45,11 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		}
 		// Loop through and publish all collected messages
 		for _, m := range msgs {
-			topicType := bmp.UnicastPrefixMsg
-			if p.splitAF {
-				if m.IsIPv4 {
-					topicType = bmp.UnicastPrefixV4Msg
-				} else {
-					topicType = bmp.UnicastPrefixV6Msg
-				}
+			topicType := bmp.UnicastPrefixV6Msg
+			if m.IsIPv4 {
+				topicType = bmp.UnicastPrefixV4Msg
 			}
+
 			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
 				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
@@ -67,13 +64,9 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 			return
 		}
 		for _, m := range msgs {
-			topicType := bmp.L3VPNMsg
-			if p.splitAF {
-				if m.IsIPv4 {
-					topicType = bmp.L3VPNV4Msg
-				} else {
-					topicType = bmp.L3VPNV6Msg
-				}
+			topicType := bmp.L3VPNV6Msg
+			if m.IsIPv4 {
+				topicType = bmp.L3VPNV4Msg
 			}
 			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
 				glog.Errorf("failed to process L3VPN message with error: %+v", err)
@@ -101,13 +94,9 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 			return
 		}
 		for _, m := range msgs {
-			topicType := bmp.SRPolicyMsg
-			if p.splitAF {
-				if m.IsIPv4 {
-					topicType = bmp.SRPolicyV4Msg
-				} else {
-					topicType = bmp.SRPolicyV6Msg
-				}
+			topicType := bmp.SRPolicyV6Msg
+			if m.IsIPv4 {
+				topicType = bmp.SRPolicyV4Msg
 			}
 			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
 				glog.Errorf("failed to process SRPolicy message with error: %+v", err)
@@ -121,13 +110,9 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 			return
 		}
 		for _, m := range msgs {
-			topicType := bmp.FlowspecMsg
-			if p.splitAF {
-				if m.IsIPv4 {
-					topicType = bmp.FlowspecV4Msg
-				} else {
-					topicType = bmp.FlowspecV6Msg
-				}
+			topicType := bmp.FlowspecV6Msg
+			if m.IsIPv4 {
+				topicType = bmp.FlowspecV4Msg
 			}
 			if err := p.marshalAndPublish(&m, topicType, []byte(m.SpecHash), false); err != nil {
 				glog.Errorf("failed to process Flowspec message with error: %+v", err)

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
@@ -21,15 +23,68 @@ import (
 )
 
 var (
-	dstPort   int
-	srcPort   int
-	perfPort  int
-	kafkaSrv  string
-	intercept string
-	splitAF   string
-	dump      string
-	file      string
+	dstPort        int
+	srcPort        int
+	perfPort       int
+	kafkaSrv       string
+	intercept      string
+	splitAF        string
+	dump           string
+	file           string
+	configFilePath string
 )
+
+var defaultTopicsConfig = kafka.TopicsConfig{
+	UnicastIPv4Topic:  "gobmp.parsed.unicast_prefix",
+	UnicastIPv6Topic:  "gobmp.parsed.unicast_prefix",
+	LSNodeTopic:       "gobmp.parsed.ls_node",
+	LSLinkTopic:       "gobmp.parsed.ls_link",
+	LSPrefixTopic:     "gobmp.parsed.ls_prefix",
+	LSSRv6SIDTopic:    "gobmp.parsed.ls_srv6_sid",
+	L3VPNIPv4Topic:    "gobmp.parsed.l3vpn",
+	L3VPNIPv6Topic:    "gobmp.parsed.l3vpn",
+	EVPNTopic:         "gobmp.parsed.evpn",
+	SRPolicyIPv4Topic: "gobmp.parsed.sr_policy",
+	SRPolicyIPv6Topic: "gobmp.parsed.sr_policy",
+	FlowSpecIPv4Topic: "gobmp.parsed.flowspec",
+	FlowSpecIPv6Topic: "gobmp.parsed.flowspec",
+}
+
+var defaultTopicsConfigSplitAF = kafka.TopicsConfig{
+	PeerTopic:         "gobmp.parsed.peer",
+	UnicastIPv4Topic:  "gobmp.parsed.unicast_prefix_v4",
+	UnicastIPv6Topic:  "gobmp.parsed.unicast_prefix_v6",
+	LSNodeTopic:       "gobmp.parsed.ls_node",
+	LSLinkTopic:       "gobmp.parsed.ls_link",
+	LSPrefixTopic:     "gobmp.parsed.ls_prefix",
+	LSSRv6SIDTopic:    "gobmp.parsed.ls_srv6_sid",
+	L3VPNIPv4Topic:    "gobmp.parsed.l3vpn_v4",
+	L3VPNIPv6Topic:    "gobmp.parsed.l3vpn_v6",
+	EVPNTopic:         "gobmp.parsed.evpn",
+	SRPolicyIPv4Topic: "gobmp.parsed.sr_policy_v4",
+	SRPolicyIPv6Topic: "gobmp.parsed.sr_policy_v6",
+	FlowSpecIPv4Topic: "gobmp.parsed.flowspec_v4",
+	FlowSpecIPv6Topic: "gobmp.parsed.flowspec_v6",
+}
+
+type Config struct {
+	KafkaTopics *kafka.TopicsConfig `json:"kafka-topics"`
+}
+
+func loadConfig(fp string) (*Config, error) {
+	fc, err := ioutil.ReadFile(fp)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read config file: %v", err)
+	}
+
+	cfg := &Config{}
+	err = json.Unmarshal(fc, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to unmarshal config file: %v", err)
+	}
+
+	return cfg, nil
+}
 
 func init() {
 	runtime.GOMAXPROCS(1)
@@ -40,7 +95,8 @@ func init() {
 	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" (default) ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 56767, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\" or to the standard output when \"dump=console\"")
-	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path anf file name to store messages when \"dump=file\"")
+	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path and file name to store messages when \"dump=file\"")
+	flag.StringVar(&configFilePath, "config.file", "", "Path to config file (json)")
 }
 
 var (
@@ -67,13 +123,43 @@ func setupSignalHandler() (stopCh <-chan struct{}) {
 func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
+
+	var err error
+	interceptFlag, err := strconv.ParseBool(intercept)
+	if err != nil {
+		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
+		os.Exit(1)
+	}
+	splitAFFlag, err := strconv.ParseBool(splitAF)
+	if err != nil {
+		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
+		os.Exit(1)
+	}
+
 	// Starting performance collecting http server
 	go func() {
 		glog.Info(http.ListenAndServe(fmt.Sprintf(":%d", perfPort), nil))
 	}()
+
+	tcfg := defaultTopicsConfig
+	if splitAFFlag {
+		tcfg = defaultTopicsConfigSplitAF
+	}
+
+	if configFilePath != "" {
+		cfg, err := loadConfig(configFilePath)
+		if err != nil {
+			glog.Errorf("Unable to load config: %v", err)
+			os.Exit(1)
+		}
+
+		if cfg.KafkaTopics != nil {
+			tcfg = *cfg.KafkaTopics
+		}
+	}
+
 	// Initializing publisher
 	var publisher pub.Publisher
-	var err error
 	switch strings.ToLower(dump) {
 	case "file":
 		publisher, err = filer.NewFiler(file)
@@ -90,7 +176,7 @@ func main() {
 		}
 		glog.V(5).Infof("console publisher has been successfully initialized.")
 	default:
-		publisher, err = kafka.NewKafkaPublisher(kafkaSrv)
+		publisher, err = kafka.NewKafkaPublisher(kafkaSrv, tcfg)
 		if err != nil {
 			glog.Errorf("failed to initialize Kafka publisher with error: %+v", err)
 			os.Exit(1)
@@ -99,17 +185,7 @@ func main() {
 	}
 
 	// Initializing bmp server
-	interceptFlag, err := strconv.ParseBool(intercept)
-	if err != nil {
-		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
-		os.Exit(1)
-	}
-	splitAFFlag, err := strconv.ParseBool(splitAF)
-	if err != nil {
-		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
-		os.Exit(1)
-	}
-	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag)
+	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher)
 	if err != nil {
 		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
 		os.Exit(1)

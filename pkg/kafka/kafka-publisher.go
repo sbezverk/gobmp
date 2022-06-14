@@ -37,96 +37,85 @@ const (
 )
 
 var (
-	brockerConnectTimeout = 10 * time.Second
-	topicCreateTimeout    = 1 * time.Second
+	brokerConnectTimeout = 10 * time.Second
+	topicCreateTimeout   = 1 * time.Second
 	// goBMP topic's retention timer is 15 minutes
-	topicRetention = "900000"
+	topicRetention = time.Minute * 15
 )
 
-var (
-	// topics defines a list of topic to initialize and connect,
-	// initialization is done as a part of NewKafkaPublisher func.
-	topicNames = []string{
-		peerTopic,
-		unicastMessageTopic,
-		unicastMessageV4Topic,
-		unicastMessageV6Topic,
-		lsNodeMessageTopic,
-		lsLinkMessageTopic,
-		l3vpnMessageTopic,
-		l3vpnMessageV4Topic,
-		l3vpnMessageV6Topic,
-		lsPrefixMessageTopic,
-		lsSRv6SIDMessageTopic,
-		evpnMessageTopic,
-		srPolicyMessageTopic,
-		srPolicyMessageV4Topic,
-		srPolicyMessageV6Topic,
-		flowspecMessageTopic,
-		flowspecMessageV4Topic,
-		flowspecMessageV6Topic,
-	}
-)
+type TopicsConfig struct {
+	PeerTopic         string `json:"peerTopic"`
+	UnicastIPv4Topic  string `json:"unicastIPv4Topic"`
+	UnicastIPv6Topic  string `json:"unicastIPv6Topic"`
+	LSNodeTopic       string `json:"lsNodeTopic"`
+	LSLinkTopic       string `json:"lsLinkTopic"`
+	L3VPNIPv4Topic    string `json:"l3vpnIPv4Topic"`
+	L3VPNIPv6Topic    string `json:"l3vpnIPv6Topic"`
+	LSPrefixTopic     string `json:"lsPrefixTopic"`
+	LSSRv6SIDTopic    string `json:"lsSRv6SIDTopic"`
+	EVPNTopic         string `json:"evpnTopic"`
+	SRPolicyIPv4Topic string `json:"srPolicyIPv4Topic"`
+	SRPolicyIPv6Topic string `json:"srPolicyIPv6Topic"`
+	FlowSpecIPv4Topic string `json:"flowSpecIPv4Topic"`
+	FlowSpecIPv6Topic string `json:"flowSpecIPv6Topic"`
+}
 
 type publisher struct {
 	broker   *sarama.Broker
 	config   *sarama.Config
 	producer sarama.AsyncProducer
 	stopCh   chan struct{}
+	tcfg     TopicsConfig
 }
 
 func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
+	topic := ""
 	switch t {
 	case bmp.PeerStateChangeMsg:
-		return p.produceMessage(peerTopic, key, msg)
-	case bmp.UnicastPrefixMsg:
-		return p.produceMessage(unicastMessageTopic, key, msg)
+		topic = p.tcfg.PeerTopic
 	case bmp.UnicastPrefixV4Msg:
-		return p.produceMessage(unicastMessageV4Topic, key, msg)
+		topic = p.tcfg.UnicastIPv4Topic
 	case bmp.UnicastPrefixV6Msg:
-		return p.produceMessage(unicastMessageV6Topic, key, msg)
+		topic = p.tcfg.UnicastIPv6Topic
 	case bmp.LSNodeMsg:
-		return p.produceMessage(lsNodeMessageTopic, key, msg)
+		topic = p.tcfg.LSNodeTopic
 	case bmp.LSLinkMsg:
-		return p.produceMessage(lsLinkMessageTopic, key, msg)
-	case bmp.L3VPNMsg:
-		return p.produceMessage(l3vpnMessageTopic, key, msg)
+		topic = p.tcfg.LSLinkTopic
 	case bmp.L3VPNV4Msg:
-		return p.produceMessage(l3vpnMessageV4Topic, key, msg)
+		topic = p.tcfg.L3VPNIPv4Topic
 	case bmp.L3VPNV6Msg:
-		return p.produceMessage(l3vpnMessageV6Topic, key, msg)
+		topic = p.tcfg.L3VPNIPv6Topic
 	case bmp.LSPrefixMsg:
-		return p.produceMessage(lsPrefixMessageTopic, key, msg)
+		topic = p.tcfg.LSPrefixTopic
 	case bmp.LSSRv6SIDMsg:
-		return p.produceMessage(lsSRv6SIDMessageTopic, key, msg)
+		topic = p.tcfg.LSSRv6SIDTopic
 	case bmp.EVPNMsg:
-		return p.produceMessage(evpnMessageTopic, key, msg)
-	case bmp.SRPolicyMsg:
-		return p.produceMessage(srPolicyMessageTopic, key, msg)
+		topic = p.tcfg.EVPNTopic
 	case bmp.SRPolicyV4Msg:
-		return p.produceMessage(srPolicyMessageV4Topic, key, msg)
+		topic = p.tcfg.SRPolicyIPv4Topic
 	case bmp.SRPolicyV6Msg:
-		return p.produceMessage(srPolicyMessageV6Topic, key, msg)
-	case bmp.FlowspecMsg:
-		return p.produceMessage(flowspecMessageTopic, key, msg)
+		topic = p.tcfg.SRPolicyIPv6Topic
 	case bmp.FlowspecV4Msg:
-		return p.produceMessage(flowspecMessageV4Topic, key, msg)
+		topic = p.tcfg.FlowSpecIPv4Topic
 	case bmp.FlowspecV6Msg:
-		return p.produceMessage(flowspecMessageV6Topic, key, msg)
+		topic = p.tcfg.FlowSpecIPv6Topic
+	default:
+		return fmt.Errorf("not implemented")
 	}
 
-	return fmt.Errorf("not implemented")
+	// Ignore when topic is not configured
+	if topic == "" {
+		return nil
+	}
+
+	return p.produceMessage(topic, key, msg)
 }
 
-func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
-	k := sarama.ByteEncoder{}
-	k = key
-	m := sarama.ByteEncoder{}
-	m = msg
+func (p *publisher) produceMessage(topic string, key sarama.ByteEncoder, msg sarama.ByteEncoder) error {
 	p.producer.Input() <- &sarama.ProducerMessage{
 		Topic: topic,
-		Key:   k,
-		Value: m,
+		Key:   key,
+		Value: msg,
 	}
 
 	return nil
@@ -137,13 +126,42 @@ func (p *publisher) Stop() {
 	p.broker.Close()
 }
 
+func initializeTopics(br *sarama.Broker, tcfg TopicsConfig) error {
+	topics := make(map[string]struct{})
+
+	topics[tcfg.UnicastIPv4Topic] = struct{}{}
+	topics[tcfg.UnicastIPv6Topic] = struct{}{}
+	topics[tcfg.PeerTopic] = struct{}{}
+	topics[tcfg.LSLinkTopic] = struct{}{}
+	topics[tcfg.LSNodeTopic] = struct{}{}
+	topics[tcfg.LSPrefixTopic] = struct{}{}
+	topics[tcfg.EVPNTopic] = struct{}{}
+	topics[tcfg.FlowSpecIPv4Topic] = struct{}{}
+	topics[tcfg.FlowSpecIPv6Topic] = struct{}{}
+	topics[tcfg.SRPolicyIPv4Topic] = struct{}{}
+	topics[tcfg.SRPolicyIPv6Topic] = struct{}{}
+
+	// Drop the empty topic name if it exists
+	if _, exists := topics[""]; exists {
+		delete(topics, "")
+	}
+
+	for t := range topics {
+		if err := ensureTopic(br, topicCreateTimeout, t); err != nil {
+			return fmt.Errorf("New Kafka publisher failed to ensure requested topics with error: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
-func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
+func NewKafkaPublisher(kafkaSrv string, tcfg TopicsConfig) (pub.Publisher, error) {
 	glog.Infof("Initializing Kafka producer client")
 	if err := validator(kafkaSrv); err != nil {
-		glog.Errorf("Failed to validate Kafka server address %s with error: %+v", kafkaSrv, err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to validate Kafka server address %s with error: %v", kafkaSrv, err)
 	}
+
 	config := sarama.NewConfig()
 	config.ClientID = "gobmp-producer" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Producer.Return.Successes = true
@@ -155,23 +173,22 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 			return nil, err
 		}
 	}
-	if err := waitForBrokerConnection(br, brockerConnectTimeout); err != nil {
-		glog.Errorf("failed to open connection to the broker with error: %+v\n", err)
-		return nil, err
-	}
-	glog.V(5).Infof("Connected to broker: %s id: %d\n", br.Addr(), br.ID())
 
-	for _, t := range topicNames {
-		if err := ensureTopic(br, topicCreateTimeout, t); err != nil {
-			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
-			return nil, err
-		}
+	if err := waitForBrokerConnection(br, brokerConnectTimeout); err != nil {
+		return nil, fmt.Errorf("failed to open connection to the broker with error: %v", err)
 	}
+	glog.V(5).Infof("Connected to broker: %s id: %d", br.Addr(), br.ID())
+
+	err := initializeTopics(br, tcfg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize topics: %v", err)
+	}
+
 	producer, err := sarama.NewAsyncProducer([]string{kafkaSrv}, config)
 	if err != nil {
-		glog.Errorf("New Kafka publisher failed to start new async producer with error: %+v", err)
-		return nil, err
+		return nil, fmt.Errorf("New Kafka publisher failed to start new async producer with error: %v", err)
 	}
+
 	glog.V(5).Infof("Initialized Kafka Async producer")
 	stopCh := make(chan struct{})
 	go func(producer sarama.AsyncProducer, stopCh <-chan struct{}) {
@@ -192,6 +209,7 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 		broker:   br,
 		config:   config,
 		producer: producer,
+		tcfg:     tcfg,
 	}, nil
 }
 
@@ -218,13 +236,14 @@ func validator(addr string) error {
 }
 
 func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) error {
+	retentionMS := fmt.Sprintf("%d", topicRetention.Milliseconds())
 	topic := &sarama.CreateTopicsRequest{
 		TopicDetails: map[string]*sarama.TopicDetail{
 			topicName: {
 				NumPartitions:     1,
 				ReplicationFactor: 1,
 				ConfigEntries: map[string]*string{
-					"retention.ms": &topicRetention,
+					"retention.ms": &retentionMS,
 				},
 			},
 		},
