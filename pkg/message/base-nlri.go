@@ -25,14 +25,14 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 	switch op {
 	case 0:
 		operation = "add"
-		if r, err := base.UnmarshalRoutes(update.RawNLRI, pathID); err == nil {
+		if r, err := base.UnmarshalRoutes(update.NLRI, pathID); err == nil {
 			routes = r
 		} else {
 			return nil, fmt.Errorf("failed to unmarshal routes from NLRI with error: %+v", err)
 		}
 	case 1:
 		operation = "del"
-		if r, err := base.UnmarshalRoutes(update.RawWithdrawnRoutes, pathID); err == nil {
+		if r, err := base.UnmarshalRoutes(update.WithdrawnRoutes, pathID); err == nil {
 			routes = r
 		} else {
 			return nil, fmt.Errorf("failed to unmarshal routes from NLRI with error: %+v", err)
@@ -57,25 +57,25 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			// Last element in AS_PATH would be the AS of the origin
 			prfx.OriginAS = int32(ases[len(ases)-1])
 		}
-		if ph.FlagV {
-			// IPv6 specific conversions
-			prfx.IsIPv4 = false
-			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-			prfx.Nexthop = update.BaseAttributes.Nexthop
-			prfx.IsNexthopIPv4 = false
-			a := make([]byte, 16)
-			copy(a, pr.Prefix)
-			prfx.Prefix = net.IP(a).To16().String()
-		} else {
-			// IPv4 specific conversions
-			prfx.IsIPv4 = true
-			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-			prfx.Nexthop = update.BaseAttributes.Nexthop
-			prfx.IsNexthopIPv4 = true
-			a := make([]byte, 4)
-			copy(a, pr.Prefix)
-			prfx.Prefix = net.IP(a).To4().String()
-		}
+		// if ph.FlagV {
+		// 	// IPv6 specific conversions
+		// 	prfx.IsIPv4 = false
+		// 	prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
+		// 	prfx.Nexthop = update.BaseAttributes.Nexthop
+		// 	prfx.IsNexthopIPv4 = false
+		// 	a := make([]byte, 16)
+		// 	copy(a, pr.Prefix)
+		// 	prfx.Prefix = net.IP(a).To16().String()
+		// } else {
+		// IPv4 specific conversions
+		prfx.IsIPv4 = true
+		prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
+		prfx.Nexthop = update.BaseAttributes.Nexthop
+		prfx.IsNexthopIPv4 = true
+		a := make([]byte, 4)
+		copy(a, pr.Prefix)
+		prfx.Prefix = net.IP(a).To4().String()
+		//	}
 		prfxs = append(prfxs, prfx)
 	}
 

@@ -24,11 +24,10 @@ func TestUnmarshalMPReachNLRI(t *testing.T) {
 				NextHopAddressLength: 16,
 				NextHopAddress:       []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x98, 0xB7, 0x0B},
 				NLRI:                 []byte{0x10, 0x20, 0x01},
+				addPath:              map[int]bool{},
 			},
-			srv6: false,
-			addPath: map[int]bool{
-				NLRIMessageType(2, 1): true,
-			},
+			srv6:    false,
+			addPath: map[int]bool{},
 		},
 	}
 	for _, tt := range tests {
