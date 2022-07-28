@@ -14,6 +14,7 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 		expect *base.MPNLRI
 		fail   bool
 		srv6   bool
+		pathID bool
 	}{
 		{
 			name:  "nlri 1",
@@ -21,7 +22,6 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 			expect: &base.MPNLRI{
 				NLRI: []base.Route{
 					{
-						PathID: 0,
 						Length: 32,
 						Label: []*base.Label{
 							{
@@ -38,7 +38,8 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 					},
 				},
 			},
-			fail: false,
+			pathID: false,
+			fail:   false,
 		},
 		{
 			name:  "nlri 2",
@@ -46,7 +47,6 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 			expect: &base.MPNLRI{
 				NLRI: []base.Route{
 					{
-						PathID: 0,
 						Length: 24,
 						Label: []*base.Label{
 							{
@@ -63,7 +63,8 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 					},
 				},
 			},
-			fail: false,
+			pathID: false,
+			fail:   false,
 		},
 		{
 			name:  "nlri 4",
@@ -88,7 +89,8 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 					},
 				},
 			},
-			fail: false,
+			pathID: true,
+			fail:   false,
 		},
 		{
 			name:  "nlri 5 L3VPN IPv6",
@@ -96,7 +98,6 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 			expect: &base.MPNLRI{
 				NLRI: []base.Route{
 					{
-						PathID: 0,
 						Length: 64,
 						Label: []*base.Label{
 							{
@@ -112,7 +113,6 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 						Prefix: []byte{0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55},
 					},
 					{
-						PathID: 0,
 						Length: 128,
 						Label: []*base.Label{
 							{
@@ -128,7 +128,6 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 						Prefix: []byte{0x01, 0x72, 0x00, 0x31, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06},
 					},
 					{
-						PathID: 0,
 						Length: 120,
 						Label: []*base.Label{
 							{
@@ -145,7 +144,8 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 					},
 				},
 			},
-			fail: false,
+			pathID: false,
+			fail:   false,
 		},
 		{
 			name:  "srv6 based l3vpn",
@@ -169,13 +169,14 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 					},
 				},
 			},
-			fail: false,
-			srv6: true,
+			fail:   false,
+			srv6:   true,
+			pathID: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := UnmarshalL3VPNNLRI(tt.input, tt.srv6)
+			got, err := UnmarshalL3VPNNLRI(tt.input, tt.pathID, tt.srv6)
 			if err != nil && !tt.fail {
 				t.Fatalf("expected to succeed but failed with error: %+v", err)
 			}
