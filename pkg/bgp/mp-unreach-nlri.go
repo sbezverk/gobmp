@@ -11,7 +11,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 	"github.com/sbezverk/gobmp/pkg/unicast"
 )
 

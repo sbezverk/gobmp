@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // EndpointBehavior defines SRv6 Endpoint Behavior TLV object

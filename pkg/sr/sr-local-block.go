@@ -2,7 +2,7 @@ package sr
 
 import (
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // LocalBlock defines SR Local Block TLV object
