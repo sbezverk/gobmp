@@ -24,9 +24,48 @@ type Route struct {
 }
 
 // UnmarshalRoutes builds BGP Withdrawn routes object
-func UnmarshalRoutes(b []byte) ([]Route, error) {
+// func UnmarshalRoutes(b []byte) ([]Route, error) {
+// 	if glog.V(6) {
+// 		glog.Infof("Routes Raw: %s", tools.MessageHex(b))
+// 	}
+// 	routes := make([]Route, 0)
+// 	if len(b) == 0 {
+// 		return nil, nil
+// 	}
+// 	for p := 0; p < len(b); {
+// 		route := Route{}
+// 		route.Length = b[p]
+// 		// Check if there is Path ID in NLRI
+// 		if b[p] == 0 && len(b) > 4 {
+// 			route.PathID = binary.BigEndian.Uint32(b[p : p+4])
+// 			p += 4
+// 			// Updating length
+// 			route.Length = b[p]
+// 		}
+// 		l := route.Length / 8
+// 		if route.Length%8 != 0 {
+// 			l++
+// 		}
+// 		p++
+// 		// Check that the following copy would not exceed the slice capacity
+// 		safeOffset := int(l)
+// 		// The sum of a current pointer in the slice and safeOffset should not exceed  the byte slice length.
+// 		if p+safeOffset > len(b) {
+// 			safeOffset = len(b) - p
+// 		}
+// 		route.Prefix = make([]byte, l)
+// 		copy(route.Prefix, b[p:p+safeOffset])
+// 		p += safeOffset
+// 		routes = append(routes, route)
+// 	}
+
+// 	return routes, nil
+// }
+
+// UnmarshalRoutes builds BGP Withdrawn routes object
+func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 	if glog.V(6) {
-		glog.Infof("Routes Raw: %s", tools.MessageHex(b))
+		glog.Infof("Routes Raw: %s Path ID flag: %t", tools.MessageHex(b), pathID)
 	}
 	routes := make([]Route, 0)
 	if len(b) == 0 {
@@ -36,7 +75,7 @@ func UnmarshalRoutes(b []byte) ([]Route, error) {
 		route := Route{}
 		route.Length = b[p]
 		// Check if there is Path ID in NLRI
-		if b[p] == 0 && len(b) > 4 {
+		if pathID {
 			route.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 			// Updating length

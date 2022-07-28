@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -12,13 +13,30 @@ import (
 // a slice of UnicatPrefix.
 func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
 	var operation string
-	routes := update.NLRI
+	var routes []base.Route
+	pathID := false
+	if ph.FlagV {
+		// Checking if Unicast IPv6 AFI/SAFI 2/1 has AddPath enabled
+		pathID = p.addPathCapable[bgp.NLRIMessageType(2, 1)]
+	} else {
+		// Checking if Unicast IPv4 AFI/SAFI 1/1 has AddPath enabled
+		pathID = p.addPathCapable[bgp.NLRIMessageType(1, 1)]
+	}
 	switch op {
 	case 0:
 		operation = "add"
+		if r, err := base.UnmarshalRoutes(update.RawNLRI, pathID); err == nil {
+			routes = r
+		} else {
+			return nil, fmt.Errorf("failed to unmarshal routes from NLRI with error: %+v", err)
+		}
 	case 1:
 		operation = "del"
-		routes = update.WithdrawnRoutes
+		if r, err := base.UnmarshalRoutes(update.RawWithdrawnRoutes, pathID); err == nil {
+			routes = r
+		} else {
+			return nil, fmt.Errorf("failed to unmarshal routes from NLRI with error: %+v", err)
+		}
 	default:
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}

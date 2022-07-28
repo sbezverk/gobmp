@@ -23,7 +23,9 @@ type MPNLRI interface {
 	IsNextHopIPv6() bool
 }
 
-func getNLRIMessageType(afi uint16, safi uint8) int {
+// NLRIMessageType return NLRI Type code based on AFI/SAFI parameters,
+// if AFI/SAFI is unknown it will return 0
+func NLRIMessageType(afi uint16, safi uint8) int {
 	switch {
 	// 16388 BGP-LS	[RFC7752] : 71	BGP-LS	[RFC7752]
 	case afi == 16388 && safi == 71:

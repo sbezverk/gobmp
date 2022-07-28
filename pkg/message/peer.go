@@ -60,13 +60,23 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			// Local BGP speaker is 4 bytes AS capable
 			m.LocalASN = lasn
 		}
-		p.as4Capable = false
-		_, l4as := peerUpMsg.SentOpen.Is4BytesASCapable()
-		_, r4as := peerUpMsg.ReceivedOpen.Is4BytesASCapable()
-		if l4as && r4as {
-			// Both peers are AS 4 bytes capable
-			p.as4Capable = true
+		p.addPathCapable = make(map[int]bool)
+		// Check if local router advertises AddPath Send/Receive for any AFI/SAFI,
+		// if map comes back empty no further AddPath Capability is needed
+		if lAddPath := peerUpMsg.SentOpen.AddPathCapability(); len(lAddPath) != 0 {
+			// Check if remote router advertises AddPath Send/Receive for any AFI/SAFI,
+			// if map comes back empty no further AddPath Capability is needed
+			if rAddPath := peerUpMsg.ReceivedOpen.AddPathCapability(); len(rAddPath) != 0 {
+				for k := range lAddPath {
+					// Enable AddPath only for AFI/SAFI types existing in both local and remote maps
+					if _, ok := rAddPath[k]; ok {
+						// AFI/SAFI type exists in both maps, which means both peers support Send/Receive of AddPath
+						p.addPathCapable[k] = true
+					}
+				}
+			}
 		}
+		glog.Infof("><SB> AddPath capability map: %+v", p.addPathCapable)
 		m.AdvCapabilities = peerUpMsg.SentOpen.GetCapabilities()
 		m.RcvCapabilities = peerUpMsg.ReceivedOpen.GetCapabilities()
 	} else {

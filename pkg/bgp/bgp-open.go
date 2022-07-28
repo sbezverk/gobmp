@@ -42,6 +42,40 @@ func (o *OpenMessage) Is4BytesASCapable() (uint32, bool) {
 	return binary.BigEndian.Uint32(v[0].Value), true
 }
 
+// IsAddPathCapable returns a map of NLRI types and bool indicating if a particular NLRI type
+// supports Add Path capability
+func (o *OpenMessage) AddPathCapability() map[int]bool {
+	m := make(map[int]bool)
+	v, ok := o.Capabilities[69]
+	if !ok {
+		return m
+	}
+	if len(v) == 0 && len(v) > 1 {
+		glog.Errorf("invalid length %d of AddPath capability", len(v))
+		return m
+	}
+	if glog.V(6) {
+		glog.Infof("AddPath Capability Raw: %s", tools.MessageHex(v[0].Value))
+	}
+	// Check for Capability data consistency
+	if len(v[0].Value)%4 != 0 {
+		glog.Errorf("invalid length of AddPath capability %d", len(v[0].Value))
+		return m
+	}
+	for p := 0; p < len(v[0].Value); p += 4 {
+		// Check if last byte == 3 (Send/Receive) AddPath, if not, ignoring entry
+		if v[0].Value[p+3] != 3 {
+			continue
+		}
+		afi := binary.BigEndian.Uint16(v[0].Value[p : p+2])
+		safi := v[0].Value[p+2]
+		m[NLRIMessageType(afi, safi)] = true
+		glog.Infof("><SB> AFI/SAFI: %d/%d has Send/Receive support for AddPath", afi, safi)
+	}
+
+	return m
+}
+
 // IsMultiLabelCapable returns true or false if Open message originated by a bgp speaker
 // supporting Multiple Label Capability
 func (o *OpenMessage) IsMultiLabelCapable() bool {
