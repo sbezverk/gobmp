@@ -57,17 +57,6 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			// Last element in AS_PATH would be the AS of the origin
 			prfx.OriginAS = int32(ases[len(ases)-1])
 		}
-		// if ph.FlagV {
-		// 	// IPv6 specific conversions
-		// 	prfx.IsIPv4 = false
-		// 	prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-		// 	prfx.Nexthop = update.BaseAttributes.Nexthop
-		// 	prfx.IsNexthopIPv4 = false
-		// 	a := make([]byte, 16)
-		// 	copy(a, pr.Prefix)
-		// 	prfx.Prefix = net.IP(a).To16().String()
-		// } else {
-		// IPv4 specific conversions
 		prfx.IsIPv4 = true
 		prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
 		prfx.Nexthop = update.BaseAttributes.Nexthop

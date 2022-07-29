@@ -76,7 +76,6 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 				}
 			}
 		}
-		glog.Infof("><SB> AddPath capability map: %+v", p.addPathCapable)
 		m.AdvCapabilities = peerUpMsg.SentOpen.GetCapabilities()
 		m.RcvCapabilities = peerUpMsg.ReceivedOpen.GetCapabilities()
 	} else {

@@ -20,14 +20,12 @@ const (
 
 // Update defines a structure of BGP Update message
 type Update struct {
-	WithdrawnRoutesLength uint16
-	// WithdrawnRoutes          []base.Route
+	WithdrawnRoutesLength    uint16
 	WithdrawnRoutes          []byte
 	TotalPathAttributeLength uint16
 	PathAttributes           []PathAttribute
-	// NLRI                     []base.Route
-	NLRI           []byte
-	BaseAttributes *BaseAttributes
+	NLRI                     []byte
+	BaseAttributes           *BaseAttributes
 }
 
 // GetAllAttributeID return a slixe of int with all attributes found in BGP Update
@@ -120,11 +118,6 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	p += 2
 	u.WithdrawnRoutes = make([]byte, u.WithdrawnRoutesLength)
 	copy(u.WithdrawnRoutes, b[p:p+int(u.WithdrawnRoutesLength)])
-	// wdr, err := base.UnmarshalRoutes(b[p : p+int(u.WithdrawnRoutesLength)])
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// u.WithdrawnRoutes = wdr
 	p += int(u.WithdrawnRoutesLength)
 	u.TotalPathAttributeLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
@@ -142,11 +135,6 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	p += int(u.TotalPathAttributeLength)
 	u.NLRI = make([]byte, len(b)-p)
 	copy(u.NLRI, b[p:])
-	// routes, err := base.UnmarshalRoutes(b[p:])
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// u.NLRI = routes
 
 	return &u, nil
 }
