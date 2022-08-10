@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // MultiTopologyIdentifier defines Multi Topology Identifier whcih is alias of uint16

@@ -12,8 +12,8 @@ import (
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
-	"github.com/sbezverk/gobmp/pkg/tools"
 	"github.com/sbezverk/gobmp/pkg/unicast"
+	"github.com/sbezverk/tools"
 )
 
 // MPReachNLRI defines an MP Reach NLRI object
@@ -25,12 +25,13 @@ type MPReachNLRI struct {
 	NLRI                 []byte
 	// When BGP update carries Prefix SID attribute 40, the processing of some AFI/SAFI NLRIs
 	// may differ from the standard processing.
-	SRv6 bool
+	SRv6    bool
+	addPath map[int]bool
 }
 
 // GetAFISAFIType returns underlaying NLRI's type based on AFI/SAFI
 func (mp *MPReachNLRI) GetAFISAFIType() int {
-	return getNLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)
+	return NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)
 }
 
 // IsIPv6NLRI return true if NLRI is for IPv6 address family
@@ -110,7 +111,8 @@ func (mp *MPReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
 // GetNLRIL3VPN check for presense of NLRI L3VPN AFI 1 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
 func (mp *MPReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 128 {
-		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.NLRI, mp.SRv6)
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.NLRI, pathID, mp.SRv6)
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +140,8 @@ func (mp *MPReachNLRI) GetNLRIEVPN() (*evpn.Route, error) {
 // GetNLRIUnicast check for presense of NLRI EVPN AFI 1 or 2  and SAFI 1 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
 func (mp *MPReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 1 {
-		nlri, err := unicast.UnmarshalUnicastNLRI(mp.NLRI)
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		nlri, err := unicast.UnmarshalUnicastNLRI(mp.NLRI, pathID)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +155,8 @@ func (mp *MPReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 // GetNLRILU check for presense of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
 func (mp *MPReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 4 {
-		nlri, err := unicast.UnmarshalLUNLRI(mp.NLRI)
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		nlri, err := unicast.UnmarshalLUNLRI(mp.NLRI, pathID)
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +178,7 @@ func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 }
 
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes
-func UnmarshalMPReachNLRI(b []byte, srv6 bool) (MPNLRI, error) {
+func UnmarshalMPReachNLRI(b []byte, srv6 bool, addPath map[int]bool) (MPNLRI, error) {
 	if glog.V(6) {
 		glog.Infof("MPReachNLRI Raw: %s", tools.MessageHex(b))
 	}
@@ -182,7 +186,8 @@ func UnmarshalMPReachNLRI(b []byte, srv6 bool) (MPNLRI, error) {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
 	mp := MPReachNLRI{
-		SRv6: srv6,
+		addPath: addPath,
+		SRv6:    srv6,
 	}
 	p := 0
 	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])

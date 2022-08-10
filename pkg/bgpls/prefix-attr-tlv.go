@@ -7,7 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/sr"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // PrefixAttrTLVs defines a struvture for Prefix Attributes as defined in the following RFC proposal:

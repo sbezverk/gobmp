@@ -16,7 +16,7 @@ func TestUnmarshalBGPOpenMessage(t *testing.T) {
 	}{
 		{
 			name:  "valid",
-			input: []byte{0, 91, 1, 4, 19, 206, 0, 90, 192, 168, 8, 8, 62, 2, 6, 1, 4, 0, 1, 0, 1, 2, 6, 1, 4, 0, 1, 0, 4, 2, 6, 1, 4, 0, 1, 0, 128, 2, 2, 128, 0, 2, 2, 2, 0, 2, 6, 65, 4, 0, 0, 19, 206, 2, 20, 5, 18, 0, 1, 0, 1, 0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 0, 128, 0, 2},
+			input: []byte{0, 91, 1, 4, 19, 206, 0, 90, 192, 168, 8, 8, 62, 2, 6, 1, 4, 0, 1, 0, 1, 2, 6, 1, 4, 0, 1, 0, 4, 2, 6, 1, 4, 0, 1, 0, 128, 2, 2, 128, 0, 2, 2, 2, 0, 2, 6, 65, 4, 0, 0, 19, 206, 2, 6, 69, 4, 1, 0, 134, 3, 2, 20, 5, 18, 0, 1, 0, 1, 0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 0, 128, 0, 2},
 			expect: &OpenMessage{
 				Length:  91,
 				Type:    1,
@@ -56,6 +56,12 @@ func TestUnmarshalBGPOpenMessage(t *testing.T) {
 						{
 							Description: "Support for 4-octet AS number capability",
 							Value:       []byte{0, 0, 19, 206},
+						},
+					},
+					69: []*capabilityData{
+						{
+							Description: "ADD-PATH Capability",
+							Value:       []byte{1, 0, 134, 3},
 						},
 					},
 					128: []*capabilityData{

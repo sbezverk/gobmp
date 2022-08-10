@@ -9,10 +9,11 @@ import (
 
 func TestUnmarshalMPReachNLRI(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  []byte
-		expect *MPReachNLRI
-		srv6   bool
+		name    string
+		input   []byte
+		expect  *MPReachNLRI
+		srv6    bool
+		addPath map[int]bool
 	}{
 		{
 			name:  "issue_173",
@@ -23,13 +24,15 @@ func TestUnmarshalMPReachNLRI(t *testing.T) {
 				NextHopAddressLength: 16,
 				NextHopAddress:       []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0A, 0x98, 0xB7, 0x0B},
 				NLRI:                 []byte{0x10, 0x20, 0x01},
+				addPath:              map[int]bool{},
 			},
-			srv6: false,
+			srv6:    false,
+			addPath: map[int]bool{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, err := UnmarshalMPReachNLRI(tt.input, tt.srv6)
+			actual, err := UnmarshalMPReachNLRI(tt.input, tt.srv6, tt.addPath)
 			if err != nil {
 				t.Fatalf("failed to unmarshal MP Reach NLRI with error: %+v", err)
 			}

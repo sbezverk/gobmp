@@ -2,7 +2,7 @@ package base
 
 import (
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // MSDTV defines MSD Type Value tuple

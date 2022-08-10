@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // MPNLRI defines a collection of Prefixes/Routes sent in NLRI of MP_REACH or MP_UNREACH attribute
@@ -24,9 +24,9 @@ type Route struct {
 }
 
 // UnmarshalRoutes builds BGP Withdrawn routes object
-func UnmarshalRoutes(b []byte) ([]Route, error) {
+func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 	if glog.V(6) {
-		glog.Infof("Routes Raw: %s", tools.MessageHex(b))
+		glog.Infof("Routes Raw: %s Path ID flag: %t", tools.MessageHex(b), pathID)
 	}
 	routes := make([]Route, 0)
 	if len(b) == 0 {
@@ -36,7 +36,7 @@ func UnmarshalRoutes(b []byte) ([]Route, error) {
 		route := Route{}
 		route.Length = b[p]
 		// Check if there is Path ID in NLRI
-		if b[p] == 0 && len(b) > 4 {
+		if pathID {
 			route.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 			// Updating length

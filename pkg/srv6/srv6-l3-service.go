@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // SIDStructureSubSubTLV defines a structure of SID's Structure Sub Sub TLV

@@ -2,7 +2,7 @@ package base
 
 import (
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // PrefixDescriptor defines Prefix Descriptor object
@@ -30,7 +30,8 @@ func (pd *PrefixDescriptor) GetPrefixMTID() *MultiTopologyIdentifier {
 // GetPrefixIPReachability returns BGP route struct encoded in Prefix Descriptor TLV
 func (pd *PrefixDescriptor) GetPrefixIPReachability(ipv4 bool) *Route {
 	if tlv, ok := pd.PrefixTLV[265]; ok {
-		routes, err := UnmarshalRoutes(tlv.Value)
+		// Route incoded in PrefixTLV does not carry Path ID, hence passing "false" to UnmarshalRoutes
+		routes, err := UnmarshalRoutes(tlv.Value, false)
 		if err != nil {
 			return nil
 		}

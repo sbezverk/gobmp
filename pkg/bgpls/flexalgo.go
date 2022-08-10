@@ -6,7 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // FlexAlgoDefinition defines an optional BGP-LS Attribute TLV associated

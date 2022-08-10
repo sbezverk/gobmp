@@ -7,10 +7,9 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/prefixsid"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 const (
@@ -22,10 +21,10 @@ const (
 // Update defines a structure of BGP Update message
 type Update struct {
 	WithdrawnRoutesLength    uint16
-	WithdrawnRoutes          []base.Route
+	WithdrawnRoutes          []byte
 	TotalPathAttributeLength uint16
 	PathAttributes           []PathAttribute
-	NLRI                     []base.Route
+	NLRI                     []byte
 	BaseAttributes           *BaseAttributes
 }
 
@@ -48,28 +47,6 @@ func (up *Update) GetBaseAttrHash() string {
 	s := fmt.Sprintf("%x", md5.Sum(data))
 
 	return s
-}
-
-// GetMPReachNLRI Instantiates MP_Reach NLRI if it exists in the update
-func (up *Update) GetMPReachNLRI() (MPNLRI, error) {
-	for _, attr := range up.PathAttributes {
-		if attr.AttributeType == 14 {
-			return UnmarshalMPReachNLRI(attr.Attribute, up.HasPrefixSID())
-		}
-	}
-
-	return nil, fmt.Errorf("not found")
-}
-
-// GetMPUnReachNLRI Instantiates MP_UNReach NLRI if it exists in the update
-func (up *Update) GetMPUnReachNLRI() (MPNLRI, error) {
-	for _, attr := range up.PathAttributes {
-		if attr.AttributeType == 15 {
-			return UnmarshalMPUnReachNLRI(attr.Attribute)
-		}
-	}
-
-	return nil, fmt.Errorf("not found")
 }
 
 // GetNLRI29 check for presense of NLRI 29 in the update and if exists, instantiate NLRI29 object
@@ -139,11 +116,8 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	u := Update{}
 	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	wdr, err := base.UnmarshalRoutes(b[p : p+int(u.WithdrawnRoutesLength)])
-	if err != nil {
-		return nil, err
-	}
-	u.WithdrawnRoutes = wdr
+	u.WithdrawnRoutes = make([]byte, u.WithdrawnRoutesLength)
+	copy(u.WithdrawnRoutes, b[p:p+int(u.WithdrawnRoutesLength)])
 	p += int(u.WithdrawnRoutesLength)
 	u.TotalPathAttributeLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
@@ -159,11 +133,8 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	u.PathAttributes = attrs
 	u.BaseAttributes = baseAttrs
 	p += int(u.TotalPathAttributeLength)
-	routes, err := base.UnmarshalRoutes(b[p:])
-	if err != nil {
-		return nil, err
-	}
-	u.NLRI = routes
+	u.NLRI = make([]byte, len(b)-p)
+	copy(u.NLRI, b[p:])
 
 	return &u, nil
 }

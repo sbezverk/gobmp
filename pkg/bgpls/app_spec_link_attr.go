@@ -5,7 +5,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-app-specific-attr-03#section-2

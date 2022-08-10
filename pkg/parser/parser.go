@@ -3,7 +3,7 @@ package parser
 import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // Parser dispatches workers upon request received from the channel

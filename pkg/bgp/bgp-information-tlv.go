@@ -2,7 +2,7 @@ package bgp
 
 import (
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // InformationalTLV defines BGP informational TLV object

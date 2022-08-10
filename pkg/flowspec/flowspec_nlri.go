@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // Spec defines an interface which all types of Flowspec rules must implement

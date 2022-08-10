@@ -68,10 +68,12 @@ func TestUnmarshalBaseNLRI(t *testing.T) {
 		name   string
 		input  []byte
 		expect []Route
+		pathID bool
 	}{
 		{
-			name:  "Default prefix",
-			input: []byte{0x0},
+			name:   "Default prefix",
+			input:  []byte{0x0},
+			pathID: false,
 			expect: []Route{
 				{
 					Length: 0x0,
@@ -80,8 +82,32 @@ func TestUnmarshalBaseNLRI(t *testing.T) {
 			},
 		},
 		{
-			name:  "Panic_1",
-			input: []byte{0x00, 0x00, 0x00, 0x01, 0x18, 0x43, 0xd3, 0x35, 0x00, 0x00, 0x00, 0x01, 0x18, 0x2d, 0xa0, 0x00},
+			name:   "fail",
+			input:  []byte{0, 8, 10, 24, 10, 0, 0, 24, 20, 0, 0},
+			pathID: false,
+			expect: []Route{
+				{
+					Length: 0x0,
+					Prefix: []byte{},
+				},
+				{
+					Length: 0x08,
+					Prefix: []byte{10},
+				},
+				{
+					Length: 24,
+					Prefix: []byte{10, 0, 0},
+				},
+				{
+					Length: 24,
+					Prefix: []byte{20, 0, 0},
+				},
+			},
+		},
+		{
+			name:   "Panic_1",
+			input:  []byte{0x00, 0x00, 0x00, 0x01, 0x18, 0x43, 0xd3, 0x35, 0x00, 0x00, 0x00, 0x01, 0x18, 0x2d, 0xa0, 0x00},
+			pathID: true,
 			expect: []Route{
 				{
 					PathID: 1,
@@ -98,7 +124,7 @@ func TestUnmarshalBaseNLRI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := UnmarshalRoutes(tt.input)
+			got, err := UnmarshalRoutes(tt.input, tt.pathID)
 			if err != nil {
 				t.Fatalf("test failed with error: %+v", err)
 			}

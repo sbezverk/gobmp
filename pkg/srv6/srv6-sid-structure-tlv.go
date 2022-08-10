@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // SIDStructure defines SRv6 SID Structure TLV object

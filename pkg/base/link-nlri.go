@@ -7,7 +7,7 @@ import (
 	"net"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // LinkNLRI defines Node NLRI onject

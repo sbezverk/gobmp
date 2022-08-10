@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/golang/glog"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // BaseAttributes defines a structure holding BGP's basic, non nlri based attributes,

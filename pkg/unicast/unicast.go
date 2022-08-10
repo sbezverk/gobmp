@@ -7,44 +7,29 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
-	"github.com/sbezverk/gobmp/pkg/tools"
+	"github.com/sbezverk/tools"
 )
 
 // UnmarshalUnicastNLRI builds MP NLRI object from the slice of bytes
-func UnmarshalUnicastNLRI(b []byte) (*base.MPNLRI, error) {
+func UnmarshalUnicastNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 	if glog.V(6) {
 		glog.Infof("MP Unicast NLRI Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
-	mpnlri := base.MPNLRI{
-		NLRI: make([]base.Route, 0),
+	mpnlri := base.MPNLRI{}
+	r, err := base.UnmarshalRoutes(b, pathID)
+	if err != nil {
+		return nil, err
 	}
-	for p := 0; p < len(b); {
-		up := base.Route{}
-		// When default prefix is sent, actual NLRI is 1 byte with value of 0x0
-		if b[p] == 0x0 && len(b) != 1 {
-			up.PathID = binary.BigEndian.Uint32(b[p : p+4])
-			p += 4
-		}
-		up.Length = b[p]
-		p++
-		l := int(up.Length / 8)
-		if up.Length%8 != 0 {
-			l++
-		}
-		up.Prefix = make([]byte, l)
-		copy(up.Prefix, b[p:p+l])
-		p += l
-		mpnlri.NLRI = append(mpnlri.NLRI, up)
-	}
+	mpnlri.NLRI = r
 
 	return &mpnlri, nil
 }
 
 // UnmarshalLUNLRI builds MP NLRI object from the slice of bytes
-func UnmarshalLUNLRI(b []byte) (*base.MPNLRI, error) {
+func UnmarshalLUNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 	if glog.V(6) {
 		glog.Infof("MP Label Unicast NLRI Raw: %s", tools.MessageHex(b))
 	}
@@ -55,7 +40,7 @@ func UnmarshalLUNLRI(b []byte) (*base.MPNLRI, error) {
 		up := base.Route{
 			Label: make([]*base.Label, 0),
 		}
-		if b[p] == 0x0 && len(b) != 1 {
+		if pathID {
 			up.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 		}
