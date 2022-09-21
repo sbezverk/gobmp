@@ -131,9 +131,19 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 				return nil, err
 			}
 		case 5:
-			n.RouteTypeSpec, err = UnmarshalEVPNIPPrefix(b[p : p+l])
-			if err != nil {
-				return nil, err
+			switch l {
+				case 34:
+					n.RouteTypeSpec, err = UnmarshalEVPNIPv4Prefix(b[p : p+l])
+					if err != nil {
+						return nil, err
+					}
+				case 58:
+					n.RouteTypeSpec, err = UnmarshalEVPNIPv6Prefix(b[p : p+l])
+					if err != nil {
+						return nil, err
+					}
+				default:
+			 	return nil, fmt.Errorf("unknown length:%d for ip prefix", l)
 			}
 		default:
 			return nil, fmt.Errorf("unknown route type %d", n.RouteType)
