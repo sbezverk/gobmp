@@ -81,20 +81,14 @@ func UnmarshalEVPNIPv4Prefix(b []byte) (*IPPrefix, error) {
 	t.GWIPAddr = make([]byte, 4)
 	copy(t.GWIPAddr, b[p:p+4])
 	p += 4
-	bos := false
-	// Loop through labels until hit Bottom of the stack or reach the end of slice
-	for !bos && p < len(b) {
-		l, err := base.MakeLabel(b[p:])
-		if err != nil {
-			return nil, err
-		}
-		t.Label = append(t.Label, l)
-		p += 3
-		bos = l.BoS
+	l, err := base.MakeLabel(b[p:])
+	if err != nil {
+		return nil, err
 	}
-
+	t.Label = append(t.Label, l)
 	return &t, nil
 }
+
 // UnmarshalEVPNIPv6Prefix instantiates new IPv6 Prefix route type object
 func UnmarshalEVPNIPv6Prefix(b []byte) (*IPPrefix, error) {
 	var err error
@@ -115,23 +109,16 @@ func UnmarshalEVPNIPv6Prefix(b []byte) (*IPPrefix, error) {
 	p += 4
 	t.IPAddrLength = b[p]
 	p++
-	t.IPAddr = make([]byte, 4)
+	t.IPAddr = make([]byte, 16)
 	copy(t.IPAddr, b[p:p+16])
 	p += 16
-	t.GWIPAddr = make([]byte, 4)
+	t.GWIPAddr = make([]byte, 16)
 	copy(t.GWIPAddr, b[p:p+16])
 	p += 16
-	bos := false
-	// Loop through labels until hit Bottom of the stack or reach the end of slice
-	for !bos && p < len(b) {
-		l, err := base.MakeLabel(b[p:])
-		if err != nil {
-			return nil, err
-		}
-		t.Label = append(t.Label, l)
-		p += 3
-		bos = l.BoS
+	l, err := base.MakeLabel(b[p:])
+	if err != nil {
+		return nil, err
 	}
-
+	t.Label = append(t.Label, l)
 	return &t, nil
 }
