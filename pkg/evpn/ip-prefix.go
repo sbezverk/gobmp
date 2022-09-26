@@ -1,6 +1,10 @@
 package evpn
 
-import "github.com/sbezverk/gobmp/pkg/base"
+import (
+	"fmt"
+
+	"github.com/sbezverk/gobmp/pkg/base"
+)
 
 // IPPrefix defines a structure of Route type 5
 // (IP Prefix route)
@@ -55,8 +59,8 @@ func (t *IPPrefix) getLabel() []*base.Label {
 	return t.Label
 }
 
-// UnmarshalEVPNIPv4Prefix instantiates new IPv4 Prefix route type object
-func UnmarshalEVPNIPv4Prefix(b []byte) (*IPPrefix, error) {
+// UnmarshalEVPNIPPrefix instantiates IP Prefix route type object
+func UnmarshalEVPNIPPrefix(b []byte, length int) (*IPPrefix, error) {
 	var err error
 	t := IPPrefix{}
 	p := 0
@@ -75,46 +79,24 @@ func UnmarshalEVPNIPv4Prefix(b []byte) (*IPPrefix, error) {
 	p += 4
 	t.IPAddrLength = b[p]
 	p++
-	t.IPAddr = make([]byte, 4)
-	copy(t.IPAddr, b[p:p+4])
-	p += 4
-	t.GWIPAddr = make([]byte, 4)
-	copy(t.GWIPAddr, b[p:p+4])
-	p += 4
-	l, err := base.MakeLabel(b[p:])
-	if err != nil {
-		return nil, err
+	switch length {
+	case 34:
+		t.IPAddr = make([]byte, 4)
+		copy(t.IPAddr, b[p:p+4])
+		p += 4
+		t.GWIPAddr = make([]byte, 4)
+		copy(t.GWIPAddr, b[p:p+4])
+		p += 4
+	case 58:
+		t.IPAddr = make([]byte, 16)
+		copy(t.IPAddr, b[p:p+16])
+		p += 16
+		t.GWIPAddr = make([]byte, 16)
+		copy(t.GWIPAddr, b[p:p+16])
+		p += 16
+	default:
+		return nil, fmt.Errorf("unknown evpn ip prefix, length:%d should be 34 for IPv4 or 58 for IPv6", length)
 	}
-	t.Label = append(t.Label, l)
-	return &t, nil
-}
-
-// UnmarshalEVPNIPv6Prefix instantiates new IPv6 Prefix route type object
-func UnmarshalEVPNIPv6Prefix(b []byte) (*IPPrefix, error) {
-	var err error
-	t := IPPrefix{}
-	p := 0
-	t.RD, err = base.MakeRD(b[p : p+8])
-	if err != nil {
-		return nil, err
-	}
-	p += 8
-	t.ESI, err = MakeESI(b[p : p+10])
-	if err != nil {
-		return nil, err
-	}
-	p += 10
-	t.EthTag = make([]byte, 4)
-	copy(t.EthTag, b[p:p+4])
-	p += 4
-	t.IPAddrLength = b[p]
-	p++
-	t.IPAddr = make([]byte, 16)
-	copy(t.IPAddr, b[p:p+16])
-	p += 16
-	t.GWIPAddr = make([]byte, 16)
-	copy(t.GWIPAddr, b[p:p+16])
-	p += 16
 	l, err := base.MakeLabel(b[p:])
 	if err != nil {
 		return nil, err
