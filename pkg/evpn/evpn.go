@@ -131,7 +131,7 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 				return nil, err
 			}
 		case 5:
-			n.RouteTypeSpec, err = UnmarshalEVPNIPPrefix(b[p : p+l])
+			n.RouteTypeSpec, err = UnmarshalEVPNIPPrefix(b[p:p+l], l)
 			if err != nil {
 				return nil, err
 			}

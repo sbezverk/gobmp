@@ -1,6 +1,10 @@
 package evpn
 
-import "github.com/sbezverk/gobmp/pkg/base"
+import (
+	"fmt"
+
+	"github.com/sbezverk/gobmp/pkg/base"
+)
 
 // IPPrefix defines a structure of Route type 5
 // (IP Prefix route)
@@ -55,8 +59,8 @@ func (t *IPPrefix) getLabel() []*base.Label {
 	return t.Label
 }
 
-// UnmarshalEVPNIPPrefix instantiates new IP Prefix route type object
-func UnmarshalEVPNIPPrefix(b []byte) (*IPPrefix, error) {
+// UnmarshalEVPNIPPrefix instantiates IP Prefix route type object
+func UnmarshalEVPNIPPrefix(b []byte, length int) (*IPPrefix, error) {
 	var err error
 	t := IPPrefix{}
 	p := 0
@@ -72,26 +76,31 @@ func UnmarshalEVPNIPPrefix(b []byte) (*IPPrefix, error) {
 	p += 10
 	t.EthTag = make([]byte, 4)
 	copy(t.EthTag, b[p:p+4])
+	p += 4
 	t.IPAddrLength = b[p]
 	p++
-	l := int(t.IPAddrLength / 8)
-	t.IPAddr = make([]byte, l)
-	copy(t.IPAddr, b[p:p+l])
-	p += l
-	t.GWIPAddr = make([]byte, l)
-	copy(t.GWIPAddr, b[p:p+l])
-	p += l
-	bos := false
-	// Loop through labels until hit Bottom of the stack or reach the end of slice
-	for !bos && p < len(b) {
-		l, err := base.MakeLabel(b[p:])
-		if err != nil {
-			return nil, err
-		}
-		t.Label = append(t.Label, l)
-		p += 3
-		bos = l.BoS
+	switch length {
+	case 34:
+		t.IPAddr = make([]byte, 4)
+		copy(t.IPAddr, b[p:p+4])
+		p += 4
+		t.GWIPAddr = make([]byte, 4)
+		copy(t.GWIPAddr, b[p:p+4])
+		p += 4
+	case 58:
+		t.IPAddr = make([]byte, 16)
+		copy(t.IPAddr, b[p:p+16])
+		p += 16
+		t.GWIPAddr = make([]byte, 16)
+		copy(t.GWIPAddr, b[p:p+16])
+		p += 16
+	default:
+		return nil, fmt.Errorf("unknown evpn ip prefix, length:%d should be 34 for IPv4 or 58 for IPv6", length)
 	}
-
+	l, err := base.MakeLabel(b[p:])
+	if err != nil {
+		return nil, err
+	}
+	t.Label = append(t.Label, l)
 	return &t, nil
 }
