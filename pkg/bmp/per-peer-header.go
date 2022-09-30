@@ -86,6 +86,7 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	case 0:
 	case 1:
 	case 2:
+	case 3:
 	default:
 		return nil, fmt.Errorf("invalid peer type, expected between 0 and 2 found %d", b[0])
 	}
