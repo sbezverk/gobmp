@@ -2,7 +2,6 @@ package message
 
 import (
 	"encoding/binary"
-	"fmt"
 	"net"
 
 	"github.com/golang/glog"
@@ -42,7 +41,6 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 	}
 
 	for _, tlv := range StatsMsg.StatsTLV {
-		fmt.Printf("tlv t:%v v:%v", tlv.InformationType, tlv.Information)
 		switch tlv.InformationType {
 		case 1:
 			m.DublicatePrefixs = binary.BigEndian.Uint32(tlv.Information)
