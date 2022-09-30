@@ -297,6 +297,7 @@ type EVPNPrefix struct {
 	RouterHash     string              `json:"router_hash,omitempty"`
 	RouterIP       string              `json:"router_ip,omitempty"`
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerType       uint32              `json:"peer_type,omitempty"`
 	PeerHash       string              `json:"peer_hash,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
 	PeerASN        uint32              `json:"peer_asn,omitempty"`

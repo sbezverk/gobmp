@@ -32,6 +32,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	for _, e := range evpn.Route {
 		prfx := EVPNPrefix{
 			Action:         operation,
+			PeerType:       uint32(ph.PeerType),
 			RouterHash:     p.speakerHash,
 			RouterIP:       p.speakerIP,
 			PeerHash:       ph.GetPeerHash(),
