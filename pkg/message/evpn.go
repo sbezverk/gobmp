@@ -49,11 +49,13 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			// IPv6 specific conversions
 			prfx.IsIPv4 = false
 			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
+			prfx.RemoteBGPID = net.IP(ph.PeerBGPID).To16().String()
 			prfx.IsNexthopIPv4 = false
 		} else {
 			// IPv4 specific conversions
 			prfx.IsIPv4 = true
 			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
+			prfx.RemoteBGPID = net.IP(ph.PeerBGPID).To4().String()
 			prfx.IsNexthopIPv4 = true
 		}
 		// Do not want to panic on nil pointer
