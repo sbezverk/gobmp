@@ -34,6 +34,7 @@ const (
 	flowspecMessageTopic   = "gobmp.parsed.flowspec"
 	flowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
 	flowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
+	statsMessageTopic      = "gobmp.parsed.statictics"
 )
 
 var (
@@ -65,6 +66,7 @@ var (
 		flowspecMessageTopic,
 		flowspecMessageV4Topic,
 		flowspecMessageV6Topic,
+		statsMessageTopic,
 	}
 )
 
@@ -113,6 +115,8 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 		return p.produceMessage(flowspecMessageV4Topic, key, msg)
 	case bmp.FlowspecV6Msg:
 		return p.produceMessage(flowspecMessageV6Topic, key, msg)
+	case bmp.StatsReportMsg:
+		return p.produceMessage(statsMessageTopic, key, msg)
 	}
 
 	return fmt.Errorf("not implemented")

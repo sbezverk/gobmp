@@ -308,6 +308,7 @@ type EVPNPrefix struct {
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
+	RawLabels      []uint32            `json:"rawlabels,omitempty"`
 	IsPrepolicy    bool                `json:"is_prepolicy"`
 	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
 	VPNRD          string              `json:"vpn_rd,omitempty"`
@@ -380,4 +381,29 @@ type Flowspec struct {
 	PathID         int32               `json:"path_id,omitempty"`
 	SpecHash       string              `json:"spec_hash,omitempty"`
 	Spec           []flowspec.Spec     `json:"spec,omitempty"`
+}
+
+// Stats defines a message format sent to as a result of BMP Stats Message
+type Stats struct {
+	Key                        string `json:"_key,omitempty"`
+	ID                         string `json:"_id,omitempty"`
+	Rev                        string `json:"_rev,omitempty"`
+	Sequence                   int    `json:"sequence,omitempty"`
+	RouterHash                 string `json:"router_hash,omitempty"`
+	RouterIP                   string `json:"router_ip,omitempty"`
+	RemoteBGPID                string `json:"remote_bgp_id,omitempty"`
+	RemoteASN                  uint32 `json:"remote_asn,omitempty"`
+	RemoteIP                   string `json:"remote_ip,omitempty"`
+	PeerRD                     string `json:"peer_rd,omitempty"`
+	Timestamp                  string `json:"timestamp,omitempty"`
+	DublicatePrefixs           uint32 `json:"dubprefixes,omitempty"`
+	DublicateWithDraws         uint32 `json:"dublicatewithdraws,omitempty"`
+	InvalidatedDueCluster      uint32 `json:"invalidatedduecluster,omitempty"`
+	InvalidatedDueAspath       uint32 `json:"invalidateddueaspath,omitempty"`
+	InvalidatedDueOriginatorId uint32 `json:"invalidateddueoriginatorid,omitempty"`
+	InvalidatedAsConfed        uint32 `json:"invalidateddueasconfed,omitempty"`
+	AdjRIBsIn                  uint64 `json:"adsribin,omitempty"`
+	LocalRib                   uint64 `json:"localrib,omitempty"`
+	UpdatesAsWithdraw          uint32 `json:"updatesaswithdraw,omitempty"`
+	PrefixesAsWithdraw         uint32 `json:"prefixesaswithdraw,omitempty"`
 }

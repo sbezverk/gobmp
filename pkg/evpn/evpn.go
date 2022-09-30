@@ -90,6 +90,21 @@ func (n *NLRI) GetEVPNLabel() []uint32 {
 	return label
 }
 
+// GetEVPNRAWLabel returns stack of raw labels.
+// Raw label values is needed when encapsulation is not mpls, and label no longer is a standart mpls label.
+func (n *NLRI) GetEVPNRawLabel() []uint32 {
+	label := make([]uint32, 0)
+	for _, l := range n.RouteTypeSpec.getLabel() {
+		value := l.Value*16 + uint32(l.Exp*2)
+		if l.BoS {
+			value++
+		}
+		label = append(label, value)
+	}
+
+	return label
+}
+
 // UnmarshalEVPNNLRI instantiates an EVPN NLRI object
 func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 	if glog.V(6) {
