@@ -52,6 +52,20 @@ func TestPerPeerHeaderRoundTrip(t *testing.T) {
 			fail: false,
 		},
 		{
+			name: "Valid IPv4 Per Peer Header",
+			original: &PerPeerHeader{
+				PeerType:          3,
+				FlagV:             false,
+				FlagA:             true,
+				PeerDistinguisher: []byte{0, 0, 0, 0, 0, 0, 0, 0},
+				PeerAS:            4200000000,
+				PeerAddress:       ipv4peer,
+				PeerBGPID:         net.ParseIP("10.10.10.1").To4(),
+				PeerTimestamp:     ts,
+			},
+			fail: false,
+		},
+		{
 			name: "Invalid Per Peer Header ",
 			original: &PerPeerHeader{
 				PeerType:          4,
