@@ -398,14 +398,14 @@ type Stats struct {
 	RemoteIP                   string `json:"remote_ip,omitempty"`
 	PeerRD                     string `json:"peer_rd,omitempty"`
 	Timestamp                  string `json:"timestamp,omitempty"`
-	DublicatePrefixs           uint32 `json:"dubprefixes,omitempty"`
-	DublicateWithDraws         uint32 `json:"dublicatewithdraws,omitempty"`
-	InvalidatedDueCluster      uint32 `json:"invalidatedduecluster,omitempty"`
-	InvalidatedDueAspath       uint32 `json:"invalidateddueaspath,omitempty"`
-	InvalidatedDueOriginatorId uint32 `json:"invalidateddueoriginatorid,omitempty"`
-	InvalidatedAsConfed        uint32 `json:"invalidateddueasconfed,omitempty"`
-	AdjRIBsIn                  uint64 `json:"adsribin,omitempty"`
-	LocalRib                   uint64 `json:"localrib,omitempty"`
-	UpdatesAsWithdraw          uint32 `json:"updatesaswithdraw,omitempty"`
-	PrefixesAsWithdraw         uint32 `json:"prefixesaswithdraw,omitempty"`
+	DublicatePrefixs           uint32 `json:"dublicate_prefix,omitempty"`
+	DublicateWithDraws         uint32 `json:"dublicate_withdraws,omitempty"`
+	InvalidatedDueCluster      uint32 `json:"invalidated_due_cluster,omitempty"`
+	InvalidatedDueAspath       uint32 `json:"invalidated_due_aspath,omitempty"`
+	InvalidatedDueOriginatorId uint32 `json:"invalidated_due_originator_id,omitempty"`
+	InvalidatedAsConfed        uint32 `json:"invalidated_due_asconfed,omitempty"`
+	AdjRIBsIn                  uint64 `json:"ads_rib_in,omitempty"`
+	LocalRib                   uint64 `json:"local_rib,omitempty"`
+	UpdatesAsWithdraw          uint32 `json:"updates_as_withdraw,omitempty"`
+	PrefixesAsWithdraw         uint32 `json:"prefixes_as_withdraw,omitempty"`
 }

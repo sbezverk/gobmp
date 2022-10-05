@@ -286,15 +286,13 @@ func type6(subType uint8, value []byte) string {
 		copy(l, value[3:])
 		s = fmt.Sprintf("%d:%d", value[0], binary.BigEndian.Uint32(l))
 	case 0x02:
+		fallthrough
+	case 0x03:
 		for i, m := range value {
-			s += fmt.Sprintf("%02x", m)
+			s += tools.ConvertToHex(m)
 			if i < len(value)-1 {
 				s += ":"
 			}
-		}
-	case 0x03:
-		if len(value) == 6 {
-			s = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", value[0], value[1], value[2], value[3], value[4], value[5])
 		}
 	case 0x00:
 		s = fmt.Sprintf("%d:%d", value[0], binary.BigEndian.Uint32(value[2:]))

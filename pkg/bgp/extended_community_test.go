@@ -29,7 +29,7 @@ func TestExtendedCommunity(t *testing.T) {
 		{
 			name:   "type 6 rmac",
 			input:  []byte{0x06, 0x03, 0x0c, 0x03, 0x00, 0x00, 0x1b, 0x08},
-			expect: "rmac=0c:03:00:00:1b:08",
+			expect: "rmac=0C:03:00:00:1B:08",
 		},
 	}
 	for _, tt := range tests {

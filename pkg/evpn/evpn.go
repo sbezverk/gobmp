@@ -81,28 +81,8 @@ func (n *NLRI) GetEVPNGWAddr() []byte {
 }
 
 // GetEVPNLabel returns stack of labels found in the nlri
-func (n *NLRI) GetEVPNLabel() []uint32 {
-	label := make([]uint32, 0)
-	for _, l := range n.RouteTypeSpec.getLabel() {
-		label = append(label, l.Value)
-	}
-
-	return label
-}
-
-// GetEVPNRAWLabel returns stack of raw labels.
-// Raw label values is needed when encapsulation is not mpls, and label no longer is a standart mpls label.
-func (n *NLRI) GetEVPNRawLabel() []uint32 {
-	label := make([]uint32, 0)
-	for _, l := range n.RouteTypeSpec.getLabel() {
-		value := l.Value*16 + uint32(l.Exp*2)
-		if l.BoS {
-			value++
-		}
-		label = append(label, value)
-	}
-
-	return label
+func (n *NLRI) GetEVPNLabel() []*base.Label {
+	return n.RouteTypeSpec.getLabel()
 }
 
 // UnmarshalEVPNNLRI instantiates an EVPN NLRI object

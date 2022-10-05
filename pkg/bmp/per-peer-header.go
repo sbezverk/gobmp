@@ -82,6 +82,7 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	// *  Peer Type = 0: Global Instance Peer
 	// *  Peer Type = 1: RD Instance Peer
 	// *  Peer Type = 2: Local Instance Peer
+	// *  Peer Type = 3: Local RIB Peer, RFC9069
 	switch b[0] {
 	case 0:
 	case 1:

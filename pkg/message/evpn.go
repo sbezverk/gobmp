@@ -29,6 +29,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	default:
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
+
 	for _, e := range evpn.Route {
 		prfx := EVPNPrefix{
 			Action:         operation,
@@ -106,8 +107,10 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 					}
 				}
 			}
-			prfx.Labels = e.GetEVPNLabel()
-			prfx.RawLabels = e.GetEVPNRawLabel()
+
+			for _, l := range e.GetEVPNLabel() {
+				prfx.Labels = append(prfx.Labels, l.GetRawValue())
+			}
 		}
 		prfxs = append(prfxs, prfx)
 	}
