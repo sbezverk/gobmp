@@ -34,7 +34,7 @@ const (
 	flowspecMessageTopic   = "gobmp.parsed.flowspec"
 	flowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
 	flowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
-	statsMessageTopic      = "gobmp.parsed.statictics"
+	statsMessageTopic      = "gobmp.parsed.statistics"
 )
 
 var (
