@@ -109,7 +109,8 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			}
 
 			for _, l := range e.GetEVPNLabel() {
-				prfx.Labels = append(prfx.Labels, l.GetRawValue())
+				prfx.Labels = append(prfx.Labels, l.Value)
+				prfx.RawLabels = append(prfx.Labels, l.GetRawValue())
 			}
 		}
 		prfxs = append(prfxs, prfx)
