@@ -43,9 +43,9 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 	for _, tlv := range StatsMsg.StatsTLV {
 		switch tlv.InformationType {
 		case 1:
-			m.DublicatePrefixs = binary.BigEndian.Uint32(tlv.Information)
+			m.DuplicatePrefixs = binary.BigEndian.Uint32(tlv.Information)
 		case 2:
-			m.DublicateWithDraws = binary.BigEndian.Uint32(tlv.Information)
+			m.DuplicateWithDraws = binary.BigEndian.Uint32(tlv.Information)
 		case 3:
 			m.InvalidatedDueCluster = binary.BigEndian.Uint32(tlv.Information)
 		case 4:
