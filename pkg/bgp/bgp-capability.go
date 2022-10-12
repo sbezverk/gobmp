@@ -37,7 +37,7 @@ var BGPCapabilities = map[uint8]string{
 	185: "Prestandard OPERATIONAL message (deprecated)",
 }
 
-type capabilityData struct {
+type CapabilityData struct {
 	Value       []byte `json:"capability_value,omitempty"`
 	Description string `json:"capability_descr,omitempty"`
 }
@@ -46,7 +46,7 @@ type capabilityData struct {
 // Informational TLVs in Open Message
 // Known capability codes: https://www.iana.org/assignments/capability-codes/capability-codes.xhtml
 // Capability structure: https://tools.ietf.org/html/rfc5492#section-4
-type Capability map[uint8][]*capabilityData
+type Capability map[uint8][]*CapabilityData
 
 func getAFISAFIString(afi uint16, safi uint8) string {
 	var afiStr, safiStr string
@@ -89,7 +89,7 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 		p++
 		length := b[p]
 		p++
-		capData := &capabilityData{}
+		capData := &CapabilityData{}
 		capData.Value = make([]byte, length)
 		copy(capData.Value, b[p:p+int(length)])
 		d, ok := BGPCapabilities[code]
@@ -106,7 +106,7 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 		}
 		c, ok := caps[code]
 		if !ok {
-			c = make([]*capabilityData, 0)
+			c = make([]*CapabilityData, 0)
 		}
 		c = append(c, capData)
 		caps[code] = c
