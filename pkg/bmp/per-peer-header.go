@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/golang/glog"
@@ -16,9 +17,18 @@ const (
 	BMP_PEER_HEADER_SIZE = 42
 )
 
+type PeerType uint8
+
+const (
+	PeerType0 PeerType = iota
+	PeerType1
+	PeerType2
+	PeerType3
+)
+
 // PerPeerHeader defines BMP Per-Peer Header per rfc7854
 type PerPeerHeader struct {
-	PeerType byte
+	PeerType PeerType
 
 	// TODO (sbezverk) For Peer type 3 different structure of flags is used,
 	// need a flexible solution to support all 3 peer types.
@@ -29,7 +39,7 @@ type PerPeerHeader struct {
 	// *  The F flag indicates that the Loc-RIB is filtered.  This MUST be
 	// set when a filter is applied to Loc-RIB routes sent to the BMP
 	// collector.
-
+	FlagF             bool
 	FlagV             bool
 	FlagL             bool
 	FlagA             bool
@@ -46,36 +56,24 @@ func (p *PerPeerHeader) Len() int {
 	return 1 + 1 + len(p.PeerDistinguisher) + len(p.PeerAddress) + 4 + len(p.PeerBGPID) + len(p.PeerTimestamp)
 }
 
-// Serialize generate a slice of bytes for sending over the network
-func (p *PerPeerHeader) Serialize() ([]byte, error) {
-	b := make([]byte, BMP_PEER_HEADER_SIZE)
-	b[0] = p.PeerType
-	flag := uint8(0)
-	if p.FlagV {
-		flag |= 0x80
+func peerType(b byte) (PeerType, error) {
+	// Extracting Peer type
+	// *  Peer Type = 0: Global Instance Peer
+	// *  Peer Type = 1: RD Instance Peer
+	// *  Peer Type = 2: Local Instance Peer
+	// *  Peer Type = 3: Local RIB Peer, RFC9069
+	switch PeerType(b) {
+	case PeerType0:
+		return PeerType0, nil
+	case PeerType1:
+		return PeerType1, nil
+	case PeerType2:
+		return PeerType2, nil
+	case PeerType3:
+		return PeerType3, nil
+	default:
+		return 0xff, fmt.Errorf("invalid peer type, expected between 0 and 3 found %d", b)
 	}
-	if p.FlagL {
-		flag |= 0x40
-	}
-	if p.FlagA {
-		flag |= 0x20
-	}
-	if p.FlagO {
-		flag |= 0x10
-	}
-	b[1] = flag
-	copy(b[2:10], p.PeerDistinguisher)
-	if p.FlagV {
-		copy(b[10:26], p.PeerAddress)
-	} else {
-		// Copying only last 4 bytes where IPv4 address is stored
-		copy(b[22:26], p.PeerAddress[12:16])
-	}
-	binary.BigEndian.PutUint32(b[26:30], uint32(p.PeerAS))
-	copy(b[30:34], p.PeerBGPID)
-	copy(b[34:42], p.PeerTimestamp)
-
-	return b, nil
 }
 
 // UnmarshalPerPeerHeader processes Per-Peer header
@@ -89,26 +87,22 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 		PeerBGPID:         make([]byte, 4),
 		PeerTimestamp:     make([]byte, 8),
 	}
-	// Extracting Peer type
-	// *  Peer Type = 0: Global Instance Peer
-	// *  Peer Type = 1: RD Instance Peer
-	// *  Peer Type = 2: Local Instance Peer
-	// *  Peer Type = 3: Local RIB Peer, RFC9069
-	switch b[0] {
-	case 0:
-	case 1:
-	case 2:
-	case 3:
-	default:
-		return nil, fmt.Errorf("invalid peer type, expected between 0 and 2 found %d", b[0])
-	}
 	p := 0
-	pph.PeerType = b[p]
+	var err error
+	if pph.PeerType, err = peerType(b[p]); err != nil {
+		return nil, err
+	}
 	p++
-	pph.FlagV = b[p]&0x80 == 0x80
-	pph.FlagL = b[p]&0x40 == 0x40
-	pph.FlagA = b[p]&0x20 == 0x20
-	pph.FlagO = b[p]&0x10 == 0x10
+	if pph.PeerType == PeerType3 {
+		// Flag F is applicable only to Peer type 3
+		pph.FlagF = b[p]&0x80 == 0x80
+	} else {
+		// Flags V,L,A and O applicable ONLY to Peer Type 0, 1 and 2
+		pph.FlagV = b[p]&0x80 == 0x80
+		pph.FlagL = b[p]&0x40 == 0x40
+		pph.FlagA = b[p]&0x20 == 0x20
+		pph.FlagO = b[p]&0x10 == 0x10
+	}
 	p++
 	// RD 8 bytes
 	copy(pph.PeerDistinguisher, b[p:p+8])
@@ -148,7 +142,7 @@ func (p *PerPeerHeader) GetPeerHash() string {
 
 // GetPeerAddrString returns a string representation of Peer address
 func (p *PerPeerHeader) GetPeerAddrString() string {
-	if p.FlagV {
+	if p.PeerType != PeerType3 && p.FlagV {
 		// IPv6 specific conversions
 		return net.IP(p.PeerAddress).To16().String()
 	}
@@ -159,20 +153,21 @@ func (p *PerPeerHeader) GetPeerAddrString() string {
 // GetPeerDistinguisherString returns string representation of Peer's distinguisher
 // depending on the peer's type.
 func (p *PerPeerHeader) GetPeerDistinguisherString() string {
-	var s string
+	pd := "0:0"
 	switch p.PeerType {
-	case 0:
-		s += "0:0"
-	case 1:
+	case PeerType0:
+		break
+	case PeerType1:
+		fallthrough
+	case PeerType3:
 		if rd, err := base.MakeRD(p.PeerDistinguisher); err != nil {
-			s += "0:0"
 			break
 		} else {
-			s += rd.String()
+			return rd.String()
 		}
-	case 2:
-		s += fmt.Sprintf("%d", binary.BigEndian.Uint64(p.PeerDistinguisher))
+	case PeerType2:
+		return strconv.FormatInt(int64(binary.BigEndian.Uint64(p.PeerDistinguisher)), 10)
 	}
 
-	return s
+	return pd
 }

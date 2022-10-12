@@ -11,17 +11,11 @@ import (
 
 // nlri process base nlri information found and bgp update message and returns
 // a slice of UnicatPrefix.
+// Used Only by Legacy IPv4 Unicast
 func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
 	var operation string
 	var routes []base.Route
-	pathID := false
-	if ph.FlagV {
-		// Checking if Unicast IPv6 AFI/SAFI 2/1 has AddPath enabled
-		pathID = p.addPathCapable[bgp.NLRIMessageType(2, 1)]
-	} else {
-		// Checking if Unicast IPv4 AFI/SAFI 1/1 has AddPath enabled
-		pathID = p.addPathCapable[bgp.NLRIMessageType(1, 1)]
-	}
+	pathID := p.addPathCapable[bgp.NLRIMessageType(1, 1)]
 	switch op {
 	case 0:
 		operation = "add"

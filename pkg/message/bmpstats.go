@@ -2,6 +2,7 @@ package message
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"net"
 
 	"github.com/golang/glog"
@@ -20,7 +21,8 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 		return
 	}
 	if len(StatsMsg.StatsTLV) == 0 {
-		glog.Errorf("stats message does not contain any tlv(stat) %+v", msg.Payload)
+		b, _ := json.MarshalIndent(StatsMsg, "", "   ")
+		glog.Errorf("stats message does not contain any tlv(stat) %s", string(b))
 		return
 	}
 
@@ -67,7 +69,7 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 		}
 	}
 	if err := p.marshalAndPublish(&m, bmp.StatsReportMsg, []byte(m.RouterHash), false); err != nil {
-		glog.Errorf("failed to process peer message with error: %+v", err)
+		glog.Errorf("failed to process peer Stats Report message with error: %+v", err)
 		return
 	}
 }
