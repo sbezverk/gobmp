@@ -21,7 +21,7 @@ type CommonHeader struct {
 
 // UnmarshalCommonHeader processes Common Header and returns BMPCommonHeader object
 func UnmarshalCommonHeader(b []byte) (*CommonHeader, error) {
-	if glog.V(6) {
+	if glog.V(5) {
 		glog.Infof("BMP CommonHeader Raw: %s", tools.MessageHex(b))
 	}
 	ch := &CommonHeader{}
