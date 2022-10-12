@@ -200,11 +200,13 @@ type L3VPNPrefix struct {
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
-	IsPrepolicy    bool                `json:"is_prepolicy"`
-	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
 	VPNRD          string              `json:"vpn_rd,omitempty"`
 	VPNRDType      uint16              `json:"vpn_rd_type"`
 	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // LSPrefix defines a structure of LS Prefix message

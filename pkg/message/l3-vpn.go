@@ -62,11 +62,15 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		} else {
 			prfx.IsNexthopIPv4 = true
 		}
-		if ph.FlagV {
-			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-
-		} else {
-			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
+		prfx.PeerIP = ph.GetPeerAddrString()
+		if f, err := ph.IsAdjRIBInPost(); err == nil {
+			prfx.IsAdjRIBInPost = f
+		}
+		if f, err := ph.IsAdjRIBOutPost(); err == nil {
+			prfx.IsAdjRIBOutPost = f
+		}
+		if f, err := ph.IsLocRIBFiltered(); err == nil {
+			prfx.IsLocRIBFiltered = f
 		}
 		prfx.Labels = make([]uint32, 0)
 		for _, l := range e.Label {

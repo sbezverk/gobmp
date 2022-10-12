@@ -3,6 +3,7 @@ package bmp
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -11,6 +12,10 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/tools"
+)
+
+var (
+	ErrInvFlagRequestForPeerType = errors.New("unsupported request for the peer type")
 )
 
 const (
@@ -148,6 +153,33 @@ func (p *PerPeerHeader) GetPeerAddrString() string {
 	}
 	// IPv4 specific conversions
 	return net.IP(p.PeerAddress[12:]).To4().String()
+}
+
+// IsAdjRIBOutPost returns true if PeerType is 0,1 or 2 and O flag is set, otherwise it returns error
+func (p *PerPeerHeader) IsAdjRIBOutPost() (bool, error) {
+	if p.PeerType != PeerType3 {
+		return p.FlagO, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
+}
+
+// IsAdjRIBInPost returns true if PeerType is 0,1 or 2 and L flag is set, otherwise it returns error
+func (p *PerPeerHeader) IsAdjRIBInPost() (bool, error) {
+	if p.PeerType != PeerType3 {
+		return p.FlagL, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
+}
+
+// IsLocRIBFiltered returns true if PeerType is 3 and F flag is set, otherwise it returns error
+func (p *PerPeerHeader) IsLocRIBFiltered() (bool, error) {
+	if p.PeerType == PeerType3 {
+		return p.FlagF, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
 }
 
 // GetPeerDistinguisherString returns string representation of Peer's distinguisher
