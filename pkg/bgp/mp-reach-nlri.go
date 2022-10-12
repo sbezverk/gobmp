@@ -62,6 +62,9 @@ func (mp *MPReachNLRI) GetNextHop() string {
 	case 4:
 		// IPv4
 		return net.IP(mp.NextHopAddress).To4().String()
+	case 8:
+		// Peer 3 (Local-RIB) Next hop is 8 bytes RD 4 bytes and IPv4 address 4 bytes
+		return net.IP(mp.NextHopAddress[4:]).To4().String()
 	case 12:
 		// RD (8 bytes) + IPv4
 		return net.IP(mp.NextHopAddress[8:]).To4().String()
@@ -179,7 +182,7 @@ func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPReachNLRI(b []byte, srv6 bool, addPath map[int]bool) (MPNLRI, error) {
-	if glog.V(6) {
+	if glog.V(5) {
 		glog.Infof("MPReachNLRI Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) == 0 {

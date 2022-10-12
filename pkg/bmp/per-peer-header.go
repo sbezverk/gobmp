@@ -18,7 +18,18 @@ const (
 
 // PerPeerHeader defines BMP Per-Peer Header per rfc7854
 type PerPeerHeader struct {
-	PeerType          byte
+	PeerType byte
+
+	// TODO (sbezverk) For Peer type 3 different structure of flags is used,
+	// need a flexible solution to support all 3 peer types.
+	// 	0 1 2 3 4 5 6 7
+	// 	+-+-+-+-+-+-+-+-+
+	// 	|F| | | | | | | |
+	// 	+-+-+-+-+-+-+-+-+
+	// *  The F flag indicates that the Loc-RIB is filtered.  This MUST be
+	// set when a filter is applied to Loc-RIB routes sent to the BMP
+	// collector.
+
 	FlagV             bool
 	FlagL             bool
 	FlagA             bool
@@ -69,7 +80,7 @@ func (p *PerPeerHeader) Serialize() ([]byte, error) {
 
 // UnmarshalPerPeerHeader processes Per-Peer header
 func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
-	if glog.V(5) {
+	if glog.V(6) {
 		glog.Infof("BMP Per Peer Header Raw: %s", tools.MessageHex(b))
 	}
 	pph := &PerPeerHeader{

@@ -64,7 +64,6 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 		a := make([]byte, 4)
 		copy(a, pr.Prefix)
 		prfx.Prefix = net.IP(a).To4().String()
-		//	}
 		prfxs = append(prfxs, prfx)
 	}
 
