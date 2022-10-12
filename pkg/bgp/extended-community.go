@@ -248,7 +248,7 @@ func getSubType(m map[uint8]string, subType uint8) string {
 	return s
 }
 
-//Transitive Two-Octet AS-Specific Extended Community
+// Transitive Two-Octet AS-Specific Extended Community
 func type0(subType uint8, value []byte) string {
 	return getSubType(transAS2SubTypes, subType) + fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:]))
 }
@@ -258,7 +258,7 @@ func type1(subType uint8, value []byte) string {
 	return getSubType(transIPv4SubTypes, subType) + fmt.Sprintf("%s:%d", net.IP(value[0:4]).To4().String(), binary.BigEndian.Uint16(value[4:]))
 }
 
-//Transitive Four-Octet AS-Specific Extended Community
+// Transitive Four-Octet AS-Specific Extended Community
 func type2(subType uint8, value []byte) string {
 	return getSubType(transAS4SubTypes, subType) + fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(value[0:4]), binary.BigEndian.Uint16(value[4:]))
 }
@@ -286,8 +286,10 @@ func type6(subType uint8, value []byte) string {
 		copy(l, value[3:])
 		s = fmt.Sprintf("%d:%d", value[0], binary.BigEndian.Uint32(l))
 	case 0x02:
+		fallthrough
+	case 0x03:
 		for i, m := range value {
-			s += fmt.Sprintf("%02x", m)
+			s += tools.ConvertToHex(m)
 			if i < len(value)-1 {
 				s += ":"
 			}

@@ -26,6 +26,11 @@ func TestExtendedCommunity(t *testing.T) {
 			input:  []byte{0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			expect: "flowspec=redirect_to_ip_next_hop",
 		},
+		{
+			name:   "type 6 rmac",
+			input:  []byte{0x06, 0x03, 0x0c, 0x03, 0x00, 0x00, 0x1b, 0x08},
+			expect: "rmac=0C:03:00:00:1B:08",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

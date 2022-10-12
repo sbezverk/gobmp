@@ -297,7 +297,9 @@ type EVPNPrefix struct {
 	RouterHash     string              `json:"router_hash,omitempty"`
 	RouterIP       string              `json:"router_ip,omitempty"`
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerType       uint32              `json:"peer_type"`
 	PeerHash       string              `json:"peer_hash,omitempty"`
+	RemoteBGPID    string              `json:"remote_bgp_id,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
 	PeerASN        uint32              `json:"peer_asn,omitempty"`
 	Timestamp      string              `json:"timestamp,omitempty"`
@@ -308,6 +310,7 @@ type EVPNPrefix struct {
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
+	RawLabels      []uint32            `json:"rawlabels,omitempty"`
 	IsPrepolicy    bool                `json:"is_prepolicy"`
 	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
 	VPNRD          string              `json:"vpn_rd,omitempty"`
@@ -380,4 +383,29 @@ type Flowspec struct {
 	PathID         int32               `json:"path_id,omitempty"`
 	SpecHash       string              `json:"spec_hash,omitempty"`
 	Spec           []flowspec.Spec     `json:"spec,omitempty"`
+}
+
+// Stats defines a message format sent to as a result of BMP Stats Message
+type Stats struct {
+	Key                        string `json:"_key,omitempty"`
+	ID                         string `json:"_id,omitempty"`
+	Rev                        string `json:"_rev,omitempty"`
+	Sequence                   int    `json:"sequence,omitempty"`
+	RouterHash                 string `json:"router_hash,omitempty"`
+	RouterIP                   string `json:"router_ip,omitempty"`
+	RemoteBGPID                string `json:"remote_bgp_id,omitempty"`
+	RemoteASN                  uint32 `json:"remote_asn,omitempty"`
+	RemoteIP                   string `json:"remote_ip,omitempty"`
+	PeerRD                     string `json:"peer_rd,omitempty"`
+	Timestamp                  string `json:"timestamp,omitempty"`
+	DuplicatePrefixs           uint32 `json:"duplicate_prefix,omitempty"`
+	DuplicateWithDraws         uint32 `json:"duplicate_withdraws,omitempty"`
+	InvalidatedDueCluster      uint32 `json:"invalidated_due_cluster,omitempty"`
+	InvalidatedDueAspath       uint32 `json:"invalidated_due_aspath,omitempty"`
+	InvalidatedDueOriginatorId uint32 `json:"invalidated_due_originator_id,omitempty"`
+	InvalidatedAsConfed        uint32 `json:"invalidated_due_asconfed,omitempty"`
+	AdjRIBsIn                  uint64 `json:"ads_rib_in,omitempty"`
+	LocalRib                   uint64 `json:"local_rib,omitempty"`
+	UpdatesAsWithdraw          uint32 `json:"updates_as_withdraw,omitempty"`
+	PrefixesAsWithdraw         uint32 `json:"prefixes_as_withdraw,omitempty"`
 }

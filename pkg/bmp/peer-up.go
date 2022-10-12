@@ -58,7 +58,7 @@ func UnmarshalPeerUpMessage(b []byte) (*PeerUpMessage, error) {
 	if len(b) > int(p) {
 		// Since pointer p does not point to the end of buffer,
 		// then processing Informational TLVs
-		tlvs, err := UnmarshalTLV(b[p : len(b)-int(p)])
+		tlvs, err := UnmarshalTLV(b[p:])
 		if err != nil {
 			return nil, err
 		}

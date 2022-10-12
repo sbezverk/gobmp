@@ -46,6 +46,8 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		p.producePeerMessage(peerDown, msg)
 	case *bmp.RouteMonitor:
 		p.produceRouteMonitorMessage(msg)
+	case *bmp.StatsReport:
+		p.produceStatsMessage(msg)
 	default:
 		glog.Warningf("got Unknown message %T to push to the producer, ignoring it...", obj)
 	}
