@@ -2,6 +2,7 @@ package bmp
 
 import (
 	"encoding/binary"
+	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -10,25 +11,34 @@ import (
 
 // PeerUpMessage defines BMPPeerUpMessage per rfc7854
 type PeerUpMessage struct {
-	LocalAddress []byte
-	LocalPort    uint16
-	RemotePort   uint16
-	SentOpen     *bgp.OpenMessage
-	ReceivedOpen *bgp.OpenMessage
-	Information  []InformationalTLV
+	LocalAddress     []byte
+	LocalPort        uint16
+	RemotePort       uint16
+	SentOpen         *bgp.OpenMessage
+	ReceivedOpen     *bgp.OpenMessage
+	Information      []InformationalTLV
+	isRemotePeerIPv6 bool
+}
+
+func (pum *PeerUpMessage) GetLocalAddressString() string {
+	if pum.isRemotePeerIPv6 {
+		return net.IP(pum.LocalAddress).To16().String()
+	}
+	return net.IP(pum.LocalAddress[12:]).To4().String()
 }
 
 // UnmarshalPeerUpMessage processes Peer Up message and returns BMPPeerUpMessage object
-func UnmarshalPeerUpMessage(b []byte) (*PeerUpMessage, error) {
+func UnmarshalPeerUpMessage(b []byte, isIPv6 bool) (*PeerUpMessage, error) {
 	if glog.V(6) {
 		glog.Infof("BMP Peer Up Message Raw: %s", tools.MessageHex(b))
 	}
 	var err error
 	pu := &PeerUpMessage{
-		LocalAddress: make([]byte, 16),
-		SentOpen:     &bgp.OpenMessage{},
-		ReceivedOpen: &bgp.OpenMessage{},
-		Information:  make([]InformationalTLV, 0),
+		LocalAddress:     make([]byte, 16),
+		SentOpen:         &bgp.OpenMessage{},
+		ReceivedOpen:     &bgp.OpenMessage{},
+		Information:      make([]InformationalTLV, 0),
+		isRemotePeerIPv6: isIPv6,
 	}
 	p := 0
 	copy(pu.LocalAddress, b[:16])

@@ -51,13 +51,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			// Last element in AS_PATH would be the AS of the origin
 			prfx.OriginAS = int32(ases[len(ases)-1])
 		}
-		if ph.FlagV {
-			// Peer is IPv6
-			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-		} else {
-			// Peer is IPv4
-			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-		}
+		prfx.PeerIP = ph.GetPeerAddrString()
 		prfx.Nexthop = nlri.GetNextHop()
 		if nlri.IsIPv6NLRI() {
 			// IPv6 specific conversions

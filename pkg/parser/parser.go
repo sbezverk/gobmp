@@ -80,7 +80,7 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 				return
 			}
 			perPerHeaderLen = bmp.PerPeerHeaderLength
-			if bmpMsg.Payload, err = bmp.UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-bmp.CommonHeaderLength]); err != nil {
+			if bmpMsg.Payload, err = bmp.UnmarshalPeerUpMessage(b[p+perPerHeaderLen:p+int(ch.MessageLength)-bmp.CommonHeaderLength], bmpMsg.PeerHeader.IsRemotePeerIPv6()); err != nil {
 				glog.Errorf("fail to recover BMP Peer Up message with error: %+v", err)
 				return
 			}

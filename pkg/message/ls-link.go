@@ -10,7 +10,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSLink, error) {
+func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update, isIPv6 bool) (*LSLink, error) {
 	var operation string
 	switch op {
 	case 0:
@@ -29,14 +29,9 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		Timestamp:  ph.GetPeerTimestamp(),
 		DomainID:   link.GetIdentifier(),
 	}
+
 	msg.Nexthop = nextHop
-	if ph.FlagV {
-		// IPv6 specific conversions
-		msg.PeerIP = net.IP(ph.PeerAddress).To16().String()
-	} else {
-		// IPv4 specific conversions
-		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-	}
+	msg.PeerIP = ph.GetPeerAddrString()
 	msg.Protocol = link.GetLinkProtocolID()
 	msg.ProtocolID = link.ProtocolID
 	msg.LSID = link.GetLinkLSID(true)
@@ -80,7 +75,7 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.AreaID = "0"
 	}
 	if lslink, err := update.GetNLRI29(); err == nil {
-		if ph.FlagV {
+		if isIPv6 {
 			msg.RouterID = lslink.GetLocalIPv6RouterID()
 			msg.RemoteRouterID = lslink.GetRemoteIPv6RouterID()
 		} else {

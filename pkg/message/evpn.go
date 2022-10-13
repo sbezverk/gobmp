@@ -46,19 +46,12 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			// Last element in AS_PATH would be the AS of the origin
 			prfx.OriginAS = int32(ases[len(ases)-1])
 		}
-		if ph.FlagV {
-			// IPv6 specific conversions
-			prfx.IsIPv4 = false
-			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-			prfx.RemoteBGPID = net.IP(ph.PeerBGPID).To16().String()
-			prfx.IsNexthopIPv4 = false
-		} else {
-			// IPv4 specific conversions
-			prfx.IsIPv4 = true
-			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-			prfx.RemoteBGPID = net.IP(ph.PeerBGPID).To4().String()
-			prfx.IsNexthopIPv4 = true
-		}
+
+		prfx.PeerIP = ph.GetPeerAddrString()
+		prfx.RemoteBGPID = ph.GetPeerBGPIDString()
+		prfx.IsIPv4 = !nlri.IsIPv6NLRI()
+		prfx.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
+
 		// Do not want to panic on nil pointer
 		if e != nil {
 			prfx.VPNRD = e.GetEVPNRD()

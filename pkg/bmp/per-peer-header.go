@@ -44,11 +44,11 @@ type PerPeerHeader struct {
 	// *  The F flag indicates that the Loc-RIB is filtered.  This MUST be
 	// set when a filter is applied to Loc-RIB routes sent to the BMP
 	// collector.
-	FlagF             bool
-	FlagV             bool
-	FlagL             bool
-	FlagA             bool
-	FlagO             bool
+	flagF             bool
+	flagV             bool
+	flagL             bool
+	flagA             bool
+	flagO             bool
 	PeerDistinguisher []byte // *PeerDistinguisher
 	PeerAddress       []byte
 	PeerAS            uint32
@@ -100,13 +100,13 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	p++
 	if pph.PeerType == PeerType3 {
 		// Flag F is applicable only to Peer type 3
-		pph.FlagF = b[p]&0x80 == 0x80
+		pph.flagF = b[p]&0x80 == 0x80
 	} else {
 		// Flags V,L,A and O applicable ONLY to Peer Type 0, 1 and 2
-		pph.FlagV = b[p]&0x80 == 0x80
-		pph.FlagL = b[p]&0x40 == 0x40
-		pph.FlagA = b[p]&0x20 == 0x20
-		pph.FlagO = b[p]&0x10 == 0x10
+		pph.flagV = b[p]&0x80 == 0x80
+		pph.flagL = b[p]&0x40 == 0x40
+		pph.flagA = b[p]&0x20 == 0x20
+		pph.flagO = b[p]&0x10 == 0x10
 	}
 	p++
 	// RD 8 bytes
@@ -145,9 +145,14 @@ func (p *PerPeerHeader) GetPeerHash() string {
 	return fmt.Sprintf("%x", md5.Sum(data))
 }
 
+// GetPeerBGPIDString returns a string representation of Peer BGP ID
+func (p *PerPeerHeader) GetPeerBGPIDString() string {
+	return net.IP(p.PeerBGPID).To4().String()
+}
+
 // GetPeerAddrString returns a string representation of Peer address
 func (p *PerPeerHeader) GetPeerAddrString() string {
-	if p.PeerType != PeerType3 && p.FlagV {
+	if p.PeerType != PeerType3 && p.flagV {
 		// IPv6 specific conversions
 		return net.IP(p.PeerAddress).To16().String()
 	}
@@ -158,7 +163,7 @@ func (p *PerPeerHeader) GetPeerAddrString() string {
 // IsAdjRIBOutPost returns true if PeerType is 0,1 or 2 and O flag is set, otherwise it returns error
 func (p *PerPeerHeader) IsAdjRIBOutPost() (bool, error) {
 	if p.PeerType != PeerType3 {
-		return p.FlagO, nil
+		return p.flagO, nil
 	}
 
 	return false, ErrInvFlagRequestForPeerType
@@ -167,7 +172,7 @@ func (p *PerPeerHeader) IsAdjRIBOutPost() (bool, error) {
 // IsAdjRIBInPost returns true if PeerType is 0,1 or 2 and L flag is set, otherwise it returns error
 func (p *PerPeerHeader) IsAdjRIBInPost() (bool, error) {
 	if p.PeerType != PeerType3 {
-		return p.FlagL, nil
+		return p.flagL, nil
 	}
 
 	return false, ErrInvFlagRequestForPeerType
@@ -176,10 +181,19 @@ func (p *PerPeerHeader) IsAdjRIBInPost() (bool, error) {
 // IsLocRIBFiltered returns true if PeerType is 3 and F flag is set, otherwise it returns error
 func (p *PerPeerHeader) IsLocRIBFiltered() (bool, error) {
 	if p.PeerType == PeerType3 {
-		return p.FlagF, nil
+		return p.flagF, nil
 	}
 
 	return false, ErrInvFlagRequestForPeerType
+}
+
+// IsRemotePeerIPv6 returns true if Remote Peer is IPv6 for PeerType is 0,1 or 2, for Peer Type 3 always returns false.
+func (p *PerPeerHeader) IsRemotePeerIPv6() bool {
+	if p.PeerType != PeerType3 {
+		return p.flagV
+	}
+
+	return false
 }
 
 // GetPeerDistinguisherString returns string representation of Peer's distinguisher

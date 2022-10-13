@@ -36,19 +36,11 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			AdvHolddown:    int(peerUpMsg.SentOpen.HoldTime),
 			RemoteHolddown: int(peerUpMsg.ReceivedOpen.HoldTime),
 		}
-		if msg.PeerHeader.FlagV {
-			m.IsIPv4 = false
-			m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To16().String()
-			m.LocalIP = net.IP(peerUpMsg.LocalAddress).To16().String()
-			m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To16().String()
-			m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To16().String()
-		} else {
-			m.IsIPv4 = true
-			m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress[12:]).To4().String()
-			m.LocalIP = net.IP(peerUpMsg.LocalAddress[12:]).To4().String()
-			m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
-			m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
-		}
+		m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
+		m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()
+		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
+		m.IsIPv4 = !msg.PeerHeader.IsRemotePeerIPv6()
+		m.LocalIP = peerUpMsg.GetLocalAddressString()
 		// Saving local bgp speaker identities.
 		p.speakerIP = m.LocalIP
 		p.speakerHash = fmt.Sprintf("%x", md5.Sum([]byte(p.speakerIP)))
@@ -93,15 +85,9 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			PeerRD:     msg.PeerHeader.GetPeerDistinguisherString(),
 			Timestamp:  msg.PeerHeader.GetPeerTimestamp(),
 		}
-		if msg.PeerHeader.FlagV {
-			m.IsIPv4 = false
-			m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To16().String()
-			m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To16().String()
-		} else {
-			m.IsIPv4 = true
-			m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress[12:]).To4().String()
-			m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
-		}
+		m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
+		m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()
+		m.IsIPv4 = !msg.PeerHeader.IsRemotePeerIPv6()
 		m.InfoData = make([]byte, len(peerDownMsg.Data))
 		copy(m.InfoData, peerDownMsg.Data)
 

@@ -3,7 +3,6 @@ package message
 import (
 	"encoding/binary"
 	"encoding/json"
-	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -33,15 +32,8 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 		RouterHash: p.speakerHash,
 		RouterIP:   p.speakerIP,
 	}
-
-	if msg.PeerHeader.FlagV {
-		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To16().String()
-		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To16().String()
-	} else {
-		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress[12:]).To4().String()
-		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
-	}
-
+	m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
+	m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()
 	for _, tlv := range StatsMsg.StatsTLV {
 		switch tlv.InformationType {
 		case 1:

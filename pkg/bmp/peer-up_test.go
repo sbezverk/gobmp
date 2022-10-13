@@ -10,9 +10,10 @@ import (
 
 func TestPeerUpMsg(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  []byte
-		expect *PeerUpMessage
+		name           string
+		input          []byte
+		remotePeerIPv6 bool
+		expect         *PeerUpMessage
 	}{
 		{
 			name:  "panic 1",
@@ -131,7 +132,7 @@ func TestPeerUpMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peerUp, err := UnmarshalPeerUpMessage(tt.input)
+			peerUp, err := UnmarshalPeerUpMessage(tt.input, tt.remotePeerIPv6)
 			if err != nil {
 				t.Fatalf("failed but supposed to succeed with error: %+v", err)
 			}

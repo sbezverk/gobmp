@@ -52,7 +52,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			prfx.OriginAS = int32(ases[len(ases)-1])
 		}
 		prfx.IsIPv4 = true
-		prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
+		prfx.PeerIP = ph.GetPeerAddrString()
 		prfx.Nexthop = update.BaseAttributes.Nexthop
 		prfx.IsNexthopIPv4 = true
 		a := make([]byte, 4)

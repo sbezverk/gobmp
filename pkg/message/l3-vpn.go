@@ -57,11 +57,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			copy(p, e.Prefix)
 			prfx.Prefix = net.IP(p).To4().String()
 		}
-		if nlri.IsNextHopIPv6() {
-			prfx.IsNexthopIPv4 = false
-		} else {
-			prfx.IsNexthopIPv4 = true
-		}
+		prfx.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
 		prfx.PeerIP = ph.GetPeerAddrString()
 		if f, err := ph.IsAdjRIBInPost(); err == nil {
 			prfx.IsAdjRIBInPost = f

@@ -63,7 +63,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	}
 	lsprefix, err := update.GetNLRI29()
 	if err == nil {
-		if ph.FlagV {
+		if !ipv4 {
 			msg.RouterID = lsprefix.GetLocalIPv6RouterID()
 		} else {
 			msg.RouterID = lsprefix.GetLocalIPv4RouterID()
