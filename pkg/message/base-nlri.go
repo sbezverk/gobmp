@@ -43,6 +43,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),
+			PeerType:       uint8(ph.PeerType),
 			PrefixLen:      int32(pr.Length),
 			PathID:         int32(pr.PathID),
 			BaseAttributes: update.BaseAttributes,
@@ -58,6 +59,16 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 		a := make([]byte, 4)
 		copy(a, pr.Prefix)
 		prfx.Prefix = net.IP(a).To4().String()
+		if f, err := ph.IsAdjRIBInPost(); err == nil {
+			prfx.IsAdjRIBInPost = f
+		}
+		if f, err := ph.IsAdjRIBOutPost(); err == nil {
+			prfx.IsAdjRIBOutPost = f
+		}
+		if f, err := ph.IsLocRIBFiltered(); err == nil {
+			prfx.IsLocRIBFiltered = f
+		}
+
 		prfxs = append(prfxs, prfx)
 	}
 

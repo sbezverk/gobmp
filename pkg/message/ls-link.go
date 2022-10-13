@@ -24,12 +24,21 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		Action:     operation,
 		RouterHash: p.speakerHash,
 		RouterIP:   p.speakerIP,
+		PeerType:   uint8(ph.PeerType),
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,
 		Timestamp:  ph.GetPeerTimestamp(),
 		DomainID:   link.GetIdentifier(),
 	}
-
+	if f, err := ph.IsAdjRIBInPost(); err == nil {
+		msg.IsAdjRIBInPost = f
+	}
+	if f, err := ph.IsAdjRIBOutPost(); err == nil {
+		msg.IsAdjRIBOutPost = f
+	}
+	if f, err := ph.IsLocRIBFiltered(); err == nil {
+		msg.IsLocRIBFiltered = f
+	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
 	msg.Protocol = link.GetLinkProtocolID()

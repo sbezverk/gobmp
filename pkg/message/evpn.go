@@ -33,7 +33,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	for _, e := range evpn.Route {
 		prfx := EVPNPrefix{
 			Action:         operation,
-			PeerType:       uint32(ph.PeerType),
+			PeerType:       uint8(ph.PeerType),
 			RouterHash:     p.speakerHash,
 			RouterIP:       p.speakerIP,
 			PeerHash:       ph.GetPeerHash(),
@@ -105,6 +105,15 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			for _, l := range e.GetEVPNLabel() {
 				prfx.Labels = append(prfx.Labels, l.Value)
 				prfx.RawLabels = append(prfx.RawLabels, l.GetRawValue())
+			}
+			if f, err := ph.IsAdjRIBInPost(); err == nil {
+				prfx.IsAdjRIBInPost = f
+			}
+			if f, err := ph.IsAdjRIBOutPost(); err == nil {
+				prfx.IsAdjRIBOutPost = f
+			}
+			if f, err := ph.IsLocRIBFiltered(); err == nil {
+				prfx.IsLocRIBFiltered = f
 			}
 		}
 		prfxs = append(prfxs, prfx)

@@ -31,6 +31,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			Action:         operation,
 			RouterHash:     p.speakerHash,
 			RouterIP:       p.speakerIP,
+			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),

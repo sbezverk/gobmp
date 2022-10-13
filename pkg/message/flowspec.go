@@ -29,6 +29,7 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	fs := &Flowspec{
 		Action:         operation,
 		RouterIP:       p.speakerIP,
+		PeerType:       uint8(ph.PeerType),
 		PeerASN:        ph.PeerAS,
 		Timestamp:      ph.GetPeerTimestamp(),
 		BaseAttributes: update.BaseAttributes,
@@ -45,6 +46,15 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	fs.PeerIP = ph.GetPeerAddrString()
 	fs.IsIPv4 = !nlri.IsIPv6NLRI()
 	fs.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
+	if f, err := ph.IsAdjRIBInPost(); err == nil {
+		fs.IsAdjRIBInPost = f
+	}
+	if f, err := ph.IsAdjRIBOutPost(); err == nil {
+		fs.IsAdjRIBOutPost = f
+	}
+	if f, err := ph.IsLocRIBFiltered(); err == nil {
+		fs.IsLocRIBFiltered = f
+	}
 
 	return []*Flowspec{fs}, nil
 }

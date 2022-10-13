@@ -31,6 +31,7 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 		Timestamp:  msg.PeerHeader.GetPeerTimestamp(),
 		RouterHash: p.speakerHash,
 		RouterIP:   p.speakerIP,
+		PeerType:   uint8(msg.PeerHeader.PeerType),
 	}
 	m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
 	m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()

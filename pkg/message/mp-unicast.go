@@ -40,12 +40,22 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			Action:         operation,
 			RouterHash:     p.speakerHash,
 			RouterIP:       p.speakerIP,
+			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),
 			PrefixLen:      int32(e.Length),
 			PathID:         int32(e.PathID),
 			BaseAttributes: update.BaseAttributes,
+		}
+		if f, err := ph.IsAdjRIBInPost(); err == nil {
+			prfx.IsAdjRIBInPost = f
+		}
+		if f, err := ph.IsAdjRIBOutPost(); err == nil {
+			prfx.IsAdjRIBOutPost = f
+		}
+		if f, err := ph.IsLocRIBFiltered(); err == nil {
+			prfx.IsLocRIBFiltered = f
 		}
 		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 			// Last element in AS_PATH would be the AS of the origin

@@ -29,12 +29,22 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m = PeerStateChange{
 			Action:         action,
 			RemoteASN:      msg.PeerHeader.PeerAS,
+			PeerType:       uint8(msg.PeerHeader.PeerType),
 			PeerRD:         msg.PeerHeader.GetPeerDistinguisherString(),
 			RemotePort:     int(peerUpMsg.RemotePort),
 			Timestamp:      msg.PeerHeader.GetPeerTimestamp(),
 			LocalPort:      int(peerUpMsg.LocalPort),
 			AdvHolddown:    int(peerUpMsg.SentOpen.HoldTime),
 			RemoteHolddown: int(peerUpMsg.ReceivedOpen.HoldTime),
+		}
+		if f, err := msg.PeerHeader.IsAdjRIBInPost(); err == nil {
+			m.IsAdjRIBInPost = f
+		}
+		if f, err := msg.PeerHeader.IsAdjRIBOutPost(); err == nil {
+			m.IsAdjRIBOutPost = f
+		}
+		if f, err := msg.PeerHeader.IsLocRIBFiltered(); err == nil {
+			m.IsLocRIBFiltered = f
 		}
 		m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
 		m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()
@@ -79,6 +89,7 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m = PeerStateChange{
 			Action:     "down",
 			RouterIP:   p.speakerIP,
+			PeerType:   uint8(msg.PeerHeader.PeerType),
 			RouterHash: p.speakerHash,
 			BMPReason:  int(peerDownMsg.Reason),
 			RemoteASN:  msg.PeerHeader.PeerAS,
