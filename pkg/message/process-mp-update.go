@@ -156,7 +156,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to produce ls_node message with error: %+v", err)
 				continue
 			}
-			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update, nlri.IsIPv6NLRI())
 			if err != nil {
 				glog.Errorf("failed to produce ls_node message with error: %+v", err)
 				continue
@@ -171,7 +171,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue
 			}
-			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, nlri.IsIPv6NLRI())
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue

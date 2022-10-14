@@ -43,9 +43,11 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 			rm, err := bmp.UnmarshalBMPRouteMonitorMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-bmp.CommonHeaderLength])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Route Monitoring with error: %+v", err)
-				glog.V(5).Infof("common header content: %+v", ch)
-				glog.V(5).Infof("per peer header content: %s", tools.MessageHex(b[p:p+bmp.PerPeerHeaderLength]))
-				glog.V(5).Infof("message content: %s", tools.MessageHex(b[p+perPerHeaderLen:p+int(ch.MessageLength)-bmp.CommonHeaderLength]))
+				if glog.V(5) {
+					glog.Infof("common header content: %+v", ch)
+					glog.Infof("per peer header content: %s", tools.MessageHex(b[p:p+bmp.PerPeerHeaderLength]))
+					glog.Infof("message content: %s", tools.MessageHex(b[p+perPerHeaderLen:p+int(ch.MessageLength)-bmp.CommonHeaderLength]))
+				}
 				return
 			}
 			bmpMsg.Payload = rm
@@ -78,7 +80,7 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 				return
 			}
 			perPerHeaderLen = bmp.PerPeerHeaderLength
-			if bmpMsg.Payload, err = bmp.UnmarshalPeerUpMessage(b[p+perPerHeaderLen : p+int(ch.MessageLength)-bmp.CommonHeaderLength]); err != nil {
+			if bmpMsg.Payload, err = bmp.UnmarshalPeerUpMessage(b[p+perPerHeaderLen:p+int(ch.MessageLength)-bmp.CommonHeaderLength], bmpMsg.PeerHeader.IsRemotePeerIPv6()); err != nil {
 				glog.Errorf("fail to recover BMP Peer Up message with error: %+v", err)
 				return
 			}

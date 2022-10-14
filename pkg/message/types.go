@@ -13,40 +13,43 @@ import (
 
 // PeerStateChange defines a message format sent to as a result of BMP Peer Up or Peer Down message
 type PeerStateChange struct {
-	Key              string         `json:"_key,omitempty"`
-	ID               string         `json:"_id,omitempty"`
-	Rev              string         `json:"_rev,omitempty"`
-	Action           string         `json:"action,omitempty"` // Action can be "add" for peer up and "del" for peer down message
-	Sequence         int            `json:"sequence,omitempty"`
-	Hash             string         `json:"hash,omitempty"`
-	RouterHash       string         `json:"router_hash,omitempty"`
-	Name             string         `json:"name,omitempty"`
-	RemoteBGPID      string         `json:"remote_bgp_id,omitempty"`
-	RouterIP         string         `json:"router_ip,omitempty"`
-	Timestamp        string         `json:"timestamp,omitempty"`
-	RemoteASN        uint32         `json:"remote_asn,omitempty"`
-	RemoteIP         string         `json:"remote_ip,omitempty"`
-	PeerRD           string         `json:"peer_rd,omitempty"`
-	RemotePort       int            `json:"remote_port,omitempty"`
-	LocalASN         uint32         `json:"local_asn,omitempty"`
-	LocalIP          string         `json:"local_ip,omitempty"`
-	LocalPort        int            `json:"local_port,omitempty"`
-	LocalBGPID       string         `json:"local_bgp_id,omitempty"`
-	InfoData         []byte         `json:"info_data,omitempty"`
-	AdvCapabilities  bgp.Capability `json:"adv_cap,omitempty"`
-	RcvCapabilities  bgp.Capability `json:"recv_cap,omitempty"`
-	RemoteHolddown   int            `json:"remote_holddown,omitempty"`
-	AdvHolddown      int            `json:"adv_holddown,omitempty"`
-	BMPReason        int            `json:"bmp_reason,omitempty"`
-	BMPErrorCode     int            `json:"bmp_error_code,omitempty"`
-	BMPErrorSubCode  int            `json:"bmp_error_sub_code,omitempty"`
-	ErrorText        string         `json:"error_text,omitempty"`
-	IsL3VPN          bool           `json:"is_l"`
-	IsPrepolicy      bool           `json:"is_prepolicy"`
-	IsIPv4           bool           `json:"is_ipv4"`
-	IsLocRIB         bool           `json:"is_locrib"`
-	IsLocRIBFiltered bool           `json:"is_locrib_filtered"`
-	TableName        string         `json:"table_name,omitempty"`
+	Key             string         `json:"_key,omitempty"`
+	ID              string         `json:"_id,omitempty"`
+	Rev             string         `json:"_rev,omitempty"`
+	Action          string         `json:"action,omitempty"` // Action can be "add" for peer up and "del" for peer down message
+	Sequence        int            `json:"sequence,omitempty"`
+	Hash            string         `json:"hash,omitempty"`
+	RouterHash      string         `json:"router_hash,omitempty"`
+	Name            string         `json:"name,omitempty"`
+	RemoteBGPID     string         `json:"remote_bgp_id,omitempty"`
+	RouterIP        string         `json:"router_ip,omitempty"`
+	Timestamp       string         `json:"timestamp,omitempty"`
+	RemoteASN       uint32         `json:"remote_asn,omitempty"`
+	RemoteIP        string         `json:"remote_ip,omitempty"`
+	PeerType        uint8          `json:"peer_type"`
+	PeerRD          string         `json:"peer_rd,omitempty"`
+	RemotePort      int            `json:"remote_port,omitempty"`
+	LocalASN        uint32         `json:"local_asn,omitempty"`
+	LocalIP         string         `json:"local_ip,omitempty"`
+	LocalPort       int            `json:"local_port,omitempty"`
+	LocalBGPID      string         `json:"local_bgp_id,omitempty"`
+	InfoData        []byte         `json:"info_data,omitempty"`
+	AdvCapabilities bgp.Capability `json:"adv_cap,omitempty"`
+	RcvCapabilities bgp.Capability `json:"recv_cap,omitempty"`
+	RemoteHolddown  int            `json:"remote_holddown,omitempty"`
+	AdvHolddown     int            `json:"adv_holddown,omitempty"`
+	BMPReason       int            `json:"bmp_reason,omitempty"`
+	BMPErrorCode    int            `json:"bmp_error_code,omitempty"`
+	BMPErrorSubCode int            `json:"bmp_error_sub_code,omitempty"`
+	ErrorText       string         `json:"error_text,omitempty"`
+	IsL3VPN         bool           `json:"is_l"`
+	IsPrepolicy     bool           `json:"is_prepolicy"`
+	IsIPv4          bool           `json:"is_ipv4"`
+	TableName       string         `json:"table_name,omitempty"`
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // UnicastPrefix defines a message format sent as a result of BMP Route Monitor message
@@ -63,6 +66,7 @@ type UnicastPrefix struct {
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
 	PeerHash       string              `json:"peer_hash,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
+	PeerType       uint8               `json:"peer_type"`
 	PeerASN        uint32              `json:"peer_asn,omitempty"`
 	Timestamp      string              `json:"timestamp,omitempty"`
 	Prefix         string              `json:"prefix,omitempty"`
@@ -73,9 +77,11 @@ type UnicastPrefix struct {
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
-	IsPrepolicy    bool                `json:"is_prepolicy"`
-	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
 	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // LSNode defines a structure of LS Node message
@@ -91,6 +97,7 @@ type LSNode struct {
 	RouterIP            string                          `json:"router_ip,omitempty"`
 	PeerHash            string                          `json:"peer_hash,omitempty"`
 	PeerIP              string                          `json:"peer_ip,omitempty"`
+	PeerType            uint8                           `json:"peer_type"`
 	PeerASN             uint32                          `json:"peer_asn,omitempty"`
 	Timestamp           string                          `json:"timestamp,omitempty"`
 	IGPRouterID         string                          `json:"igp_router_id,omitempty"`
@@ -109,8 +116,10 @@ type LSNode struct {
 	SRv6CapabilitiesTLV *srv6.CapabilityTLV             `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             []*base.MSDTV                   `json:"node_msd,omitempty"`
 	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition     `json:"flex_algo_definition,omitempty"`
-	IsPrepolicy         bool                            `json:"is_prepolicy"`
-	IsAdjRIBIn          bool                            `json:"is_adj_rib_in"`
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // LSLink defines a structure of LS link message
@@ -126,6 +135,7 @@ type LSLink struct {
 	DomainID              int64                         `json:"domain_id"`
 	PeerHash              string                        `json:"peer_hash,omitempty"`
 	PeerIP                string                        `json:"peer_ip,omitempty"`
+	PeerType              uint8                         `json:"peer_type"`
 	PeerASN               uint32                        `json:"peer_asn,omitempty"`
 	Timestamp             string                        `json:"timestamp,omitempty"`
 	IGPRouterID           string                        `json:"igp_router_id,omitempty"`
@@ -174,6 +184,10 @@ type LSLink struct {
 	UnidirResidualBW      uint32                        `json:"unidir_residual_bw,omitempty"`
 	UnidirAvailableBW     uint32                        `json:"unidir_available_bw,omitempty"`
 	UnidirBWUtilization   uint32                        `json:"unidir_bw_utilization,omitempty"`
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // L3VPNPrefix defines the structure of Layer 3 VPN message
@@ -189,6 +203,7 @@ type L3VPNPrefix struct {
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
 	PeerHash       string              `json:"peer_hash,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
+	PeerType       uint8               `json:"peer_type"`
 	PeerASN        uint32              `json:"peer_asn,omitempty"`
 	Timestamp      string              `json:"timestamp,omitempty"`
 	Prefix         string              `json:"prefix,omitempty"`
@@ -200,11 +215,13 @@ type L3VPNPrefix struct {
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
-	IsPrepolicy    bool                `json:"is_prepolicy"`
-	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
 	VPNRD          string              `json:"vpn_rd,omitempty"`
 	VPNRDType      uint16              `json:"vpn_rd_type"`
 	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // LSPrefix defines a structure of LS Prefix message
@@ -220,6 +237,7 @@ type LSPrefix struct {
 	DomainID             int64                         `json:"domain_id"`
 	PeerHash             string                        `json:"peer_hash,omitempty"`
 	PeerIP               string                        `json:"peer_ip,omitempty"`
+	PeerType             uint8                         `json:"peer_type"`
 	PeerASN              uint32                        `json:"peer_asn,omitempty"`
 	Timestamp            string                        `json:"timestamp,omitempty"`
 	IGPRouterID          string                        `json:"igp_router_id,omitempty"`
@@ -239,11 +257,13 @@ type LSPrefix struct {
 	Prefix               string                        `json:"prefix,omitempty"`
 	PrefixLen            int32                         `json:"prefix_len,omitempty"`
 	PrefixMetric         uint32                        `json:"prefix_metric,omitempty"`
-	IsPrepolicy          bool                          `json:"is_prepolicy"`
-	IsAdjRIBIn           bool                          `json:"is_adj_rib_in"`
 	PrefixAttrTLVs       *bgpls.PrefixAttrTLVs         `json:"prefix_attr_tlvs,omitempty"`
 	FlexAlgoPrefixMetric []*bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
 	SRv6Locator          *srv6.LocatorTLV              `json:"srv6_locator,omitempty"`
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // LSSRv6SID defines a structure of LS SRv6 SID message
@@ -259,6 +279,7 @@ type LSSRv6SID struct {
 	DomainID             int64                         `json:"domain_id"`
 	PeerHash             string                        `json:"peer_hash,omitempty"`
 	PeerIP               string                        `json:"peer_ip,omitempty"`
+	PeerType             uint8                         `json:"peer_type"`
 	PeerASN              uint32                        `json:"peer_asn,omitempty"`
 	Timestamp            string                        `json:"timestamp,omitempty"`
 	IGPRouterID          string                        `json:"igp_router_id,omitempty"`
@@ -278,12 +299,14 @@ type LSSRv6SID struct {
 	IGPMetric            uint32                        `json:"igp_metric,omitempty"`
 	Prefix               string                        `json:"prefix,omitempty"`
 	PrefixLen            int32                         `json:"prefix_len,omitempty"`
-	IsPrepolicy          bool                          `json:"is_prepolicy"`
-	IsAdjRIBIn           bool                          `json:"is_adj_rib_in"`
 	SRv6SID              string                        `json:"srv6_sid,omitempty"`
 	SRv6EndpointBehavior *srv6.EndpointBehavior        `json:"srv6_endpoint_behavior,omitempty"`
 	SRv6BGPPeerNodeSID   *srv6.BGPPeerNodeSID          `json:"srv6_bgp_peer_node_sid,omitempty"`
 	SRv6SIDStructure     *srv6.SIDStructure            `json:"srv6_sid_structure,omitempty"`
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // EVPNPrefix defines the structure of EVPN message
@@ -297,10 +320,10 @@ type EVPNPrefix struct {
 	RouterHash     string              `json:"router_hash,omitempty"`
 	RouterIP       string              `json:"router_ip,omitempty"`
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
-	PeerType       uint32              `json:"peer_type"`
 	PeerHash       string              `json:"peer_hash,omitempty"`
 	RemoteBGPID    string              `json:"remote_bgp_id,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
+	PeerType       uint8               `json:"peer_type"`
 	PeerASN        uint32              `json:"peer_asn,omitempty"`
 	Timestamp      string              `json:"timestamp,omitempty"`
 	IsIPv4         bool                `json:"is_ipv4"`
@@ -311,8 +334,6 @@ type EVPNPrefix struct {
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
 	RawLabels      []uint32            `json:"rawlabels,omitempty"`
-	IsPrepolicy    bool                `json:"is_prepolicy"`
-	IsAdjRIBIn     bool                `json:"is_adj_rib_in"`
 	VPNRD          string              `json:"vpn_rd,omitempty"`
 	VPNRDType      uint16              `json:"vpn_rd_type"`
 	ESI            string              `json:"eth_segment_id,omitempty"`
@@ -326,6 +347,10 @@ type EVPNPrefix struct {
 	// TODO Type 3 carries nlri 22
 	// https://tools.ietf.org/html/rfc6514
 	// Add to the message
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // SRPolicy defines the structure of SR Policy message
@@ -341,6 +366,7 @@ type SRPolicy struct {
 	BaseAttributes *bgp.BaseAttributes     `json:"base_attrs,omitempty"`
 	PeerHash       string                  `json:"peer_hash,omitempty"`
 	PeerIP         string                  `json:"peer_ip,omitempty"`
+	PeerType       uint8                   `json:"peer_type"`
 	PeerASN        uint32                  `json:"peer_asn,omitempty"`
 	Timestamp      string                  `json:"timestamp,omitempty"`
 	IsIPv4         bool                    `json:"is_ipv4"`
@@ -350,8 +376,6 @@ type SRPolicy struct {
 	IsNexthopIPv4  bool                    `json:"is_nexthop_ipv4"`
 	PathID         int32                   `json:"path_id,omitempty"`
 	Labels         []uint32                `json:"labels,omitempty"`
-	IsPrepolicy    bool                    `json:"is_prepolicy"`
-	IsAdjRIBIn     bool                    `json:"is_adj_rib_in"`
 	Distinguisher  uint32                  `json:"distinguisher,omitempty"`
 	Color          uint32                  `json:"color,omitempty"`
 	Endpoint       []byte                  `json:"endpoint,omitempty"`
@@ -362,6 +386,10 @@ type SRPolicy struct {
 	PolicyPathName string                  `json:"policy_path_name,omitempty"`
 	ENLP           *srpolicy.ENLP          `json:"enlp_subtlv,omitempty"`
 	SegmentList    []*srpolicy.SegmentList `json:"segment_list_subtlv,omitempty"`
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // Flowspec defines the structure of SR Policy message
@@ -374,6 +402,7 @@ type Flowspec struct {
 	RouterIP       string              `json:"router_ip,omitempty"`
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
+	PeerType       uint8               `json:"peer_type"`
 	PeerASN        uint32              `json:"peer_asn,omitempty"`
 	Timestamp      string              `json:"timestamp,omitempty"`
 	IsIPv4         bool                `json:"is_ipv4"`
@@ -383,6 +412,10 @@ type Flowspec struct {
 	PathID         int32               `json:"path_id,omitempty"`
 	SpecHash       string              `json:"spec_hash,omitempty"`
 	Spec           []flowspec.Spec     `json:"spec,omitempty"`
+	// Values are assigned based on PerPeerHeader flas
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
 // Stats defines a message format sent to as a result of BMP Stats Message
@@ -393,6 +426,7 @@ type Stats struct {
 	Sequence                   int    `json:"sequence,omitempty"`
 	RouterHash                 string `json:"router_hash,omitempty"`
 	RouterIP                   string `json:"router_ip,omitempty"`
+	PeerType                   uint8  `json:"peer_type"`
 	RemoteBGPID                string `json:"remote_bgp_id,omitempty"`
 	RemoteASN                  uint32 `json:"remote_asn,omitempty"`
 	RemoteIP                   string `json:"remote_ip,omitempty"`

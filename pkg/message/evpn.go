@@ -33,7 +33,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	for _, e := range evpn.Route {
 		prfx := EVPNPrefix{
 			Action:         operation,
-			PeerType:       uint32(ph.PeerType),
+			PeerType:       uint8(ph.PeerType),
 			RouterHash:     p.speakerHash,
 			RouterIP:       p.speakerIP,
 			PeerHash:       ph.GetPeerHash(),
@@ -46,19 +46,12 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			// Last element in AS_PATH would be the AS of the origin
 			prfx.OriginAS = int32(ases[len(ases)-1])
 		}
-		if ph.FlagV {
-			// IPv6 specific conversions
-			prfx.IsIPv4 = false
-			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-			prfx.RemoteBGPID = net.IP(ph.PeerBGPID).To16().String()
-			prfx.IsNexthopIPv4 = false
-		} else {
-			// IPv4 specific conversions
-			prfx.IsIPv4 = true
-			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
-			prfx.RemoteBGPID = net.IP(ph.PeerBGPID).To4().String()
-			prfx.IsNexthopIPv4 = true
-		}
+
+		prfx.PeerIP = ph.GetPeerAddrString()
+		prfx.RemoteBGPID = ph.GetPeerBGPIDString()
+		prfx.IsIPv4 = !nlri.IsIPv6NLRI()
+		prfx.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
+
 		// Do not want to panic on nil pointer
 		if e != nil {
 			prfx.VPNRD = e.GetEVPNRD()
@@ -112,6 +105,15 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			for _, l := range e.GetEVPNLabel() {
 				prfx.Labels = append(prfx.Labels, l.Value)
 				prfx.RawLabels = append(prfx.RawLabels, l.GetRawValue())
+			}
+			if f, err := ph.IsAdjRIBInPost(); err == nil {
+				prfx.IsAdjRIBInPost = f
+			}
+			if f, err := ph.IsAdjRIBOutPost(); err == nil {
+				prfx.IsAdjRIBOutPost = f
+			}
+			if f, err := ph.IsLocRIBFiltered(); err == nil {
+				prfx.IsLocRIBFiltered = f
 			}
 		}
 		prfxs = append(prfxs, prfx)

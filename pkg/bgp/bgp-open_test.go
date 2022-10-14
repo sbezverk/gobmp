@@ -26,7 +26,7 @@ func TestUnmarshalBGPOpenMessage(t *testing.T) {
 				OptParamLen:        62,
 				OptionalParameters: []InformationalTLV{},
 				Capabilities: Capability{
-					1: []*capabilityData{
+					1: []*CapabilityData{
 						{
 							Description: "Multiprotocol Extensions for BGP-4 : afi=1 safi=1 Unicast IPv4",
 							Value:       []byte{0, 1, 0, 1},
@@ -40,31 +40,31 @@ func TestUnmarshalBGPOpenMessage(t *testing.T) {
 							Value:       []byte{0, 1, 0, 128},
 						},
 					},
-					2: []*capabilityData{
+					2: []*CapabilityData{
 						{
 							Description: "Route Refresh Capability for BGP-4",
 							Value:       []byte{},
 						},
 					},
-					5: []*capabilityData{
+					5: []*CapabilityData{
 						{
 							Description: "Extended Next Hop Encoding",
 							Value:       []byte{0, 1, 0, 1, 0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 0, 128, 0, 2},
 						},
 					},
-					65: []*capabilityData{
+					65: []*CapabilityData{
 						{
 							Description: "Support for 4-octet AS number capability",
 							Value:       []byte{0, 0, 19, 206},
 						},
 					},
-					69: []*capabilityData{
+					69: []*CapabilityData{
 						{
 							Description: "ADD-PATH Capability",
 							Value:       []byte{1, 0, 134, 3},
 						},
 					},
-					128: []*capabilityData{
+					128: []*CapabilityData{
 						{
 							Description: "Prestandard Route Refresh (deprecated)",
 							Value:       []byte{},

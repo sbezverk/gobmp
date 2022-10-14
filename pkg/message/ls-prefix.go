@@ -23,10 +23,20 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		Action:     operation,
 		RouterHash: p.speakerHash,
 		RouterIP:   p.speakerIP,
+		PeerType:   uint8(ph.PeerType),
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,
 		Timestamp:  ph.GetPeerTimestamp(),
 		DomainID:   prfx.GetIdentifier(),
+	}
+	if f, err := ph.IsAdjRIBInPost(); err == nil {
+		msg.IsAdjRIBInPost = f
+	}
+	if f, err := ph.IsAdjRIBOutPost(); err == nil {
+		msg.IsAdjRIBOutPost = f
+	}
+	if f, err := ph.IsLocRIBFiltered(); err == nil {
+		msg.IsLocRIBFiltered = f
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
@@ -63,7 +73,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	}
 	lsprefix, err := update.GetNLRI29()
 	if err == nil {
-		if ph.FlagV {
+		if !ipv4 {
 			msg.RouterID = lsprefix.GetLocalIPv6RouterID()
 		} else {
 			msg.RouterID = lsprefix.GetLocalIPv4RouterID()

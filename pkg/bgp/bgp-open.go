@@ -70,7 +70,6 @@ func (o *OpenMessage) AddPathCapability() map[int]bool {
 		afi := binary.BigEndian.Uint16(v[0].Value[p : p+2])
 		safi := v[0].Value[p+2]
 		m[NLRIMessageType(afi, safi)] = true
-		glog.Infof("><SB> AFI/SAFI: %d/%d has Send/Receive support for AddPath", afi, safi)
 	}
 
 	return m

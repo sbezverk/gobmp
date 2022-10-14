@@ -22,10 +22,20 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 		Action:     operation,
 		RouterHash: p.speakerHash,
 		RouterIP:   p.speakerIP,
+		PeerType:   uint8(ph.PeerType),
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,
 		Timestamp:  ph.GetPeerTimestamp(),
 		DomainID:   nlri6.GetIdentifier(),
+	}
+	if f, err := ph.IsAdjRIBInPost(); err == nil {
+		msg.IsAdjRIBInPost = f
+	}
+	if f, err := ph.IsAdjRIBOutPost(); err == nil {
+		msg.IsAdjRIBOutPost = f
+	}
+	if f, err := ph.IsLocRIBFiltered(); err == nil {
+		msg.IsLocRIBFiltered = f
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()

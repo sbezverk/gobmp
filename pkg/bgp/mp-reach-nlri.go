@@ -62,6 +62,9 @@ func (mp *MPReachNLRI) GetNextHop() string {
 	case 4:
 		// IPv4
 		return net.IP(mp.NextHopAddress).To4().String()
+	case 8:
+		// Peer 3 (Local-RIB) Next hop is 8 bytes RD 4 bytes and IPv4 address 4 bytes
+		return net.IP(mp.NextHopAddress[4:]).To4().String()
 	case 12:
 		// RD (8 bytes) + IPv4
 		return net.IP(mp.NextHopAddress[8:]).To4().String()

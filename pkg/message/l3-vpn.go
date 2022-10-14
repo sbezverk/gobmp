@@ -31,6 +31,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			Action:         operation,
 			RouterHash:     p.speakerHash,
 			RouterIP:       p.speakerIP,
+			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),
@@ -57,16 +58,16 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			copy(p, e.Prefix)
 			prfx.Prefix = net.IP(p).To4().String()
 		}
-		if nlri.IsNextHopIPv6() {
-			prfx.IsNexthopIPv4 = false
-		} else {
-			prfx.IsNexthopIPv4 = true
+		prfx.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
+		prfx.PeerIP = ph.GetPeerAddrString()
+		if f, err := ph.IsAdjRIBInPost(); err == nil {
+			prfx.IsAdjRIBInPost = f
 		}
-		if ph.FlagV {
-			prfx.PeerIP = net.IP(ph.PeerAddress).To16().String()
-
-		} else {
-			prfx.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
+		if f, err := ph.IsAdjRIBOutPost(); err == nil {
+			prfx.IsAdjRIBOutPost = f
+		}
+		if f, err := ph.IsLocRIBFiltered(); err == nil {
+			prfx.IsLocRIBFiltered = f
 		}
 		prfx.Labels = make([]uint32, 0)
 		for _, l := range e.Label {

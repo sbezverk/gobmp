@@ -2,14 +2,13 @@ package message
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, error) {
+func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update, isIPv6 bool) (*LSNode, error) {
 	var operation string
 	switch op {
 	case 0:
@@ -23,18 +22,22 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		Action:     operation,
 		RouterHash: p.speakerHash,
 		RouterIP:   p.speakerIP,
+		PeerType:   uint8(ph.PeerType),
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,
 		Timestamp:  ph.GetPeerTimestamp(),
 		DomainID:   node.GetIdentifier(),
 	}
-	if ph.FlagV {
-		// IPv6 specific conversions
-		msg.PeerIP = net.IP(ph.PeerAddress).To16().String()
-	} else {
-		// IPv4 specific conversions
-		msg.PeerIP = net.IP(ph.PeerAddress[12:]).To4().String()
+	if f, err := ph.IsAdjRIBInPost(); err == nil {
+		msg.IsAdjRIBInPost = f
 	}
+	if f, err := ph.IsAdjRIBOutPost(); err == nil {
+		msg.IsAdjRIBOutPost = f
+	}
+	if f, err := ph.IsLocRIBFiltered(); err == nil {
+		msg.IsLocRIBFiltered = f
+	}
+	msg.PeerIP = ph.GetPeerAddrString()
 	msg.Protocol = node.GetNodeProtocolID()
 	msg.ProtocolID = node.ProtocolID
 	msg.IGPRouterID = node.GetNodeIGPRouterID()
@@ -60,7 +63,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.P
 		case base.ISISL2:
 			msg.AreaID = lsnode.GetISISAreaID()
 		}
-		if ph.FlagV {
+		if isIPv6 {
 			msg.RouterID = lsnode.GetLocalIPv6RouterID()
 		} else {
 			msg.RouterID = lsnode.GetLocalIPv4RouterID()

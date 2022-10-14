@@ -2,7 +2,7 @@ package message
 
 import (
 	"encoding/binary"
-	"net"
+	"encoding/json"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -20,7 +20,8 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 		return
 	}
 	if len(StatsMsg.StatsTLV) == 0 {
-		glog.Errorf("stats message does not contain any tlv(stat) %+v", msg.Payload)
+		b, _ := json.MarshalIndent(StatsMsg, "", "   ")
+		glog.Errorf("stats message does not contain any tlv(stat) %s", string(b))
 		return
 	}
 
@@ -30,16 +31,10 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 		Timestamp:  msg.PeerHeader.GetPeerTimestamp(),
 		RouterHash: p.speakerHash,
 		RouterIP:   p.speakerIP,
+		PeerType:   uint8(msg.PeerHeader.PeerType),
 	}
-
-	if msg.PeerHeader.FlagV {
-		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress).To16().String()
-		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To16().String()
-	} else {
-		m.RemoteIP = net.IP(msg.PeerHeader.PeerAddress[12:]).To4().String()
-		m.RemoteBGPID = net.IP(msg.PeerHeader.PeerBGPID).To4().String()
-	}
-
+	m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
+	m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()
 	for _, tlv := range StatsMsg.StatsTLV {
 		switch tlv.InformationType {
 		case 1:
@@ -67,7 +62,7 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 		}
 	}
 	if err := p.marshalAndPublish(&m, bmp.StatsReportMsg, []byte(m.RouterHash), false); err != nil {
-		glog.Errorf("failed to process peer message with error: %+v", err)
+		glog.Errorf("failed to process peer Stats Report message with error: %+v", err)
 		return
 	}
 }
