@@ -34,9 +34,6 @@ const (
 // PerPeerHeader defines BMP Per-Peer Header per rfc7854
 type PerPeerHeader struct {
 	PeerType PeerType
-
-	// TODO (sbezverk) For Peer type 3 different structure of flags is used,
-	// need a flexible solution to support all 3 peer types.
 	// 	0 1 2 3 4 5 6 7
 	// 	+-+-+-+-+-+-+-+-+
 	// 	|F| | | | | | | |
@@ -79,50 +76,6 @@ func peerType(b byte) (PeerType, error) {
 	default:
 		return 0xff, fmt.Errorf("invalid peer type, expected between 0 and 3 found %d", b)
 	}
-}
-
-// UnmarshalPerPeerHeader processes Per-Peer header
-func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
-	if glog.V(6) {
-		glog.Infof("BMP Per Peer Header Raw: %s", tools.MessageHex(b))
-	}
-	pph := &PerPeerHeader{
-		PeerDistinguisher: make([]byte, 8), // newPeerDistinguisher(),
-		PeerAddress:       make([]byte, 16),
-		PeerBGPID:         make([]byte, 4),
-		PeerTimestamp:     make([]byte, 8),
-	}
-	p := 0
-	var err error
-	if pph.PeerType, err = peerType(b[p]); err != nil {
-		return nil, err
-	}
-	p++
-	if pph.PeerType == PeerType3 {
-		// Flag F is applicable only to Peer type 3
-		pph.flagF = b[p]&0x80 == 0x80
-	} else {
-		// Flags V,L,A and O applicable ONLY to Peer Type 0, 1 and 2
-		pph.flagV = b[p]&0x80 == 0x80
-		pph.flagL = b[p]&0x40 == 0x40
-		pph.flagA = b[p]&0x20 == 0x20
-		pph.flagO = b[p]&0x10 == 0x10
-	}
-	p++
-	// RD 8 bytes
-	copy(pph.PeerDistinguisher, b[p:p+8])
-	p += 8
-	// Peer Address 16 bytes but for IPv4 case only last 4 bytes needed
-	copy(pph.PeerAddress, b[p:p+16])
-	p += 16
-	pph.PeerAS = binary.BigEndian.Uint32(b[p : p+4])
-	p += 4
-	copy(pph.PeerBGPID, b[p:p+4])
-	p += 4
-	// Store Peer's timestamp (8 bytes) as a slice
-	copy(pph.PeerTimestamp, b[p:p+8])
-
-	return pph, nil
 }
 
 func (p *PerPeerHeader) GetPeerTimestamp() string {
@@ -216,4 +169,48 @@ func (p *PerPeerHeader) GetPeerDistinguisherString() string {
 	}
 
 	return pd
+}
+
+// UnmarshalPerPeerHeader processes Per-Peer header
+func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
+	if glog.V(6) {
+		glog.Infof("BMP Per Peer Header Raw: %s", tools.MessageHex(b))
+	}
+	pph := &PerPeerHeader{
+		PeerDistinguisher: make([]byte, 8), // newPeerDistinguisher(),
+		PeerAddress:       make([]byte, 16),
+		PeerBGPID:         make([]byte, 4),
+		PeerTimestamp:     make([]byte, 8),
+	}
+	p := 0
+	var err error
+	if pph.PeerType, err = peerType(b[p]); err != nil {
+		return nil, err
+	}
+	p++
+	if pph.PeerType == PeerType3 {
+		// Flag F is applicable only to Peer type 3
+		pph.flagF = b[p]&0x80 == 0x80
+	} else {
+		// Flags V,L,A and O applicable ONLY to Peer Type 0, 1 and 2
+		pph.flagV = b[p]&0x80 == 0x80
+		pph.flagL = b[p]&0x40 == 0x40
+		pph.flagA = b[p]&0x20 == 0x20
+		pph.flagO = b[p]&0x10 == 0x10
+	}
+	p++
+	// RD 8 bytes
+	copy(pph.PeerDistinguisher, b[p:p+8])
+	p += 8
+	// Peer Address 16 bytes but for IPv4 case only last 4 bytes needed
+	copy(pph.PeerAddress, b[p:p+16])
+	p += 16
+	pph.PeerAS = binary.BigEndian.Uint32(b[p : p+4])
+	p += 4
+	copy(pph.PeerBGPID, b[p:p+4])
+	p += 4
+	// Store Peer's timestamp (8 bytes) as a slice
+	copy(pph.PeerTimestamp, b[p:p+8])
+
+	return pph, nil
 }
