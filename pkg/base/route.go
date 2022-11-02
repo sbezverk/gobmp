@@ -41,6 +41,10 @@ func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 			// Check for More or Equal to protect from the length of 4 bytes, with PathID true
 			// there should be 5 bytes.
 			if p+4 >= len(b) {
+				// Attempt to unmarshal routes with inversed pathID flag, if succeeded, return error as nil
+				if r, err := UnmarshalRoutes(b, !pathID); err == nil {
+					return r, nil
+				}
 				glog.Errorf("UnmarshalRoutes: malformed byte slice %s Path ID flag: %t", tools.MessageHex(b), pathID)
 				return nil, fmt.Errorf("malformed byte slice")
 			}
@@ -56,6 +60,10 @@ func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 		p++
 		// The sum of a current pointer in the slice and safeOffset should not exceed the byte slice length.
 		if p+int(l) > len(b) {
+			// Attempt to unmarshal routes with inversed pathID flag, if succeeded, return error as nil
+			if r, err := UnmarshalRoutes(b, !pathID); err == nil {
+				return r, nil
+			}
 			glog.Errorf("UnmarshalRoutes: malformed byte slice %s Path ID flag: %t", tools.MessageHex(b), pathID)
 			return nil, fmt.Errorf("malformed byte slice")
 		}

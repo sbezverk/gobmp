@@ -62,7 +62,6 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			// Local BGP speaker is 4 bytes AS capable
 			m.LocalASN = lasn
 		}
-		p.addPathCapable = make(map[int]bool)
 		// Check if local router advertises AddPath Send/Receive for any AFI/SAFI,
 		// if map comes back empty no further AddPath Capability is needed
 		if lAddPath := peerUpMsg.SentOpen.AddPathCapability(); len(lAddPath) != 0 {
@@ -80,6 +79,9 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		}
 		m.AdvCapabilities = peerUpMsg.SentOpen.GetCapabilities()
 		m.RcvCapabilities = peerUpMsg.ReceivedOpen.GetCapabilities()
+		if glog.V(6) {
+			glog.Infof("producer for speaker ip: %s add path: %+v", p.speakerIP, p.addPathCapable)
+		}
 	} else {
 		peerDownMsg, ok := msg.Payload.(*bmp.PeerDownMessage)
 		if !ok {

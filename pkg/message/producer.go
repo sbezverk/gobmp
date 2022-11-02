@@ -58,6 +58,6 @@ func NewProducer(publisher pub.Publisher, splitAF bool) Producer {
 	return &producer{
 		publisher:      publisher,
 		splitAF:        splitAF,
-		addPathCapable: map[int]bool{},
+		addPathCapable: make(map[int]bool),
 	}
 }

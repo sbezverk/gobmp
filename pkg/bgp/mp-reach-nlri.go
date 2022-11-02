@@ -183,7 +183,7 @@ func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPReachNLRI(b []byte, srv6 bool, addPath map[int]bool) (MPNLRI, error) {
 	if glog.V(6) {
-		glog.Infof("MPReachNLRI Raw: %s", tools.MessageHex(b))
+		glog.Infof("MPReachNLRI Raw: %s SRv6 flag: %t add path: %+v", tools.MessageHex(b), srv6, addPath)
 	}
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
