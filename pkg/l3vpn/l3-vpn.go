@@ -63,6 +63,7 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 		}
 		rd, err := base.MakeRD(b[p : p+8])
 		if err != nil {
+			glog.Errorf("UnmarshalL3VPNNLRI: failed to unmarshal from %s PathID %t", tools.MessageHex(b), pathID)
 			return nil, err
 		}
 		p += 8

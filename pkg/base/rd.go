@@ -4,6 +4,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+
+	"github.com/golang/glog"
+	"github.com/sbezverk/tools"
 )
 
 // RD defines a structure of VPN prefixe's Route Distinguisher
@@ -16,10 +19,12 @@ type RD struct {
 func MakeRD(b []byte) (*RD, error) {
 	rd := RD{}
 	if len(b) != 8 {
+		glog.Errorf("MakeRD: invalid rd length detected in %s", tools.MessageHex(b))
 		return nil, fmt.Errorf("invalid length expected 8 got %d", len(b))
 	}
 	rd.Type = binary.BigEndian.Uint16(b[0:2])
 	if rd.Type > 2 {
+		glog.Errorf("MakeRD: invalid rd type detected in %s", tools.MessageHex(b))
 		return nil, fmt.Errorf("invalid rd type %d", rd.Type)
 	}
 	rd.Value = make([]byte, 6)

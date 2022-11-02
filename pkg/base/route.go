@@ -2,6 +2,7 @@ package base
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
@@ -37,6 +38,12 @@ func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 		route.Length = b[p]
 		// Check if there is Path ID in NLRI
 		if pathID {
+			// Check for More or Equal to protect from the length of 4 bytes, with PathID true
+			// there should be 5 bytes.
+			if p+4 >= len(b) {
+				glog.Errorf("UnmarshalRoutes: malformed byte slice %s Path ID flag: %t", tools.MessageHex(b), pathID)
+				return nil, fmt.Errorf("malformed byte slice")
+			}
 			route.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 			// Updating length
@@ -47,15 +54,14 @@ func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 			l++
 		}
 		p++
-		// Check that the following copy would not exceed the slice capacity
-		safeOffset := int(l)
-		// The sum of a current pointer in the slice and safeOffset should not exceed  the byte slice length.
-		if p+safeOffset > len(b) {
-			safeOffset = len(b) - p
+		// The sum of a current pointer in the slice and safeOffset should not exceed the byte slice length.
+		if p+int(l) > len(b) {
+			glog.Errorf("UnmarshalRoutes: malformed byte slice %s Path ID flag: %t", tools.MessageHex(b), pathID)
+			return nil, fmt.Errorf("malformed byte slice")
 		}
 		route.Prefix = make([]byte, l)
-		copy(route.Prefix, b[p:p+safeOffset])
-		p += safeOffset
+		copy(route.Prefix, b[p:p+int(l)])
+		p += int(l)
 		routes = append(routes, route)
 	}
 
