@@ -12,15 +12,15 @@ import (
 
 // UnmarshalL3VPNNLRI instantiates a L3 VPN NLRI object
 func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, error) {
-	if glog.V(6) {
-		glog.Infof("L3VPN NLRI Raw: %s", tools.MessageHex(b))
-	}
-	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
-	}
 	srv6Flag := false
 	if len(srv6) == 1 {
 		srv6Flag = srv6[0]
+	}
+	if glog.V(6) {
+		glog.Infof("L3VPN NLRI Raw: %s path ID flag: %t srv6 flag: %t ", tools.MessageHex(b), pathID, srv6Flag)
+	}
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
 	}
 	mpnlri := base.MPNLRI{
 		NLRI: make([]base.Route, 0),
@@ -30,14 +30,32 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 			Label: make([]*base.Label, 0),
 		}
 		if pathID {
+			if p+4 > len(b) {
+				if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
+					return mp, nil
+				}
+				return nil, fmt.Errorf("malformed slice")
+			}
 			up.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 		}
 		up.Length = b[p]
+		if p+1 > len(b) {
+			if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
+				return mp, nil
+			}
+			return nil, fmt.Errorf("malformed slice")
+		}
 		p++
 		// Next 3 bytes are a part of Compatibility field 0x800000
 		// then it is MP_UNREACH_NLRI and no Label information is present
 		compatibilityField := 0
+		if p+3 > len(b) {
+			if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
+				return mp, nil
+			}
+			return nil, fmt.Errorf("malformed slice")
+		}
 		if bytes.Equal([]byte{0x80, 0x00, 0x00}, b[p:p+3]) {
 			up.Label = nil
 			compatibilityField = 3
@@ -47,9 +65,18 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 			up.Label = make([]*base.Label, 0)
 			bos := false
 			for !bos && p < len(b) {
+				if p+3 >= len(b) {
+					if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
+						return mp, nil
+					}
+					return nil, fmt.Errorf("malformed slice")
+				}
 				l, err := base.MakeLabel(b[p:p+3], srv6Flag)
 				if err != nil {
-					return nil, err
+					if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
+						return mp, nil
+					}
+					return nil, fmt.Errorf("malformed slice")
 				}
 				up.Label = append(up.Label, l)
 				p += 3
@@ -61,10 +88,18 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 				}
 			}
 		}
+		if p+8 > len(b) {
+			if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
+				return mp, nil
+			}
+			return nil, fmt.Errorf("malformed slice")
+		}
 		rd, err := base.MakeRD(b[p : p+8])
 		if err != nil {
-			glog.Errorf("UnmarshalL3VPNNLRI: failed to unmarshal from %s PathID %t", tools.MessageHex(b), pathID)
-			return nil, err
+			if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
+				return mp, nil
+			}
+			return nil, fmt.Errorf("malformed slice")
 		}
 		p += 8
 		up.RD = rd
@@ -73,6 +108,12 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 		l := int(up.Length/8) - (len(up.Label) * 3) - compatibilityField - 8
 		if up.Length%8 != 0 {
 			l++
+		}
+		if p+l > len(b) {
+			if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
+				return mp, nil
+			}
+			return nil, fmt.Errorf("malformed slice")
 		}
 		up.Prefix = make([]byte, l)
 		copy(up.Prefix, b[p:p+l])

@@ -173,6 +173,32 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 			srv6:   true,
 			pathID: false,
 		},
+		{
+			name:  "crash_11-02-2022",
+			input: []byte{0x70, 0x05, 0xDC, 0x51, 0x00, 0x00, 0x02, 0xBC, 0x00, 0x00, 0x02, 0xBC, 0x0A, 0x46, 0x46},
+			expect: &base.MPNLRI{
+				NLRI: []base.Route{
+					{
+						Length: 24,
+						Label: []*base.Label{
+							{
+								Value: 24005,
+								Exp:   0,
+								BoS:   true,
+							},
+						},
+						RD: &base.RD{
+							Type:  0,
+							Value: []byte{2, 188, 0, 0, 2, 188},
+						},
+						Prefix: []byte{10, 70, 70},
+					},
+				},
+			},
+			fail:   false,
+			srv6:   false,
+			pathID: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
