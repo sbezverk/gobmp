@@ -50,7 +50,7 @@ func (o *OpenMessage) AddPathCapability() map[int]bool {
 	if !ok {
 		return m
 	}
-	if len(v) == 0 && len(v) > 1 {
+	if len(v) == 0 || len(v) > 1 {
 		glog.Errorf("invalid length %d of AddPath capability", len(v))
 		return m
 	}
