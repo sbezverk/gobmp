@@ -45,6 +45,10 @@ func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 			}
 			route.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
+			if p >= len(b) {
+				err = fmt.Errorf("not enough bytes to reconstruct routes")
+				goto error_handle
+			}
 			// Updating length
 			route.Length = b[p]
 		}
