@@ -25,36 +25,31 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 	mpnlri := base.MPNLRI{
 		NLRI: make([]base.Route, 0),
 	}
+	var err error = nil
 	for p := 0; p < len(b); {
 		up := base.Route{
 			Label: make([]*base.Label, 0),
 		}
 		if pathID {
 			if p+4 > len(b) {
-				if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
-					return mp, nil
-				}
-				return nil, fmt.Errorf("malformed slice")
+				err = fmt.Errorf("not enough bytes to reconstruct l3vpn nlri")
+				goto error_handle
 			}
 			up.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 		}
 		up.Length = b[p]
 		if p+1 > len(b) {
-			if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
-				return mp, nil
-			}
-			return nil, fmt.Errorf("malformed slice")
+			err = fmt.Errorf("not enough bytes to reconstruct l3vpn nlri")
+			goto error_handle
 		}
 		p++
 		// Next 3 bytes are a part of Compatibility field 0x800000
 		// then it is MP_UNREACH_NLRI and no Label information is present
 		compatibilityField := 0
 		if p+3 > len(b) {
-			if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
-				return mp, nil
-			}
-			return nil, fmt.Errorf("malformed slice")
+			err = fmt.Errorf("not enough bytes to reconstruct l3vpn nlri")
+			goto error_handle
 		}
 		if bytes.Equal([]byte{0x80, 0x00, 0x00}, b[p:p+3]) {
 			up.Label = nil
@@ -65,18 +60,14 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 			up.Label = make([]*base.Label, 0)
 			bos := false
 			for !bos && p < len(b) {
-				if p+3 >= len(b) {
-					if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
-						return mp, nil
-					}
-					return nil, fmt.Errorf("malformed slice")
+				if p+3 > len(b) {
+					err = fmt.Errorf("not enough bytes to reconstruct l3vpn nlri")
+					goto error_handle
 				}
-				l, err := base.MakeLabel(b[p:p+3], srv6Flag)
-				if err != nil {
-					if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
-						return mp, nil
-					}
-					return nil, fmt.Errorf("malformed slice")
+				l, e := base.MakeLabel(b[p:p+3], srv6Flag)
+				if e != nil {
+					err = e
+					goto error_handle
 				}
 				up.Label = append(up.Label, l)
 				p += 3
@@ -89,17 +80,13 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 			}
 		}
 		if p+8 > len(b) {
-			if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
-				return mp, nil
-			}
-			return nil, fmt.Errorf("malformed slice")
+			err = fmt.Errorf("not enough bytes to reconstruct l3vpn nlri")
+			goto error_handle
 		}
-		rd, err := base.MakeRD(b[p : p+8])
-		if err != nil {
-			if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
-				return mp, nil
-			}
-			return nil, fmt.Errorf("malformed slice")
+		rd, e := base.MakeRD(b[p : p+8])
+		if e != nil {
+			err = e
+			goto error_handle
 		}
 		p += 8
 		up.RD = rd
@@ -110,16 +97,28 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 			l++
 		}
 		if p+l > len(b) {
-			if mp, err := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); err == nil {
-				return mp, nil
-			}
-			return nil, fmt.Errorf("malformed slice")
+			err = fmt.Errorf("not enough bytes to reconstruct l3vpn nlri")
+			goto error_handle
 		}
 		up.Prefix = make([]byte, l)
 		copy(up.Prefix, b[p:p+l])
 		p += l
 		up.Length = uint8(l * 8)
 		mpnlri.NLRI = append(mpnlri.NLRI, up)
+	}
+
+error_handle:
+	if err != nil {
+		// In some cases, Error could be triggered by use of incorrect value of PathID flag, as Add Path capability
+		// might be advertised and received, but BGP Update would not have PathID set due to some other conditions,
+		// example when bgp speakers are in different AS. In error handle, attempting to Unmarshal again with reversed
+		// value of PathID flag.
+		if mp, e := UnmarshalL3VPNNLRI(b, !pathID, srv6Flag); e == nil {
+			return mp, nil
+		}
+		glog.Errorf("failed to reconstruct l3vpn nlri from slice %s with error: %+v", tools.MessageHex(b), err)
+
+		return nil, err
 	}
 
 	return &mpnlri, nil
