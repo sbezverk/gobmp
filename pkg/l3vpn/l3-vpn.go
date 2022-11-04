@@ -39,6 +39,10 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 			p += 4
 		}
 		up.Length = b[p]
+		if up.Length <= 0 {
+			err = fmt.Errorf("not enough bytes to reconstruct l3vpn nlri")
+			goto error_handle
+		}
 		if p+1 > len(b) {
 			err = fmt.Errorf("not enough bytes to reconstruct l3vpn nlri")
 			goto error_handle
@@ -93,6 +97,10 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 		// Adjusting prefix length to remove bits used by labels each label takes 3 bytes, or 3 bytes
 		// of Compatibility field
 		l := int(up.Length/8) - (len(up.Label) * 3) - compatibilityField - 8
+		if l < 0 {
+			err = fmt.Errorf("not enough bytes to reconstruct l3vpn nlri")
+			goto error_handle
+		}
 		if up.Length%8 != 0 {
 			l++
 		}

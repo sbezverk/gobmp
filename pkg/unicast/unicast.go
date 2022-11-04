@@ -54,6 +54,10 @@ func UnmarshalLUNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 			goto error_handle
 		}
 		up.Length = b[p]
+		if up.Length <= 0 {
+			err = fmt.Errorf("not enough bytes to reconstruct l3vpn nlri")
+			goto error_handle
+		}
 		p++
 		// Next 3 bytes are a part of Compatibility field 0x800000
 		// then it is MP_UNREACH_NLRI and no Label information is present

@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/sbezverk/gobmp/pkg/base"
 )
 
@@ -199,6 +200,47 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 			srv6:   false,
 			pathID: true,
 		},
+		{
+			name:  "crash_11-03-2022",
+			input: []byte{0x77, 0x05, 0xDD, 0x31, 0x00, 0x01, 0x0A, 0x00, 0x00, 0x07, 0x00, 0x01, 0xAC, 0x10, 0x07, 0x00, 0x70, 0x05, 0xDD, 0x31, 0x00, 0x01, 0x0A, 0x00, 0x00, 0x07, 0x00, 0x01, 0x64, 0x64, 0x07},
+			expect: &base.MPNLRI{
+				NLRI: []base.Route{
+					{
+						Length: 32,
+						Label: []*base.Label{
+							{
+								Value: 24019,
+								Exp:   0,
+								BoS:   true,
+							},
+						},
+						RD: &base.RD{
+							Type:  1,
+							Value: []byte{10, 0, 0, 7, 0, 1},
+						},
+						Prefix: []byte{172, 16, 7, 0},
+					},
+					{
+						Length: 24,
+						Label: []*base.Label{
+							{
+								Value: 24019,
+								Exp:   0,
+								BoS:   true,
+							},
+						},
+						RD: &base.RD{
+							Type:  1,
+							Value: []byte{10, 0, 0, 7, 0, 1},
+						},
+						Prefix: []byte{100, 100, 7},
+					},
+				},
+			},
+			fail:   false,
+			srv6:   false,
+			pathID: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -211,7 +253,8 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 			}
 			if err == nil {
 				if !reflect.DeepEqual(got, tt.expect) {
-					t.Errorf("Expected label %+v does not match to actual label %+v", *tt.expect, got)
+					t.Logf("Differences: %+v", deep.Equal(tt.expect, got))
+					t.Fatal("test failed as expected nlri does not match actual nlri")
 				}
 			}
 		})
