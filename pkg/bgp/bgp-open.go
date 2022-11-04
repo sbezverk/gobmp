@@ -50,7 +50,7 @@ func (o *OpenMessage) AddPathCapability() map[int]bool {
 	if !ok {
 		return m
 	}
-	if len(v) == 0 && len(v) > 1 {
+	if len(v) == 0 || len(v) > 1 {
 		glog.Errorf("invalid length %d of AddPath capability", len(v))
 		return m
 	}
@@ -63,13 +63,17 @@ func (o *OpenMessage) AddPathCapability() map[int]bool {
 		return m
 	}
 	for p := 0; p < len(v[0].Value); p += 4 {
-		// Check if last byte == 3 (Send/Receive) AddPath, if not, ignoring entry
-		if v[0].Value[p+3] != 3 {
-			continue
-		}
 		afi := binary.BigEndian.Uint16(v[0].Value[p : p+2])
 		safi := v[0].Value[p+2]
-		m[NLRIMessageType(afi, safi)] = true
+		// Check if last byte == 3 (Send/Receive) AddPath, if not, ignoring entry
+		flag := false
+		if v[0].Value[p+3] == 3 {
+			flag = true
+		}
+		m[NLRIMessageType(afi, safi)] = flag
+		if glog.V(6) {
+			glog.Infof("AddPath Capability for AFI/SAFI: %d/%d is %t", afi, safi, flag)
+		}
 	}
 
 	return m
