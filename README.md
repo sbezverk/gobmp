@@ -156,6 +156,11 @@ When intercept set "true", all incomming BMP messages will be processed and a co
 
 Kafka server TCP/IP address
 
+```
+--bmp-raw
+```
+
+Publish BMP RAW messages (the default is to publish parsed messages)
 
 ```
 --msg-file={message file path and location} (default "/tmp/messages.json")

@@ -21,6 +21,7 @@ type BMPServer interface {
 type bmpServer struct {
 	splitAF         bool
 	intercept       bool
+	bmpRaw          bool
 	publisher       pub.Publisher
 	sourcePort      int
 	destinationPort int
@@ -117,7 +118,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 }
 
 // NewBMPServer instantiates a new instance of BMP Server
-func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool) (BMPServer, error) {
+func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, bmpRaw bool) (BMPServer, error) {
 	incoming, err := net.Listen("tcp", fmt.Sprintf(":%d", sPort))
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", sPort, err)
@@ -131,6 +132,7 @@ func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF boo
 		publisher:       p,
 		incoming:        incoming,
 		splitAF:         splitAF,
+		bmpRaw:          bmpRaw,
 	}
 
 	return &bmp, nil
