@@ -16,6 +16,7 @@ import (
 
 // Define constants for each topic name
 const (
+	rawTopic               = "gobmp.bmp_raw"
 	peerTopic              = "gobmp.parsed.peer"
 	unicastMessageTopic    = "gobmp.parsed.unicast_prefix"
 	unicastMessageV4Topic  = "gobmp.parsed.unicast_prefix_v4"
@@ -48,6 +49,7 @@ var (
 	// topics defines a list of topic to initialize and connect,
 	// initialization is done as a part of NewKafkaPublisher func.
 	topicNames = []string{
+		rawTopic,
 		peerTopic,
 		unicastMessageTopic,
 		unicastMessageV4Topic,
@@ -79,6 +81,8 @@ type publisher struct {
 
 func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 	switch t {
+	case bmp.BMPRawMsg:
+		return p.produceMessage(rawTopic, key, msg)
 	case bmp.PeerStateChangeMsg:
 		return p.produceMessage(peerTopic, key, msg)
 	case bmp.UnicastPrefixMsg:
