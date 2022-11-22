@@ -22,7 +22,7 @@ type NotificationMessage struct {
 	Data         []byte
 }
 
-// UnmarshalBGPNotificationMessage validate information passed in byte slice and returns BGPNotificationMessage object
+// UnmarshalBGPNotificationMessage validates information passed in byte slice and returns BGPNotificationMessage object
 func UnmarshalBGPNotificationMessage(b []byte) (*NotificationMessage, error) {
 	if glog.V(6) {
 		glog.Infof("BGPNotificationMessage Raw: %s", tools.MessageHex(b))
@@ -32,9 +32,11 @@ func UnmarshalBGPNotificationMessage(b []byte) (*NotificationMessage, error) {
 	}
 	p := 0
 	m := NotificationMessage{}
+	// Skip marker 16 bytes
 	p += 16
 	m.Length = int16(binary.BigEndian.Uint16(b[p : p+2]))
 	p += 2
+	fmt.Printf("length:%v\n", m.Length)
 	if b[p] != 3 {
 		return nil, fmt.Errorf("invalid message type %d for BGP Notification Message", b[p])
 	}
@@ -114,9 +116,28 @@ var fsmErrorSubErrors = map[uint8]string{
 	0x00: "",
 }
 
-// Cease Error. No sub error code is defined.
+// Cease Error. rfc4486
+// 0x00: "",
+// 0x1:  "Maximum Number of Prefixes Reached",
+// 0x2:  "Administrative Shutdown",
+// 0x3:  "Peer De-configured",
+// 0x4:  "Administrative Reset",
+// 0x5:  "Connection Rejected",
+// 0x6:  "Other Configuration Change",
+// 0x7:  "Connection Collision Resolution",
+// 0x8:  "Out of Resources",
+// 0x9:  "Hard Reset",
 var ceaseErrorSubErrors = map[uint8]string{
 	0x00: "",
+	0x1:  "Maximum Number of Prefixes Reached",
+	0x2:  "Administrative Shutdown",
+	0x3:  "Peer De-configured",
+	0x4:  "Administrative Reset",
+	0x5:  "Connection Rejected",
+	0x6:  "Other Configuration Change",
+	0x7:  "Connection Collision Resolution",
+	0x8:  "Out of Resources",
+	0x9:  "Hard Reset",
 }
 
 func getErrorSubError(m map[uint8]string, subType uint8) string {
@@ -154,7 +175,7 @@ func fmsError(subType uint8, value byte) string {
 
 // Cease Error
 func ceaseError(subType uint8, value byte) string {
-	return "Cease Error" + getErrorSubError(ceaseErrorSubErrors, subType)
+	return "Cease Error, Sub Error:" + getErrorSubError(ceaseErrorSubErrors, subType)
 }
 
 // errCode defines a map with errorCode as a key, it return a function to process a type specific sub type error.
