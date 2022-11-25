@@ -7,11 +7,11 @@ import (
 )
 
 // Parser dispatches workers upon request received from the channel
-func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}) {
+func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}, bmpRaw bool) {
 	for {
 		select {
 		case msg := <-queue:
-			go parsingWorker(msg, producerQueue)
+			go parsingWorker(msg, producerQueue, bmpRaw)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
@@ -19,7 +19,7 @@ func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{
 	}
 }
 
-func parsingWorker(b []byte, producerQueue chan bmp.Message) {
+func parsingWorker(b []byte, producerQueue chan bmp.Message, bmpRaw bool) {
 	var bmpMsg bmp.Message
 	// Loop through all found Common Headers in the slice and process them
 	for m := 0; m < len(b); {
@@ -47,6 +47,19 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 			}
 			p += bmp.PerPeerHeaderLength
 		}
+
+		if bmpRaw {
+			if bmpMsg.PeerHeader != nil {
+				if bmpMsg.Payload, err = bmp.UnmarshalBMPRawMessage(b[m:]); err != nil {
+					glog.Errorf("fail to recover BMP Raw message with error: %+v", err)
+					return
+				}
+				producerQueue <- bmpMsg
+			}
+			m += int(ch.MessageLength)
+			continue
+		}
+
 		switch ch.MessageType {
 		case bmp.RouteMonitorMsg:
 			rm, err := bmp.UnmarshalBMPRouteMonitorMessage(b[p:])

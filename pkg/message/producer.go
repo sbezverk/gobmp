@@ -48,6 +48,8 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		p.produceRouteMonitorMessage(msg)
 	case *bmp.StatsReport:
 		p.produceStatsMessage(msg)
+	case *bmp.RawMessage:
+		p.produceRawMessage(msg)
 	default:
 		glog.Warningf("got Unknown message %T to push to the producer, ignoring it...", obj)
 	}

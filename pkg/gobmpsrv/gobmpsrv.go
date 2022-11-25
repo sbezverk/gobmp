@@ -78,7 +78,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	parserQueue := make(chan []byte)
 	parsStop := make(chan struct{})
 	// Starting parser per client with dedicated work queue
-	go parser.Parser(parserQueue, producerQueue, parsStop)
+	go parser.Parser(parserQueue, producerQueue, parsStop, srv.bmpRaw)
 	defer func() {
 		glog.V(5).Infof("all done with client %+v", client.RemoteAddr())
 		close(parsStop)
