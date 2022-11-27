@@ -1,6 +1,9 @@
 package message
 
 import (
+	"crypto/md5"
+	"fmt"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/pub"
@@ -21,6 +24,7 @@ type producer struct {
 	speakerIP      string
 	speakerHash    string
 	addPathCapable map[int]bool
+	adminHash      string
 	// If splitAF is set to true, ipv4 and ipv6 messages will go into separate topics
 	splitAF bool
 }
@@ -56,10 +60,14 @@ func (p *producer) producingWorker(msg bmp.Message) {
 }
 
 // NewProducer instantiates a new instance of a producer with Publisher interface
-func NewProducer(publisher pub.Publisher, splitAF bool) Producer {
+func NewProducer(publisher pub.Publisher, adminId string, splitAF bool) Producer {
+	data := []byte{}
+	data = append(data, []byte(adminId)...)
+
 	return &producer{
 		publisher:      publisher,
 		splitAF:        splitAF,
 		addPathCapable: make(map[int]bool),
+		adminHash:      fmt.Sprintf("%x", md5.Sum(data)),
 	}
 }

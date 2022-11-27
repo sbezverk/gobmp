@@ -21,7 +21,7 @@ func (p *producer) produceRawMessage(msg bmp.Message) {
 	}
 
 	out := []byte(fmt.Sprintf("V: 1.7\nC_HASH_ID: %s\nR_HASH: %s\nR_IP: %s\nL: %d\n\n",
-		p.speakerHash, msg.PeerHeader.GetPeerHash(),
+		p.adminHash, msg.PeerHeader.GetPeerHash(),
 		msg.PeerHeader.GetPeerAddrString(), len(rm.Msg)))
 	out = append(out, rm.Msg...)
 

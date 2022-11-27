@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -27,6 +28,7 @@ type bmpServer struct {
 	destinationPort int
 	incoming        net.Listener
 	stop            chan struct{}
+	adminId         string
 }
 
 func (srv *bmpServer) Start() {
@@ -69,7 +71,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
 	}
 	var producerQueue chan bmp.Message
-	prod := message.NewProducer(srv.publisher, srv.splitAF)
+	prod := message.NewProducer(srv.publisher, srv.adminId, srv.splitAF)
 	prodStop := make(chan struct{})
 	producerQueue = make(chan bmp.Message)
 	// Starting messages producer per client with dedicated work queue
@@ -134,6 +136,14 @@ func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF boo
 		splitAF:         splitAF,
 		bmpRaw:          bmpRaw,
 	}
+
+	// XXX need to be able specify admin id via a command line switch
+	// But for now, just use the hostname
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "dummy"
+	}
+	bmp.adminId = hostname
 
 	return &bmp, nil
 }
