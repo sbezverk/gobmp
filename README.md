@@ -130,6 +130,18 @@ The statically linked linux binary will be stored in ./bin sub folder.
 *goBMP parameters:*
 
 ```
+--admin-id={string} (default is os.hostname)
+```
+
+This collector's admin id (used in "bmp-raw" mode)
+
+```
+--bmp-raw
+```
+
+Publish BMP RAW messages (the default is to publish parsed messages)
+
+```
 --destination-port={port} (default 5050)
 ```
 
@@ -155,12 +167,6 @@ When intercept set "true", all incomming BMP messages will be processed and a co
 ```
 
 Kafka server TCP/IP address
-
-```
---bmp-raw
-```
-
-Publish BMP RAW messages (the default is to publish parsed messages)
 
 ```
 --msg-file={message file path and location} (default "/tmp/messages.json")
