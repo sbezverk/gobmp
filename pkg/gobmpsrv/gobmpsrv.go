@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -120,7 +119,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 }
 
 // NewBMPServer instantiates a new instance of BMP Server
-func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, bmpRaw bool) (BMPServer, error) {
+func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, bmpRaw bool, adminId string) (BMPServer, error) {
 	incoming, err := net.Listen("tcp", fmt.Sprintf(":%d", sPort))
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", sPort, err)
@@ -135,15 +134,8 @@ func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF boo
 		incoming:        incoming,
 		splitAF:         splitAF,
 		bmpRaw:          bmpRaw,
+		adminId:         adminId,
 	}
-
-	// XXX need to be able specify admin id via a command line switch
-	// But for now, just use the hostname
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "dummy"
-	}
-	bmp.adminId = hostname
 
 	return &bmp, nil
 }

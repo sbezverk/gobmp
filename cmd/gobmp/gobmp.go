@@ -30,6 +30,7 @@ var (
 	splitAF   string
 	dump      string
 	file      string
+	adminId   string
 )
 
 func init() {
@@ -43,6 +44,11 @@ func init() {
 	flag.IntVar(&perfPort, "performance-port", 56767, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\" or to the standard output when \"dump=console\"")
 	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path anf file name to store messages when \"dump=file\"")
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "dummy"
+	}
+	flag.StringVar(&adminId, "admin-id", hostname, "This collector's admin id (used in \"bmp-raw\" mode)")
 }
 
 func main() {
@@ -90,7 +96,7 @@ func main() {
 		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
 		os.Exit(1)
 	}
-	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag, bmpRaw)
+	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag, bmpRaw, adminId)
 	if err != nil {
 		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
 		os.Exit(1)
