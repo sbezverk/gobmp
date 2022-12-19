@@ -232,7 +232,9 @@ func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) err
 				},
 			},
 		},
+		Timeout: timeout,
 	}
+
 	ticker := time.NewTicker(100 * time.Millisecond)
 	tout := time.NewTimer(timeout)
 	for {
