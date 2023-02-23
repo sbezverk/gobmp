@@ -240,3 +240,4 @@ gobmp: 06:36:26.088307 {MsgType:7 MsgHash: Msg:{"action":"add","base_attrs":{"ba
 ## Status
 
 **goBMP** is work in progress, even though a considerable number of AFI/SAFI and BGP-LS attributes are processed, there is still a lot of work for contribution.
+See [CHANGELOG.md](https://github.com/sbezverk/gobmp/blob/master/CHANGELOG.md) for latest updates to this project.
