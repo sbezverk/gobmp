@@ -155,6 +155,9 @@ type LSLink struct {
 	MaxLinkBW             uint32                        `json:"max_link_bw,omitempty"`
 	MaxResvBW             uint32                        `json:"max_resv_bw,omitempty"`
 	UnResvBW              []uint32                      `json:"unresv_bw,omitempty"`
+	MaxLinkBWKbps         uint64                        `json:"max_link_bw_kbps,omitempty"`
+	MaxResvBWKbps         uint64                        `json:"max_resv_bw_kbps,omitempty"`
+	UnResvBWKbps          []uint64                      `json:"unresv_bw_kbps,omitempty"`
 	TEDefaultMetric       uint32                        `json:"te_default_metric,omitempty"`
 	LinkProtection        uint16                        `json:"link_protection,omitempty"`
 	MPLSProtoMask         uint8                         `json:"mpls_proto_mask,omitempty"`
