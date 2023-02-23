@@ -283,24 +283,27 @@ Future:
 25: (nei_ip): 10.1.1.2
 26: (igp_metric): 1
 27: (admin_group): 0
-28: (max_link_bw): 1000000
+28: (max_link_bw): 0
 29: (max_resv_bw): 0
-30: (unresv_bw): 0, 0, 0, 0, 0, 0, 0, 0
-31: (te_default_metric): 1
-32: (link_protection):
-33: (mpls_proto_mask):
-34: (srlg):
-35: (link_name):
-36: (remote_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
-37: (local_node_hash): c2679dc1c0d5615c23b3ec45f59f6b15
-38: (remote_igp_router_id): 0000.0000.0000.0000
-39: (remote_router_id): 10.0.0.0
-40: (local_node_asn): 100000
-41: (remote_node_asn): 100000
-42: (peer_node_sid):
-43: (is_prepolicy): 1
-44: (is_adj_rib_in): 1
-45: (ls_adjacency_sid): BVL 0 24004, VL 0 24005
+30: (unresv_bw):
+31: (max_link_bw_kbps): 1000000
+32: (max_resv_bw_kbps): 0
+33: (unresv_bw_kbps): 0, 0, 0, 0, 0, 0, 0, 0
+34: (te_default_metric): 1
+35: (link_protection):
+36: (mpls_proto_mask):
+37: (srlg):
+38: (link_name):
+39: (remote_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
+40: (local_node_hash): c2679dc1c0d5615c23b3ec45f59f6b15
+41: (remote_igp_router_id): 0000.0000.0000.0000
+42: (remote_router_id): 10.0.0.0
+43: (local_node_asn): 100000
+44: (remote_node_asn): 100000
+45: (peer_node_sid):
+46: (is_prepolicy): 1
+47: (is_adj_rib_in): 1
+48: (ls_adjacency_sid): BVL 0 24004, VL 0 24005
 
 Additional segment routing not accounted for by OpenBMP:
 
@@ -363,21 +366,24 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 28: (max_link_bw): 0
 29: (max_resv_bw): 0
 30: (unresv_bw):
-31: (te_default_metric): 0
-32: (link_protection):
-33: (mpls_proto_mask):
-34: (srlg):
-35: (link_name):
-36: (remote_node_hash): 9b20947913e9b23f4d5ccf4174e9eba4
-37: (local_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
-38: (remote_igp_router_id): 0000.0000.0001.0000
-39: (remote_router_id): ::
-40: (local_node_asn): 100000
-41: (remote_node_asn): 100000
-42: (peer_node_sid):
-43: (is_prepolicy): 1
-44: (is_adj_rib_in): 1
-45: (ls_adjacency_sid):
+31: (max_link_bw_kbps): 0
+32: (max_resv_bw_kbps): 0
+33: (unresv_bw_kbps):
+34: (te_default_metric): 0
+35: (link_protection):
+36: (mpls_proto_mask):
+37: (srlg):
+38: (link_name):
+39: (remote_node_hash): 9b20947913e9b23f4d5ccf4174e9eba4
+40: (local_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
+41: (remote_igp_router_id): 0000.0000.0001.0000
+42: (remote_router_id): ::
+43: (local_node_asn): 100000
+44: (remote_node_asn): 100000
+45: (peer_node_sid):
+46: (is_prepolicy): 1
+47: (is_adj_rib_in): 1
+48: (ls_adjacency_sid):
 
 ```
 #### BMP ls_prefix message:
