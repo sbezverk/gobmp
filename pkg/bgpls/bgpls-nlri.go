@@ -460,9 +460,8 @@ func (ls *NLRI) GetUnreservedLinkBandwidthKbps() []uint64 {
 		if tlv.Type != 1091 {
 			continue
 		}
-		for p := 0; p < len(tlv.Value); {
-			unResrved = append(unResrved, uint64(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value[p:p+4])) * 8 / 1000))
-			p += 4
+		for i, p := 0, 0; p < len(tlv.Value); i, p = i+1, p+4 {
+			unResrved[i] = uint64(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value[p:p+4])) * 8 / 1000)
 		}
 		return unResrved
 	}
