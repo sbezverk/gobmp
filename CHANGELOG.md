@@ -4,6 +4,14 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2023-03-20
+
+#### Fixed
+
+- unresv\_bw\_kbps data structure was appending a slice, leaving initial 0 values and growing beyond the expected length.
+  Updated function to index the slice to overwrite initial values and keep the expected length.
+  [\#215](https://github.com/sbezverk/gobmp/issues/215)
+
 ### 2023-02-23
 
 #### Added
