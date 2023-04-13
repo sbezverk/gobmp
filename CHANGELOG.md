@@ -4,6 +4,13 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2023-04-13
+
+#### Changed
+
+- SR value "prefix_sid" was previous configured with "omitempty" json tag option, this option is now removed. A valid
+  SID index of 0 is now explicit in the json output.
+
 ### 2023-03-20
 
 #### Fixed
