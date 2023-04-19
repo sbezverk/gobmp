@@ -21,11 +21,13 @@ type BMPServer interface {
 type bmpServer struct {
 	splitAF         bool
 	intercept       bool
+	bmpRaw          bool
 	publisher       pub.Publisher
 	sourcePort      int
 	destinationPort int
 	incoming        net.Listener
 	stop            chan struct{}
+	adminId         string
 }
 
 func (srv *bmpServer) Start() {
@@ -68,7 +70,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
 	}
 	var producerQueue chan bmp.Message
-	prod := message.NewProducer(srv.publisher, srv.splitAF)
+	prod := message.NewProducer(srv.publisher, srv.adminId, srv.splitAF)
 	prodStop := make(chan struct{})
 	producerQueue = make(chan bmp.Message)
 	// Starting messages producer per client with dedicated work queue
@@ -77,7 +79,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	parserQueue := make(chan []byte)
 	parsStop := make(chan struct{})
 	// Starting parser per client with dedicated work queue
-	go parser.Parser(parserQueue, producerQueue, parsStop)
+	go parser.Parser(parserQueue, producerQueue, parsStop, srv.bmpRaw)
 	defer func() {
 		glog.V(5).Infof("all done with client %+v", client.RemoteAddr())
 		close(parsStop)
@@ -117,7 +119,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 }
 
 // NewBMPServer instantiates a new instance of BMP Server
-func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool) (BMPServer, error) {
+func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, bmpRaw bool, adminId string) (BMPServer, error) {
 	incoming, err := net.Listen("tcp", fmt.Sprintf(":%d", sPort))
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", sPort, err)
@@ -131,6 +133,8 @@ func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF boo
 		publisher:       p,
 		incoming:        incoming,
 		splitAF:         splitAF,
+		bmpRaw:          bmpRaw,
+		adminId:         adminId,
 	}
 
 	return &bmp, nil

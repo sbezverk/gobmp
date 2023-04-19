@@ -25,10 +25,12 @@ var (
 	srcPort   int
 	perfPort  int
 	kafkaSrv  string
+	bmpRaw    bool
 	intercept string
 	splitAF   string
 	dump      string
 	file      string
+	adminId   string
 )
 
 func init() {
@@ -36,11 +38,17 @@ func init() {
 	flag.IntVar(&srcPort, "source-port", 5000, "port exposed to outside")
 	flag.IntVar(&dstPort, "destination-port", 5050, "port openBMP is listening")
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
+	flag.BoolVar(&bmpRaw, "bmp-raw", false, "publish BMP RAW messages instead of default parsed messages")
 	flag.StringVar(&intercept, "intercept", "false", "When intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
 	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" (default) ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 56767, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\" or to the standard output when \"dump=console\"")
 	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path anf file name to store messages when \"dump=file\"")
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "dummy"
+	}
+	flag.StringVar(&adminId, "admin-id", hostname, "This collector's admin id (used in \"bmp-raw\" mode)")
 }
 
 func main() {
@@ -88,7 +96,7 @@ func main() {
 		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
 		os.Exit(1)
 	}
-	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag)
+	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag, bmpRaw, adminId)
 	if err != nil {
 		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
 		os.Exit(1)

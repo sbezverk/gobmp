@@ -6,6 +6,8 @@ const (
 	// PerPeerHeaderLength defines the length of BMP's Per Peer Header
 	PerPeerHeaderLength = 42
 
+	BMPRawMsg = -1
+
 	// RouteMonitorMsg defines BMP Route Monitor message type
 	RouteMonitorMsg = 0
 	// StatsReportMsg defines BMP Statistics Report message
