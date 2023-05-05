@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"net/http"
@@ -21,26 +20,18 @@ import (
 )
 
 var (
-	dstPort   int
-	srcPort   int
-	perfPort  int
-	kafkaSrv  string
-	intercept string
-	splitAF   string
-	dump      string
-	file      string
+	srcPort   = flag.Int("source-port", 5000, "port exposed to outside")
+	dstPort   = flag.Int("destination-port", 5050, "port openBMP is listening")
+	kafkaSrv  = flag.String("kafka-server", "", "URL to access Kafka server")
+	intercept = flag.Bool("intercept", false, "When intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
+	splitAF   = flag.Bool("split-af", true, "When set \"true\" (default) ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
+	perfPort  = flag.Int("performance-port", 56767, "port used for performance debugging")
+	dump      = flag.String("dump", "", "Dump resulting messages to file when \"dump=file\" or to the standard output when \"dump=console\"")
+	file      = flag.String("msg-file", "/tmp/messages.json", "Full path anf file name to store messages when \"dump=file\"")
 )
 
 func init() {
 	runtime.GOMAXPROCS(1)
-	flag.IntVar(&srcPort, "source-port", 5000, "port exposed to outside")
-	flag.IntVar(&dstPort, "destination-port", 5050, "port openBMP is listening")
-	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
-	flag.StringVar(&intercept, "intercept", "false", "When intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
-	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" (default) ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
-	flag.IntVar(&perfPort, "performance-port", 56767, "port used for performance debugging")
-	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\" or to the standard output when \"dump=console\"")
-	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path anf file name to store messages when \"dump=file\"")
 }
 
 func main() {
@@ -53,9 +44,9 @@ func main() {
 	// Initializing publisher
 	var publisher pub.Publisher
 	var err error
-	switch strings.ToLower(dump) {
+	switch strings.ToLower(*dump) {
 	case "file":
-		publisher, err = filer.NewFiler(file)
+		publisher, err = filer.NewFiler(*file)
 		if err != nil {
 			glog.Errorf("failed to initialize file publisher with error: %+v", err)
 			os.Exit(1)
@@ -69,7 +60,7 @@ func main() {
 		}
 		glog.V(5).Infof("console publisher has been successfully initialized.")
 	default:
-		publisher, err = kafka.NewKafkaPublisher(kafkaSrv)
+		publisher, err = kafka.NewKafkaPublisher(*kafkaSrv)
 		if err != nil {
 			glog.Errorf("failed to initialize Kafka publisher with error: %+v", err)
 			os.Exit(1)
@@ -78,17 +69,7 @@ func main() {
 	}
 
 	// Initializing bmp server
-	interceptFlag, err := strconv.ParseBool(intercept)
-	if err != nil {
-		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
-		os.Exit(1)
-	}
-	splitAFFlag, err := strconv.ParseBool(splitAF)
-	if err != nil {
-		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
-		os.Exit(1)
-	}
-	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag)
+	bmpSrv, err := gobmpsrv.NewBMPServer(*srcPort, *dstPort, *intercept, publisher, *splitAF)
 	if err != nil {
 		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
 		os.Exit(1)
