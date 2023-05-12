@@ -104,7 +104,7 @@ For the complete list of supported extensions and drafts follow this link: [Supp
 
  
 
-The structure of the each record which is published to kafka, stored in the message file or printed to standard output, is defined in the package **_message_** [file types.go](https://github.com/sbezverk/gobmp/blob/master/pkg/message/types.go)
+The structure of the each record which is published to kafka, nats, stored in the message file or printed to standard output, is defined in the package **_message_** [file types.go](https://github.com/sbezverk/gobmp/blob/master/pkg/message/types.go)
 
 ## Building goBMP
 

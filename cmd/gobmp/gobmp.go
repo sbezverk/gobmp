@@ -16,6 +16,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/filer"
 	"github.com/sbezverk/gobmp/pkg/gobmpsrv"
 	"github.com/sbezverk/gobmp/pkg/kafka"
+	"github.com/sbezverk/gobmp/pkg/nats"
 	"github.com/sbezverk/gobmp/pkg/pub"
 	"github.com/sbezverk/tools"
 )
@@ -25,6 +26,7 @@ var (
 	srcPort   int
 	perfPort  int
 	kafkaSrv  string
+	natsSrv   string
 	intercept string
 	splitAF   string
 	dump      string
@@ -36,10 +38,11 @@ func init() {
 	flag.IntVar(&srcPort, "source-port", 5000, "port exposed to outside")
 	flag.IntVar(&dstPort, "destination-port", 5050, "port openBMP is listening")
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
+	flag.StringVar(&natsSrv, "nats-server", "", "URL to access NATS server")
 	flag.StringVar(&intercept, "intercept", "false", "When intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
 	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" (default) ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 56767, "port used for performance debugging")
-	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\" or to the standard output when \"dump=console\"")
+	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\", to standard output when \"dump=console\" or to NATS when \"dump=nats\"")
 	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path anf file name to store messages when \"dump=file\"")
 }
 
@@ -68,6 +71,13 @@ func main() {
 			os.Exit(1)
 		}
 		glog.V(5).Infof("console publisher has been successfully initialized.")
+	case "nats":
+		publisher, err = nats.NewPublisher(natsSrv)
+		if err != nil {
+			glog.Errorf("failed to initialize NATS publisher with error: %+v", err)
+			os.Exit(1)
+		}
+		glog.V(5).Infof("NATS publisher has been successfully initialized.")
 	default:
 		publisher, err = kafka.NewKafkaPublisher(kafkaSrv)
 		if err != nil {
