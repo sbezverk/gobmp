@@ -26,6 +26,7 @@ type bmpServer struct {
 	destinationPort int
 	incoming        net.Listener
 	stop            chan struct{}
+	passiveRouter   string
 }
 
 func (srv *bmpServer) Start() {
@@ -43,6 +44,17 @@ func (srv *bmpServer) Stop() {
 }
 
 func (srv *bmpServer) server() {
+	// Establish connection to passive router if specified
+	if srv.passiveRouter != "" {
+		conn, err := net.Dial("tcp", srv.passiveRouter)
+		if err != nil {
+			glog.Errorf("failed to connect to passive router with error: %+v", err)
+			return
+		}
+		glog.Infof("connected to passive router %+v, calling bmpWorker", conn.RemoteAddr())
+		go srv.bmpWorker(conn)
+	}
+
 	for {
 		client, err := srv.incoming.Accept()
 		if err != nil {
@@ -117,7 +129,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 }
 
 // NewBMPServer instantiates a new instance of BMP Server
-func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool) (BMPServer, error) {
+func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, passiveRouter string) (BMPServer, error) {
 	incoming, err := net.Listen("tcp", fmt.Sprintf(":%d", sPort))
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", sPort, err)
@@ -131,6 +143,7 @@ func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF boo
 		publisher:       p,
 		incoming:        incoming,
 		splitAF:         splitAF,
+		passiveRouter:   passiveRouter,
 	}
 
 	return &bmp, nil
