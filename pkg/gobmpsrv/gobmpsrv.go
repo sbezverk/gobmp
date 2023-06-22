@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -26,6 +27,7 @@ type bmpServer struct {
 	destinationPort int
 	incoming        net.Listener
 	stop            chan struct{}
+	passiveRouter   string
 }
 
 func (srv *bmpServer) Start() {
@@ -43,18 +45,40 @@ func (srv *bmpServer) Stop() {
 }
 
 func (srv *bmpServer) server() {
-	for {
-		client, err := srv.incoming.Accept()
-		if err != nil {
-			glog.Errorf("fail to accept client connection with error: %+v", err)
-			continue
+	// Create a channel for signaling retries from failed passive connections
+	retryChan := make(chan struct{})
+	retryCount := 0
+
+	// Establish connection to passive router if specified
+	if srv.passiveRouter != "" {
+		go srv.passiveConnect(retryChan, retryCount)
+	}
+
+	// separate goroutine for handling incoming client connections
+	go func() {
+		for {
+			client, err := srv.incoming.Accept()
+			if err != nil {
+				glog.Errorf("fail to accept client connection with error: %+v", err)
+				continue
+			}
+			glog.V(5).Infof("client %+v accepted, calling bmpWorker", client.RemoteAddr())
+			go srv.bmpWorker(client, nil)
 		}
-		glog.V(5).Infof("client %+v accepted, calling bmpWorker", client.RemoteAddr())
-		go srv.bmpWorker(client)
+	}()
+
+	// main goroutine for handling retrying passive connections
+	for {
+		<-retryChan
+		if srv.passiveRouter != "" {
+			glog.Infof("retrying connection to passive router")
+			retryCount++
+			go srv.passiveConnect(retryChan, retryCount)
+		}
 	}
 }
 
-func (srv *bmpServer) bmpWorker(client net.Conn) {
+func (srv *bmpServer) bmpWorker(client net.Conn, retryChan chan struct{}) {
 	defer client.Close()
 	var server net.Conn
 	var err error
@@ -87,6 +111,10 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		headerMsg := make([]byte, bmp.CommonHeaderLength)
 		if _, err := io.ReadAtLeast(client, headerMsg, bmp.CommonHeaderLength); err != nil {
 			glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
+			// Send a retry signal if channel is provided
+			if retryChan != nil {
+				retryChan <- struct{}{}
+			}
 			return
 		}
 		// Recovering common header first
@@ -116,8 +144,31 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	}
 }
 
+func (srv *bmpServer) passiveConnect(retryChan chan struct{}, retryCount int) {
+	// Stop retrying after 10 attempts
+	if retryCount > 10 {
+		glog.Errorf("failed to connect to passive router after 10 retries")
+		return
+	}
+
+	conn, err := net.DialTimeout("tcp", srv.passiveRouter, 10*time.Second)
+	if err != nil {
+		glog.Errorf("failed to connect to passive router with error: %+v", err)
+
+		// Use a backoff timer to retry (30s * retryCount)
+		time.Sleep(time.Duration(retryCount*30) * time.Second)
+
+		// Signal tat the connection should be retried
+		retryChan <- struct{}{}
+		return
+	}
+
+	glog.Infof("connected to passive router %+v, calling bmpWorker", conn.RemoteAddr())
+	go srv.bmpWorker(conn, retryChan)
+}
+
 // NewBMPServer instantiates a new instance of BMP Server
-func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool) (BMPServer, error) {
+func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, passiveRouter string) (BMPServer, error) {
 	incoming, err := net.Listen("tcp", fmt.Sprintf(":%d", sPort))
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", sPort, err)
@@ -131,6 +182,7 @@ func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF boo
 		publisher:       p,
 		incoming:        incoming,
 		splitAF:         splitAF,
+		passiveRouter:   passiveRouter,
 	}
 
 	return &bmp, nil
