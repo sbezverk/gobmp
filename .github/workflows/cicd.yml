@@ -56,6 +56,8 @@ jobs:
           os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
       - name: setup host kernel parameters
         run: ./build/set_kernel_params.sh
       - name: starts test bed components
