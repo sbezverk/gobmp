@@ -14,9 +14,8 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "1.20"
 jobs:
-  lint:
+  cicd:
     strategy:
       matrix:
         go-version: [1.19.x, 1.20.x]
@@ -41,10 +40,11 @@ jobs:
           # When `install-mode` is `binary` (default) the value can be v1.2 or v1.2.3 or `latest` to use the latest version.
           # When `install-mode` is `goinstall` the value can be v1.2.3, `latest`, or the hash of a commit.
           version: v1.53
-      - name: Build
+      - name: Run go tests
+        run: |
+            go test ./...
+            go test -race ./...
+      - name: Build binary
         run: make build
-
-#      - name: Run go tests
-#        - run: |
-#        go test ./...
-#        go test -race ./...
+      - name: Build local container
+        run: make container IMAGE_VERSION=cicd
