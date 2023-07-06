@@ -9,7 +9,7 @@ networks:
 
 services:
   gobmp:
-    image: sbezverk/gobmp:cicd
+    image: localhost/gobmp:cicd
     hostname: gobmp
     container_name: gobmp
     command:
