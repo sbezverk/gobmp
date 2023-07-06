@@ -18,7 +18,7 @@ jobs:
   cicd:
     strategy:
       matrix:
-        go-version: [1.19.x, 1.20.x]
+        go-version: [1.20.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -46,20 +46,30 @@ jobs:
             go test -race ./...
       - name: Build binary
         run: make build
-      - name: Build local container
-        run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
 
   integration_test:
     needs: [cicd]
     strategy:
         matrix:
           os: [ubuntu-latest]
+          go-version: [1.20.x]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
       - name: setup host kernel parameters
         run: ./build/set_kernel_params.sh
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: "**/go.sum"
+      - name: Build local container
+        run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
       - name: check for gobmp container
         run: docker images
       - name: starts test bed components
