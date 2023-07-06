@@ -85,7 +85,7 @@ services:
     stdin_open: true
     tty: true
     volumes:
-    - source: ./build/simple-bgp/xrd-1_xrconf.cfg
+    - source: ./simple-bgp/xrd-1_xrconf.cfg
       target: /etc/xrd/startup.cfg
       type: bind
     - xr-1:/xr-storage/
@@ -133,7 +133,7 @@ services:
     stdin_open: true
     tty: true
     volumes:
-    - source: ./build/simple-bgp/xrd-2_xrconf.cfg
+    - source: ./simple-bgp/xrd-2_xrconf.cfg
       target: /etc/xrd/startup.cfg
       type: bind
     - xr-2:/xr-storage/
