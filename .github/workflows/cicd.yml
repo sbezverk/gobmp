@@ -48,3 +48,17 @@ jobs:
         run: make build
       - name: Build local container
         run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
+
+  integration_test:
+    strategy:
+        matrix:
+          os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: setup host kernel parameters
+        run: ./build/set_kernel_params.sh
+      - name: starts test bed components
+        run: docker compose -f ./test_bed.yml up --detach
+      - name: check docker
+        run: docker ps
+
