@@ -60,8 +60,10 @@ jobs:
         uses: actions/checkout@v3
       - name: setup host kernel parameters
         run: ./build/set_kernel_params.sh
+      - name: check for gobmp container
+        run: docker images
       - name: starts test bed components
-        run: docker compose -f ./test_bed.yml up --detach
+        run: docker compose -f ./build/test_bed.yml up --detach
       - name: check docker
         run: docker ps
 
