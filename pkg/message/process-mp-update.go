@@ -36,7 +36,6 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 	case 17:
 		// MP_REACH_NLRI AFI 2 SAFI 4
 		if !labeledSet {
-			labeledSet = true
 			labeled = true
 		}
 		msgs, err := p.unicast(nlri, operation, ph, update, labeled)

@@ -195,7 +195,7 @@ func (o *Operator) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	o = t
+	*o = *t
 
 	return nil
 }
@@ -231,7 +231,7 @@ func (t *PrefixSpec) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, s); err != nil {
 		return err
 	}
-	t = s
+	*t = *s
 
 	return nil
 }
@@ -261,7 +261,7 @@ func (o *OpVal) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, ov); err != nil {
 		return err
 	}
-	o = ov
+	*o = *ov
 
 	return nil
 }
@@ -344,7 +344,7 @@ func (t *GenericSpec) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, s); err != nil {
 		return err
 	}
-	t = s
+	*t = *s
 
 	return nil
 }

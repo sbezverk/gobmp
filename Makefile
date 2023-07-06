@@ -1,7 +1,7 @@
 REGISTRY_NAME?=docker.io/sbezverk
 IMAGE_VERSION?=0.0.0
 
-.PHONY: all gobmp player container push clean test
+.PHONY: all gobmp player container push clean test lint
 
 ifdef V
 TESTARGS = -v -args -alsologtostderr -v 5
@@ -33,6 +33,10 @@ player-push: player-container
 
 clean:
 	rm -rf bin
+
+lint:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	golangci-lint run
 
 test:
 	GO111MODULE=on go test `go list ./... | grep -v 'vendor'` $(TESTARGS)
