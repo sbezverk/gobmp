@@ -50,6 +50,7 @@ jobs:
         run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
 
   integration_test:
+    needs: [cicd]
     strategy:
         matrix:
           os: [ubuntu-latest]
