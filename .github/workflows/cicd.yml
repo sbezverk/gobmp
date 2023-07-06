@@ -1,0 +1,50 @@
+name: cicd
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+env:
+  # Path to where test results will be saved.
+  TEST_RESULTS: /tmp/test-results
+  # Default version of Go to use by CI workflows. This should be the latest
+  # release of Go; developers likely use the latest release in development and
+  # we want to catch any bugs (e.g. lint errors, race detection) with this
+  # release before they are merged. The Go compatibility guarantees ensure
+  # backwards compatibility with the previous two minor releases and we
+  # explicitly test our code for these versions so keeping this at prior
+  # versions does not add value.
+  DEFAULT_GO_VERSION: "1.20"
+jobs:
+  lint:
+    strategy:
+      matrix:
+        go-version: [1.19.x, 1.20.x]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: "**/go.sum"
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          # Require: The version of golangci-lint to use.
+          # When `install-mode` is `binary` (default) the value can be v1.2 or v1.2.3 or `latest` to use the latest version.
+          # When `install-mode` is `goinstall` the value can be v1.2.3, `latest`, or the hash of a commit.
+          version: v1.53
+      - name: Build
+        run: make build
+
+#      - name: Run go tests
+#        - run: |
+#        go test ./...
+#        go test -race ./...
