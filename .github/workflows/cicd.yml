@@ -47,4 +47,4 @@ jobs:
       - name: Build binary
         run: make build
       - name: Build local container
-        run: make container IMAGE_VERSION=cicd
+        run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
