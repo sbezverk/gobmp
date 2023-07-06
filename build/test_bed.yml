@@ -1,0 +1,32 @@
+version: '3.2'
+
+networks:
+  data:
+    name: data
+    ipam:
+      config:
+        - subnet: 172.50.2.0/24
+
+services:
+  gobmp:
+    image: sbezverk/gobmp:cicd
+    hostname: gobmp
+    container_name: gobmp
+    command:
+      --v=5
+      --msg-file=/tmp/messages.json
+      --dump=file
+    ports:
+      - "65000:5000"
+    networks:
+      - data
+    volumes:
+      - vol1:/tmp
+
+volumes:
+  vol1:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/tmp'

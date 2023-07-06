@@ -260,13 +260,17 @@ func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) err
 func waitForBrokerConnection(br *sarama.Broker, timeout time.Duration) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	tout := time.NewTimer(timeout)
+	defer func() {
+		ticker.Stop()
+		tout.Stop()
+	}()
 	for {
 		ok, err := br.Connected()
 		if ok {
 			return nil
 		}
 		if err != nil {
-			return err
+			continue
 		}
 		select {
 		case <-ticker.C:
