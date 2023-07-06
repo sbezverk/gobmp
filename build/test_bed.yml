@@ -35,7 +35,7 @@ services:
     cap_add:
     - NET_ADMIN
     networks:
-      source-xrd-1:
+      gobmp-xrd-1:
         ipv4_address: 10.1.1.2
     stdin_open: true
     tty: true
