@@ -33,7 +33,8 @@ done
 if [[ ${found} == true ]]; then
         echo "successfully connected to kafka"
 else
-        echo "container ${cn} failed to connect to kafka"
+        echo "container ${cn} failed to connect to kafka, check container logs..."
+        docker logs ${cid}
         exit 1
 fi
 
