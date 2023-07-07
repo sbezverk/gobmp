@@ -38,7 +38,7 @@ const (
 )
 
 var (
-	brockerConnectTimeout = 10 * time.Second
+	brockerConnectTimeout = 120 * time.Second
 	topicCreateTimeout    = 1 * time.Second
 	// goBMP topic's retention timer is 15 minutes
 	topicRetention = "900000"
@@ -258,19 +258,21 @@ func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) err
 }
 
 func waitForBrokerConnection(br *sarama.Broker, timeout time.Duration) error {
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(10 * time.Second)
 	tout := time.NewTimer(timeout)
 	defer func() {
 		ticker.Stop()
 		tout.Stop()
 	}()
 	for {
-		ok, err := br.Connected()
-		if ok {
-			return nil
-		}
-		if err != nil {
-			continue
+		if ok, err := br.Connected(); err != nil {
+			glog.Errorf("failed to connect to the broker with error: %+v, will retry in 10 seconds", err)
+		} else {
+			if ok {
+				return nil
+			} else {
+				glog.Errorf("kafka broker %s is not ready yet, will retry in 10 seconds", br.Addr())
+			}
 		}
 		select {
 		case <-ticker.C:

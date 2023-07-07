@@ -20,18 +20,53 @@ networks:
     name: xr-1-gi1-xr-2-gi0
 
 services:
+  zoo:
+    image: bitnami/zookeeper:latest
+    hostname: zoo
+    container_name: zoo
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_SERVERS: zoo:2888:3888
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.5
+
+  kafka:
+    image: bitnami/kafka:latest
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "9999:9999"
+    environment:
+      - KAFKA_ENABLE_KRAFT=no
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ADVERTISED_HOST_NAME=kafka
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zoo:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:29092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://127.0.0.1:9092
+      - BITNAMI_DEBUG=true
+    depends_on:
+      - zoo
+networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.4
+
   gobmp:
     image: localhost/gobmp:cicd
     hostname: gobmp
     container_name: gobmp
     command:
       --v=5
-      --msg-file=/tmp/messages.json
-      --dump=file
+      --kafka-server=kafka:9092
     ports:
       - "5000:5000"
-    volumes:
-      - vol1:/tmp
     cap_add:
     - NET_ADMIN
     networks:
@@ -39,6 +74,8 @@ services:
         ipv4_address: 10.1.1.2
     stdin_open: true
     tty: true
+    depends_on:
+      - kafka
 
   xr-1:
     cap_add:
@@ -143,9 +180,4 @@ volumes:
     name: xr-1
   xr-2:
     name: xr-2
-  vol1:
-    driver: local
-    driver_opts:
-      type: 'none'
-      o: 'bind'
-      device: '/tmp'
+
