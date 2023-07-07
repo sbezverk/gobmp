@@ -54,7 +54,7 @@ services:
       - BITNAMI_DEBUG=true
     depends_on:
       - zoo
-networks:
+    networks:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.4
 
