@@ -2,9 +2,11 @@ package kafka
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
@@ -38,7 +40,7 @@ const (
 )
 
 var (
-	brockerConnectTimeout = 10 * time.Second
+	brockerConnectTimeout = 120 * time.Second
 	topicCreateTimeout    = 1 * time.Second
 	// goBMP topic's retention timer is 15 minutes
 	topicRetention = "900000"
@@ -123,9 +125,9 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 }
 
 func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
-	k := sarama.ByteEncoder{}
+	var k sarama.ByteEncoder
+	var m sarama.ByteEncoder
 	k = key
-	m := sarama.ByteEncoder{}
 	m = msg
 	p.producer.Input() <- &sarama.ProducerMessage{
 		Topic: topic,
@@ -148,18 +150,19 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 		glog.Errorf("Failed to validate Kafka server address %s with error: %+v", kafkaSrv, err)
 		return nil, err
 	}
+	if glog.V(6) {
+		sarama.Logger = log.New(os.Stdout, "[sarama]      ", log.LstdFlags)
+	}
 	config := sarama.NewConfig()
 	config.ClientID = "gobmp-producer" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Producer.Return.Successes = true
-	config.Version = sarama.V0_11_0_0
+	config.Producer.Return.Errors = true
+	config.Admin.Retry.Max = 100
+	config.Version = sarama.V1_1_0_0
 
 	br := sarama.NewBroker(kafkaSrv)
-	if err := br.Open(config); err != nil {
-		if err != sarama.ErrAlreadyConnected {
-			return nil, err
-		}
-	}
-	if err := waitForBrokerConnection(br, brockerConnectTimeout); err != nil {
+
+	if err := waitForBrokerConnection(br, config, brockerConnectTimeout); err != nil {
 		glog.Errorf("failed to open connection to the broker with error: %+v\n", err)
 		return nil, err
 	}
@@ -257,16 +260,28 @@ func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) err
 	}
 }
 
-func waitForBrokerConnection(br *sarama.Broker, timeout time.Duration) error {
-	ticker := time.NewTicker(100 * time.Millisecond)
+func waitForBrokerConnection(br *sarama.Broker, config *sarama.Config, timeout time.Duration) error {
+	ticker := time.NewTicker(10 * time.Second)
 	tout := time.NewTimer(timeout)
+	defer func() {
+		ticker.Stop()
+		tout.Stop()
+	}()
 	for {
-		ok, err := br.Connected()
-		if ok {
-			return nil
-		}
-		if err != nil {
-			return err
+		if err := br.Open(config); err == nil {
+			if ok, err := br.Connected(); err != nil {
+				glog.Errorf("failed to connect to the broker with error: %+v, will retry in 10 seconds", err)
+			} else {
+				if ok {
+					return nil
+				} else {
+					glog.Errorf("kafka broker %s is not ready yet, will retry in 10 seconds", br.Addr())
+				}
+			}
+		} else {
+			if err == sarama.ErrAlreadyConnected {
+				return nil
+			}
 		}
 		select {
 		case <-ticker.C:

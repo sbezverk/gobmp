@@ -122,7 +122,7 @@ type SRCandidatePathState struct {
 	Preference uint32 `json:"preference"`
 }
 
-//UnmarshalSRCandidatePathState instantiates SR Candidate Path State object from a slice of bytes
+// UnmarshalSRCandidatePathState instantiates SR Candidate Path State object from a slice of bytes
 func UnmarshalSRCandidatePathState(b []byte) (*SRCandidatePathState, error) {
 	if glog.V(6) {
 		glog.Infof("SR Candidate Path State TLV Raw: %s", tools.MessageHex(b))
@@ -321,7 +321,6 @@ func UnmarshalSRAffinityConstraint(b []byte) (*SRAffinityConstraint, error) {
 			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint Sub TLV")
 		}
 		binary.BigEndian.PutUint32(b[p:p+4], s.InclAllEAG)
-		p += 4
 	}
 
 	return s, nil

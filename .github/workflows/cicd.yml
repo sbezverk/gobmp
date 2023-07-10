@@ -1,0 +1,69 @@
+name: cicd
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  tests:
+    strategy:
+      matrix:
+        go-version: [1.20.x]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: "**/go.sum"
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          # Require: The version of golangci-lint to use.
+          version: v1.53
+      - name: Run go tests
+        run: |
+            go test ./...
+            go test -race ./...
+      - name: Build binary
+        run: make build
+
+  integration_tests:
+    needs: [tests]
+    strategy:
+        matrix:
+          os: [ubuntu-latest]
+          go-version: [1.20.x]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: setup host kernel parameters
+        run: ./build/set_kernel_params.sh
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: "**/go.sum"
+      - name: Build local container
+        run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
+      - name: pulling XRd container
+        run: docker pull sbezverk/xrd-control-plane:7.9.2
+      - name: check for gobmp container
+        run: docker images
+      - name: starts test bed components
+        run: docker compose -f ./build/test_bed.yml up --detach
+      - name: check conection to kafka and bmp session with a router
+        run: ./build/monitor_container.sh gobmp
+
