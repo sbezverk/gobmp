@@ -62,8 +62,8 @@ jobs:
         run: docker pull sbezverk/xrd-control-plane:7.9.2
       - name: check for gobmp container
         run: docker images
-      - name: starts test bed components
-        run: docker compose -f ./build/test_bed.yml up --detach
+      - name: starts unicast v4 integration test
+        run: docker compose -f ./build/unicastv4-bgp/test_bed.yml up --detach
       - name: check conection to kafka and bmp session with a router
         run: ./build/monitor_container.sh gobmp
 

@@ -1,11 +1,18 @@
 package validator
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/kafka"
 )
+
+type StoredMessage struct {
+	TopicType int    `json:"topic_type"`
+	Message   []byte `json:"message"`
+}
 
 func Check(topics []*kafka.TopicDescriptor, b []byte, errCh chan error) {
 
@@ -13,8 +20,9 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, errCh chan error) {
 }
 
 type message struct {
-	msg   []byte
-	errCh chan error
+	msg       []byte
+	topicType int
+	errCh     chan error
 }
 type store struct {
 	stopCh chan struct{}
@@ -29,7 +37,8 @@ func (s *store) manager() {
 		case <-s.stopCh:
 			return
 		case msg := <-s.msgCh:
-			_, err := s.f.Write(msg.msg)
+			b, _ := json.Marshal(&StoredMessage{TopicType: msg.topicType, Message: msg.msg})
+			_, err := s.f.Write(b)
 			s.errCh <- err
 		}
 	}
@@ -41,17 +50,19 @@ func (s *store) storeWorker(topic *kafka.TopicDescriptor, done chan struct{}, wo
 		case <-s.stopCh:
 			return
 		case msg := <-topic.TopicChan:
+			glog.Infof("><SB> Topic: %s received messsage", topic.TopicName)
 			errCh := make(chan error)
 			s.msgCh <- &message{
-				msg:   msg,
-				errCh: errCh,
+				topicType: topic.TopicType,
+				msg:       msg,
+				errCh:     errCh,
 			}
 			err := <-errCh
 			if err != nil {
 				workersErrChan <- err
 				return
 			}
-
+			glog.Infof("><SB> Message processing completed without errors.")
 			// TODO (sbezverk) investigate EoR message to indicate complition of a worker and to send done signal
 		}
 	}
@@ -86,6 +97,7 @@ func Store(topics []*kafka.TopicDescriptor, f *os.File, stopCh chan struct{}, er
 		errCh <- err
 		return
 	case <-doneCh:
+		glog.Infof("><SB> worker reported done...")
 		done++
 		if done >= total {
 			errCh <- nil
