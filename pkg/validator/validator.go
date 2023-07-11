@@ -1,7 +1,7 @@
 package validator
 
 import (
-	"encoding/json"
+	"encoding/binary"
 	"fmt"
 	"os"
 
@@ -10,8 +10,18 @@ import (
 )
 
 type StoredMessage struct {
-	TopicType int    `json:"topic_type"`
-	Message   []byte `json:"message"`
+	TopicType uint32
+	Len       uint32
+	Message   []byte
+}
+
+func (sm *StoredMessage) Marshal() []byte {
+	b := make([]byte, len(sm.Message)+4+4)
+	binary.BigEndian.PutUint32(b[:4], sm.TopicType)
+	binary.BigEndian.PutUint32(b[4:8], sm.TopicType)
+	copy(b[8:], sm.Message)
+
+	return b
 }
 
 func Check(topics []*kafka.TopicDescriptor, b []byte, errCh chan error) {
@@ -37,8 +47,7 @@ func (s *store) manager() {
 		case <-s.stopCh:
 			return
 		case msg := <-s.msgCh:
-			b, _ := json.Marshal(&StoredMessage{TopicType: msg.topicType, Message: msg.msg})
-			_, err := s.f.Write(b)
+			_, err := s.f.Write((&StoredMessage{TopicType: uint32(msg.topicType), Len: uint32(len(msg.msg)), Message: msg.msg}).Marshal())
 			glog.Infof("storing message, error: %+v", err)
 			msg.errCh <- err
 		}
