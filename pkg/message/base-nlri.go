@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -12,7 +13,7 @@ import (
 // nlri process base nlri information found and bgp update message and returns
 // a slice of UnicatPrefix.
 // Used Only by Legacy IPv4 Unicast
-func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]UnicastPrefix, error) {
+func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*UnicastPrefix, error) {
 	var operation string
 	var routes []base.Route
 	pathID := p.addPathCapable[bgp.NLRIMessageType(1, 1)]
@@ -34,9 +35,25 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]Un
 	default:
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
-	prfxs := make([]UnicastPrefix, 0)
+	prfxs := make([]*UnicastPrefix, 0)
+	// Check if Update carries any routes, if update comes with 0 routes, it is EoR message
+	if len(routes) == 0 {
+		glog.Infof("><SB> Suspected EoR message for Unicast ipv4")
+		return []*UnicastPrefix{
+			{
+				Action:     operation,
+				RouterHash: p.speakerHash,
+				RouterIP:   p.speakerIP,
+				PeerHash:   ph.GetPeerHash(),
+				PeerASN:    ph.PeerAS,
+				Timestamp:  ph.GetPeerTimestamp(),
+				PeerType:   uint8(ph.PeerType),
+				IsEOR:      true,
+			},
+		}, nil
+	}
 	for _, pr := range routes {
-		prfx := UnicastPrefix{
+		prfx := &UnicastPrefix{
 			Action:         operation,
 			RouterHash:     p.speakerHash,
 			RouterIP:       p.speakerIP,

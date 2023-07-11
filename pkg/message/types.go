@@ -78,7 +78,8 @@ type UnicastPrefix struct {
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
 	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
-	// Values are assigned based on PerPeerHeader flas
+	IsEOR          bool                `json:"is_eor,omitempty"`
+	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`

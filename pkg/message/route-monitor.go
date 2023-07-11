@@ -60,7 +60,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			t = bmp.UnicastPrefixV4Msg
 		}
 		// Original BGP's NLRI messages processing
-		msgs := make([]UnicastPrefix, 0)
+		msgs := make([]*UnicastPrefix, 0)
 		if routeMonitorMsg.Update.WithdrawnRoutesLength != 0 {
 			msg, err := p.nlri(DelPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 			if err != nil {
