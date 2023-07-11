@@ -39,7 +39,8 @@ func (s *store) manager() {
 		case msg := <-s.msgCh:
 			b, _ := json.Marshal(&StoredMessage{TopicType: msg.topicType, Message: msg.msg})
 			_, err := s.f.Write(b)
-			s.errCh <- err
+			glog.Infof("storing message, error: %+v", err)
+			msg.errCh <- err
 		}
 	}
 }
@@ -58,11 +59,11 @@ func (s *store) storeWorker(topic *kafka.TopicDescriptor, done chan struct{}, wo
 				errCh:     errCh,
 			}
 			err := <-errCh
+			glog.Infof("><SB> Message processing completed with error: %+v", err)
 			if err != nil {
 				workersErrChan <- err
 				return
 			}
-			glog.Infof("><SB> Message processing completed without errors.")
 			// TODO (sbezverk) investigate EoR message to indicate complition of a worker and to send done signal
 		}
 	}
