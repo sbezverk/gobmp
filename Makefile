@@ -21,7 +21,7 @@ player:
 
 validator:
 	mkdir -p bin
-	$(MAKE) -C ./cmd/player compile-validator
+	$(MAKE) -C ./cmd/validator compile-validator
 
 container: gobmp
 	docker build -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile.gobmp .
