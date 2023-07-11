@@ -26,7 +26,7 @@ func init() {
 	flag.StringVar(&msgFile, "msg-file", "./messages.json", "file to read from or to store to processed bmp messages")
 	flag.IntVar(&timeout, "timeout", 300, "timeout in seconds, default 300, for the test to complete all processing.")
 	flag.BoolVar(&validatorFlag, "validate", false, "when validator is true, incomming messages are validated against stored in the message file, otherwise the messages are stored in the file.")
-	flag.StringVar(&msgFile, "test-case", "u4", "test case to validate or to collect messages")
+	flag.StringVar(&testCase, "test-case", "u4", "test case to validate or to collect messages")
 }
 
 func main() {
