@@ -71,6 +71,13 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	// starting kafka consumer
+	k, err := kafka.NewKafkaMConsumer(msgSrvAddr, topics)
+	if err != nil {
+		glog.Errorf("failed to initialize kafka consumer with error: %+v", err)
+		os.Exit(1)
+	}
+	k.Start()
 	// Starting Check and Store depending on the validator Flag
 
 	if validatorFlag {
@@ -81,23 +88,25 @@ func main() {
 
 	// Setting up timeout and wait either on a timeout or result from errCh
 	timeOut := time.NewTimer(time.Second * time.Duration(timeout))
+	retCode := 0
 	select {
 	case <-timeOut.C:
 		close(stopCh)
 		if validatorFlag {
 			glog.Errorf("timed out waiting for the test to complete")
-			os.Exit(1)
+			retCode = 1
 		}
 	case err := <-errCh:
 		close(stopCh)
 		if err != nil {
 			glog.Errorf("validation failed with error: %+v", err)
-			os.Exit(1)
+			retCode = 1
 		} else {
 			glog.Infof("validation succeeded")
-			os.Exit(0)
+			retCode = 0
 		}
 	}
 
-	os.Exit(0)
+	k.Stop()
+	os.Exit(retCode)
 }

@@ -26,14 +26,13 @@ type kafka struct {
 	stopCh  chan struct{}
 	brokers []string
 	topics  []*TopicDescriptor
-	msg     chan []byte
 	config  *sarama.Config
 	master  sarama.Consumer
 }
 
 // NewKafkaMessenger returns an instance of a kafka consumer acting as a messenger server
-func NewKafkaMessenger(kafkaSrv string, topics []*TopicDescriptor, msg chan []byte) (Srv, error) {
-	glog.Infof("NewKafkaMessenger")
+func NewKafkaMConsumer(kafkaSrv string, topics []*TopicDescriptor) (Srv, error) {
+	glog.Infof("NewKafkaConsumer")
 	if err := tools.HostAddrValidator(kafkaSrv); err != nil {
 		return nil, err
 	}
@@ -54,7 +53,6 @@ func NewKafkaMessenger(kafkaSrv string, topics []*TopicDescriptor, msg chan []by
 		stopCh: make(chan struct{}),
 		config: config,
 		master: master,
-		msg:    msg,
 		topics: topics,
 	}
 
