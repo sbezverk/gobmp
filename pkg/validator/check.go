@@ -73,6 +73,7 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 		dictionary[k] = u
 	}
 	glog.Infof("Dictionaly for topic type %d contains %d test messages", topic.TopicType, len(dictionary))
+	matches := 0
 	for {
 		select {
 		case <-c.stopCh:
@@ -98,6 +99,13 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 				return
 			}
 			glog.Infof("found matching the test message for the key: %s", k)
+			matches++
+			if matches >= len(dictionary) {
+				// All checks are completed, exiting
+				glog.Infof("topic type %d, all checks are done.", topic.TopicType)
+				done <- struct{}{}
+				return
+			}
 		}
 	}
 }

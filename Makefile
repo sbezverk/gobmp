@@ -33,8 +33,8 @@ container: gobmp
 player-container: player
 	docker build -t $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION) -f ./build/Dockerfile.player .
 
-validator-container: player
-	docker build -t $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION) -f ./build/Dockerfile.validator .
+validator-container: validator
+	docker build -t $(REGISTRY_NAME)/gobmp-validator:$(IMAGE_VERSION) -f ./build/Dockerfile.validator .
 
 push: container
 	docker push $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION)
@@ -42,7 +42,7 @@ push: container
 player-push: player-container
 	docker push $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION)
 
-validator-push: player-container
+validator-push: validator-container
 	docker push $(REGISTRY_NAME)/gobmp-validator:$(IMAGE_VERSION)
 
 clean:
