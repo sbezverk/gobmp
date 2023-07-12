@@ -69,7 +69,7 @@ type StoredMessage struct {
 func (sm *StoredMessage) Marshal() []byte {
 	b := make([]byte, len(sm.Message)+4+4)
 	binary.BigEndian.PutUint32(b[:4], sm.TopicType)
-	binary.BigEndian.PutUint32(b[4:8], sm.TopicType)
+	binary.BigEndian.PutUint32(b[4:8], sm.Len)
 	copy(b[8:], sm.Message)
 
 	return b
@@ -97,11 +97,6 @@ func (sm *StoredMessage) Unmarshal(b []byte) error {
 	return nil
 }
 
-func Check(topics []*kafka.TopicDescriptor, b []byte, errCh chan error) {
-
-	errCh <- nil
-}
-
 type message struct {
 	msg       []byte
 	topicType int
@@ -121,7 +116,6 @@ func (s *store) manager() {
 			return
 		case msg := <-s.msgCh:
 			_, err := s.f.Write((&StoredMessage{TopicType: uint32(msg.topicType), Len: uint32(len(msg.msg)), Message: msg.msg}).Marshal())
-			glog.Infof("storing message, error: %+v", err)
 			msg.errCh <- err
 		}
 	}
@@ -133,7 +127,6 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, done chan struc
 		case <-s.stopCh:
 			return
 		case msg := <-topic.TopicChan:
-			glog.Infof("><SB> Topic: %s received messsage", topic.TopicName)
 			u := &bmp_message.UnicastPrefix{}
 			if err := json.Unmarshal(msg, u); err != nil {
 				workersErrChan <- err
@@ -146,13 +139,12 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, done chan struc
 				errCh:     errCh,
 			}
 			err := <-errCh
-			glog.Infof("><SB> Message processing completed with error: %+v", err)
 			if err != nil {
 				workersErrChan <- err
 				return
 			}
 			if u.IsEOR {
-				glog.Infof("EoR for topic %s", topic.TopicName)
+				glog.Infof("Received EoR for topic %s", topic.TopicName)
 				done <- struct{}{}
 				return
 			}
@@ -195,7 +187,6 @@ func Store(topics []*kafka.TopicDescriptor, f *os.File, stopCh chan struct{}, er
 			errCh <- err
 			return
 		case <-doneCh:
-			glog.Infof("><SB> worker reported done...")
 			done++
 			if done >= total {
 				errCh <- nil

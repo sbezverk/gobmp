@@ -23,6 +23,10 @@ validator:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/validator compile-validator
 
+validator-mac:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/validator compile-validator-mac
+
 container: gobmp
 	docker build -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile.gobmp .
 
