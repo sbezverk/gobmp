@@ -86,9 +86,7 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, done chan struc
 				return
 			}
 			if u.IsEOR {
-				glog.Infof("Received EoR for topic %s", topic.TopicName)
-				done <- struct{}{}
-				return
+				continue
 			}
 			errCh := make(chan error)
 			s.msgCh <- &message{
