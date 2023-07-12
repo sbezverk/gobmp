@@ -12,54 +12,6 @@ import (
 	bmp_message "github.com/sbezverk/gobmp/pkg/message"
 )
 
-// func GetObject(msgType int, b []byte) (interface{}, error) {
-// 	var obj interface{}
-// 	switch msgType {
-// 	case bmp.UnicastPrefixV4Msg:
-// 		fallthrough
-// 	case bmp.UnicastPrefixMsg:
-// 		fallthrough
-// 	case bmp.UnicastPrefixV6Msg:
-// 		u := &bmp_message.UnicastPrefix{}
-// 		if err := json.Unmarshal(b, u); err != nil {
-// 			return nil, err
-// 		}
-// 		obj = u
-// 	case bmp.LSNodeMsg:
-// 		fallthrough
-// 	case bmp.LSLinkMsg:
-// 		fallthrough
-// 	case bmp.L3VPNMsg:
-// 		fallthrough
-// 	case bmp.L3VPNV4Msg:
-// 		fallthrough
-// 	case bmp.L3VPNV6Msg:
-// 		fallthrough
-// 	case bmp.LSPrefixMsg:
-// 		fallthrough
-// 	case bmp.LSSRv6SIDMsg:
-// 		fallthrough
-// 	case bmp.EVPNMsg:
-// 		fallthrough
-// 	case bmp.SRPolicyMsg:
-// 		fallthrough
-// 	case bmp.SRPolicyV4Msg:
-// 		fallthrough
-// 	case bmp.SRPolicyV6Msg:
-// 		fallthrough
-// 	case bmp.FlowspecMsg:
-// 		fallthrough
-// 	case bmp.FlowspecV4Msg:
-// 		fallthrough
-// 	case bmp.FlowspecV6Msg:
-// 		return nil, fmt.Errorf("not yet implmented")
-// 	default:
-// 		return nil, fmt.Errorf("unknown type %d", msgType)
-// 	}
-
-// 	return obj, nil
-// }
-
 type StoredMessage struct {
 	TopicType uint32
 	Len       uint32
@@ -127,9 +79,15 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, done chan struc
 		case <-s.stopCh:
 			return
 		case msg := <-topic.TopicChan:
+			glog.Infof("Received message from topic type: %d", topic.TopicType)
 			u := &bmp_message.UnicastPrefix{}
 			if err := json.Unmarshal(msg, u); err != nil {
 				workersErrChan <- err
+				return
+			}
+			if u.IsEOR {
+				glog.Infof("Received EoR for topic %s", topic.TopicName)
+				done <- struct{}{}
 				return
 			}
 			errCh := make(chan error)
@@ -141,11 +99,6 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, done chan struc
 			err := <-errCh
 			if err != nil {
 				workersErrChan <- err
-				return
-			}
-			if u.IsEOR {
-				glog.Infof("Received EoR for topic %s", topic.TopicName)
-				done <- struct{}{}
 				return
 			}
 		}
