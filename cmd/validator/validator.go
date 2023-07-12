@@ -72,16 +72,16 @@ func main() {
 		}
 	}
 	// starting kafka consumer
-	k, err := kafka.NewKafkaMConsumer(msgSrvAddr, topics)
-	if err != nil {
-		glog.Errorf("failed to initialize kafka consumer with error: %+v", err)
-		os.Exit(1)
-	}
-	k.Start()
+	// k, err := kafka.NewKafkaMConsumer(msgSrvAddr, topics)
+	// if err != nil {
+	// 	glog.Errorf("failed to initialize kafka consumer with error: %+v", err)
+	// 	os.Exit(1)
+	// }
+	// k.Start()
 	// Starting Check and Store depending on the validator Flag
 
 	if validatorFlag {
-		go validator.Check(topics, b, errCh)
+		go validator.Check(topics, b, stopCh, errCh)
 	} else {
 		go validator.Store(topics, f, stopCh, errCh)
 	}
@@ -107,6 +107,6 @@ func main() {
 		}
 	}
 
-	k.Stop()
+	// k.Stop()
 	os.Exit(retCode)
 }

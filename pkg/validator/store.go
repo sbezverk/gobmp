@@ -79,7 +79,7 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, done chan struc
 		case <-s.stopCh:
 			return
 		case msg := <-topic.TopicChan:
-			glog.Infof("Received message from topic type: %d", topic.TopicType)
+			glog.Infof("Store received message from topic type: %d", topic.TopicType)
 			u := &bmp_message.UnicastPrefix{}
 			if err := json.Unmarshal(msg, u); err != nil {
 				workersErrChan <- err
@@ -128,21 +128,20 @@ func Store(topics []*kafka.TopicDescriptor, f *os.File, stopCh chan struct{}, er
 		case bmp.UnicastPrefixV6Msg:
 			go s.storeUnicastWorker(topic, doneCh, workersErrChan)
 		}
-
-		total := len(topics)
-		done := 0
-		select {
-		case <-stopCh:
+	}
+	total := len(topics)
+	done := 0
+	select {
+	case <-stopCh:
+		return
+	case err := <-workersErrChan:
+		errCh <- err
+		return
+	case <-doneCh:
+		done++
+		if done >= total {
+			errCh <- nil
 			return
-		case err := <-workersErrChan:
-			errCh <- err
-			return
-		case <-doneCh:
-			done++
-			if done >= total {
-				errCh <- nil
-				return
-			}
 		}
 	}
 }
