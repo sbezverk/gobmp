@@ -12,8 +12,8 @@ import (
 
 // Srv defines required method of a processor server
 type Srv interface {
-	Start() error
-	Stop() error
+	Start()
+	Stop()
 }
 
 type TopicDescriptor struct {
@@ -23,11 +23,10 @@ type TopicDescriptor struct {
 }
 
 type kafka struct {
-	stopCh  chan struct{}
-	brokers []string
-	topics  []*TopicDescriptor
-	config  *sarama.Config
-	master  sarama.Consumer
+	stopCh chan struct{}
+	topics []*TopicDescriptor
+	config *sarama.Config
+	master sarama.Consumer
 }
 
 // NewKafkaMessenger returns an instance of a kafka consumer acting as a messenger server
@@ -59,19 +58,16 @@ func NewKafkaMConsumer(kafkaSrv string, topics []*TopicDescriptor) (Srv, error) 
 	return k, nil
 }
 
-func (k *kafka) Start() error {
+func (k *kafka) Start() {
 	// Starting readers for each topic name and type defined in topics map
 	for _, topic := range k.topics {
 		go k.topicReader(topic)
 	}
-
-	return nil
 }
 
-func (k *kafka) Stop() error {
+func (k *kafka) Stop() {
 	close(k.stopCh)
 	k.master.Close()
-	return nil
 }
 
 func (k *kafka) topicReader(topic *TopicDescriptor) {
