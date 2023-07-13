@@ -56,8 +56,10 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.sum"
-      - name: Build local container
+      - name: Build gobmp container
         run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
+      - name: Build validator container
+        run: make validator
       - name: pulling XRd container
         run: docker pull sbezverk/xrd-control-plane:7.9.2
       - name: check for gobmp container
@@ -66,4 +68,6 @@ jobs:
         run: docker compose -f ./build/unicastv4-bgp/test_bed.yml up --detach
       - name: check conection to kafka and bmp session with a router
         run: ./build/monitor_container.sh gobmp
+      - name: run validator for ipv4 unicast
+        run: ./bin/validator --validate=true --kafka=127.0.0.1:9092 --msg-file=./testdata/validator/ipv4_unicast.msg
 
