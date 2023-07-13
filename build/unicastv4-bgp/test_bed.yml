@@ -42,15 +42,14 @@ services:
     ports:
       - "9092:9092"
       - "29092:29092"
-      - "9999:9999"
     environment:
       - KAFKA_ENABLE_KRAFT=no
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_ADVERTISED_HOST_NAME=kafka
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zoo:2181
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=10.1.1.5:2181
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:29092
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://127.0.0.1:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://10.1.1.4:9092,PLAINTEXT_HOST://127.0.0.1:9092
       - BITNAMI_DEBUG=true
     depends_on:
       - zoo
@@ -63,8 +62,8 @@ services:
     hostname: gobmp
     container_name: gobmp
     command:
-      --v=5
-      --kafka-server=kafka:9092
+      --v=9
+      --kafka-server=10.1.1.4:9092
     ports:
       - "5000:5000"
     cap_add:
