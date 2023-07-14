@@ -7,7 +7,7 @@ require (
 	github.com/go-test/deep v1.0.8
 	github.com/golang/glog v1.1.1
 	github.com/nats-io/nats.go v1.25.0
-	github.com/sbezverk/tools v0.0.0-20230714045252-e34199dea3d5
+	github.com/sbezverk/tools v0.0.0-20230714051746-80037ac202cf
 )
 
 require (
@@ -29,6 +29,7 @@ require (
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect

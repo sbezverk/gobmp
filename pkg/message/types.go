@@ -1,6 +1,7 @@
 package message
 
 import (
+	"reflect"
 	"strconv"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -11,6 +12,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/srv6"
+	"github.com/sbezverk/tools/sort"
 )
 
 // PeerStateChange defines a message format sent to as a result of BMP Peer Up or Peer Down message
@@ -133,10 +135,12 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 	}
 	if u.PathID != ou.PathID {
 		equal = false
-		diffs = append(diffs, "path_ide mismatch: "+strconv.Itoa(int(u.PathID))+" and "+strconv.Itoa(int(ou.PathID)))
+		diffs = append(diffs, "path_id mismatch: "+strconv.Itoa(int(u.PathID))+" and "+strconv.Itoa(int(ou.PathID)))
 	}
-	// TODO (sbezverk) Add comparing labels slice
-
+	if reflect.DeepEqual(sort.SortMergeComparableSlice(u.Labels), sort.SortMergeComparableSlice(ou.Labels)) {
+		equal = false
+		diffs = append(diffs, "labels mismatch")
+	}
 	// TODO (sbezverk) Add comparing prefix_sid
 
 	if u.IsAdjRIBInPost && !ou.IsAdjRIBInPost {
