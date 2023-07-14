@@ -96,7 +96,16 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "router_ip mismatch: "+u.RouterIP+" and "+ou.RouterIP)
 	}
-	// TODO Add Equal method to Base Attributes
+	if u.BaseAttributes != ou.BaseAttributes {
+		equal = false
+		diffs = append(diffs, "bgp base attributes mismatch")
+	}
+	if u.BaseAttributes != nil {
+		if eq, df := u.BaseAttributes.Equal(ou.BaseAttributes); !eq {
+			equal = false
+			diffs = append(diffs, df...)
+		}
+	}
 	if u.PeerIP != ou.PeerIP {
 		equal = false
 		diffs = append(diffs, "peer_ip mismatch: "+u.PeerIP+" and "+ou.PeerIP)
@@ -137,12 +146,17 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "path_id mismatch: "+strconv.Itoa(int(u.PathID))+" and "+strconv.Itoa(int(ou.PathID)))
 	}
-	if reflect.DeepEqual(sort.SortMergeComparableSlice(u.Labels), sort.SortMergeComparableSlice(ou.Labels)) {
+	if !reflect.DeepEqual(sort.SortMergeComparableSlice(u.Labels), sort.SortMergeComparableSlice(ou.Labels)) {
 		equal = false
 		diffs = append(diffs, "labels mismatch")
 	}
-	// TODO (sbezverk) Add comparing prefix_sid
-
+	if u.PrefixSID != ou.PrefixSID {
+		equal = false
+		diffs = append(diffs, "prefix sid mismatch")
+	}
+	//	if u.PrefixSID != nil {
+	// TODO (sbezverk) Add calling equal for PrefixSID object when it is implemented
+	//	}
 	if u.IsAdjRIBInPost && !ou.IsAdjRIBInPost {
 		equal = false
 		diffs = append(diffs, "is_adj_rib_in_post_policy mismatch: "+strconv.FormatBool(u.IsAdjRIBInPost)+" and "+strconv.FormatBool(ou.IsAdjRIBInPost))

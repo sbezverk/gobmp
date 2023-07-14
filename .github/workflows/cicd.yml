@@ -70,6 +70,4 @@ jobs:
         run: ./build/monitor_container.sh gobmp
       - name: run validator for ipv4 unicast
         run: ./bin/validator --validate=true --kafka=127.0.0.1:9092 --msg-file=./testdata/validator/ipv4_unicast.msg
-      - name: collect gobmp container logs
-        run: docker logs gobmp
 
