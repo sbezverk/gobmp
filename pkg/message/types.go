@@ -96,14 +96,19 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "router_ip mismatch: "+u.RouterIP+" and "+ou.RouterIP)
 	}
-	if u.BaseAttributes != ou.BaseAttributes {
-		equal = false
-		diffs = append(diffs, "bgp base attributes mismatch")
-	}
 	if u.BaseAttributes != nil {
+		if ou.BaseAttributes == nil {
+			equal = false
+			diffs = append(diffs, "bgp base attributes mismatch expected BGP BaseAttribute object is not nil, but received object is nil")
+		}
 		if eq, df := u.BaseAttributes.Equal(ou.BaseAttributes); !eq {
 			equal = false
 			diffs = append(diffs, df...)
+		}
+	} else {
+		if ou.BaseAttributes != nil {
+			equal = false
+			diffs = append(diffs, "bgp base attributes mismatch expected BGP BaseAttribute object is nil, but received object is not nil")
 		}
 	}
 	if u.PeerIP != ou.PeerIP {
