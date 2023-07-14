@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -80,25 +81,30 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 			return
 		case msg := <-topic.TopicChan:
 			glog.Infof("Check received message from topic type: %d", topic.TopicType)
-			u := &bmp_message.UnicastPrefix{}
-			if err := json.Unmarshal(msg, u); err != nil {
+			ou := &bmp_message.UnicastPrefix{}
+			if err := json.Unmarshal(msg, ou); err != nil {
 				workersErrChan <- err
 				return
 			}
-			if u.IsEOR {
+			if ou.IsEOR {
 				continue
 			}
-			k, err := makeUnicastPrefixKey(u)
+			k, err := makeUnicastPrefixKey(ou)
 			if err != nil {
 				workersErrChan <- err
 				return
 			}
-			_, ok := dictionary[k]
+			u, ok := dictionary[k]
 			if !ok {
 				workersErrChan <- fmt.Errorf("dictionary does not have a test message for key: %s", k)
 				return
 			}
 			glog.Infof("found matching the test message for the key: %s", k)
+			equal, diffs := u.Equal(ou)
+			if !equal {
+				workersErrChan <- fmt.Errorf("for key: %s, expected and received messages differ, diffs: %s", k, strings.Join(diffs, " | "))
+				return
+			}
 			matches++
 			if matches >= len(dictionary) {
 				// All checks are completed, exiting

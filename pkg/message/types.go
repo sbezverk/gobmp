@@ -1,6 +1,8 @@
 package message
 
 import (
+	"strconv"
+
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
@@ -83,6 +85,74 @@ type UnicastPrefix struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+}
+
+func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
+	equal := true
+	diffs := make([]string, 0)
+	if u.RouterIP != ou.RouterIP {
+		equal = false
+		diffs = append(diffs, "router_ip mismatch: "+u.RouterIP+" and "+ou.RouterIP)
+	}
+	// TODO Add Equal method to Base Attributes
+	if u.PeerIP != ou.PeerIP {
+		equal = false
+		diffs = append(diffs, "peer_ip mismatch: "+u.PeerIP+" and "+ou.PeerIP)
+	}
+	if u.PeerType != ou.PeerType {
+		equal = false
+		diffs = append(diffs, "peer_type mismatch: "+strconv.Itoa(int(u.PeerType))+" and "+strconv.Itoa(int(ou.PeerType)))
+	}
+	if u.PeerASN != ou.PeerASN {
+		equal = false
+		diffs = append(diffs, "peer_asn mismatch: "+strconv.Itoa(int(u.PeerASN))+" and "+strconv.Itoa(int(ou.PeerASN)))
+	}
+	if u.Prefix != ou.Prefix {
+		equal = false
+		diffs = append(diffs, "prefix mismatch: "+u.Prefix+" and "+ou.Prefix)
+	}
+	if u.PrefixLen != ou.PrefixLen {
+		equal = false
+		diffs = append(diffs, "prefix len mismatch: "+strconv.Itoa(int(u.PrefixLen))+" and "+strconv.Itoa(int(ou.PrefixLen)))
+	}
+	if u.IsIPv4 && !ou.IsIPv4 {
+		equal = false
+		diffs = append(diffs, "is_ipv4 mismatch: "+strconv.FormatBool(u.IsIPv4)+" and "+strconv.FormatBool(ou.IsIPv4))
+	}
+	if u.OriginAS != ou.OriginAS {
+		equal = false
+		diffs = append(diffs, "origin_as mismatch: "+strconv.Itoa(int(u.OriginAS))+" and "+strconv.Itoa(int(ou.OriginAS)))
+	}
+	if u.Nexthop != ou.Nexthop {
+		equal = false
+		diffs = append(diffs, "nexthop mismatch: "+u.Nexthop+" and "+ou.Nexthop)
+	}
+	if u.IsNexthopIPv4 && !ou.IsNexthopIPv4 {
+		equal = false
+		diffs = append(diffs, "is_nexthop_ipv4 mismatch: "+strconv.FormatBool(u.IsNexthopIPv4)+" and "+strconv.FormatBool(ou.IsNexthopIPv4))
+	}
+	if u.PathID != ou.PathID {
+		equal = false
+		diffs = append(diffs, "path_ide mismatch: "+strconv.Itoa(int(u.PathID))+" and "+strconv.Itoa(int(ou.PathID)))
+	}
+	// TODO (sbezverk) Add comparing labels slice
+
+	// TODO (sbezverk) Add comparing prefix_sid
+
+	if u.IsAdjRIBInPost && !ou.IsAdjRIBInPost {
+		equal = false
+		diffs = append(diffs, "is_adj_rib_in_post_policy mismatch: "+strconv.FormatBool(u.IsAdjRIBInPost)+" and "+strconv.FormatBool(ou.IsAdjRIBInPost))
+	}
+	if u.IsAdjRIBOutPost && !ou.IsAdjRIBOutPost {
+		equal = false
+		diffs = append(diffs, "is_adj_rib_out_post_policy: "+strconv.FormatBool(u.IsAdjRIBOutPost)+" and "+strconv.FormatBool(ou.IsAdjRIBOutPost))
+	}
+	if u.IsLocRIBFiltered && !ou.IsLocRIBFiltered {
+		equal = false
+		diffs = append(diffs, "is_loc_rib_filtered mismatch: "+strconv.FormatBool(u.IsLocRIBFiltered)+" and "+strconv.FormatBool(ou.IsLocRIBFiltered))
+	}
+
+	return equal, diffs
 }
 
 // LSNode defines a structure of LS Node message
