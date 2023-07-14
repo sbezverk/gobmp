@@ -50,7 +50,7 @@ while [ ${done} == false ]; do
                 found=true
         else
                 i=$((i+1))
-                if [[ ${i} -eq 12 ]]; then
+                if [[ ${i} -eq 24 ]]; then
                         done=true
                 else
                         sleep 10;
