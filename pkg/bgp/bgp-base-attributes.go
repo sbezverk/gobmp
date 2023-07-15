@@ -1,15 +1,18 @@
 package bgp
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"net"
+	"reflect"
 	"strconv"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
+	"github.com/sbezverk/tools/sort"
 )
 
 // BaseAttributes defines a structure holding BGP's basic, non nlri based attributes,
@@ -41,6 +44,79 @@ type BaseAttributes struct {
 	LgCommunityList []string `json:"large_community_list,omitempty"`
 	// SecPath
 	// AttrSet
+}
+
+func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
+	equal := true
+	diffs := make([]string, 0)
+
+	if ba.Origin != oba.Origin {
+		equal = false
+		diffs = append(diffs, "origin mismatch: "+ba.Origin+" and "+oba.Origin)
+	}
+	if !reflect.DeepEqual(sort.SortMergeComparableSlice(ba.ASPath), sort.SortMergeComparableSlice(oba.ASPath)) {
+		equal = false
+		diffs = append(diffs, "as_path mismatch")
+	}
+	if ba.ASPathCount != oba.ASPathCount {
+		equal = false
+		diffs = append(diffs, "as_path_count mismatch: "+strconv.Itoa(int(ba.ASPathCount))+" and "+strconv.Itoa(int(oba.ASPathCount)))
+	}
+	if ba.Nexthop != oba.Nexthop {
+		equal = false
+		diffs = append(diffs, "nexthop mismatch: "+ba.Nexthop+" and "+oba.Nexthop)
+	}
+	if ba.MED != oba.MED {
+		equal = false
+		diffs = append(diffs, "as_path_count mismatch: "+strconv.Itoa(int(ba.MED))+" and "+strconv.Itoa(int(oba.MED)))
+	}
+	if ba.LocalPref != oba.LocalPref {
+		equal = false
+		diffs = append(diffs, "local_pref mismatch: "+strconv.Itoa(int(ba.LocalPref))+" and "+strconv.Itoa(int(oba.LocalPref)))
+	}
+	if ba.IsAtomicAgg && !oba.IsAtomicAgg {
+		equal = false
+		diffs = append(diffs, "is_atomic_agg mismatch: "+strconv.FormatBool(ba.IsAtomicAgg)+" and "+strconv.FormatBool(oba.IsAtomicAgg))
+	}
+	if !bytes.Equal(ba.Aggregator, oba.Aggregator) {
+		equal = false
+		diffs = append(diffs, "aggregator mismatch")
+	}
+	if !reflect.DeepEqual(sort.SortMergeComparableSlice(ba.CommunityList), sort.SortMergeComparableSlice(oba.CommunityList)) {
+		equal = false
+		diffs = append(diffs, "community_list mismatch")
+	}
+	if ba.OriginatorID != oba.OriginatorID {
+		equal = false
+		diffs = append(diffs, "originator_id mismatch: "+ba.OriginatorID+" and "+oba.OriginatorID)
+	}
+	if ba.ClusterList != oba.ClusterList {
+		equal = false
+		diffs = append(diffs, "cluster_list mismatch: "+ba.ClusterList+" and "+oba.ClusterList)
+	}
+	if !reflect.DeepEqual(sort.SortMergeComparableSlice(ba.ExtCommunityList), sort.SortMergeComparableSlice(oba.ExtCommunityList)) {
+		equal = false
+		diffs = append(diffs, "ext_community_list mismatch")
+	}
+	if !reflect.DeepEqual(sort.SortMergeComparableSlice(ba.AS4Path), sort.SortMergeComparableSlice(oba.AS4Path)) {
+		equal = false
+		diffs = append(diffs, "as4_path mismatch")
+	}
+	if ba.AS4PathCount != oba.AS4PathCount {
+		equal = false
+		diffs = append(diffs, "as4_path_count mismatch: "+strconv.Itoa(int(ba.AS4PathCount))+" and "+strconv.Itoa(int(oba.AS4PathCount)))
+	}
+	if !bytes.Equal(ba.AS4Aggregator, oba.AS4Aggregator) {
+		equal = false
+		diffs = append(diffs, "as4_aggregator mismatch")
+	}
+	if !reflect.DeepEqual(sort.SortMergeComparableSlice(ba.LgCommunityList), sort.SortMergeComparableSlice(oba.LgCommunityList)) {
+		equal = false
+		diffs = append(diffs, "large_community_list mismatch")
+	}
+
+	return equal, diffs
+
 }
 
 // UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
@@ -293,7 +369,7 @@ func unmarshalAttrClusterList(b []byte) string {
 	return clist
 }
 
-//  unmarshalAttrExtCommunity returns a slice with all extended communities found in bgp update
+// unmarshalAttrExtCommunity returns a slice with all extended communities found in bgp update
 func unmarshalAttrExtCommunity(b []byte) []string {
 	ext, err := UnmarshalBGPExtCommunity(b)
 	if err != nil {

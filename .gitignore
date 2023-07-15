@@ -9,6 +9,7 @@ cmd/bin
 .vscode
 perf
 *.pdf
+.DS_Store
 
 # Test binary, built with `go test -c`
 *.test

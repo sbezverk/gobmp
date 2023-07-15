@@ -10,7 +10,7 @@ import (
 )
 
 // unicast process nlri 14 afi 1/2 safi 1 messages and generates UnicastPrefix messages
-func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update, label bool) ([]UnicastPrefix, error) {
+func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update, label bool) ([]*UnicastPrefix, error) {
 	var err error
 	var operation string
 	switch op {
@@ -22,7 +22,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 
-	prfxs := make([]UnicastPrefix, 0)
+	prfxs := make([]*UnicastPrefix, 0)
 	var u *base.MPNLRI
 	if label {
 		u, err = nlri.GetNLRILU()
@@ -35,8 +35,23 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			return nil, err
 		}
 	}
+	// Check if Update carries any routes, if update comes with 0 routes, it is EoR message
+	if len(u.NLRI) == 0 {
+		return []*UnicastPrefix{
+			{
+				Action:     operation,
+				RouterHash: p.speakerHash,
+				RouterIP:   p.speakerIP,
+				PeerHash:   ph.GetPeerHash(),
+				PeerASN:    ph.PeerAS,
+				Timestamp:  ph.GetPeerTimestamp(),
+				PeerType:   uint8(ph.PeerType),
+				IsEOR:      true,
+			},
+		}, nil
+	}
 	for _, e := range u.NLRI {
-		prfx := UnicastPrefix{
+		prfx := &UnicastPrefix{
 			Action:         operation,
 			RouterHash:     p.speakerHash,
 			RouterIP:       p.speakerIP,
