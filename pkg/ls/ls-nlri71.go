@@ -33,8 +33,8 @@ func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 	if glog.V(6) {
 		glog.Infof("LSNLRI71 Raw: %s ", tools.MessageHex(b))
 	}
-	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
+	if len(b) < 4 {
+		return nil, fmt.Errorf("invalid length %d to decode NLRI71", len(b))
 	}
 	ls := NLRI71{
 		NLRI: make([]Element, 0),
@@ -45,7 +45,9 @@ func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 		p += 2
 		el.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-
+		if int(el.Length)+p > len(b) {
+			return nil, fmt.Errorf("%d bytes not enough to decode NLRI71 of %d bytes", len(b), el.Length)
+		}
 		switch el.Type {
 		case 1:
 			n, err := base.UnmarshalNodeNLRI(b[p : p+int(el.Length)])

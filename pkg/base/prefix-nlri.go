@@ -99,8 +99,8 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 	if glog.V(6) {
 		glog.Infof("PrefixNLRI Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
+	if len(b) < 9 {
+		return nil, fmt.Errorf("not enough bytes to decode Prefix NLRI")
 	}
 	pr := PrefixNLRI{
 		IsIPv4: ipv4,
@@ -112,8 +112,14 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 	copy(pr.Identifier, b[p:p+8])
 	p += 8
 
+	if p+4 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to decode Prefix NLRI Node Descriptor length")
+	}
 	// Get Node Descriptor's length, skip Node Descriptor Type
 	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
+	if p+4+int(ndl) > len(b) {
+		return nil, fmt.Errorf("not enough bytes to decode Prefix NLRI Node Descriptor")
+	}
 	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)+4])
 	if err != nil {
 		return nil, err
