@@ -6,7 +6,7 @@ require (
 	github.com/Shopify/sarama v1.27.0
 	github.com/go-test/deep v1.0.8
 	github.com/golang/glog v1.1.1
-	github.com/nats-io/nats.go v1.25.0
+	github.com/nats-io/nats.go v1.28.0
 	github.com/sbezverk/tools v0.0.0-20230714051746-80037ac202cf
 )
 
@@ -20,8 +20,8 @@ require (
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/jcmturner/gofork v1.0.0 // indirect
-	github.com/klauspost/compress v1.16.4 // indirect
-	github.com/nats-io/nats-server/v2 v2.9.16 // indirect
+	github.com/klauspost/compress v1.16.7 // indirect
+	github.com/nats-io/nats-server/v2 v2.9.23 // indirect
 	github.com/nats-io/nkeys v0.4.4 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
