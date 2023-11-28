@@ -3,6 +3,7 @@ package kafka
 import (
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -41,7 +42,7 @@ func NewKafkaMConsumer(kafkaSrv string, topics []*TopicDescriptor) (Srv, error) 
 	config.Consumer.Return.Errors = true
 	config.Version = sarama.V1_1_0_0
 
-	brokers := []string{kafkaSrv}
+	brokers := strings.Split(kafkaSrv, ",")
 
 	// Create new consumer
 	master, err := sarama.NewConsumer(brokers, config)
