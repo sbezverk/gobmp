@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -11,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/pub"
@@ -74,7 +75,7 @@ var (
 )
 
 type publisher struct {
-	clusterAdmin *sarama.ClusterAdmin
+	clusterAdmin sarama.ClusterAdmin
 	config       *sarama.Config
 	producer     sarama.AsyncProducer
 	stopCh       chan struct{}
@@ -165,6 +166,7 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 	ca, err := sarama.NewClusterAdmin(kafkaSrvs, config)
 	if err != nil {
 		glog.Errorf("failed to create cluster admin: %+v", err)
+		return nil, err
 	}
 
 	cb, err := waitForControllerBrokerConnection(ca, config, brockerConnectTimeout)
@@ -175,7 +177,7 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 	glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
 
 	for _, t := range topicNames {
-		if err := ensureTopic(cb, topicCreateTimeout, t); err != nil {
+		if err := ensureTopic(ca, topicCreateTimeout, t); err != nil {
 			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 			return nil, err
 		}
@@ -233,7 +235,7 @@ func validator(brokerEndpoints string) error {
 	return nil
 }
 
-func ensureTopic(ca *sarama.ClusterAdmin, timeout time.Duration, topicName string) error {
+func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string) error {
 	topicDetail := &sarama.TopicDetail{
 		NumPartitions:     1,
 		ReplicationFactor: 1,
@@ -241,19 +243,19 @@ func ensureTopic(ca *sarama.ClusterAdmin, timeout time.Duration, topicName strin
 			"retention.ms": &topicRetention,
 		},
 	}
-	
+
 	ticker := time.NewTicker(100 * time.Millisecond)
 	tout := time.NewTimer(timeout)
 	for {
-		err := ca.CreateTopic(topic, topicDetail, false)
+		err := ca.CreateTopic(topicName, topicDetail, false)
 		if errors.Is(err, sarama.ErrIncompleteResponse) {
 			return err
 		}
-		if errors.Is(err.Err, sarama.ErrTopicAlreadyExists) || errors.Is(err.Err, sarama.ErrNoError) {
+		if errors.Is(err, sarama.ErrTopicAlreadyExists) || errors.Is(err, sarama.ErrNoError) {
 			return nil
 		}
-		if !errors.Is(e.Err, sarama.ErrRequestTimedOut) {
-			return e
+		if !errors.Is(err, sarama.ErrRequestTimedOut) {
+			return err
 		}
 		select {
 		case <-ticker.C:
@@ -264,7 +266,10 @@ func ensureTopic(ca *sarama.ClusterAdmin, timeout time.Duration, topicName strin
 	}
 }
 
-func waitForControllerBrokerConnection(ca *sarama.ClusterAdmin, config *sarama.Config, timeout time.Duration) (cb *sarama.Broker, error) {
+func waitForControllerBrokerConnection(ca sarama.ClusterAdmin, config *sarama.Config, timeout time.Duration) (*sarama.Broker, error) {
+	if ca == nil {
+		return nil, errors.New("nil ClusterAdmin provided")
+	}
 	ticker := time.NewTicker(10 * time.Second)
 	tout := time.NewTimer(timeout)
 	defer func() {
