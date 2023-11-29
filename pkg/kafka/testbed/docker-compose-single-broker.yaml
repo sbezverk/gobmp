@@ -73,7 +73,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
       ZOOKEEPER: "zookeeper:2181"
-      KAFKA_TOPICS: "gobmp.parsed.peer:4:4:delete gobmp.parsed.unicast_prefix:6:4:delete gobmp.parsed.unicast_prefix_v4:6:4:delete gobmp.parsed.unicast_prefix_v6:6:4:delete gobmp.parsed.ls_node:4:4:delete gobmp.parsed.ls_link:4:4:delete gobmp.parsed.l3vpn:4:4:delete gobmp.parsed.l3vpn_v4:4:4:delete gobmp.parsed.l3vpn_v6:4:4:delete gobmp.parsed.sr_policy:4:4:delete gobmp.parsed.sr_policy_v4:4:4:delete gobmp.parsed.sr_policy_v6:4:4:delete gobmp.parsed.flowspec:4:4:delete gobmp.parsed.flowspec_v4:4:4:delete gobmp.parsed.flowspec_v6:4:4:delete gobmp.parsed.ls_prefix:4:4:delete gobmp.parsed.ls_srv6_sid:4:4:delete gobmp.parsed.evpn:4:4:delete gobmp.parsed.statistics:4:4:delete"
+      KAFKA_TOPICS: "gobmp.parsed.peer:1:1:delete gobmp.parsed.unicast_prefix:1:1:delete gobmp.parsed.unicast_prefix_v4:1:1:delete gobmp.parsed.unicast_prefix_v6:1:1:delete gobmp.parsed.ls_node:1:1:delete gobmp.parsed.ls_link:1:1:delete gobmp.parsed.l3vpn:1:1:delete gobmp.parsed.l3vpn_v4:1:1:delete gobmp.parsed.l3vpn_v6:1:1:delete gobmp.parsed.sr_policy:1:1:delete gobmp.parsed.sr_policy_v4:1:1:delete gobmp.parsed.sr_policy_v6:1:1:delete gobmp.parsed.flowspec:1:1:delete gobmp.parsed.flowspec_v4:1:1:delete gobmp.parsed.flowspec_v6:1:1:delete gobmp.parsed.ls_prefix:1:1:delete gobmp.parsed.ls_srv6_sid:1:1:delete gobmp.parsed.evpn:1:1:delete gobmp.parsed.statistics:1:1:delete"
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       ALLOW_PLAINTEXT_LISTENER: "yes"
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-1:9091"
@@ -112,6 +112,8 @@ services:
     - IPC_LOCK
     cap_drop:
     - all
+    expose:
+    - 179
     container_name: xr-1
     devices:
     - /dev/fuse
@@ -161,6 +163,8 @@ services:
     - IPC_LOCK
     cap_drop:
     - all
+    expose:
+    - 179
     container_name: xr-2
     devices:
     - /dev/fuse
