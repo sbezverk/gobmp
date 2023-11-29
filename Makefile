@@ -1,5 +1,5 @@
 REGISTRY_NAME?=docker.io/sbezverk
-IMAGE_VERSION?=test-235
+IMAGE_VERSION?=0.0.0
 
 .PHONY: all gobmp player container push clean test lint
 

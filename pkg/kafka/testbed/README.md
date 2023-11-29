@@ -2,6 +2,7 @@
 
 From within the `testbed` folder (note that there are separate files for gobgp and xrd tests):
 ```
+export IMAGE_VERSION=test-235
 cd ../../..
 make container
 cd pkg/kafka/testbed
