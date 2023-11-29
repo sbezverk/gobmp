@@ -190,6 +190,8 @@ services:
     - IPC_LOCK
     cap_drop:
     - all
+    expose:
+    - 179
     container_name: xr-1
     devices:
     - /dev/fuse
@@ -239,6 +241,8 @@ services:
     - IPC_LOCK
     cap_drop:
     - all
+    expose:
+    - 179
     container_name: xr-2
     devices:
     - /dev/fuse

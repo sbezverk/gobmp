@@ -79,6 +79,7 @@ services:
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-1:9091"
       KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9091"
       BOOTSTRAP_SERVERS: "kafka-1:9091"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.6
