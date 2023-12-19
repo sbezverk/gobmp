@@ -23,20 +23,21 @@ services:
     image: localhost/gobmp:cicd
     hostname: gobmp
     container_name: gobmp
-    command:
-      --v=9
-      --kafka-server=10.1.1.6:9091
     ports:
       - "5000:5000"
+    command:
+      --v=9
+      --kafka-server=10.1.1.6:9091,10.1.1.7:9092,10.1.1.8:9093,10.1.1.9:9094
     cap_add:
     - NET_ADMIN
     networks:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.2
-    stdin_open: true
-    tty: true
     depends_on:
       - kafka-1
+      - kafka-2
+      - kafka-3
+      - kafka-4
   zoo:
     image: bitnami/zookeeper:latest
     hostname: zoo
@@ -73,6 +74,72 @@ services:
     networks:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.6
+  kafka-2:
+    image: bitnami/kafka:latest
+    hostname: kafka-2
+    container_name: kafka-2
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      - KAFKA_CFG_BROKER_ID=2
+      - KAFKA_ENABLE_KRAFT=no
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ADVERTISED_HOST_NAME=kafka-2
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zoo:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:29092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://10.1.1.7:9092,PLAINTEXT_HOST://127.0.0.1:9092
+      - BITNAMI_DEBUG=true
+    depends_on:
+      - zoo
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.7
+  kafka-3:
+    image: bitnami/kafka:latest
+    hostname: kafka-3
+    container_name: kafka-3
+    ports:
+      - "9093:9093"
+      - "29093:29093"
+    environment:
+      - KAFKA_CFG_BROKER_ID=3
+      - KAFKA_ENABLE_KRAFT=no
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ADVERTISED_HOST_NAME=kafka-3
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zoo:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9093,PLAINTEXT_HOST://:29093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://10.1.1.8:9093,PLAINTEXT_HOST://127.0.0.1:9093
+      - BITNAMI_DEBUG=true
+    depends_on:
+      - zoo
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.8
+  kafka-4:
+    image: bitnami/kafka:latest
+    hostname: kafka-4
+    container_name: kafka-4
+    ports:
+      - "9094:9094"
+      - "29094:29094"
+    environment:
+      - KAFKA_CFG_BROKER_ID=4
+      - KAFKA_ENABLE_KRAFT=no
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ADVERTISED_HOST_NAME=kafka-4
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zoo:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9094,PLAINTEXT_HOST://:29094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://10.1.1.9:9094,PLAINTEXT_HOST://127.0.0.1:9094
+      - BITNAMI_DEBUG=true
+    depends_on:
+      - zoo
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.9
   xr-1:
     cap_add:
     - CHOWN
