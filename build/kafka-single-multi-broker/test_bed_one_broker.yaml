@@ -25,7 +25,7 @@ services:
     container_name: gobmp
     command:
       --v=9
-      --kafka-server=10.1.1.6:9091
+      --kafka-server=kafka-1:9091
     ports:
       - "5000:5000"
     cap_add:
@@ -66,7 +66,7 @@ services:
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zoo:2181
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9091,PLAINTEXT_HOST://:29091
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://10.1.1.6:9091,PLAINTEXT_HOST://127.0.0.1:9091
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-1:9091,PLAINTEXT_HOST://127.0.0.1:9091
       - BITNAMI_DEBUG=true
     depends_on:
       - zoo
