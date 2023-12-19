@@ -20,75 +20,59 @@ networks:
     name: xr-1-gi1-xr-2-gi0
 services:
   gobmp:
-    # image: sbezverk/gobmp:v1.0.3
-    image: sbezverk/gobmp:test-235
-    restart: always
-    expose:
-      - 5000
-    entrypoint:
-      [ 
-        "/gobmp",
-        "--source-port=5000",
-        "--intercept=false",
-        "--split-af=true",
-        "--v=9",
-        "--kafka-server=kafka-1:9091"
-      ]
+    image: localhost/gobmp:cicd
+    hostname: gobmp
+    container_name: gobmp
+    command:
+      --v=9
+      --kafka-server=kafka-1:9091
+    ports:
+      - "5000:5000"
     cap_add:
     - NET_ADMIN
     networks:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.2
-    # stdin_open: true
-    # tty: true
+    stdin_open: true
+    tty: true
     depends_on:
       - kafka-1
-  zookeeper:
-    image: zookeeper:3.7.0
-    restart: always
-    expose:
-      - 2181
+  zoo:
+    image: bitnami/zookeeper:latest
+    hostname: zoo
+    container_name: zoo
+    ports:
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_SERVERS: zoo:2888:3888
+      ALLOW_ANONYMOUS_LOGIN: "yes"
     networks:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.5
-    volumes:
-      - ./zookeeper_hc.sh:/tmp/hc.sh
-    healthcheck:
-      test: [ "CMD-SHELL", "/tmp/hc.sh" ]
-      interval: 2s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
   kafka-1:
-    image: confluentinc/cp-kafka:7.3.1
-    restart: always
-    depends_on:
-      - zookeeper
-    expose:
-      - 9091
+    image: bitnami/kafka:latest
+    hostname: kafka-1
+    container_name: kafka-1
+    ports:
+      - "9091:9091"
+      - "29091:29091"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
-      ZOOKEEPER: "zookeeper:2181"
-      KAFKA_TOPICS: "gobmp.parsed.peer:1:1:delete gobmp.parsed.unicast_prefix:1:1:delete gobmp.parsed.unicast_prefix_v4:1:1:delete gobmp.parsed.unicast_prefix_v6:1:1:delete gobmp.parsed.ls_node:1:1:delete gobmp.parsed.ls_link:1:1:delete gobmp.parsed.l3vpn:1:1:delete gobmp.parsed.l3vpn_v4:1:1:delete gobmp.parsed.l3vpn_v6:1:1:delete gobmp.parsed.sr_policy:1:1:delete gobmp.parsed.sr_policy_v4:1:1:delete gobmp.parsed.sr_policy_v6:1:1:delete gobmp.parsed.flowspec:1:1:delete gobmp.parsed.flowspec_v4:1:1:delete gobmp.parsed.flowspec_v6:1:1:delete gobmp.parsed.ls_prefix:1:1:delete gobmp.parsed.ls_srv6_sid:1:1:delete gobmp.parsed.evpn:1:1:delete gobmp.parsed.statistics:1:1:delete"
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-      ALLOW_PLAINTEXT_LISTENER: "yes"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-1:9091"
-      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9091"
-      BOOTSTRAP_SERVERS: "kafka-1:9091"
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      - KAFKA_CFG_BROKER_ID=1
+      - KAFKA_ENABLE_KRAFT=no
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ADVERTISED_HOST_NAME=kafka-1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zoo:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9091,PLAINTEXT_HOST://:29091
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-1:9091,PLAINTEXT_HOST://127.0.0.1:9091
+      - BITNAMI_DEBUG=true
+    depends_on:
+      - zoo
     networks:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.6
-    healthcheck:
-      test: ps augwwx | egrep [S]upportedKafka
-      interval: 2s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
   xr-1:
     cap_add:
     - CHOWN
