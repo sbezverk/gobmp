@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -8,9 +9,10 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/pub"
@@ -73,10 +75,10 @@ var (
 )
 
 type publisher struct {
-	broker   *sarama.Broker
-	config   *sarama.Config
-	producer sarama.AsyncProducer
-	stopCh   chan struct{}
+	clusterAdmin sarama.ClusterAdmin
+	config       *sarama.Config
+	producer     sarama.AsyncProducer
+	stopCh       chan struct{}
 }
 
 func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
@@ -140,7 +142,7 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 
 func (p *publisher) Stop() {
 	close(p.stopCh)
-	p.broker.Close()
+	p.clusterAdmin.Close()
 }
 
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
@@ -157,24 +159,33 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 	config.ClientID = "gobmp-producer" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
-	config.Admin.Retry.Max = 100
-	config.Version = sarama.V1_1_0_0
+	config.Admin.Retry.Max = 120
+	config.Admin.Retry.Backoff = time.Second
+	config.Metadata.Retry.Max = 300
+	config.Metadata.Retry.Backoff = time.Second * 10
+	config.Version = sarama.V2_1_0_0
 
-	br := sarama.NewBroker(kafkaSrv)
-
-	if err := waitForBrokerConnection(br, config, brockerConnectTimeout); err != nil {
-		glog.Errorf("failed to open connection to the broker with error: %+v\n", err)
+	kafkaSrvs := strings.Split(kafkaSrv, ",")
+	ca, err := sarama.NewClusterAdmin(kafkaSrvs, config)
+	if err != nil {
+		glog.Errorf("failed to create cluster admin: %+v", err)
 		return nil, err
 	}
-	glog.V(5).Infof("Connected to broker: %s id: %d\n", br.Addr(), br.ID())
+
+	cb, err := waitForControllerBrokerConnection(ca, config, brockerConnectTimeout)
+	if err != nil {
+		glog.Errorf("failed to open connection to the controller broker with error: %+v\n", err)
+		return nil, err
+	}
+	glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
 
 	for _, t := range topicNames {
-		if err := ensureTopic(br, topicCreateTimeout, t); err != nil {
+		if err := ensureTopic(ca, topicCreateTimeout, t); err != nil {
 			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 			return nil, err
 		}
 	}
-	producer, err := sarama.NewAsyncProducer([]string{kafkaSrv}, config)
+	producer, err := sarama.NewAsyncProducer(kafkaSrvs, config)
 	if err != nil {
 		glog.Errorf("New Kafka publisher failed to start new async producer with error: %+v", err)
 		return nil, err
@@ -195,61 +206,59 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 	}(producer, stopCh)
 
 	return &publisher{
-		stopCh:   stopCh,
-		broker:   br,
-		config:   config,
-		producer: producer,
+		stopCh:       stopCh,
+		clusterAdmin: ca,
+		config:       config,
+		producer:     producer,
 	}, nil
 }
 
-func validator(addr string) error {
-	host, port, _ := net.SplitHostPort(addr)
-	if host == "" || port == "" {
-		return fmt.Errorf("host or port cannot be ''")
-	}
-	// Try to resolve if the hostname was used in the address
-	if ip, err := net.LookupIP(host); err != nil || ip == nil {
-		// Check if IP address was used in address instead of a host name
-		if net.ParseIP(host) == nil {
-			return fmt.Errorf("fail to parse host part of address")
+func validator(brokerEndpoints string) error {
+	addrs := strings.Split(brokerEndpoints, ",")
+	for _, addr := range addrs {
+		host, port, _ := net.SplitHostPort(addr)
+		if host == "" || port == "" {
+			return fmt.Errorf("%s: host or port cannot be ''", addr)
 		}
-	}
-	np, err := strconv.Atoi(port)
-	if err != nil {
-		return fmt.Errorf("fail to parse port with error: %w", err)
-	}
-	if np == 0 || np > math.MaxUint16 {
-		return fmt.Errorf("the value of port is invalid")
+		// Try to resolve if the hostname was used in the address
+		if ip, err := net.LookupIP(host); err != nil || ip == nil {
+			// Check if IP address was used in address instead of a host name
+			if net.ParseIP(host) == nil {
+				return fmt.Errorf("%s: fail to parse host part of address", addr)
+			}
+		}
+		np, err := strconv.Atoi(port)
+		if err != nil {
+			return fmt.Errorf("%s: fail to parse port with error: %w", addr, err)
+		}
+		if np == 0 || np > math.MaxUint16 {
+			return fmt.Errorf("%s: the value of port is invalid", addr)
+		}
 	}
 	return nil
 }
 
-func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) error {
-	topic := &sarama.CreateTopicsRequest{
-		TopicDetails: map[string]*sarama.TopicDetail{
-			topicName: {
-				NumPartitions:     1,
-				ReplicationFactor: 1,
-				ConfigEntries: map[string]*string{
-					"retention.ms": &topicRetention,
-				},
-			},
+func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string) error {
+	topicDetail := &sarama.TopicDetail{
+		NumPartitions:     1,
+		ReplicationFactor: 1,
+		ConfigEntries: map[string]*string{
+			"retention.ms": &topicRetention,
 		},
 	}
+
 	ticker := time.NewTicker(100 * time.Millisecond)
 	tout := time.NewTimer(timeout)
 	for {
-		t, err := br.CreateTopics(topic)
-		if err != nil {
+		err := ca.CreateTopic(topicName, topicDetail, false)
+		if errors.Is(err, sarama.ErrIncompleteResponse) {
 			return err
 		}
-		if e, ok := t.TopicErrors[topicName]; ok {
-			if e.Err == sarama.ErrTopicAlreadyExists || e.Err == sarama.ErrNoError {
-				return nil
-			}
-			if e.Err != sarama.ErrRequestTimedOut {
-				return e
-			}
+		if errors.Is(err, sarama.ErrTopicAlreadyExists) || errors.Is(err, sarama.ErrNoError) {
+			return nil
+		}
+		if !errors.Is(err, sarama.ErrRequestTimedOut) {
+			return err
 		}
 		select {
 		case <-ticker.C:
@@ -260,34 +269,41 @@ func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) err
 	}
 }
 
-func waitForBrokerConnection(br *sarama.Broker, config *sarama.Config, timeout time.Duration) error {
+func waitForControllerBrokerConnection(ca sarama.ClusterAdmin, config *sarama.Config, timeout time.Duration) (*sarama.Broker, error) {
+	if ca == nil {
+		return nil, errors.New("nil ClusterAdmin provided")
+	}
 	ticker := time.NewTicker(10 * time.Second)
 	tout := time.NewTimer(timeout)
 	defer func() {
 		ticker.Stop()
 		tout.Stop()
 	}()
+	cb, err := ca.Controller()
+	if err != nil {
+		return nil, err
+	}
 	for {
-		if err := br.Open(config); err == nil {
-			if ok, err := br.Connected(); err != nil {
-				glog.Errorf("failed to connect to the broker with error: %+v, will retry in 10 seconds", err)
+		if err := cb.Open(config); err == nil {
+			if ok, err := cb.Connected(); err != nil {
+				glog.Errorf("failed to connect to the controller broker with error: %+v, will retry in 10 seconds", err)
 			} else {
 				if ok {
-					return nil
+					return cb, nil
 				} else {
-					glog.Errorf("kafka broker %s is not ready yet, will retry in 10 seconds", br.Addr())
+					glog.Errorf("kafka controller broker %s is not ready yet, will retry in 10 seconds", cb.Addr())
 				}
 			}
 		} else {
 			if err == sarama.ErrAlreadyConnected {
-				return nil
+				return cb, nil
 			}
 		}
 		select {
 		case <-ticker.C:
 			continue
 		case <-tout.C:
-			return fmt.Errorf("timeout waiting for the connection to the broker %s", br.Addr())
+			return nil, fmt.Errorf("timeout waiting for the connection to the broker %s", cb.Addr())
 		}
 	}
 

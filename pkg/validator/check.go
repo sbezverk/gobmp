@@ -73,7 +73,7 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 		// TODO (sbezverk) there should be no duplication, add check if the key already exists
 		dictionary[k] = u
 	}
-	glog.Infof("Dictionaly for topic type %d contains %d test messages", topic.TopicType, len(dictionary))
+	glog.Infof("Dictionary for topic type %d contains %d test messages", topic.TopicType, len(dictionary))
 	matches := 0
 	for {
 		select {

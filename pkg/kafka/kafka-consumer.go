@@ -3,9 +3,10 @@ package kafka
 import (
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
 )
@@ -32,16 +33,17 @@ type kafka struct {
 // NewKafkaMessenger returns an instance of a kafka consumer acting as a messenger server
 func NewKafkaMConsumer(kafkaSrv string, topics []*TopicDescriptor) (Srv, error) {
 	glog.Infof("NewKafkaConsumer")
-	if err := tools.HostAddrValidator(kafkaSrv); err != nil {
-		return nil, err
+	brokers := strings.Split(kafkaSrv, ",")
+	for i := range brokers {
+		if err := tools.HostAddrValidator(brokers[i]); err != nil {
+			return nil, err
+		}
 	}
 
 	config := sarama.NewConfig()
 	config.ClientID = "validator" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Consumer.Return.Errors = true
 	config.Version = sarama.V1_1_0_0
-
-	brokers := []string{kafkaSrv}
 
 	// Create new consumer
 	master, err := sarama.NewConsumer(brokers, config)
