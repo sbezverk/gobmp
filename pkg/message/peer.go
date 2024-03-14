@@ -89,14 +89,15 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			return
 		}
 		m = PeerStateChange{
-			Action:     "down",
-			RouterIP:   p.speakerIP,
-			PeerType:   uint8(msg.PeerHeader.PeerType),
-			RouterHash: p.speakerHash,
-			BMPReason:  int(peerDownMsg.Reason),
-			RemoteASN:  msg.PeerHeader.PeerAS,
-			PeerRD:     msg.PeerHeader.GetPeerDistinguisherString(),
-			Timestamp:  msg.PeerHeader.GetPeerTimestamp(),
+			Action:               "down",
+			RouterIP:             p.speakerIP,
+			PeerType:             uint8(msg.PeerHeader.PeerType),
+			RouterHash:           p.speakerHash,
+			BMPReason:            int(peerDownMsg.Reason),
+			BMPReasonDescription: peerDownMsg.Description,
+			RemoteASN:            msg.PeerHeader.PeerAS,
+			PeerRD:               msg.PeerHeader.GetPeerDistinguisherString(),
+			Timestamp:            msg.PeerHeader.GetPeerTimestamp(),
 		}
 		m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
 		m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()
