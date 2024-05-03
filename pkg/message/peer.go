@@ -70,9 +70,9 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			if rAddPath := peerUpMsg.ReceivedOpen.AddPathCapability(); len(rAddPath) != 0 {
 				for k := range lAddPath {
 					// Enable AddPath only for AFI/SAFI types existing in both local and remote maps
-					if _, ok := rAddPath[k]; ok {
+					if capable, ok := rAddPath[k]; ok {
 						// AFI/SAFI type exists in both maps, which means both peers support Send/Receive of AddPath
-						p.addPathCapable[k] = true
+						p.addPathCapable[k] = capable
 					}
 				}
 			}

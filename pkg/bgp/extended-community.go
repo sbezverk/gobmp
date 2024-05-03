@@ -240,12 +240,11 @@ var flowspecSubTypes = map[uint8]string{
 }
 
 func getSubType(m map[uint8]string, subType uint8) string {
-	s := "Subtype unknown="
-	var ok bool
-	if s, ok = m[subType]; ok {
+	if s, ok := m[subType]; ok {
 		return s
 	}
-	return s
+
+	return "Subtype unknown="
 }
 
 // Transitive Two-Octet AS-Specific Extended Community

@@ -2,9 +2,11 @@ package kafka
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
@@ -16,29 +18,29 @@ import (
 
 // Define constants for each topic name
 const (
-	peerTopic              = "gobmp.parsed.peer"
-	unicastMessageTopic    = "gobmp.parsed.unicast_prefix"
-	unicastMessageV4Topic  = "gobmp.parsed.unicast_prefix_v4"
-	unicastMessageV6Topic  = "gobmp.parsed.unicast_prefix_v6"
-	lsNodeMessageTopic     = "gobmp.parsed.ls_node"
-	lsLinkMessageTopic     = "gobmp.parsed.ls_link"
-	l3vpnMessageTopic      = "gobmp.parsed.l3vpn"
-	l3vpnMessageV4Topic    = "gobmp.parsed.l3vpn_v4"
-	l3vpnMessageV6Topic    = "gobmp.parsed.l3vpn_v6"
-	lsPrefixMessageTopic   = "gobmp.parsed.ls_prefix"
-	lsSRv6SIDMessageTopic  = "gobmp.parsed.ls_srv6_sid"
-	evpnMessageTopic       = "gobmp.parsed.evpn"
-	srPolicyMessageTopic   = "gobmp.parsed.sr_policy"
-	srPolicyMessageV4Topic = "gobmp.parsed.sr_policy_v4"
-	srPolicyMessageV6Topic = "gobmp.parsed.sr_policy_v6"
-	flowspecMessageTopic   = "gobmp.parsed.flowspec"
-	flowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
-	flowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
-	statsMessageTopic      = "gobmp.parsed.statistics"
+	PeerTopic              = "gobmp.parsed.peer"
+	UnicastMessageTopic    = "gobmp.parsed.unicast_prefix"
+	UnicastMessageV4Topic  = "gobmp.parsed.unicast_prefix_v4"
+	UnicastMessageV6Topic  = "gobmp.parsed.unicast_prefix_v6"
+	LSNodeMessageTopic     = "gobmp.parsed.ls_node"
+	LSLinkMessageTopic     = "gobmp.parsed.ls_link"
+	L3vpnMessageTopic      = "gobmp.parsed.l3vpn"
+	L3vpnMessageV4Topic    = "gobmp.parsed.l3vpn_v4"
+	L3vpnMessageV6Topic    = "gobmp.parsed.l3vpn_v6"
+	LSPrefixMessageTopic   = "gobmp.parsed.ls_prefix"
+	LSSRv6SIDMessageTopic  = "gobmp.parsed.ls_srv6_sid"
+	EVPNMessageTopic       = "gobmp.parsed.evpn"
+	SRPolicyMessageTopic   = "gobmp.parsed.sr_policy"
+	SRPolicyMessageV4Topic = "gobmp.parsed.sr_policy_v4"
+	SRPolicyMessageV6Topic = "gobmp.parsed.sr_policy_v6"
+	FlowspecMessageTopic   = "gobmp.parsed.flowspec"
+	FlowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
+	FlowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
+	StatsMessageTopic      = "gobmp.parsed.statistics"
 )
 
 var (
-	brockerConnectTimeout = 10 * time.Second
+	brockerConnectTimeout = 120 * time.Second
 	topicCreateTimeout    = 1 * time.Second
 	// goBMP topic's retention timer is 15 minutes
 	topicRetention = "900000"
@@ -48,25 +50,25 @@ var (
 	// topics defines a list of topic to initialize and connect,
 	// initialization is done as a part of NewKafkaPublisher func.
 	topicNames = []string{
-		peerTopic,
-		unicastMessageTopic,
-		unicastMessageV4Topic,
-		unicastMessageV6Topic,
-		lsNodeMessageTopic,
-		lsLinkMessageTopic,
-		l3vpnMessageTopic,
-		l3vpnMessageV4Topic,
-		l3vpnMessageV6Topic,
-		lsPrefixMessageTopic,
-		lsSRv6SIDMessageTopic,
-		evpnMessageTopic,
-		srPolicyMessageTopic,
-		srPolicyMessageV4Topic,
-		srPolicyMessageV6Topic,
-		flowspecMessageTopic,
-		flowspecMessageV4Topic,
-		flowspecMessageV6Topic,
-		statsMessageTopic,
+		PeerTopic,
+		UnicastMessageTopic,
+		UnicastMessageV4Topic,
+		UnicastMessageV6Topic,
+		LSNodeMessageTopic,
+		LSLinkMessageTopic,
+		L3vpnMessageTopic,
+		L3vpnMessageV4Topic,
+		L3vpnMessageV6Topic,
+		LSPrefixMessageTopic,
+		LSSRv6SIDMessageTopic,
+		EVPNMessageTopic,
+		SRPolicyMessageTopic,
+		SRPolicyMessageV4Topic,
+		SRPolicyMessageV6Topic,
+		FlowspecMessageTopic,
+		FlowspecMessageV4Topic,
+		FlowspecMessageV6Topic,
+		StatsMessageTopic,
 	}
 )
 
@@ -80,52 +82,52 @@ type publisher struct {
 func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 	switch t {
 	case bmp.PeerStateChangeMsg:
-		return p.produceMessage(peerTopic, key, msg)
+		return p.produceMessage(PeerTopic, key, msg)
 	case bmp.UnicastPrefixMsg:
-		return p.produceMessage(unicastMessageTopic, key, msg)
+		return p.produceMessage(UnicastMessageTopic, key, msg)
 	case bmp.UnicastPrefixV4Msg:
-		return p.produceMessage(unicastMessageV4Topic, key, msg)
+		return p.produceMessage(UnicastMessageV4Topic, key, msg)
 	case bmp.UnicastPrefixV6Msg:
-		return p.produceMessage(unicastMessageV6Topic, key, msg)
+		return p.produceMessage(UnicastMessageV6Topic, key, msg)
 	case bmp.LSNodeMsg:
-		return p.produceMessage(lsNodeMessageTopic, key, msg)
+		return p.produceMessage(LSNodeMessageTopic, key, msg)
 	case bmp.LSLinkMsg:
-		return p.produceMessage(lsLinkMessageTopic, key, msg)
+		return p.produceMessage(LSLinkMessageTopic, key, msg)
 	case bmp.L3VPNMsg:
-		return p.produceMessage(l3vpnMessageTopic, key, msg)
+		return p.produceMessage(L3vpnMessageTopic, key, msg)
 	case bmp.L3VPNV4Msg:
-		return p.produceMessage(l3vpnMessageV4Topic, key, msg)
+		return p.produceMessage(L3vpnMessageV4Topic, key, msg)
 	case bmp.L3VPNV6Msg:
-		return p.produceMessage(l3vpnMessageV6Topic, key, msg)
+		return p.produceMessage(L3vpnMessageV6Topic, key, msg)
 	case bmp.LSPrefixMsg:
-		return p.produceMessage(lsPrefixMessageTopic, key, msg)
+		return p.produceMessage(LSPrefixMessageTopic, key, msg)
 	case bmp.LSSRv6SIDMsg:
-		return p.produceMessage(lsSRv6SIDMessageTopic, key, msg)
+		return p.produceMessage(LSSRv6SIDMessageTopic, key, msg)
 	case bmp.EVPNMsg:
-		return p.produceMessage(evpnMessageTopic, key, msg)
+		return p.produceMessage(EVPNMessageTopic, key, msg)
 	case bmp.SRPolicyMsg:
-		return p.produceMessage(srPolicyMessageTopic, key, msg)
+		return p.produceMessage(SRPolicyMessageTopic, key, msg)
 	case bmp.SRPolicyV4Msg:
-		return p.produceMessage(srPolicyMessageV4Topic, key, msg)
+		return p.produceMessage(SRPolicyMessageV4Topic, key, msg)
 	case bmp.SRPolicyV6Msg:
-		return p.produceMessage(srPolicyMessageV6Topic, key, msg)
+		return p.produceMessage(SRPolicyMessageV6Topic, key, msg)
 	case bmp.FlowspecMsg:
-		return p.produceMessage(flowspecMessageTopic, key, msg)
+		return p.produceMessage(FlowspecMessageTopic, key, msg)
 	case bmp.FlowspecV4Msg:
-		return p.produceMessage(flowspecMessageV4Topic, key, msg)
+		return p.produceMessage(FlowspecMessageV4Topic, key, msg)
 	case bmp.FlowspecV6Msg:
-		return p.produceMessage(flowspecMessageV6Topic, key, msg)
+		return p.produceMessage(FlowspecMessageV6Topic, key, msg)
 	case bmp.StatsReportMsg:
-		return p.produceMessage(statsMessageTopic, key, msg)
+		return p.produceMessage(StatsMessageTopic, key, msg)
 	}
 
 	return fmt.Errorf("not implemented")
 }
 
 func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
-	k := sarama.ByteEncoder{}
+	var k sarama.ByteEncoder
+	var m sarama.ByteEncoder
 	k = key
-	m := sarama.ByteEncoder{}
 	m = msg
 	p.producer.Input() <- &sarama.ProducerMessage{
 		Topic: topic,
@@ -148,18 +150,19 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 		glog.Errorf("Failed to validate Kafka server address %s with error: %+v", kafkaSrv, err)
 		return nil, err
 	}
+	if glog.V(6) {
+		sarama.Logger = log.New(os.Stdout, "[sarama]      ", log.LstdFlags)
+	}
 	config := sarama.NewConfig()
 	config.ClientID = "gobmp-producer" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Producer.Return.Successes = true
-	config.Version = sarama.V0_11_0_0
+	config.Producer.Return.Errors = true
+	config.Admin.Retry.Max = 100
+	config.Version = sarama.V1_1_0_0
 
 	br := sarama.NewBroker(kafkaSrv)
-	if err := br.Open(config); err != nil {
-		if err != sarama.ErrAlreadyConnected {
-			return nil, err
-		}
-	}
-	if err := waitForBrokerConnection(br, brockerConnectTimeout); err != nil {
+
+	if err := waitForBrokerConnection(br, config, brockerConnectTimeout); err != nil {
 		glog.Errorf("failed to open connection to the broker with error: %+v\n", err)
 		return nil, err
 	}
@@ -259,16 +262,28 @@ func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) err
 	}
 }
 
-func waitForBrokerConnection(br *sarama.Broker, timeout time.Duration) error {
-	ticker := time.NewTicker(100 * time.Millisecond)
+func waitForBrokerConnection(br *sarama.Broker, config *sarama.Config, timeout time.Duration) error {
+	ticker := time.NewTicker(10 * time.Second)
 	tout := time.NewTimer(timeout)
+	defer func() {
+		ticker.Stop()
+		tout.Stop()
+	}()
 	for {
-		ok, err := br.Connected()
-		if ok {
-			return nil
-		}
-		if err != nil {
-			return err
+		if err := br.Open(config); err == nil {
+			if ok, err := br.Connected(); err != nil {
+				glog.Errorf("failed to connect to the broker with error: %+v, will retry in 10 seconds", err)
+			} else {
+				if ok {
+					return nil
+				} else {
+					glog.Errorf("kafka broker %s is not ready yet, will retry in 10 seconds", br.Addr())
+				}
+			}
+		} else {
+			if err == sarama.ErrAlreadyConnected {
+				return nil
+			}
 		}
 		select {
 		case <-ticker.C:

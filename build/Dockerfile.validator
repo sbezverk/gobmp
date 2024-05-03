@@ -1,0 +1,4 @@
+FROM scratch
+
+COPY ./bin/validator /validator
+ENTRYPOINT ["/validator"]

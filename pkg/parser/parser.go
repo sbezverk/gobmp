@@ -101,7 +101,6 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 				glog.Infof("Content:%s", tools.MessageHex(b))
 			}
 		}
-		perPerHeaderLen = 0
 		p += (int(ch.MessageLength) - bmp.CommonHeaderLength)
 		if producerQueue != nil && bmpMsg.Payload != nil {
 			producerQueue <- bmpMsg

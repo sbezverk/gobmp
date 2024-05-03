@@ -408,40 +408,65 @@ func (ls *NLRI) GetPrefixMetric() uint32 {
 	return 0
 }
 
+// Deprecated per issue #213 - https://github.com/sbezverk/gobmp/issues/213
+// Returns 0 - TLV data moved to GetMaxLinkBandwidthKbps
 // GetMaxLinkBandwidth returns value of Maximum Link Bandwidth in bps
 func (ls *NLRI) GetMaxLinkBandwidth() uint32 {
+	return 0
+}
+
+// Deprecated per issue #213 - https://github.com/sbezverk/gobmp/issues/213
+// Returns 0 - TLV data moved to GetMaxReservableLinkBandwidthKbps
+// GetMaxReservableLinkBandwidth returns value of Maximum Reservable Link Bandwidth in bps
+func (ls *NLRI) GetMaxReservableLinkBandwidth() uint32 {
+	return 0
+}
+
+// Deprecated per issue #213 - https://github.com/sbezverk/gobmp/issues/213
+// Returns nil - TLV data moved to GetUnreservedLinkBandwidthKbps
+// GetUnreservedLinkBandwidth returns eight 32-bit number in bps
+func (ls *NLRI) GetUnreservedLinkBandwidth() []uint32 {
+	return nil
+}
+
+// GetMaxLinkBandwidthKbps returns value of Maximum Link Bandwidth in kbps
+func (ls *NLRI) GetMaxLinkBandwidthKbps() uint64 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1089 {
 			continue
 		}
-		return uint32(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value))) * 8
+		return uint64(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value)) * 8 / 1000)
 	}
 
 	return 0
 }
 
-// GetMaxReservableLinkBandwidth returns value of Maximum Reservable Link Bandwidth in bps
-func (ls *NLRI) GetMaxReservableLinkBandwidth() uint32 {
+// GetMaxReservableLinkBandwidthKbps returns value of Maximum Reservable Link Bandwidth in kbps
+func (ls *NLRI) GetMaxReservableLinkBandwidthKbps() uint64 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1090 {
 			continue
 		}
-		return uint32(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value))) * 8
+		return uint64(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value)) * 8 / 1000)
 	}
 
 	return 0
 }
 
-// GetUnreservedLinkBandwidth returns eight 32-bit number in bps
-func (ls *NLRI) GetUnreservedLinkBandwidth() []uint32 {
-	unResrved := make([]uint32, 8)
+// GetUnreservedLinkBandwidthKbps returns eight 64-bit number in kbps
+func (ls *NLRI) GetUnreservedLinkBandwidthKbps() []uint64 {
+	unResrved := make([]uint64, 8)
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1091 {
 			continue
 		}
-		for p := 0; p < len(tlv.Value); {
-			unResrved = append(unResrved, uint32(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value[p:p+4])))*8)
-			p += 4
+                tlvLen := len(tlv.Value)
+                if tlvLen != 32 {
+                        glog.Errorf("BGP-LS TLV 1091 invalid length: %d, returning default\n", tlvLen)
+                        return unResrved
+                }
+		for i, p := 0, 0; p < tlvLen; i, p = i+1, p+4 {
+			unResrved[i] = uint64(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value[p:p+4])) * 8 / 1000)
 		}
 		return unResrved
 	}

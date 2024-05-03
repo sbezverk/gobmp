@@ -149,9 +149,7 @@ func MakeESI(b []byte) (*ESI, error) {
 		return nil, fmt.Errorf("wrong length of slice, expected 10 got %d", len(b))
 	}
 	esi := ESI{}
-	for i := 0; i < len(b); i++ {
-		esi[i] = b[i]
-	}
+	copy(esi[:], b)
 
 	return &esi, nil
 }
@@ -165,9 +163,7 @@ func MakeMACAddress(b []byte) (*MACAddress, error) {
 		return nil, fmt.Errorf("wrong length of slice, expected 6 got %d", len(b))
 	}
 	mac := MACAddress{}
-	for i := 0; i < len(b); i++ {
-		mac[i] = b[i]
-	}
+	copy(mac[:], b)
 
 	return &mac, nil
 }

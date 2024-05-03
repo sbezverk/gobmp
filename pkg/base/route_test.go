@@ -51,6 +51,9 @@ func TestGetPrefixIPReachability(t *testing.T) {
 			if route == nil {
 				t.Errorf("failed, no routes reterned")
 			}
+			if route == nil {
+				t.Fatal("computed route is nil")
+			}
 			if len(route.Prefix) == 16 {
 				rs = net.IP(route.Prefix).To16().String()
 			} else {
@@ -118,6 +121,18 @@ func TestUnmarshalBaseNLRI(t *testing.T) {
 					PathID: 1,
 					Length: 24,
 					Prefix: []byte{45, 160, 0},
+				},
+			},
+		},
+		{
+			name:   "issue #227",
+			input:  []byte{0x1C, 0x02, 0x02, 0x02, 0x00},
+			pathID: false,
+			expect: []Route{
+				{
+					PathID: 0,
+					Length: 28,
+					Prefix: []byte{2, 2, 2, 0},
 				},
 			},
 		},

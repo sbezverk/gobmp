@@ -318,7 +318,7 @@ func (f *LocalMPLSCrossConnectFEC) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return nil
 	}
-	f = t
+	*f = *t
 
 	return nil
 }
@@ -377,7 +377,7 @@ func (i *LocalMPLSCrossConnectInterface) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, t); err != nil {
 		return nil
 	}
-	i = t
+	*i = *t
 
 	return nil
 }

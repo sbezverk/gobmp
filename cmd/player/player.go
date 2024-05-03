@@ -74,7 +74,7 @@ func main() {
 			time.Sleep(time.Second * time.Duration(delay))
 		}
 		wg.Wait()
-		glog.Infof("%3f seconds took to process %d records", time.Now().Sub(start).Seconds(), records)
+		glog.Infof("%3f seconds took to process %d records", time.Since(start).Seconds(), records)
 		records = 0
 	}
 
