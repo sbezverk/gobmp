@@ -42,8 +42,6 @@ const (
 var (
 	brockerConnectTimeout = 120 * time.Second
 	topicCreateTimeout    = 1 * time.Second
-	// goBMP topic's retention timer is 15 minutes
-	topicRetention = "900000"
 )
 
 var (
@@ -144,7 +142,7 @@ func (p *publisher) Stop() {
 }
 
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
-func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
+func NewKafkaPublisher(kafkaSrv, kafkaTpRetnTimeMs string) (pub.Publisher, error) {
 	glog.Infof("Initializing Kafka producer client")
 	if err := validator(kafkaSrv); err != nil {
 		glog.Errorf("Failed to validate Kafka server address %s with error: %+v", kafkaSrv, err)
@@ -169,7 +167,7 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 	glog.V(5).Infof("Connected to broker: %s id: %d\n", br.Addr(), br.ID())
 
 	for _, t := range topicNames {
-		if err := ensureTopic(br, topicCreateTimeout, t); err != nil {
+		if err := ensureTopic(br, topicCreateTimeout, t, kafkaTpRetnTimeMs); err != nil {
 			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 			return nil, err
 		}
@@ -224,14 +222,14 @@ func validator(addr string) error {
 	return nil
 }
 
-func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string) error {
+func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName, kafkaTpRetnTimeMs string) error {
 	topic := &sarama.CreateTopicsRequest{
 		TopicDetails: map[string]*sarama.TopicDetail{
 			topicName: {
 				NumPartitions:     1,
 				ReplicationFactor: 1,
 				ConfigEntries: map[string]*string{
-					"retention.ms": &topicRetention,
+					"retention.ms": &kafkaTpRetnTimeMs,
 				},
 			},
 		},
