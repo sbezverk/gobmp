@@ -142,10 +142,10 @@ func (p *publisher) Stop() {
 }
 
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
-func NewKafkaPublisher(kafkaSrv, kafkaTpRetnTimeMs string) (pub.Publisher, error) {
+func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	glog.Infof("Initializing Kafka producer client")
-	if err := validator(kafkaSrv); err != nil {
-		glog.Errorf("Failed to validate Kafka server address %s with error: %+v", kafkaSrv, err)
+	if err := validator(*kConfig); err != nil {
+		glog.Errorf("Failed to validate Kafka config: %v with error: %+v", kConfig, err)
 		return nil, err
 	}
 	if glog.V(6) {
@@ -158,7 +158,7 @@ func NewKafkaPublisher(kafkaSrv, kafkaTpRetnTimeMs string) (pub.Publisher, error
 	config.Admin.Retry.Max = 100
 	config.Version = sarama.V1_1_0_0
 
-	br := sarama.NewBroker(kafkaSrv)
+	br := sarama.NewBroker(kConfig.ServerAddress)
 
 	if err := waitForBrokerConnection(br, config, brockerConnectTimeout); err != nil {
 		glog.Errorf("failed to open connection to the broker with error: %+v\n", err)
@@ -167,12 +167,12 @@ func NewKafkaPublisher(kafkaSrv, kafkaTpRetnTimeMs string) (pub.Publisher, error
 	glog.V(5).Infof("Connected to broker: %s id: %d\n", br.Addr(), br.ID())
 
 	for _, t := range topicNames {
-		if err := ensureTopic(br, topicCreateTimeout, t, kafkaTpRetnTimeMs); err != nil {
+		if err := ensureTopic(br, topicCreateTimeout, t, kConfig.TopicRetentionTimeMs); err != nil {
 			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 			return nil, err
 		}
 	}
-	producer, err := sarama.NewAsyncProducer([]string{kafkaSrv}, config)
+	producer, err := sarama.NewAsyncProducer([]string{kConfig.ServerAddress}, config)
 	if err != nil {
 		glog.Errorf("New Kafka publisher failed to start new async producer with error: %+v", err)
 		return nil, err
@@ -200,8 +200,8 @@ func NewKafkaPublisher(kafkaSrv, kafkaTpRetnTimeMs string) (pub.Publisher, error
 	}, nil
 }
 
-func validator(addr string) error {
-	host, port, _ := net.SplitHostPort(addr)
+func validator(kConfig Config) error {
+	host, port, _ := net.SplitHostPort(kConfig.ServerAddress)
 	if host == "" || port == "" {
 		return fmt.Errorf("host or port cannot be ''")
 	}
@@ -218,6 +218,14 @@ func validator(addr string) error {
 	}
 	if np == 0 || np > math.MaxUint16 {
 		return fmt.Errorf("the value of port is invalid")
+	}
+	// validator for topic retention time
+	if i, err := strconv.Atoi(kConfig.TopicRetentionTimeMs); err != nil {
+		return err
+	} else {
+		if i < 0 {
+			return fmt.Errorf("kafka topic retention time can not be less than 0")
+		}
 	}
 	return nil
 }

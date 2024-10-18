@@ -81,7 +81,11 @@ func main() {
 		}
 		glog.V(5).Infof("NATS publisher has been successfully initialized.")
 	default:
-		publisher, err = kafka.NewKafkaPublisher(kafkaSrv, kafkaTpRetnTimeMs)
+		kConfig := &kafka.Config{
+			ServerAddress: kafkaSrv,
+			TopicRetentionTimeMs: kafkaTpRetnTimeMs,
+		}
+		publisher, err = kafka.NewKafkaPublisher(kConfig)
 		if err != nil {
 			glog.Errorf("failed to initialize Kafka publisher with error: %+v", err)
 			os.Exit(1)

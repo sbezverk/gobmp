@@ -46,7 +46,11 @@ func main() {
 	defer f.Close()
 
 	// Initializing publisher process
-	publisher, err := kafka.NewKafkaPublisher(msgSrvAddr, topicRetnTimeMs)
+	kConfig := &kafka.Config{
+		ServerAddress: msgSrvAddr,
+		TopicRetentionTimeMs: topicRetnTimeMs,
+	}
+	publisher, err := kafka.NewKafkaPublisher(kConfig)
 	if err != nil {
 		glog.Errorf("fail to initialize Kafka publisher with error: %+v", err)
 		os.Exit(1)
