@@ -144,7 +144,7 @@ func (p *publisher) Stop() {
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
 func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	glog.Infof("Initializing Kafka producer client")
-	if err := validator(*kConfig); err != nil {
+	if err := validator(kConfig); err != nil {
 		glog.Errorf("Failed to validate Kafka config: %v with error: %+v", kConfig, err)
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	glog.V(5).Infof("Connected to broker: %s id: %d\n", br.Addr(), br.ID())
 
 	for _, t := range topicNames {
-		if err := ensureTopic(br, topicCreateTimeout, t, kConfig.TopicRetentionTimeMs); err != nil {
+		if err := ensureTopic(br, topicCreateTimeout, t, kConfig); err != nil {
 			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 			return nil, err
 		}
@@ -200,7 +200,10 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	}, nil
 }
 
-func validator(kConfig Config) error {
+func validator(kConfig *Config) error {
+	if kConfig == nil {
+		return fmt.Errorf("kafka config can not be nil")
+	}
 	host, port, _ := net.SplitHostPort(kConfig.ServerAddress)
 	if host == "" || port == "" {
 		return fmt.Errorf("host or port cannot be ''")
@@ -220,24 +223,24 @@ func validator(kConfig Config) error {
 		return fmt.Errorf("the value of port is invalid")
 	}
 	// validator for topic retention time
-	if i, err := strconv.Atoi(kConfig.TopicRetentionTimeMs); err != nil {
+	i, err := strconv.Atoi(kConfig.TopicRetentionTimeMs)
+	if err != nil {
 		return err
-	} else {
-		if i < 0 {
-			return fmt.Errorf("kafka topic retention time can not be less than 0")
-		}
+	}
+	if i < -1 {
+		return fmt.Errorf("kafka topic retention time can not be less than 0")
 	}
 	return nil
 }
 
-func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName, kafkaTpRetnTimeMs string) error {
+func ensureTopic(br *sarama.Broker, timeout time.Duration, topicName string, kConfig *Config) error {
 	topic := &sarama.CreateTopicsRequest{
 		TopicDetails: map[string]*sarama.TopicDetail{
 			topicName: {
 				NumPartitions:     1,
 				ReplicationFactor: 1,
 				ConfigEntries: map[string]*string{
-					"retention.ms": &kafkaTpRetnTimeMs,
+					"retention.ms": &kConfig.TopicRetentionTimeMs,
 				},
 			},
 		},
