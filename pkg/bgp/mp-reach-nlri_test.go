@@ -43,6 +43,17 @@ func TestUnmarshalMPReachNLRI(t *testing.T) {
 			srv6:    false,
 			addPath: map[int]bool{},
 		},
+		{
+			name:  "possible panic in ls nlri 71",
+			input: []byte{64, 4, 71, 16, 36, 9, 128, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 4, 0, 66, 2, 0, 0, 0, 0, 0, 0, 95, 80, 1, 0, 0, 26, 2, 0, 0, 4, 0, 0, 95, 80, 2, 1, 0, 4, 211, 136, 191, 255, 2, 3, 0, 6, 33, 17, 54, 25, 18, 54, 1, 9, 0, 17, 127, 36, 9, 128, 30, 0, 240, 0, 1, 0, 0, 0, 0, 0, 0, 0, 202},
+			expect: &MPReachNLRI{
+				AddressFamilyID:      16388,
+				SubAddressFamilyID:   71,
+				NextHopAddressLength: 16,
+				NextHopAddress:       []byte{36, 9, 128, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11},
+				NLRI:                 []byte{0, 4, 0, 66, 2, 0, 0, 0, 0, 0, 0, 95, 80, 1, 0, 0, 26, 2, 0, 0, 4, 0, 0, 95, 80, 2, 1, 0, 4, 211, 136, 191, 255, 2, 3, 0, 6, 33, 17, 54, 25, 18, 54, 1, 9, 0, 17, 127, 36, 9, 128, 30, 0, 240, 0, 1, 0, 0, 0, 0, 0, 0, 0, 202},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
