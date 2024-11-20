@@ -19,6 +19,7 @@ import (
 
 var (
 	msgSrvAddr string
+	topicRetnTimeMs string
 	file       string
 	delay      int
 	iterations int
@@ -26,6 +27,7 @@ var (
 
 func init() {
 	flag.StringVar(&msgSrvAddr, "message-server", "", "URL to the messages supplying server")
+	flag.StringVar(&topicRetnTimeMs, "topic-retention-time-ms", "900000", "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
 	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "File with the bmp messages to replay")
 	flag.IntVar(&delay, "delay", 0, "Delay in seconds to add between sending messages")
 	flag.IntVar(&iterations, "iterations", 1, "Number of iterations to replay messages")
@@ -44,7 +46,11 @@ func main() {
 	defer f.Close()
 
 	// Initializing publisher process
-	publisher, err := kafka.NewKafkaPublisher(msgSrvAddr)
+	kConfig := &kafka.Config{
+		ServerAddress: msgSrvAddr,
+		TopicRetentionTimeMs: topicRetnTimeMs,
+	}
+	publisher, err := kafka.NewKafkaPublisher(kConfig)
 	if err != nil {
 		glog.Errorf("fail to initialize Kafka publisher with error: %+v", err)
 		os.Exit(1)
