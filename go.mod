@@ -1,6 +1,6 @@
 module github.com/sbezverk/gobmp
 
-go 1.23
+go 1.22
 
 require (
 	github.com/IBM/sarama v1.44.0
