@@ -74,7 +74,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 		}
 		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 			// Last element in AS_PATH would be the AS of the origin
-			prfx.OriginAS = int32(ases[len(ases)-1])
+			prfx.OriginAS = ases[len(ases)-1]
 		}
 		prfx.PeerIP = ph.GetPeerAddrString()
 		prfx.Nexthop = nlri.GetNextHop()

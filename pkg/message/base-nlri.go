@@ -67,7 +67,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 		}
 		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 			// Last element in AS_PATH would be the AS of the origin
-			prfx.OriginAS = int32(ases[len(ases)-1])
+			prfx.OriginAS = ases[len(ases)-1]
 		}
 		prfx.IsIPv4 = true
 		prfx.PeerIP = ph.GetPeerAddrString()
