@@ -38,7 +38,7 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 
 	if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 		// Last element in AS_PATH would be the AS of the origin
-		fs.OriginAS = int32(ases[len(ases)-1])
+		fs.OriginAS = ases[len(ases)-1]
 	}
 
 	fs.Nexthop = nlri.GetNextHop()
