@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/Shopify/sarama v1.27.0
 	github.com/go-test/deep v1.0.8
-	github.com/golang/glog v1.1.1
+	github.com/golang/glog v1.2.4
 	github.com/nats-io/nats.go v1.28.0
 	github.com/sbezverk/tools v0.0.0-20230714051746-80037ac202cf
 )
