@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/testify v1.8.4 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect
-	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
