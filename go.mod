@@ -4,9 +4,9 @@ go 1.19
 
 require (
 	github.com/IBM/sarama v1.43.3
-	github.com/go-test/deep v1.1.1
+	github.com/go-test/deep v1.0.8
 	github.com/golang/glog v1.2.4
-	github.com/nats-io/nats.go v1.29.0
+	github.com/nats-io/nats.go v1.28.0
 	github.com/sbezverk/tools v0.0.0-20230829072858-5ef962b0f1c0
 )
 
@@ -35,5 +35,5 @@ require (
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
-	google.golang.org/protobuf v1.33.0 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
 )
