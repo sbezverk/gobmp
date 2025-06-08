@@ -176,10 +176,12 @@ Port to listen for incoming BMP messages (default 5000)
 --tls-key={key file}
 --tls-ca={ca file}
 ```
-aarafat-tag:
-When these options are provided, goBMP additionally listens for BMP over TLS (BMPS)
-connections on the specified port using mutual TLS as defined in
-[draft-hmntsharma-bmp-over-tls](https://datatracker.ietf.org/doc/draft-hmntsharma-bmp-over-tls/02/).
+
+When these options are provided, goBMP additionally supports BMP over TLS (BMPS) connections by listening on the specified port using mutual TLS, as defined in [draft-hmntsharma-bmp-over-tls](https://datatracker.ietf.org/doc/draft-hmntsharma-bmp-over-tls/02/).
+
+Packet behaviour on the wire with BMPS enabled - a session begins with a standard mutual TLS handshake on the configured port. The server presents its certificate, the client responds with its own, and both certificates are verified against the configured certificate authorities (CAs). Once the handshake is successfully completed, the connection is fully encrypted.
+
+From that point onward, BMP messages are transmitted over the established TLS tunnel just as they would be over a plain TCP connection. The application reads BMP headers and payloads from a `net.Conn`, which is a `tls.Conn` in the case of BMPS. As a result, all packets on the wire are encrypted at the transport layer, ensuring both confidentiality and integrity of BMP data.
 
 
 ```
