@@ -170,6 +170,17 @@ Full path and  file name to store messages when "dump=file"
 
 Port to listen for incoming BMP messages (default 5000)
 
+```
+--tls-port={port}
+--tls-cert={certificate file}
+--tls-key={key file}
+--tls-ca={ca file}
+```
+aarafat-tag:
+When these options are provided, goBMP additionally listens for BMP over TLS (BMPS)
+connections on the specified port using mutual TLS as defined in
+[draft-hmntsharma-bmp-over-tls](https://datatracker.ietf.org/doc/draft-hmntsharma-bmp-over-tls/02/).
+
 
 ```
 --v=(1-7)

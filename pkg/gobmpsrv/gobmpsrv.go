@@ -1,9 +1,12 @@
 package gobmpsrv
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net"
+	"os"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -25,12 +28,17 @@ type bmpServer struct {
 	sourcePort      int
 	destinationPort int
 	incoming        net.Listener
+	tlsConfig       *tls.Config
 	stop            chan struct{}
 }
 
 func (srv *bmpServer) Start() {
 	// Starting bmp server server
-	glog.Infof("Starting gobmp server on %s, intercept mode: %t\n", srv.incoming.Addr().String(), srv.intercept)
+	mode := "BMP"
+	if srv.tlsConfig != nil {
+		mode = "BMPS"
+	}
+	glog.Infof("Starting gobmp server on %s (%s), intercept mode: %t\n", srv.incoming.Addr().String(), mode, srv.intercept)
 	go srv.server()
 }
 
@@ -116,9 +124,39 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	}
 }
 
-// NewBMPServer instantiates a new instance of BMP Server
-func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool) (BMPServer, error) {
-	incoming, err := net.Listen("tcp", fmt.Sprintf(":%d", sPort))
+// LoadTLSConfig returns TLS configuration for BMP over TLS server.
+// It enables TLS 1.3 and requires and verifies client certificates.
+func LoadTLSConfig(certFile, keyFile, caFile string) (*tls.Config, error) {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, err
+	}
+	caBytes, err := os.ReadFile(caFile)
+	if err != nil {
+		return nil, err
+	}
+	caPool := x509.NewCertPool()
+	if !caPool.AppendCertsFromPEM(caBytes) {
+		return nil, fmt.Errorf("failed to parse CA certificate")
+	}
+	return &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientCAs:    caPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS13,
+	}, nil
+}
+
+// NewBMPServer instantiates a new instance of BMP Server. If tlsCfg is not nil
+// the server listens for BMPS connections using the provided TLS configuration.
+func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, tlsCfg *tls.Config) (BMPServer, error) {
+	var incoming net.Listener
+	var err error
+	if tlsCfg != nil {
+		incoming, err = tls.Listen("tcp", fmt.Sprintf(":%d", sPort), tlsCfg)
+	} else {
+		incoming, err = net.Listen("tcp", fmt.Sprintf(":%d", sPort))
+	}
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", sPort, err)
 		return nil, err
@@ -130,6 +168,7 @@ func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF boo
 		intercept:       intercept,
 		publisher:       p,
 		incoming:        incoming,
+		tlsConfig:       tlsCfg,
 		splitAF:         splitAF,
 	}
 

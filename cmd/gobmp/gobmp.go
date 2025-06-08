@@ -22,22 +22,30 @@ import (
 )
 
 var (
-	dstPort   int
-	srcPort   int
-	perfPort  int
-	kafkaSrv  string
+	dstPort           int
+	tlsPort           int
+	tlsCert           string
+	tlsKey            string
+	tlsCA             string
+	srcPort           int
+	perfPort          int
+	kafkaSrv          string
 	kafkaTpRetnTimeMs string // Kafka topic retention time in ms
-	natsSrv   string
-	intercept string
-	splitAF   string
-	dump      string
-	file      string
+	natsSrv           string
+	intercept         string
+	splitAF           string
+	dump              string
+	file              string
 )
 
 func init() {
 	runtime.GOMAXPROCS(1)
 	flag.IntVar(&srcPort, "source-port", 5000, "port exposed to outside")
 	flag.IntVar(&dstPort, "destination-port", 5050, "port openBMP is listening")
+	flag.IntVar(&tlsPort, "tls-port", 0, "port for BMP over TLS (BMPS) session")
+	flag.StringVar(&tlsCert, "tls-cert", "", "TLS server certificate file")
+	flag.StringVar(&tlsKey, "tls-key", "", "TLS server key file")
+	flag.StringVar(&tlsCA, "tls-ca", "", "CA certificate for client verification")
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
 	flag.StringVar(&kafkaTpRetnTimeMs, "kafka-topic-retention-time-ms", "900000", "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
 	flag.StringVar(&natsSrv, "nats-server", "", "URL to access NATS server")
@@ -82,7 +90,7 @@ func main() {
 		glog.V(5).Infof("NATS publisher has been successfully initialized.")
 	default:
 		kConfig := &kafka.Config{
-			ServerAddress: kafkaSrv,
+			ServerAddress:        kafkaSrv,
 			TopicRetentionTimeMs: kafkaTpRetnTimeMs,
 		}
 		publisher, err = kafka.NewKafkaPublisher(kConfig)
@@ -104,17 +112,37 @@ func main() {
 		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
 		os.Exit(1)
 	}
-	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag)
+	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag, nil)
 	if err != nil {
 		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
 		os.Exit(1)
 	}
-	// Starting Interceptor server
+	
+	var bmpTLSSrv gobmpsrv.BMPServer
+	if tlsPort != 0 {
+		tlsCfg, err := gobmpsrv.LoadTLSConfig(tlsCert, tlsKey, tlsCA)
+		if err != nil {
+			glog.Errorf("failed to load TLS configuration: %+v", err)
+			os.Exit(1)
+		}
+		bmpTLSSrv, err = gobmpsrv.NewBMPServer(tlsPort, dstPort, interceptFlag, publisher, splitAFFlag, tlsCfg)
+		if err != nil {
+			glog.Errorf("failed to setup BMPS server with error: %+v", err)
+			os.Exit(1)
+		}
+	}
+	// Starting servers
 	bmpSrv.Start()
+	if bmpTLSSrv != nil {
+		bmpTLSSrv.Start()
+	}
 
 	stopCh := tools.SetupSignalHandler()
 	<-stopCh
 
 	bmpSrv.Stop()
+	if bmpTLSSrv != nil {
+		bmpTLSSrv.Stop()
+	}
 	os.Exit(0)
 }
