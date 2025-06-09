@@ -128,6 +128,12 @@ The statically linked linux binary will be stored in ./bin sub folder.
 ```
 
 *goBMP parameters:*
+```
+--config=/path/to/gobmp.yaml
+```
+
+Optional path to a configuration file. By default `gobmp` looks for `gobmp.yaml` in `/etc/gobmp`, `$HOME/.gobmp` or the current directory.
+
 
 ```
 --destination-port={port} (default 5050)
@@ -155,7 +161,17 @@ When intercept set "true", all incomming BMP messages will be processed and a co
 ```
 
 Kafka server TCP/IP address
+```
+--kafka-topic-retention-time-ms={milliseconds}
+```
 
+Kafka topic retention time in milliseconds. Default is `900000` (15 minutes).
+
+```
+--nats-server=nats://server:port
+```
+
+Publish messages to a NATS server instead of Kafka when `--dump=nats`.
 
 ```
 --msg-file={message file path and location} (default "/tmp/messages.json")
@@ -169,6 +185,18 @@ Full path and  file name to store messages when "dump=file"
 ```
 
 Port to listen for incoming BMP messages (default 5000)
+```
+--split-af={true|false}
+```
+
+Publish IPv4 and IPv6 updates to separate topics when set to `true` (default). When `false` the same topic is used for both address families.
+
+```
+--performance-port={port} (default 56767)
+```
+
+Port used by the built-in performance and debugging HTTP server.
+
 
 ```
 --tls-port={port}
@@ -189,6 +217,36 @@ From that point onward, BMP messages are transmitted over the established TLS tu
 ```
 
 Log level, please use --v=6 for debugging. Level 6 prints in hexadecimal format the incoming message. 
+
+### Configuration via file or environment variables
+
+All command-line flags can also be provided in a YAML configuration file or via environment variables. Environment variable names match the flag names but use upper case and underscores instead of dashes. For example `SOURCE_PORT` or `KAFKA_SERVER`.
+
+Example `gobmp.yaml` grouped by use cases:
+
+```yaml
+# Ports used by the server
+source-port: 5000                # Listen for incoming BMP connections
+destination-port: 5050           # Forward BMP data to this port when intercepting
+performance-port: 56767          # Exposes /debug/pprof endpoints
+
+# TLS/BMPS settings (enable by setting a tls-port value)
+tls-port: 0                      # Set to non-zero to enable BMP over TLS
+tls-cert: /etc/gobmp/server.crt  # Server certificate
+tls-key: /etc/gobmp/server.key   # Server private key
+tls-ca: /etc/gobmp/ca.crt        # CA for client verification
+
+# Message publication settings
+kafka-server: localhost:9092
+kafka-topic-retention-time-ms: 900000
+nats-server: nats://localhost:4222
+dump: kafka                      # kafka (default), file, console or nats
+msg-file: /tmp/messages.json     # Used when dump=file
+
+# Operational behaviour
+intercept: false                 # Copy messages to destination-port instead of publishing
+split-af: true                   # Separate IPv4 and IPv6 topics
+```
 
 ### As a kubernetes deployment
 
