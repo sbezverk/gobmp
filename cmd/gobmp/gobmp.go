@@ -52,6 +52,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	runtime.GOMAXPROCS(1)
 	cobra.OnInitialize(initConfig)
+	rootCmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gobmp.yaml)")
 	rootCmd.PersistentFlags().IntVar(&srcPort, "source-port", 5000, "port exposed to outside")
 	rootCmd.PersistentFlags().IntVar(&dstPort, "destination-port", 5050, "port openBMP is listening")
