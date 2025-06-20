@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"sync"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/tools"
@@ -8,10 +10,16 @@ import (
 
 // Parser dispatches workers upon request received from the channel
 func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}) {
+	// This is used to ensure that the calls to parsingWorker() occur "in sequence",
+	// meaning Nth call has to complete before the (N+1)th call starts
+	var wg sync.WaitGroup
 	for {
 		select {
 		case msg := <-queue:
-			go parsingWorker(msg, producerQueue)
+			wg.Add(1)
+			go parsingWorker(msg, producerQueue, &wg)
+			// Wait until the call above is done
+			wg.Wait()
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
@@ -19,7 +27,10 @@ func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{
 	}
 }
 
-func parsingWorker(b []byte, producerQueue chan bmp.Message) {
+func parsingWorker(b []byte, producerQueue chan bmp.Message, wg *sync.WaitGroup) {
+	// To indicate to the caller that it is done
+	defer wg.Done()
+
 	perPerHeaderLen := 0
 	var bmpMsg bmp.Message
 	// Loop through all found Common Headers in the slice and process them
@@ -100,9 +111,12 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 			if glog.V(6) {
 				glog.Infof("Content:%s", tools.MessageHex(b))
 			}
+		default:
+			glog.Warningf("Unsupported message %d", ch.MessageType)
 		}
 		p += (int(ch.MessageLength) - bmp.CommonHeaderLength)
 		if producerQueue != nil && bmpMsg.Payload != nil {
+			glog.V(10).Infof("Sending msg to producer, hdr:<%+v> payload:<%+v>", bmpMsg.PeerHeader, bmpMsg.Payload)
 			producerQueue <- bmpMsg
 		}
 	}

@@ -1,6 +1,18 @@
 package parser
 
-import "testing"
+import (
+	"sync"
+	"testing"
+
+	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/stretchr/testify/require"
+)
+
+// Msg using AS 5070
+var msgAS5070 []byte = []byte{3, 0, 0, 0, 32, 4, 0, 1, 0, 10, 32, 55, 46, 50, 46, 49, 46, 50, 51, 73, 0, 2, 0, 8, 120, 114, 118, 57, 107, 45, 114, 49, 3, 0, 0, 0, 234, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 80, 103, 0, 0, 19, 206, 57, 112, 1, 254, 94, 98, 129, 171, 0, 0, 215, 126, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 80, 128, 0, 179, 131, 152, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 91, 1, 4, 19, 206, 0, 90, 192, 168, 8, 8, 62, 2, 6, 1, 4, 0, 1, 0, 1, 2, 6, 1, 4, 0, 1, 0, 4, 2, 6, 1, 4, 0, 1, 0, 128, 2, 2, 128, 0, 2, 2, 2, 0, 2, 6, 65, 4, 0, 0, 19, 206, 2, 20, 5, 18, 0, 1, 0, 1, 0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 0, 128, 0, 2, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 75, 1, 4, 19, 206, 0, 90, 57, 112, 1, 254, 46, 2, 44, 2, 0, 1, 4, 0, 1, 0, 1, 1, 4, 0, 2, 0, 1, 1, 4, 0, 1, 0, 4, 1, 4, 0, 2, 0, 4, 1, 4, 0, 1, 0, 128, 1, 4, 0, 2, 0, 128, 65, 4, 0, 0, 19, 206}
+
+// Msg using AS 5071 (rest same as above)
+var msgAS5071 []byte = []byte{3, 0, 0, 0, 32, 4, 0, 1, 0, 10, 32, 55, 46, 50, 46, 49, 46, 50, 51, 73, 0, 2, 0, 8, 120, 114, 118, 57, 107, 45, 114, 49, 3, 0, 0, 0, 234, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 80, 103, 0, 0, 19, 207, 57, 112, 1, 254, 94, 98, 129, 171, 0, 0, 215, 126, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 80, 128, 0, 179, 131, 152, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 91, 1, 4, 19, 206, 0, 90, 192, 168, 8, 8, 62, 2, 6, 1, 4, 0, 1, 0, 1, 2, 6, 1, 4, 0, 1, 0, 4, 2, 6, 1, 4, 0, 1, 0, 128, 2, 2, 128, 0, 2, 2, 2, 0, 2, 6, 65, 4, 0, 0, 19, 206, 2, 20, 5, 18, 0, 1, 0, 1, 0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 0, 128, 0, 2, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 75, 1, 4, 19, 206, 0, 90, 57, 112, 1, 254, 46, 2, 44, 2, 0, 1, 4, 0, 1, 0, 1, 1, 4, 0, 2, 0, 1, 1, 4, 0, 1, 0, 4, 1, 4, 0, 2, 0, 4, 1, 4, 0, 1, 0, 128, 1, 4, 0, 2, 0, 128, 65, 4, 0, 0, 19, 206}
 
 func TestParsingWorker(t *testing.T) {
 	tests := []struct {
@@ -14,7 +26,50 @@ func TestParsingWorker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsingWorker(tt.input, nil)
+			var wg sync.WaitGroup
+			wg.Add(1)
+			parsingWorker(tt.input, nil, &wg)
 		})
 	}
+}
+
+func TestParser(t *testing.T) {
+	var inputs [][]byte
+
+	producerQueue := make(chan bmp.Message)
+	parserQueue := make(chan []byte)
+	parsStop := make(chan struct{})
+
+	// We put 1000 identical messages with AS5070 and a last one with 5071
+	for range 1000 {
+		inputs = append(inputs, msgAS5070)
+	}
+	inputs = append(inputs, msgAS5071)
+
+	go Parser(parserQueue, producerQueue, parsStop)
+
+	// This is to ensure that all the produced messages by the parser are consumed
+	var wg sync.WaitGroup
+	wg.Add(1)
+	var lastProducedAS uint32
+	go func() {
+		t.Log("Waiting for msg on producer queue")
+		for range inputs {
+			msg := <-producerQueue
+			lastProducedAS = msg.PeerHeader.PeerAS
+		}
+		wg.Done()
+	}()
+	t.Log("Sending inputs to parserQueue")
+	for _, input := range inputs {
+		parserQueue <- input
+	}
+	wg.Wait()
+
+	t.Log("Done")
+
+	parsStop <- struct{}{}
+	// Last message on produceQueue has to be AS5071 (0x13cf = 5071),
+	// otherwise it means messages have been produced out of order (compared to input)
+	require.Equal(t, uint32(0x13cf), lastProducedAS)
 }
