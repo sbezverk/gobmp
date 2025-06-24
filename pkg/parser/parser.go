@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"sync"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/tools"
@@ -10,16 +8,11 @@ import (
 
 // Parser dispatches workers upon request received from the channel
 func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}) {
-	// This is used to ensure that the calls to parsingWorker() occur "in sequence",
-	// meaning Nth call has to complete before the (N+1)th call starts
-	var wg sync.WaitGroup
 	for {
 		select {
 		case msg := <-queue:
-			wg.Add(1)
-			go parsingWorker(msg, producerQueue, &wg)
-			// Wait until the call above is done
-			wg.Wait()
+			// Synchronous call to guarantee no misordering
+			parsingWorker(msg, producerQueue)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
@@ -27,10 +20,7 @@ func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{
 	}
 }
 
-func parsingWorker(b []byte, producerQueue chan bmp.Message, wg *sync.WaitGroup) {
-	// To indicate to the caller that it is done
-	defer wg.Done()
-
+func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 	perPerHeaderLen := 0
 	var bmpMsg bmp.Message
 	// Loop through all found Common Headers in the slice and process them
