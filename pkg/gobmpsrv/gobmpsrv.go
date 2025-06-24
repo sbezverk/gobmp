@@ -19,8 +19,10 @@ type BMPServer interface {
 }
 
 type bmpServer struct {
-	splitAF         bool
-	intercept       bool
+	splitAF   bool
+	intercept bool
+	// Whether to parse the incoming messages synchronously
+	syncParsing     bool
 	publisher       pub.Publisher
 	sourcePort      int
 	destinationPort int
@@ -30,7 +32,7 @@ type bmpServer struct {
 
 func (srv *bmpServer) Start() {
 	// Starting bmp server server
-	glog.Infof("Starting gobmp server on %s, intercept mode: %t\n", srv.incoming.Addr().String(), srv.intercept)
+	glog.Infof("Starting gobmp server on %s, intercept mode: %t, syncParsing: %t\n", srv.incoming.Addr().String(), srv.intercept, srv.syncParsing)
 	go srv.server()
 }
 
@@ -77,7 +79,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	parserQueue := make(chan []byte)
 	parsStop := make(chan struct{})
 	// Starting parser per client with dedicated work queue
-	go parser.Parser(parserQueue, producerQueue, parsStop)
+	go parser.Parser(parserQueue, producerQueue, parsStop, srv.syncParsing)
 	defer func() {
 		glog.V(5).Infof("all done with client %+v", client.RemoteAddr())
 		close(parsStop)
@@ -117,7 +119,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 }
 
 // NewBMPServer instantiates a new instance of BMP Server
-func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool) (BMPServer, error) {
+func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, syncParsing bool) (BMPServer, error) {
 	incoming, err := net.Listen("tcp", fmt.Sprintf(":%d", sPort))
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", sPort, err)
@@ -131,6 +133,7 @@ func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF boo
 		publisher:       p,
 		incoming:        incoming,
 		splitAF:         splitAF,
+		syncParsing:     syncParsing,
 	}
 
 	return &bmp, nil

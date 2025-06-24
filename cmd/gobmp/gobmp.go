@@ -22,16 +22,17 @@ import (
 )
 
 var (
-	dstPort   int
-	srcPort   int
-	perfPort  int
-	kafkaSrv  string
+	dstPort           int
+	srcPort           int
+	perfPort          int
+	kafkaSrv          string
 	kafkaTpRetnTimeMs string // Kafka topic retention time in ms
-	natsSrv   string
-	intercept string
-	splitAF   string
-	dump      string
-	file      string
+	natsSrv           string
+	intercept         string
+	splitAF           string
+	dump              string
+	file              string
+	syncParsing       string
 )
 
 func init() {
@@ -45,7 +46,8 @@ func init() {
 	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" (default) ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 56767, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\", to standard output when \"dump=console\" or to NATS when \"dump=nats\"")
-	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path anf file name to store messages when \"dump=file\"")
+	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path and file name to store messages when \"dump=file\"")
+	flag.StringVar(&syncParsing, "sync-parsing", "false", "Set to \"true\" for synchronous parsing of messages: guarantees ordering at the expense of performance")
 }
 
 func main() {
@@ -82,7 +84,7 @@ func main() {
 		glog.V(5).Infof("NATS publisher has been successfully initialized.")
 	default:
 		kConfig := &kafka.Config{
-			ServerAddress: kafkaSrv,
+			ServerAddress:        kafkaSrv,
 			TopicRetentionTimeMs: kafkaTpRetnTimeMs,
 		}
 		publisher, err = kafka.NewKafkaPublisher(kConfig)
@@ -104,7 +106,12 @@ func main() {
 		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
 		os.Exit(1)
 	}
-	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag)
+	syncParsingFlag, err := strconv.ParseBool(syncParsing)
+	if err != nil {
+		glog.Errorf("failed to parse to bool the value of the syncParsing flag with error: %+v", err)
+		os.Exit(1)
+	}
+	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag, syncParsingFlag)
 	if err != nil {
 		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
 		os.Exit(1)

@@ -7,12 +7,17 @@ import (
 )
 
 // Parser dispatches workers upon request received from the channel
-func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}) {
+func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}, syncParsing bool) {
 	for {
 		select {
 		case msg := <-queue:
-			// Synchronous call to guarantee no misordering
-			parsingWorker(msg, producerQueue)
+			if syncParsing {
+				// Synchronous call to guarantee no misordering
+				parsingWorker(msg, producerQueue)
+			} else {
+				// For performance
+				go parsingWorker(msg, producerQueue)
+			}
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return

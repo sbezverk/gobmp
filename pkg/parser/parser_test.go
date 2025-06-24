@@ -44,7 +44,8 @@ func TestParser(t *testing.T) {
 	}
 	inputs = append(inputs, msgAS5071)
 
-	go Parser(parserQueue, producerQueue, parsStop)
+	// Synchronous parsing to guarantee ordering
+	go Parser(parserQueue, producerQueue, parsStop, true)
 
 	// This is to ensure that all the produced messages by the parser are consumed
 	var wg sync.WaitGroup
