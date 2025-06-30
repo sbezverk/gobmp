@@ -57,32 +57,32 @@ func (n *NLRI) GetEVPNTAG() []byte {
 
 // GetEVPNMAC returns Ethernet MAC object
 func (n *NLRI) GetEVPNMAC() *MACAddress {
-	return n.RouteTypeSpec.getMAC()
+	return n.getMAC()
 }
 
 // GetEVPNMACLength returns Ethernet MAC length in bits
 func (n *NLRI) GetEVPNMACLength() *uint8 {
-	return n.RouteTypeSpec.getMACLength()
+	return n.getMACLength()
 }
 
 // GetEVPNIPAddr returns IP Address object
 func (n *NLRI) GetEVPNIPAddr() []byte {
-	return n.RouteTypeSpec.getIPAddress()
+	return n.getIPAddress()
 }
 
 // GetEVPNIPLength returns IP Address length in bits
 func (n *NLRI) GetEVPNIPLength() *uint8 {
-	return n.RouteTypeSpec.getIPLength()
+	return n.getIPLength()
 }
 
 // GetEVPNGWAddr returns IP Address of Gateway
 func (n *NLRI) GetEVPNGWAddr() []byte {
-	return n.RouteTypeSpec.getGWAddress()
+	return n.getGWAddress()
 }
 
 // GetEVPNLabel returns stack of labels found in the nlri
 func (n *NLRI) GetEVPNLabel() []*base.Label {
-	return n.RouteTypeSpec.getLabel()
+	return n.getLabel()
 }
 
 // UnmarshalEVPNNLRI instantiates an EVPN NLRI object
