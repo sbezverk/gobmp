@@ -40,7 +40,7 @@ jobs:
     strategy:
         matrix:
           os: [ubuntu-latest]
-          go-version: [1.20.x]
+          go-version: [1.23.x]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -52,7 +52,7 @@ jobs:
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Install Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.sum"
@@ -61,7 +61,7 @@ jobs:
       - name: Build validator binary
         run: make validator
       - name: pulling XRd container
-        run: docker pull sbezverk/xrd-control-plane:7.9.2
+        run: docker pull sbezverk/xrd-control-plane:25.2.1
       - name: check for gobmp container
         run: docker images
       - name: starts unicast v4 integration test
