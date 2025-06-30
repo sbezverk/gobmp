@@ -41,7 +41,6 @@ func main() {
 		glog.Errorf("fail to open messages file %s with error: %+v", file, err)
 		os.Exit(1)
 	}
-	defer f.Close()
 
 	// Initializing publisher process
 	publisher, err := kafka.NewKafkaPublisher(msgSrvAddr)
@@ -77,7 +76,8 @@ func main() {
 		glog.Infof("%3f seconds took to process %d records", time.Since(start).Seconds(), records)
 		records = 0
 	}
-
+    f.Close()
+	
 	os.Exit(0)
 }
 
