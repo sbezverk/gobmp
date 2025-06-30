@@ -62,6 +62,7 @@ jobs:
         run: make validator
       - name: pulling XRd container
         run: docker pull sbezverk/xrd-control-plane:25.2.1
+        continue-on-error: true
       - name: check for gobmp container
         run: docker images
       - name: starts unicast v4 integration test
