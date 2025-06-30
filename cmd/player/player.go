@@ -76,8 +76,8 @@ func main() {
 		glog.Infof("%3f seconds took to process %d records", time.Since(start).Seconds(), records)
 		records = 0
 	}
-    f.Close()
-	
+    _ = f.Close()
+
 	os.Exit(0)
 }
 
