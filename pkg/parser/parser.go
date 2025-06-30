@@ -7,11 +7,17 @@ import (
 )
 
 // Parser dispatches workers upon request received from the channel
-func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}) {
+func Parser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}, syncParsing bool) {
 	for {
 		select {
 		case msg := <-queue:
-			go parsingWorker(msg, producerQueue)
+			if syncParsing {
+				// Synchronous call to guarantee no misordering
+				parsingWorker(msg, producerQueue)
+			} else {
+				// For performance
+				go parsingWorker(msg, producerQueue)
+			}
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
@@ -100,9 +106,12 @@ func parsingWorker(b []byte, producerQueue chan bmp.Message) {
 			if glog.V(6) {
 				glog.Infof("Content:%s", tools.MessageHex(b))
 			}
+		default:
+			glog.Warningf("Unsupported message %d", ch.MessageType)
 		}
 		p += (int(ch.MessageLength) - bmp.CommonHeaderLength)
 		if producerQueue != nil && bmpMsg.Payload != nil {
+			glog.V(10).Infof("Sending msg to producer, hdr:<%+v> payload:<%+v>", bmpMsg.PeerHeader, bmpMsg.Payload)
 			producerQueue <- bmpMsg
 		}
 	}
