@@ -38,7 +38,7 @@ func (p *pubfiler) PublishMessage(msgType int, msgHash []byte, msg []byte) error
 }
 
 func (p *pubfiler) Stop() {
-	p.file.Close()
+	_ = p.file.Close()
 }
 
 // NewFiler returns a new instance of message filer

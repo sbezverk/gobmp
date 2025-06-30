@@ -140,7 +140,7 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 
 func (p *publisher) Stop() {
 	close(p.stopCh)
-	p.broker.Close()
+	_ = p.broker.Close()
 }
 
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
@@ -188,7 +188,7 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 			case err := <-producer.Errors():
 				glog.Errorf("failed to produce message with error: %+v", *err)
 			case <-stopCh:
-				producer.Close()
+				_ = producer.Close()
 				return
 			}
 		}

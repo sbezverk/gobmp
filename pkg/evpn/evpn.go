@@ -42,17 +42,17 @@ func (n *NLRI) GetEVPNRouteType() uint8 {
 
 // GetEVPNRD returns a string representation of RD if available
 func (n *NLRI) GetEVPNRD() string {
-	return n.RouteTypeSpec.getRD()
+	return n.getRD()
 }
 
 // GetEVPNESI returns Ethernet Segment Identifier
 func (n *NLRI) GetEVPNESI() *ESI {
-	return n.RouteTypeSpec.getESI()
+	return n.getESI()
 }
 
 // GetEVPNTAG returns Ethernet TAG
 func (n *NLRI) GetEVPNTAG() []byte {
-	return n.RouteTypeSpec.getTag()
+	return n.getTag()
 }
 
 // GetEVPNMAC returns Ethernet MAC object

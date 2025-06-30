@@ -67,7 +67,7 @@ func (k *kafka) Start() {
 
 func (k *kafka) Stop() {
 	close(k.stopCh)
-	k.master.Close()
+	_ = k.master.Close()
 }
 
 func (k *kafka) topicReader(topic *TopicDescriptor) {
