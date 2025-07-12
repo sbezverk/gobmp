@@ -1,0 +1,97 @@
+name: Publish gobmp container
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag (e.g. v1.0.0)'
+        required: true
+        default: 'latest'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache-dependency-path: '**/go.sum'
+
+      - name: Build gobmp binary
+        run: make gobmp
+
+      # - name: Build gobmp container
+      #   run: |
+      #     REGISTRY_NAME=ghcr.io/${{ github.repository_owner }} IMAGE_VERSION=${{ github.event.inputs.image_tag }} make container
+
+      # - name: Login to GHCR
+      #   run: |
+      #     echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # - name: Push image
+      #   run: |
+      #     docker push ghcr.io/${{ github.repository_owner }}/gobmp:${{ github.event.inputs.image_tag }}
+
+      - name: Generate Dockerfile dynamically
+        run: |
+          TAG_NAME="${{ steps.vars.outputs.version }}"
+
+          cat <<EOF > Dockerfile
+          
+          FROM scratch
+
+          ENV GOMAXPROCS=1
+
+          USER root:root
+          RUN echo 'root:admin' | chpasswd
+
+          RUN apt-get update && \
+              apt-get install -y sudo iproute2 iputils-ping openssh-server vim wget libcunit1-dev libncurses-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev libjansson4 jq && \
+              apt-get clean && rm -rf /var/lib/apt/lists/*
+
+          # Config SSH
+          RUN echo "HostKeyAlgorithms ssh-dss,ecdsa-sha2-nistp256,ssh-ed25519" >> /etc/ssh/ssh_config    
+          RUN echo "KexAlgorithms diffie-hellman-group1-sha1,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,diffie-hellman-group14-sha1" >> /etc/ssh/ssh_config    
+          RUN service ssh restart
+
+          # Create admin user with sudo access
+          RUN useradd -rm -d /home/ubuntu -s /bin/bash -g root -G sudo -u 1001 suuser \
+              && echo 'suuser:suuser' | chpasswd \
+              && useradd -rm -d /home/ubuntu -s /bin/bash -g root -G sudo -u 1002 admin \
+              && echo 'admin:admin' | chpasswd
+
+          # Copy gombp    
+          COPY ./bin/gobmp /gobmp
+
+          ENTRYPOINT service ssh restart & bash
+
+          EOF
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.vars.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
