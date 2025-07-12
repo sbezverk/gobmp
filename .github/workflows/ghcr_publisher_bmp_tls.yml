@@ -1,4 +1,4 @@
-name: Publish gobmp container
+name: Publish gobmp container bmp tls
 
 on:
   workflow_dispatch:
