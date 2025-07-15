@@ -112,6 +112,28 @@ func (p *publisher) Stop() {
 	p.nc.Close()
 }
 
+func (p *publisher) createStreams() error {
+	// Define the stream configuration
+	streamConfig := &nats.StreamConfig{
+		Name:      "goBMP",
+		Subjects:  []string{"gobmp.parsed.*"},
+		Storage:   nats.FileStorage,
+		Retention: nats.InterestPolicy,
+		MaxMsgs:   -1, // No limit
+		MaxBytes:  -1, // No limit
+		MaxAge:    24 * time.Hour,
+		Replicas:  1,
+	}
+
+	// Try to create the stream, ignore if it already exists
+	_, err := p.js.AddStream(streamConfig)
+	if err != nil && err != nats.ErrStreamNameAlreadyInUse {
+		return fmt.Errorf("failed to create stream: %v", err)
+	}
+
+	return nil
+}
+
 // NewPublisher instantiates a new instance of a NATS publisher
 func NewPublisher(natsSrv string) (pub.Publisher, error) {
 	glog.Infof("Initializing NATS producer client")
@@ -134,8 +156,15 @@ func NewPublisher(natsSrv string) (pub.Publisher, error) {
 		return nil, err
 	}
 
-	return &publisher{
+	p := &publisher{
 		nc: nc,
 		js: js,
-	}, nil
+	}
+
+	// Create the streams
+	if err := p.createStreams(); err != nil {
+		return nil, err
+	}
+
+	return p, nil
 }
