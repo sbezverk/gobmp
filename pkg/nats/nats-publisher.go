@@ -121,7 +121,7 @@ func (p *publisher) createStreams() error {
 		Retention: nats.InterestPolicy,
 		MaxMsgs:   -1, // No limit
 		MaxBytes:  -1, // No limit
-		MaxAge:    24 * time.Hour,
+		MaxAge:    15 * time.Minute,
 		Replicas:  1,
 	}
 
