@@ -60,9 +60,17 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 	case 18:
 		fallthrough
 	case 19:
+		// Updatng the error handling in the l3vpn case...
 		msgs, err := p.l3vpn(nlri, operation, ph, update)
 		if err != nil {
-			glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
+			// Only log as error if its not the common "not found" case
+			if err.Error() == "not found" || err.Error() == "NLRI length is 0" {
+				if glog.V(6) {
+					glog.Infof("No L3VPN NLRI found in update") // Debug level logging
+				}
+			} else {
+				glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
+			}
 			return
 		}
 		for _, m := range msgs {
