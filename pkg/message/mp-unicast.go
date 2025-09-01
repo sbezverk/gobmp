@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -92,6 +93,14 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			a := make([]byte, 4)
 			copy(a, e.Prefix)
 			prfx.Prefix = net.IP(a).To4().String()
+			// Cap IPv4 prefix lengths at 32 bits
+			if prfx.PrefixLen > 32 {
+				if glog.V(6) {
+					glog.Warningf("Capping excessive IPv4 prefix length %d to 32 for prefix %s",
+						prfx.PrefixLen, prfx.Prefix)
+				}
+				prfx.PrefixLen = 32
+			}
 		}
 		if label {
 			for _, l := range e.Label {
