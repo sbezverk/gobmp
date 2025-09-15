@@ -77,6 +77,8 @@ services:
     tty: true
     depends_on:
       - kafka
+    volumes:
+      - "/tmp:/tmp"
 
   xr-1:
     cap_add:

@@ -18,11 +18,11 @@ import (
 )
 
 var (
-	msgSrvAddr string
+	msgSrvAddr      string
 	topicRetnTimeMs string
-	file       string
-	delay      int
-	iterations int
+	file            string
+	delay           int
+	iterations      int
 )
 
 func init() {
@@ -46,7 +46,7 @@ func main() {
 
 	// Initializing publisher process
 	kConfig := &kafka.Config{
-		ServerAddress: msgSrvAddr,
+		ServerAddress:        msgSrvAddr,
 		TopicRetentionTimeMs: topicRetnTimeMs,
 	}
 	publisher, err := kafka.NewKafkaPublisher(kConfig)
@@ -70,8 +70,8 @@ func main() {
 			wg.Add(1)
 			go func(msg *filer.MsgOut) {
 				defer wg.Done()
-				if err := publisher.PublishMessage(msg.Type, msg.Key, msg.Value); err != nil {
-					glog.Errorf("fail to publish message type: %d message key: %s with error: %+v", msg.Type, tools.MessageHex(msg.Key), err)
+				if err := publisher.PublishMessage(msg.MsgType, []byte(msg.MsgHash), []byte(msg.Msg)); err != nil {
+					glog.Errorf("fail to publish message type: %d message key: %s with error: %+v", msg.MsgType, tools.MessageHex([]byte(msg.MsgHash)), err)
 				}
 			}(msgs[e])
 			records++
@@ -82,7 +82,7 @@ func main() {
 		glog.Infof("%3f seconds took to process %d records", time.Since(start).Seconds(), records)
 		records = 0
 	}
-    _ = f.Close()
+	_ = f.Close()
 
 	os.Exit(0)
 }
