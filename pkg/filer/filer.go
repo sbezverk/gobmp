@@ -1,6 +1,7 @@
 package filer
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 
@@ -30,7 +31,9 @@ func (p *pubfiler) PublishMessage(msgType int, msgHash []byte, msg []byte) error
 		return err
 	}
 	b = append(b, '\n')
-	_, err = p.file.Write(b)
+	s := bytes.ReplaceAll(b, []byte(`\\n`), []byte(`\n`))
+	s = bytes.ReplaceAll(s, []byte(`\"`), []byte(`"`))
+	_, err = p.file.Write(s)
 	if err != nil {
 		return err
 	}
