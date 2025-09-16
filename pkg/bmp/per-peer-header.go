@@ -189,6 +189,7 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	}
 	p++
 	if pph.PeerType == PeerType3 {
+		glog.Infof("><SB> peer type 3 detected...")
 		// Flag F is applicable only to Peer type 3
 		pph.flagF = b[p]&0x80 == 0x80
 	} else {

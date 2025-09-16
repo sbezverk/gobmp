@@ -85,7 +85,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	}
 }
 
-func (p *producer) marshalAndPublish(msg interface{}, msgType int, hash []byte, debug bool) error {
+func (p *producer) marshalAndPublish(msg any, msgType int, hash []byte, debug bool) error {
 	j, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal a message of type %d with error: %+v", msgType, err)

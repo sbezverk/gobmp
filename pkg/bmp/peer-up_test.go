@@ -124,7 +124,7 @@ func TestPeerUpMsg(t *testing.T) {
 					{
 						InformationType:   3,
 						InformationLength: 6,
-						Information:       []byte{103, 108, 111, 98, 97, 108},
+						Information:       "global",
 					},
 				},
 			},

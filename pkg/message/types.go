@@ -7,6 +7,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
+	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/prefixsid"
 	"github.com/sbezverk/gobmp/pkg/sr"
@@ -17,39 +18,40 @@ import (
 
 // PeerStateChange defines a message format sent to as a result of BMP Peer Up or Peer Down message
 type PeerStateChange struct {
-	Key             string         `json:"_key,omitempty"`
-	ID              string         `json:"_id,omitempty"`
-	Rev             string         `json:"_rev,omitempty"`
-	Action          string         `json:"action,omitempty"` // Action can be "add" for peer up and "del" for peer down message
-	Sequence        int            `json:"sequence,omitempty"`
-	Hash            string         `json:"hash,omitempty"`
-	RouterHash      string         `json:"router_hash,omitempty"`
-	Name            string         `json:"name,omitempty"`
-	RemoteBGPID     string         `json:"remote_bgp_id,omitempty"`
-	RouterIP        string         `json:"router_ip,omitempty"`
-	Timestamp       string         `json:"timestamp,omitempty"`
-	RemoteASN       uint32         `json:"remote_asn,omitempty"`
-	RemoteIP        string         `json:"remote_ip,omitempty"`
-	PeerType        uint8          `json:"peer_type"`
-	PeerRD          string         `json:"peer_rd,omitempty"`
-	RemotePort      int            `json:"remote_port,omitempty"`
-	LocalASN        uint32         `json:"local_asn,omitempty"`
-	LocalIP         string         `json:"local_ip,omitempty"`
-	LocalPort       int            `json:"local_port,omitempty"`
-	LocalBGPID      string         `json:"local_bgp_id,omitempty"`
-	InfoData        []byte         `json:"info_data,omitempty"`
-	AdvCapabilities bgp.Capability `json:"adv_cap,omitempty"`
-	RcvCapabilities bgp.Capability `json:"recv_cap,omitempty"`
-	RemoteHolddown  int            `json:"remote_holddown,omitempty"`
-	AdvHolddown     int            `json:"adv_holddown,omitempty"`
-	BMPReason       int            `json:"bmp_reason,omitempty"`
-	BMPErrorCode    int            `json:"bmp_error_code,omitempty"`
-	BMPErrorSubCode int            `json:"bmp_error_sub_code,omitempty"`
-	ErrorText       string         `json:"error_text,omitempty"`
-	IsL3VPN         bool           `json:"is_l"`
-	IsPrepolicy     bool           `json:"is_prepolicy"`
-	IsIPv4          bool           `json:"is_ipv4"`
-	TableName       string         `json:"table_name,omitempty"`
+	Key             string                 `json:"_key,omitempty"`
+	ID              string                 `json:"_id,omitempty"`
+	Rev             string                 `json:"_rev,omitempty"`
+	Action          string                 `json:"action,omitempty"` // Action can be "add" for peer up and "del" for peer down message
+	Sequence        int                    `json:"sequence,omitempty"`
+	Hash            string                 `json:"hash,omitempty"`
+	RouterHash      string                 `json:"router_hash,omitempty"`
+	Name            string                 `json:"name,omitempty"`
+	RemoteBGPID     string                 `json:"remote_bgp_id,omitempty"`
+	RouterIP        string                 `json:"router_ip,omitempty"`
+	Timestamp       string                 `json:"timestamp,omitempty"`
+	RemoteASN       uint32                 `json:"remote_asn,omitempty"`
+	RemoteIP        string                 `json:"remote_ip,omitempty"`
+	PeerType        uint8                  `json:"peer_type"`
+	PeerRD          string                 `json:"peer_rd,omitempty"`
+	RemotePort      int                    `json:"remote_port,omitempty"`
+	LocalASN        uint32                 `json:"local_asn,omitempty"`
+	LocalIP         string                 `json:"local_ip,omitempty"`
+	LocalPort       int                    `json:"local_port,omitempty"`
+	LocalBGPID      string                 `json:"local_bgp_id,omitempty"`
+	InfoData        []byte                 `json:"info_data,omitempty"`
+	AdvCapabilities bgp.Capability         `json:"adv_cap,omitempty"`
+	RcvCapabilities bgp.Capability         `json:"recv_cap,omitempty"`
+	InfoTLV         []bmp.InformationalTLV `json:"info_tlv,omitempty"`
+	RemoteHolddown  int                    `json:"remote_holddown,omitempty"`
+	AdvHolddown     int                    `json:"adv_holddown,omitempty"`
+	BMPReason       int                    `json:"bmp_reason,omitempty"`
+	BMPErrorCode    int                    `json:"bmp_error_code,omitempty"`
+	BMPErrorSubCode int                    `json:"bmp_error_sub_code,omitempty"`
+	ErrorText       string                 `json:"error_text,omitempty"`
+	IsL3VPN         bool                   `json:"is_l"`
+	IsPrepolicy     bool                   `json:"is_prepolicy"`
+	IsIPv4          bool                   `json:"is_ipv4"`
+	// TableName       string         `json:"table_name,omitempty"`
 	// Values are assigned based on PerPeerHeader flas
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
@@ -83,10 +85,12 @@ type UnicastPrefix struct {
 	Labels         []uint32            `json:"labels,omitempty"`
 	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
 	IsEOR          bool                `json:"is_eor,omitempty"`
-	// Values are assigned based on PerPeerHeader flags
+	TableName      string              `json:"table_name,omitempty"`
+	// Values are assigned based on PerPeerHeader flags and Peer type
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 }
 
 func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
@@ -159,6 +163,10 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "prefix sid mismatch")
 	}
+	if u.TableName != ou.TableName {
+		equal = false
+		diffs = append(diffs, "table name mismatch: "+u.TableName+" and "+ou.TableName)
+	}
 	//	if u.PrefixSID != nil {
 	// TODO (sbezverk) Add calling equal for PrefixSID object when it is implemented
 	//	}
@@ -174,7 +182,10 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "is_loc_rib_filtered mismatch: "+strconv.FormatBool(u.IsLocRIBFiltered)+" and "+strconv.FormatBool(ou.IsLocRIBFiltered))
 	}
-
+	if u.IsLocRIB && !ou.IsLocRIB {
+		equal = false
+		diffs = append(diffs, "is_loc_rib mismatch: "+strconv.FormatBool(u.IsLocRIB)+" and "+strconv.FormatBool(ou.IsLocRIB))
+	}
 	return equal, diffs
 }
 
@@ -315,10 +326,12 @@ type L3VPNPrefix struct {
 	VPNRD          string              `json:"vpn_rd,omitempty"`
 	VPNRDType      uint16              `json:"vpn_rd_type"`
 	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
+	TableName      string              `json:"table_name,omitempty"`
 	// Values are assigned based on PerPeerHeader flas
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 }
 
 // LSPrefix defines a structure of LS Prefix message

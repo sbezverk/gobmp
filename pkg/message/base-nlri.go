@@ -93,7 +93,10 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 		if f, err := ph.IsLocRIBFiltered(); err == nil {
 			prfx.IsLocRIBFiltered = f
 		}
-
+		if ph.PeerType == bmp.PeerType3 {
+			prfx.IsLocRIB = true
+			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		}
 		prfxs = append(prfxs, prfx)
 	}
 

@@ -1,6 +1,8 @@
 package message
 
 import (
+	"sync"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/pub"
@@ -23,6 +25,23 @@ type producer struct {
 	addPathCapable map[int]bool
 	// If splitAF is set to true, ipv4 and ipv6 messages will go into separate topics
 	splitAF bool
+	// tableLock protects tableInfoMap as it is accessed from multiple goroutines
+	tableLock sync.Mutex
+	// tableInfoMap keeps Information TLVs per Peer BGP ID and Peer Distinguisher
+	tableInfoMap map[string][]bmp.InformationalTLV
+}
+
+func (p *producer) GetTableName(bgpID, rd string) string {
+	p.tableLock.Lock()
+	defer p.tableLock.Unlock()
+	tn := ""
+	for _, tlv := range p.tableInfoMap[bgpID+rd] {
+		if tlv.InformationType == 3 {
+			tn += tlv.Information.(string)
+		}
+	}
+
+	return tn
 }
 
 // Producer dispatches kafka workers upon request received from the channel
@@ -59,5 +78,6 @@ func NewProducer(publisher pub.Publisher, splitAF bool) Producer {
 		publisher:      publisher,
 		splitAF:        splitAF,
 		addPathCapable: make(map[int]bool),
+		tableInfoMap:   make(map[string][]bmp.InformationalTLV),
 	}
 }

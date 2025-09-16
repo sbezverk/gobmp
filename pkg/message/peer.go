@@ -82,6 +82,18 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		if glog.V(6) {
 			glog.Infof("producer for speaker ip: %s add path: %+v", p.speakerIP, p.addPathCapable)
 		}
+		if len(peerUpMsg.Information) > 0 {
+			m.InfoTLV = make([]bmp.InformationalTLV, len(peerUpMsg.Information))
+			copy(m.InfoTLV, peerUpMsg.Information)
+		}
+		p.tableLock.Lock()
+		tim, ok := p.tableInfoMap[m.RemoteBGPID+m.PeerRD]
+		if !ok {
+			tim = make([]bmp.InformationalTLV, len(peerUpMsg.Information))
+		}
+		copy(tim, peerUpMsg.Information)
+		p.tableInfoMap[m.RemoteBGPID+m.PeerRD] = tim
+		p.tableLock.Unlock()
 	} else {
 		peerDownMsg, ok := msg.Payload.(*bmp.PeerDownMessage)
 		if !ok {
@@ -103,7 +115,9 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m.IsIPv4 = !msg.PeerHeader.IsRemotePeerIPv6()
 		m.InfoData = make([]byte, len(peerDownMsg.Data))
 		copy(m.InfoData, peerDownMsg.Data)
-
+		p.tableLock.Lock()
+		delete(p.tableInfoMap, m.RemoteBGPID+m.PeerRD)
+		p.tableLock.Unlock()
 	}
 	if err := p.marshalAndPublish(&m, bmp.PeerStateChangeMsg, []byte(m.RouterHash), false); err != nil {
 		glog.Errorf("failed to process peer message with error: %+v", err)
