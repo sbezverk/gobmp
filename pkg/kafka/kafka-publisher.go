@@ -44,8 +44,6 @@ const (
 var (
 	brockerConnectTimeout = 120 * time.Second
 	topicCreateTimeout    = 1 * time.Second
-	// goBMP topic's retention timer is 15 minutes
-	topicRetention = "900000"
 )
 
 var (
@@ -146,10 +144,10 @@ func (p *publisher) Stop() {
 }
 
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
-func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
+func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	glog.Infof("Initializing Kafka producer client")
-	if err := validator(kafkaSrv); err != nil {
-		glog.Errorf("Failed to validate Kafka server address %s with error: %+v", kafkaSrv, err)
+	if err := validator(kConfig); err != nil {
+		glog.Errorf("Failed to validate Kafka config: %v with error: %+v", kConfig, err)
 		return nil, err
 	}
 	if glog.V(6) {
@@ -199,7 +197,7 @@ func NewKafkaPublisher(kafkaSrv string) (pub.Publisher, error) {
 			case err := <-producer.Errors():
 				glog.Errorf("failed to produce message with error: %+v", *err)
 			case <-stopCh:
-				producer.Close()
+				_ = producer.Close()
 				return
 			}
 		}
@@ -235,6 +233,14 @@ func validator(brokerEndpoints string) error {
 			return fmt.Errorf("%s: the value of port is invalid", addr)
 		}
 	}
+	// validator for topic retention time
+	i, err := strconv.Atoi(kConfig.TopicRetentionTimeMs)
+	if err != nil {
+		return err
+	}
+	if i < -1 {
+		return fmt.Errorf("kafka topic retention time can not be less than 0")
+	}
 	return nil
 }
 
@@ -245,6 +251,7 @@ func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string
 		ConfigEntries: map[string]*string{
 			"retention.ms": &topicRetention,
 		},
+		Timeout: timeout,
 	}
 
 	ticker := time.NewTicker(100 * time.Millisecond)

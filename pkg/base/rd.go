@@ -44,6 +44,5 @@ func (rd *RD) String() string {
 	case 2:
 		s += fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(rd.Value[0:4]), binary.BigEndian.Uint16(rd.Value[4:]))
 	}
-
 	return s
 }

@@ -8,7 +8,8 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) lsNode(node *base.NodeNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update, isIPv6 bool) (*LSNode, error) {
+func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next hop */ string,
+	op int, ph *bmp.PerPeerHeader, update *bgp.Update, isIPv6 bool) (*LSNode, error) {
 	var operation string
 	switch op {
 	case 0:

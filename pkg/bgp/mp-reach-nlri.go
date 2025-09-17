@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -78,9 +79,12 @@ func (mp *MPReachNLRI) GetNextHop() string {
 		// IPv6 + Link Local IPv6
 		// https://tools.ietf.org/html/rfc2545#section-3
 		return net.IP(mp.NextHopAddress[:16]).To16().String() + "," + net.IP(mp.NextHopAddress[16:]).To16().String()
+	case 48:
+		// RD:IPv6 + RD:Link Local IPv6
+		return net.IP(mp.NextHopAddress[8:24]).To16().String() + "," + net.IP(mp.NextHopAddress[32:]).To16().String()
 	}
 
-	return "invalid"
+	return "invalid next hop address length: " + strconv.Itoa(int(mp.NextHopAddressLength))
 }
 
 // GetNLRI71 check for presense of NLRI 71 in the NLRI 14 NLRI data and if exists, instantiate NLRI71 object

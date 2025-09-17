@@ -52,7 +52,9 @@ func main() {
 		}
 	}
 	// If this point is reached f cannot be nil
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	errCh := make(chan error)
 	stopCh := make(chan struct{})
 

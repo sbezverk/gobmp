@@ -18,14 +18,16 @@ import (
 )
 
 var (
-	msgSrvAddr string
-	file       string
-	delay      int
-	iterations int
+	msgSrvAddr      string
+	topicRetnTimeMs string
+	file            string
+	delay           int
+	iterations      int
 )
 
 func init() {
 	flag.StringVar(&msgSrvAddr, "message-server", "", "URL to the messages supplying server")
+	flag.StringVar(&topicRetnTimeMs, "topic-retention-time-ms", "900000", "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
 	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "File with the bmp messages to replay")
 	flag.IntVar(&delay, "delay", 0, "Delay in seconds to add between sending messages")
 	flag.IntVar(&iterations, "iterations", 1, "Number of iterations to replay messages")
@@ -41,10 +43,13 @@ func main() {
 		glog.Errorf("fail to open messages file %s with error: %+v", file, err)
 		os.Exit(1)
 	}
-	defer f.Close()
 
 	// Initializing publisher process
-	publisher, err := kafka.NewKafkaPublisher(msgSrvAddr)
+	kConfig := &kafka.Config{
+		ServerAddress:        msgSrvAddr,
+		TopicRetentionTimeMs: topicRetnTimeMs,
+	}
+	publisher, err := kafka.NewKafkaPublisher(kConfig)
 	if err != nil {
 		glog.Errorf("fail to initialize Kafka publisher with error: %+v", err)
 		os.Exit(1)
@@ -65,8 +70,8 @@ func main() {
 			wg.Add(1)
 			go func(msg *filer.MsgOut) {
 				defer wg.Done()
-				if err := publisher.PublishMessage(msg.Type, msg.Key, msg.Value); err != nil {
-					glog.Errorf("fail to publish message type: %d message key: %s with error: %+v", msg.Type, tools.MessageHex(msg.Key), err)
+				if err := publisher.PublishMessage(msg.MsgType, []byte(msg.MsgHash), []byte(msg.Msg)); err != nil {
+					glog.Errorf("fail to publish message type: %d message key: %s with error: %+v", msg.MsgType, tools.MessageHex([]byte(msg.MsgHash)), err)
 				}
 			}(msgs[e])
 			records++
@@ -77,6 +82,7 @@ func main() {
 		glog.Infof("%3f seconds took to process %d records", time.Since(start).Seconds(), records)
 		records = 0
 	}
+	_ = f.Close()
 
 	os.Exit(0)
 }

@@ -55,7 +55,9 @@ func (srv *bmpServer) server() {
 }
 
 func (srv *bmpServer) bmpWorker(client net.Conn) {
-	defer client.Close()
+	defer func() {
+		_ = client.Close()
+	}()
 	var server net.Conn
 	var err error
 	if srv.intercept {
@@ -64,7 +66,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 			glog.Errorf("failed to connect to destination with error: %+v", err)
 			return
 		}
-		defer server.Close()
+		defer func() { _ = server.Close() }()
 		glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
 	}
 	var producerQueue chan bmp.Message
