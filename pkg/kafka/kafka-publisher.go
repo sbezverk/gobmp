@@ -142,7 +142,7 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 
 func (p *publisher) Stop() {
 	close(p.stopCh)
-	p.clusterAdmin.Close()
+	_ = p.clusterAdmin.Close()
 }
 
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
