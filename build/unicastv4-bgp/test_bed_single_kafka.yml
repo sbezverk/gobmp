@@ -35,7 +35,7 @@ services:
         ipv4_address: 10.1.1.5
 
   kafka:
-    image: bitnami/kafka:2.6.0
+    image: bitnami/kafka:latest
     hostname: kafka
     container_name: kafka
     ports:
