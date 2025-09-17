@@ -18,30 +18,47 @@ type Producer interface {
 	Producer(queue chan bmp.Message, stop chan struct{})
 }
 
-type producer struct {
-	publisher      pub.Publisher
-	speakerIP      string
-	speakerHash    string
+type PerTableProperties struct {
 	addPathCapable map[int]bool
+	// tableInfoTLVs holds Informational TLVs received with Peer Up message for the given BGP ID + RD combination
+	tableInfoTLVs []bmp.InformationalTLV
+}
+
+type producer struct {
+	publisher   pub.Publisher
+	speakerIP   string
+	speakerHash string
+	// addPathCapable map[int]bool
 	// If splitAF is set to true, ipv4 and ipv6 messages will go into separate topics
 	splitAF bool
-	// tableLock protects tableInfoMap as it is accessed from multiple goroutines
-	tableLock sync.Mutex
-	// tableInfoMap keeps Information TLVs per Peer BGP ID and Peer Distinguisher
-	tableInfoMap map[string][]bmp.InformationalTLV
+	// tableLock protects tableProperties as it is accessed from multiple goroutines
+	tableLock sync.RWMutex
+	// tableProperties keeps table specific properties per BGP ID + RD combination
+	tableProperties map[string]PerTableProperties
 }
 
 func (p *producer) GetTableName(bgpID, rd string) string {
-	p.tableLock.Lock()
-	defer p.tableLock.Unlock()
+	p.tableLock.RLock()
+	defer p.tableLock.RUnlock()
 	tn := ""
-	for _, tlv := range p.tableInfoMap[bgpID+rd] {
-		if tlv.InformationType == 3 {
-			tn += tlv.Information.(string)
+
+	if properties, ok := p.tableProperties[bgpID+rd]; ok {
+		for _, tlv := range properties.tableInfoTLVs {
+			if tlv.InformationType == 3 {
+				tn += tlv.Information.(string)
+			}
 		}
 	}
-
 	return tn
+}
+
+func (p *producer) GetAddPathCapability(tableKey string) map[int]bool {
+	var m map[int]bool
+	p.tableLock.RLock()
+	defer p.tableLock.RUnlock()
+	m = p.tableProperties[tableKey].addPathCapable
+
+	return m
 }
 
 // Producer dispatches kafka workers upon request received from the channel
@@ -75,9 +92,9 @@ func (p *producer) producingWorker(msg bmp.Message) {
 // NewProducer instantiates a new instance of a producer with Publisher interface
 func NewProducer(publisher pub.Publisher, splitAF bool) Producer {
 	return &producer{
-		publisher:      publisher,
-		splitAF:        splitAF,
-		addPathCapable: make(map[int]bool),
-		tableInfoMap:   make(map[string][]bmp.InformationalTLV),
+		publisher: publisher,
+		splitAF:   splitAF,
+		// addPathCapable:  make(map[int]bool),
+		tableProperties: make(map[string]PerTableProperties),
 	}
 }

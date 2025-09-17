@@ -16,7 +16,7 @@ import (
 func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*UnicastPrefix, error) {
 	var operation string
 	var routes []base.Route
-	pathID := p.addPathCapable[bgp.NLRIMessageType(1, 1)]
+	pathID := p.GetAddPathCapability(ph.GetTableKey())[bgp.NLRIMessageType(1, 1)]
 	switch op {
 	case 0:
 		operation = "add"
@@ -38,7 +38,6 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 	prfxs := make([]*UnicastPrefix, 0)
 	// Check if Update carries any routes, if update comes with 0 routes, it is EoR message
 	if len(routes) == 0 {
-		glog.Infof("><SB> Suspected EoR message for Unicast ipv4")
 		return []*UnicastPrefix{
 			{
 				Action:     operation,

@@ -171,6 +171,10 @@ func (p *PerPeerHeader) GetPeerDistinguisherString() string {
 	return pd
 }
 
+func (p *PerPeerHeader) GetTableKey() string {
+	return p.GetPeerBGPIDString() + p.GetPeerDistinguisherString()
+}
+
 // UnmarshalPerPeerHeader processes Per-Peer header
 func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	if glog.V(6) {
@@ -189,7 +193,6 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	}
 	p++
 	if pph.PeerType == PeerType3 {
-		glog.Infof("><SB> peer type 3 detected...")
 		// Flag F is applicable only to Peer type 3
 		pph.flagF = b[p]&0x80 == 0x80
 	} else {
