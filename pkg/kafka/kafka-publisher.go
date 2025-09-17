@@ -44,6 +44,8 @@ const (
 var (
 	brockerConnectTimeout = 120 * time.Second
 	topicCreateTimeout    = 1 * time.Second
+	// goBMP topic's retention timer is 15 minutes
+	topicRetention = "900000"
 )
 
 var (
@@ -163,7 +165,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	config.Metadata.Retry.Backoff = time.Second * 10
 	config.Version = sarama.V2_1_0_0
 
-	kafkaSrvs := strings.Split(kafkaSrv, ",")
+	kafkaSrvs := strings.Split(kConfig.ServerAddress, ",")
 	ca, err := sarama.NewClusterAdmin(kafkaSrvs, config)
 	if err != nil {
 		glog.Errorf("failed to create cluster admin: %+v", err)
@@ -211,8 +213,8 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	}, nil
 }
 
-func validator(brokerEndpoints string) error {
-	addrs := strings.Split(brokerEndpoints, ",")
+func validator(kConfig *Config) error {
+	addrs := strings.Split(kConfig.ServerAddress, ",")
 	for _, addr := range addrs {
 		host, port, _ := net.SplitHostPort(addr)
 		if host == "" || port == "" {
@@ -251,7 +253,6 @@ func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string
 		ConfigEntries: map[string]*string{
 			"retention.ms": &topicRetention,
 		},
-		Timeout: timeout,
 	}
 
 	ticker := time.NewTicker(100 * time.Millisecond)
