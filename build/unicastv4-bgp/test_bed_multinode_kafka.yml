@@ -20,7 +20,7 @@ networks:
     name: xr-1-gi1-xr-2-gi0
 services:
   gobmp:
-    image: sbezverk/gobmp:cicd
+    image: localhost/gobmp:cicd
     expose:
       - 5000
     entrypoint:
