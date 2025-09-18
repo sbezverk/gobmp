@@ -1,3 +1,4 @@
+version: "3.2"
 networks:
   mgmt:
     driver_opts:
@@ -17,69 +18,76 @@ networks:
       com.docker.network.driver.mtu: 9000
     internal: true
     name: xr-1-gi1-xr-2-gi0
-
 services:
-  zoo:
-    image: bitnami/zookeeper:latest
-    hostname: zoo
-    container_name: zoo
-    ports:
-      - "2181:2181"
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_SERVER_ID: 1
-      ZOOKEEPER_SERVERS: zoo:2888:3888
-      ALLOW_ANONYMOUS_LOGIN: "yes"
-    networks:
-      gobmp-xrd-1:
-        ipv4_address: 10.1.1.5
-
-  kafka:
-    image: bitnami/kafka:2.6.0
-    hostname: kafka
-    container_name: kafka
-    ports:
-      - "9092:9092"
-      - "9093:9093"
-    environment:
-      - KAFKA_ENABLE_KRAFT=no
-      - KAFKA_CFG_NODE_ID=0
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - ALLOW_PLAINTEXT_LISTENER=yes
-      - KAFKA_ADVERTISED_HOST_NAME=kafka
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=10.1.1.5:2181
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - BITNAMI_DEBUG=true
-    depends_on:
-      - zoo
-    networks:
-      gobmp-xrd-1:
-        ipv4_address: 10.1.1.4
-
   gobmp:
-    image: localhost/gobmp:cicd
-    hostname: gobmp
-    container_name: gobmp
-    command:
-      --v=9
-      --kafka-server=10.1.1.4:9092
-    ports:
-      - "5000:5000"
+    # image: sbezverk/gobmp:v1.0.3
+    image: sbezverk/gobmp:test-235
+    restart: always
+    expose:
+      - 5000
+    entrypoint:
+      [ 
+        "/gobmp",
+        "--source-port=5000",
+        "--intercept=false",
+        "--split-af=true",
+        "--v=9",
+        "--kafka-server=kafka-1:9091"
+      ]
     cap_add:
     - NET_ADMIN
     networks:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.2
-    stdin_open: true
-    tty: true
+    # stdin_open: true
+    # tty: true
     depends_on:
-      - kafka
+      - kafka-1
+  zookeeper:
+    image: zookeeper:3.7.0
+    restart: always
+    expose:
+      - 2181
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.5
     volumes:
-      - "/tmp:/tmp"
-
+      - ./zookeeper_hc.sh:/tmp/hc.sh
+    healthcheck:
+      test: [ "CMD-SHELL", "/tmp/hc.sh" ]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  kafka-1:
+    image: confluentinc/cp-kafka:7.3.1
+    restart: always
+    depends_on:
+      - zookeeper
+    expose:
+      - 9091
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      ZOOKEEPER: "zookeeper:2181"
+      KAFKA_TOPICS: "gobmp.parsed.peer:4:4:delete gobmp.parsed.unicast_prefix:6:4:delete gobmp.parsed.unicast_prefix_v4:6:4:delete gobmp.parsed.unicast_prefix_v6:6:4:delete gobmp.parsed.ls_node:4:4:delete gobmp.parsed.ls_link:4:4:delete gobmp.parsed.l3vpn:4:4:delete gobmp.parsed.l3vpn_v4:4:4:delete gobmp.parsed.l3vpn_v6:4:4:delete gobmp.parsed.sr_policy:4:4:delete gobmp.parsed.sr_policy_v4:4:4:delete gobmp.parsed.sr_policy_v6:4:4:delete gobmp.parsed.flowspec:4:4:delete gobmp.parsed.flowspec_v4:4:4:delete gobmp.parsed.flowspec_v6:4:4:delete gobmp.parsed.ls_prefix:4:4:delete gobmp.parsed.ls_srv6_sid:4:4:delete gobmp.parsed.evpn:4:4:delete gobmp.parsed.statistics:4:4:delete"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-1:9091"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9091"
+      BOOTSTRAP_SERVERS: "kafka-1:9091"
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.6
+    healthcheck:
+      test: ps augwwx | egrep [S]upportedKafka
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
   xr-1:
     cap_add:
     - CHOWN
@@ -112,7 +120,7 @@ services:
       XR_EVERY_BOOT_CONFIG: /etc/xrd/startup.cfg
       XR_INTERFACES: linux:xr-20,xr_name=Gi0/0/0/0,chksum;linux:xr-00,xr_name=Gi0/0/0/1
       XR_MGMT_INTERFACES: linux:xr-10,xr_name=Mg0/RP0/CPU0/0,chksum
-    image: sbezverk/xrd-control-plane:25.2.1
+    image: sbezverk/xrd-control-plane:7.9.2
     networks:
       mgmt: null
       gobmp-xrd-1:
@@ -129,7 +137,6 @@ services:
       target: /etc/xrd/startup.cfg
       type: bind
     - xr-1:/xr-storage/
-
   xr-2:
     cap_add:
     - CHOWN
@@ -162,7 +169,7 @@ services:
       XR_EVERY_BOOT_CONFIG: /etc/xrd/startup.cfg
       XR_INTERFACES: linux:xr-00,xr_name=Gi0/0/0/0;linux:xr-30,xr_name=Gi0/0/0/1,chksum
       XR_MGMT_INTERFACES: linux:xr-10,xr_name=Mg0/RP0/CPU0/0,chksum
-    image: sbezverk/xrd-control-plane:25.2.1
+    image: sbezverk/xrd-control-plane:7.9.2
     networks:
       mgmt: null
       xr-1-gi1-xr-2-gi0: null
@@ -177,10 +184,8 @@ services:
       target: /etc/xrd/startup.cfg
       type: bind
     - xr-2:/xr-storage/
-
 volumes:
   xr-1:
     name: xr-1
   xr-2:
     name: xr-2
-
