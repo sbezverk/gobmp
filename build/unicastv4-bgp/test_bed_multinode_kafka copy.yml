@@ -1,0 +1,325 @@
+networks:
+  mgmt:
+    driver_opts:
+      com.docker.network.container_iface_prefix: xr-1
+    ipam:
+      config:
+      - subnet: 172.30.0.0/24
+  gobmp-xrd-1:
+    driver_opts:
+      com.docker.network.container_iface_prefix: xr-2
+    ipam:
+      config:
+      - subnet: 10.1.1.0/24
+  xr-1-gi1-xr-2-gi0:
+    driver_opts:
+      com.docker.network.container_iface_prefix: xr-0
+      com.docker.network.driver.mtu: 9000
+    internal: true
+    name: xr-1-gi1-xr-2-gi0
+
+services:
+  ubuntu:
+    image: sbezverk/centos-tool-box:latest 
+    hostname: ubuntu
+    container_name: ubuntu
+    command: "tail -f /dev/null"
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.4
+
+  zoo:
+    image: bitnami/zookeeper:latest
+    hostname: zoo
+    container_name: zoo
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_TICK_TIME: 2000
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.5
+
+  kafka-1:
+    image: bitnami/kafka:latest
+    container_name: kafka-1
+    restart: always
+    depends_on:
+      - zoo
+    ports:
+      - "9091:9091"
+      - "8091:8091"
+    environment:
+      KAFKA_CLUSTER_ID: 50123
+      KAFKA_BROKER_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "10.1.1.5:2181"
+      ZOOKEEPER: "10.1.1.5:2181"
+      KAFKA_TOPICS: "gobmp.parsed.peer:4:4:delete gobmp.parsed.unicast_prefix:6:4:delete gobmp.parsed.unicast_prefix_v4:6:4:delete gobmp.parsed.unicast_prefix_v6:6:4:delete gobmp.parsed.ls_node:4:4:delete gobmp.parsed.ls_link:4:4:delete gobmp.parsed.l3vpn:4:4:delete gobmp.parsed.l3vpn_v4:4:4:delete gobmp.parsed.l3vpn_v6:4:4:delete gobmp.parsed.sr_policy:4:4:delete gobmp.parsed.sr_policy_v4:4:4:delete gobmp.parsed.sr_policy_v6:4:4:delete gobmp.parsed.flowspec:4:4:delete gobmp.parsed.flowspec_v4:4:4:delete gobmp.parsed.flowspec_v6:4:4:delete gobmp.parsed.ls_prefix:4:4:delete gobmp.parsed.ls_srv6_sid:4:4:delete gobmp.parsed.evpn:4:4:delete gobmp.parsed.statistics:4:4:delete"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-1:9091"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9091,CONTROLLER-1://0.0.0.0:8091"
+      BOOTSTRAP_SERVERS: "kafka-1:9091,kafka-2:9092,kafka-3:9093,kafka-4:9094"
+      KAFKA_ENABLE_KRAFT: "no"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER-1:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "0@kafka-1:9091,1@kafka-2:9092,3@kafka-3:9093,4@kafka-4:9094"
+      BITNAMI_DEBUG: true
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER-1"
+      KAFKA_CFG_LISTENER_NAME_CONTROLLER: "CONTROLLER-1"
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.6
+    healthcheck:
+      test: ps augwwx | egrep [S]upportedKafka
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  kafka-2:
+    image: bitnami/kafka:latest
+    container_name: kafka-2
+    restart: always
+    depends_on:
+      - zoo
+    ports:
+      - "9092:9092"
+      - "8092:8092"
+    environment:
+      KAFKA_CLUSTER_ID: 50123
+      KAFKA_BROKER_ID: 2
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_NODE_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: "10.1.1.5:2181"
+      ZOOKEEPER: "10.1.1.5:2181"
+      KAFKA_TOPICS: "gobmp.parsed.peer:4:4:delete gobmp.parsed.unicast_prefix:6:4:delete gobmp.parsed.unicast_prefix_v4:6:4:delete gobmp.parsed.unicast_prefix_v6:6:4:delete gobmp.parsed.ls_node:4:4:delete gobmp.parsed.ls_link:4:4:delete gobmp.parsed.l3vpn:4:4:delete gobmp.parsed.l3vpn_v4:4:4:delete gobmp.parsed.l3vpn_v6:4:4:delete gobmp.parsed.sr_policy:4:4:delete gobmp.parsed.sr_policy_v4:4:4:delete gobmp.parsed.sr_policy_v6:4:4:delete gobmp.parsed.flowspec:4:4:delete gobmp.parsed.flowspec_v4:4:4:delete gobmp.parsed.flowspec_v6:4:4:delete gobmp.parsed.ls_prefix:4:4:delete gobmp.parsed.ls_srv6_sid:4:4:delete gobmp.parsed.evpn:4:4:delete gobmp.parsed.statistics:4:4:delete"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-2:9092"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER-2://0.0.0.0:8092"
+      BOOTSTRAP_SERVERS: "kafka-1:9091,kafka-2:9092,kafka-3:9093,kafka-4:9094"
+      KAFKA_ENABLE_KRAFT: "no"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER-2:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "0@kafka-1:9091,1@kafka-2:9092,3@kafka-3:9093,4@kafka-4:9094"
+      BITNAMI_DEBUG: true
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER-2"
+      KAFKA_CFG_LISTENER_NAME_CONTROLLER: "CONTROLLER-2"
+
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.7
+    healthcheck:
+      test: ps augwwx | egrep [S]upportedKafka
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  kafka-3:
+    image: bitnami/kafka:latest
+    container_name: kafka-3
+    restart: always
+    depends_on:
+      - zoo
+    ports:
+      - "9093:9093"
+      - "8093:8093"
+    environment:
+      KAFKA_CLUSTER_ID: 50123
+      KAFKA_BROKER_ID: 3
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_NODE_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: "10.1.1.5:2181"
+      ZOOKEEPER: "10.1.1.5:2181"
+      KAFKA_TOPICS: "gobmp.parsed.peer:4:4:delete gobmp.parsed.unicast_prefix:6:4:delete gobmp.parsed.unicast_prefix_v4:6:4:delete gobmp.parsed.unicast_prefix_v6:6:4:delete gobmp.parsed.ls_node:4:4:delete gobmp.parsed.ls_link:4:4:delete gobmp.parsed.l3vpn:4:4:delete gobmp.parsed.l3vpn_v4:4:4:delete gobmp.parsed.l3vpn_v6:4:4:delete gobmp.parsed.sr_policy:4:4:delete gobmp.parsed.sr_policy_v4:4:4:delete gobmp.parsed.sr_policy_v6:4:4:delete gobmp.parsed.flowspec:4:4:delete gobmp.parsed.flowspec_v4:4:4:delete gobmp.parsed.flowspec_v6:4:4:delete gobmp.parsed.ls_prefix:4:4:delete gobmp.parsed.ls_srv6_sid:4:4:delete gobmp.parsed.evpn:4:4:delete gobmp.parsed.statistics:4:4:delete"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-3:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9093,CONTROLLER-3://0.0.0.0:8093"
+      BOOTSTRAP_SERVERS: "kafka-1:9091,kafka-2:9092,kafka-3:9093,kafka-4:9094"
+      KAFKA_ENABLE_KRAFT: "no"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER-3:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "0@kafka-1:9091,1@kafka-2:9092,3@kafka-3:9093,4@kafka-4:9094"
+      BITNAMI_DEBUG: true
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER-3"
+      KAFKA_CFG_LISTENER_NAME_CONTROLLER: "CONTROLLER-3"
+
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.8
+    healthcheck:
+      test: ps augwwx | egrep [S]upportedKafka
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  kafka-4:
+    image: bitnami/kafka:latest
+    container_name: kafka-4
+    restart: always
+    depends_on:
+      - zoo
+    ports:
+      - "9094:9094"
+      - "8094:8094"
+    environment:
+      KAFKA_CLUSTER_ID: 50123
+      KAFKA_BROKER_ID: 4
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_NODE_ID: 4
+      KAFKA_ZOOKEEPER_CONNECT: "10.1.1.5:2181"
+      ZOOKEEPER: "10.1.1.5:2181"
+      KAFKA_TOPICS: "gobmp.parsed.peer:4:4:delete gobmp.parsed.unicast_prefix:6:4:delete gobmp.parsed.unicast_prefix_v4:6:4:delete gobmp.parsed.unicast_prefix_v6:6:4:delete gobmp.parsed.ls_node:4:4:delete gobmp.parsed.ls_link:4:4:delete gobmp.parsed.l3vpn:4:4:delete gobmp.parsed.l3vpn_v4:4:4:delete gobmp.parsed.l3vpn_v6:4:4:delete gobmp.parsed.sr_policy:4:4:delete gobmp.parsed.sr_policy_v4:4:4:delete gobmp.parsed.sr_policy_v6:4:4:delete gobmp.parsed.flowspec:4:4:delete gobmp.parsed.flowspec_v4:4:4:delete gobmp.parsed.flowspec_v6:4:4:delete gobmp.parsed.ls_prefix:4:4:delete gobmp.parsed.ls_srv6_sid:4:4:delete gobmp.parsed.evpn:4:4:delete gobmp.parsed.statistics:4:4:delete"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-4:9094"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9094,CONTROLLER-4://0.0.0.0:8094"
+      BOOTSTRAP_SERVERS: "kafka-1:9091,kafka-2:9092,kafka-3:9093,kafka-4:9094"
+      KAFKA_ENABLE_KRAFT: "no"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER-4:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "0@kafka-1:9091,1@kafka-2:9092,3@kafka-3:9093,4@kafka-4:9094"
+      BITNAMI_DEBUG: true
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER-4"
+      KAFKA_CFG_LISTENER_NAME_CONTROLLER: "CONTROLLER-4"
+
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.9
+    healthcheck:
+      test: ps augwwx | egrep [S]upportedKafka
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  gobmp:
+    image: localhost/gobmp:cicd
+    hostname: gobmp
+    container_name: gobmp
+    command:
+      --v=9
+      --kafka-server=kafka-1:9091,kafka-2:9092,kafka-3:9093,kafka-4:9094
+    ports:
+      - "5000:5000"
+    cap_add:
+    - NET_ADMIN
+    networks:
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.2
+    stdin_open: true
+    tty: true
+    depends_on:
+      - kafka-1
+      - kafka-2
+      - kafka-3
+      - kafka-4
+    volumes:
+      - "/tmp:/tmp"
+
+  xr-1:
+    cap_add:
+    - CHOWN
+    - DAC_OVERRIDE
+    - FSETID
+    - FOWNER
+    - MKNOD
+    - NET_RAW
+    - SETGID
+    - SETUID
+    - SETFCAP
+    - SETPCAP
+    - NET_BIND_SERVICE
+    - SYS_CHROOT
+    - KILL
+    - AUDIT_WRITE
+    - SYS_NICE
+    - SYS_ADMIN
+    - SYS_RESOURCE
+    - NET_ADMIN
+    - SYS_PTRACE
+    - IPC_LOCK
+    cap_drop:
+    - all
+    container_name: xr-1
+    devices:
+    - /dev/fuse
+    - /dev/net/tun
+    environment:
+      XR_EVERY_BOOT_CONFIG: /etc/xrd/startup.cfg
+      XR_INTERFACES: linux:xr-20,xr_name=Gi0/0/0/0,chksum;linux:xr-00,xr_name=Gi0/0/0/1
+      XR_MGMT_INTERFACES: linux:xr-10,xr_name=Mg0/RP0/CPU0/0,chksum
+    image: sbezverk/xrd-control-plane:25.2.1
+    networks:
+      mgmt: null
+      gobmp-xrd-1:
+        ipv4_address: 10.1.1.3
+      xr-1-gi1-xr-2-gi0: null
+    pids_limit: -1
+    security_opt:
+    - apparmor=unconfined
+    - label=disable
+    stdin_open: true
+    tty: true
+    volumes:
+    - source: ./xrd-1_xrconf.cfg
+      target: /etc/xrd/startup.cfg
+      type: bind
+    - xr-1:/xr-storage/
+
+  xr-2:
+    cap_add:
+    - CHOWN
+    - DAC_OVERRIDE
+    - FSETID
+    - FOWNER
+    - MKNOD
+    - NET_RAW
+    - SETGID
+    - SETUID
+    - SETFCAP
+    - SETPCAP
+    - NET_BIND_SERVICE
+    - SYS_CHROOT
+    - KILL
+    - AUDIT_WRITE
+    - SYS_NICE
+    - SYS_ADMIN
+    - SYS_RESOURCE
+    - NET_ADMIN
+    - SYS_PTRACE
+    - IPC_LOCK
+    cap_drop:
+    - all
+    container_name: xr-2
+    devices:
+    - /dev/fuse
+    - /dev/net/tun
+    environment:
+      XR_EVERY_BOOT_CONFIG: /etc/xrd/startup.cfg
+      XR_INTERFACES: linux:xr-00,xr_name=Gi0/0/0/0;linux:xr-30,xr_name=Gi0/0/0/1,chksum
+      XR_MGMT_INTERFACES: linux:xr-10,xr_name=Mg0/RP0/CPU0/0,chksum
+    image: sbezverk/xrd-control-plane:25.2.1
+    networks:
+      mgmt: null
+      xr-1-gi1-xr-2-gi0: null
+    pids_limit: -1
+    security_opt:
+    - apparmor=unconfined
+    - label=disable
+    stdin_open: true
+    tty: true
+    volumes:
+    - source: ./xrd-2_xrconf.cfg
+      target: /etc/xrd/startup.cfg
+      type: bind
+    - xr-2:/xr-storage/
+
+volumes:
+  xr-1:
+    name: xr-1
+  xr-2:
+    name: xr-2
+
