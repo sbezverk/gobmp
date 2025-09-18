@@ -33,17 +33,18 @@ type kafka struct {
 // NewKafkaMessenger returns an instance of a kafka consumer acting as a messenger server
 func NewKafkaMConsumer(kafkaSrv string, topics []*TopicDescriptor) (Srv, error) {
 	glog.Infof("NewKafkaConsumer")
-	if err := tools.HostAddrValidator(kafkaSrv); err != nil {
-		return nil, err
-	}
 
 	config := sarama.NewConfig()
 	config.ClientID = "validator" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Consumer.Return.Errors = true
-	config.Version = sarama.V1_1_0_0
+	config.Version = sarama.V2_1_0_0
 
 	brokers := strings.Split(kafkaSrv, ",")
-
+	for _, broker := range brokers {
+		if err := tools.HostAddrValidator(broker); err != nil {
+			return nil, err
+		}
+	}
 	// Create new consumer
 	master, err := sarama.NewConsumer(brokers, config)
 	if err != nil {
