@@ -21,7 +21,7 @@ networks:
 services:
   gobmp:
     #image: sbezverk/gobmp:v1.0.3
-    image: sbezverk/gobmp:test-235
+    image: sbezverk/gobmp:issue-235
     expose:
       - 5000
     entrypoint:
@@ -198,7 +198,7 @@ services:
       XR_EVERY_BOOT_CONFIG: /etc/xrd/startup.cfg
       XR_INTERFACES: linux:xr-20,xr_name=Gi0/0/0/0,chksum;linux:xr-00,xr_name=Gi0/0/0/1
       XR_MGMT_INTERFACES: linux:xr-10,xr_name=Mg0/RP0/CPU0/0,chksum
-    image: sbezverk/xrd-control-plane:7.9.2
+    image: sbezverk/xrd-control-plane:25.2.1
     networks:
       mgmt: null
       gobmp-xrd-1:
@@ -247,7 +247,7 @@ services:
       XR_EVERY_BOOT_CONFIG: /etc/xrd/startup.cfg
       XR_INTERFACES: linux:xr-00,xr_name=Gi0/0/0/0;linux:xr-30,xr_name=Gi0/0/0/1,chksum
       XR_MGMT_INTERFACES: linux:xr-10,xr_name=Mg0/RP0/CPU0/0,chksum
-    image: sbezverk/xrd-control-plane:7.9.2
+    image: sbezverk/xrd-control-plane:25.2.1
     networks:
       mgmt: null
       xr-1-gi1-xr-2-gi0: null

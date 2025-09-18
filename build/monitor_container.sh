@@ -16,7 +16,7 @@ i=0
 
 while [ ${done} == false ]; do
 
-        msg=$(docker logs ${cid} | grep "Kafka publisher has been successfully initialized")
+        msg=$(docker logs ${cid} 2>&1 | grep "Kafka publisher has been successfully initialized")
         if [[ ${msg} != "" ]]; then
                 done=true
                 found=true
@@ -44,7 +44,7 @@ i=0
 
 while [ ${done} == false ]; do
 
-        msg=$(docker logs ${cid} | grep "client 10.1.1.3")
+        msg=$(docker logs ${cid} 2>&1 | grep "client 10.1.1.3")
         if [[ ${msg} != "" ]]; then
                 done=true
                 found=true
