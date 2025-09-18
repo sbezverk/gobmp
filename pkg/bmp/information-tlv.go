@@ -10,9 +10,9 @@ import (
 
 // InformationalTLV defines Informational TLV per rfc7854
 type InformationalTLV struct {
-	InformationType   int16
-	InformationLength int16
-	Information       []byte
+	InformationType   int16 `json:"info_type"`
+	InformationLength int16 `json:"info_length"`
+	Information       any   `json:"info_value"`
 }
 
 // UnmarshalTLV builds a slice of Informational TLVs
@@ -29,12 +29,23 @@ func UnmarshalTLV(b []byte) ([]InformationalTLV, error) {
 		if l > int16(len(b)-(i+4)) {
 			return nil, fmt.Errorf("invalid tlv length %d", l)
 		}
-		v := b[i+4 : i+4+int(l)]
-		tlvs = append(tlvs, InformationalTLV{
+		tlv := InformationalTLV{
 			InformationType:   t,
 			InformationLength: l,
-			Information:       v,
-		})
+		}
+		// According to rfc 9736 types 0, 3 and 4 are string types
+		// All other types are binary
+		switch t {
+		case 0:
+			fallthrough
+		case 3:
+			fallthrough
+		case 4:
+			tlv.Information = string(b[i+4 : i+4+int(l)])
+		default:
+			tlv.Information = b[i+4 : i+4+int(l)]
+		}
+		tlvs = append(tlvs, tlv)
 		i += 4 + int(l)
 	}
 

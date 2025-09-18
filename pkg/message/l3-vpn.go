@@ -87,6 +87,10 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		if psid, err := update.GetAttrPrefixSID(); err == nil {
 			prfx.PrefixSID = psid
 		}
+		if ph.PeerType == bmp.PeerType3 {
+			prfx.IsLocRIB = true
+			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		}
 		prfxs = append(prfxs, prfx)
 	}
 

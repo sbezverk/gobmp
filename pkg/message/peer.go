@@ -62,6 +62,16 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			// Local BGP speaker is 4 bytes AS capable
 			m.LocalASN = lasn
 		}
+		m.AdvCapabilities = peerUpMsg.SentOpen.GetCapabilities()
+		m.RcvCapabilities = peerUpMsg.ReceivedOpen.GetCapabilities()
+		if len(peerUpMsg.Information) > 0 {
+			m.InfoTLV = make([]bmp.InformationalTLV, len(peerUpMsg.Information))
+			copy(m.InfoTLV, peerUpMsg.Information)
+		}
+		p.tableLock.Lock()
+		ptp := PerTableProperties{
+			addPathCapable: make(map[int]bool),
+		}
 		// Check if local router advertises AddPath Send/Receive for any AFI/SAFI,
 		// if map comes back empty no further AddPath Capability is needed
 		if lAddPath := peerUpMsg.SentOpen.AddPathCapability(); len(lAddPath) != 0 {
@@ -72,16 +82,18 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 					// Enable AddPath only for AFI/SAFI types existing in both local and remote maps
 					if capable, ok := rAddPath[k]; ok {
 						// AFI/SAFI type exists in both maps, which means both peers support Send/Receive of AddPath
-						p.addPathCapable[k] = capable
+						ptp.addPathCapable[k] = capable
+						if glog.V(6) {
+							glog.Infof("producer for speaker ip: %s afi/safi code: %d add path: %+v", p.speakerIP, k, capable)
+						}
 					}
 				}
 			}
 		}
-		m.AdvCapabilities = peerUpMsg.SentOpen.GetCapabilities()
-		m.RcvCapabilities = peerUpMsg.ReceivedOpen.GetCapabilities()
-		if glog.V(6) {
-			glog.Infof("producer for speaker ip: %s add path: %+v", p.speakerIP, p.addPathCapable)
-		}
+		ptp.tableInfoTLVs = make([]bmp.InformationalTLV, len(peerUpMsg.Information))
+		copy(ptp.tableInfoTLVs, peerUpMsg.Information)
+		p.tableProperties[msg.PeerHeader.GetTableKey()] = ptp
+		p.tableLock.Unlock()
 	} else {
 		peerDownMsg, ok := msg.Payload.(*bmp.PeerDownMessage)
 		if !ok {
@@ -103,7 +115,9 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m.IsIPv4 = !msg.PeerHeader.IsRemotePeerIPv6()
 		m.InfoData = make([]byte, len(peerDownMsg.Data))
 		copy(m.InfoData, peerDownMsg.Data)
-
+		p.tableLock.Lock()
+		delete(p.tableProperties, msg.PeerHeader.GetTableKey())
+		p.tableLock.Unlock()
 	}
 	if err := p.marshalAndPublish(&m, bmp.PeerStateChangeMsg, []byte(m.RouterHash), false); err != nil {
 		glog.Errorf("failed to process peer message with error: %+v", err)

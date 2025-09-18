@@ -111,6 +111,10 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 				prfx.PrefixSID = psid
 			}
 		}
+		if ph.PeerType == bmp.PeerType3 {
+			prfx.IsLocRIB = true
+			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		}
 		prfxs = append(prfxs, prfx)
 	}
 

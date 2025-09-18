@@ -171,6 +171,10 @@ func (p *PerPeerHeader) GetPeerDistinguisherString() string {
 	return pd
 }
 
+func (p *PerPeerHeader) GetTableKey() string {
+	return p.GetPeerBGPIDString() + p.GetPeerDistinguisherString()
+}
+
 // UnmarshalPerPeerHeader processes Per-Peer header
 func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	if glog.V(6) {

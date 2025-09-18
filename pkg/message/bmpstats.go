@@ -36,29 +36,29 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 	m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
 	m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()
 	for _, tlv := range StatsMsg.StatsTLV {
-		switch tlv.InformationType {
+		switch tlv.StatType {
 		case 1:
-			m.DuplicatePrefixs = binary.BigEndian.Uint32(tlv.Information)
+			m.DuplicatePrefixs = binary.BigEndian.Uint32(tlv.StatData)
 		case 2:
-			m.DuplicateWithDraws = binary.BigEndian.Uint32(tlv.Information)
+			m.DuplicateWithDraws = binary.BigEndian.Uint32(tlv.StatData)
 		case 3:
-			m.InvalidatedDueCluster = binary.BigEndian.Uint32(tlv.Information)
+			m.InvalidatedDueCluster = binary.BigEndian.Uint32(tlv.StatData)
 		case 4:
-			m.InvalidatedDueAspath = binary.BigEndian.Uint32(tlv.Information)
+			m.InvalidatedDueAspath = binary.BigEndian.Uint32(tlv.StatData)
 		case 5:
-			m.InvalidatedDueOriginatorId = binary.BigEndian.Uint32(tlv.Information)
+			m.InvalidatedDueOriginatorId = binary.BigEndian.Uint32(tlv.StatData)
 		case 6:
-			m.InvalidatedAsConfed = binary.BigEndian.Uint32(tlv.Information)
+			m.InvalidatedAsConfed = binary.BigEndian.Uint32(tlv.StatData)
 		case 7:
-			m.AdjRIBsIn = binary.BigEndian.Uint64(tlv.Information)
+			m.AdjRIBsIn = binary.BigEndian.Uint64(tlv.StatData)
 		case 8:
-			m.LocalRib = binary.BigEndian.Uint64(tlv.Information)
+			m.LocalRib = binary.BigEndian.Uint64(tlv.StatData)
 		case 11:
-			m.UpdatesAsWithdraw = binary.BigEndian.Uint32(tlv.Information)
+			m.UpdatesAsWithdraw = binary.BigEndian.Uint32(tlv.StatData)
 		case 12:
-			m.PrefixesAsWithdraw = binary.BigEndian.Uint32(tlv.Information)
+			m.PrefixesAsWithdraw = binary.BigEndian.Uint32(tlv.StatData)
 		default:
-			glog.Warningf("unprocessed stats type:%v", tlv.InformationType)
+			glog.Warningf("unprocessed stats type:%v", tlv.StatType)
 		}
 	}
 	if err := p.marshalAndPublish(&m, bmp.StatsReportMsg, []byte(m.RouterHash), false); err != nil {
