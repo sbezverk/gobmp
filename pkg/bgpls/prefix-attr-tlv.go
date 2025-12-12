@@ -386,7 +386,7 @@ func UnmarshalRangeTLVFlags(b byte, proto base.ProtoID) (RangeTLVFlags, error) {
 // UnmarshalRangeTLV builds Range TLV Object (RFC 9085 Section 2.3.5)
 func UnmarshalRangeTLV(b []byte, proto base.ProtoID) (*RangeTLV, error) {
 	if len(b) < 4 {
-		return nil, fmt.Errorf("Range TLV too short: %d bytes, expected at least 4", len(b))
+		return nil, fmt.Errorf("range TLV too short: %d bytes, expected at least 4", len(b))
 	}
 
 	rtlv := &RangeTLV{}

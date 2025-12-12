@@ -294,7 +294,7 @@ func (ls *NLRI) GetLSRangeTLV(proto base.ProtoID) (*RangeTLV, error) {
 		}
 		return UnmarshalRangeTLV(tlv.Value, proto)
 	}
-	return nil, fmt.Errorf("Range TLV 1159 not found")
+	return nil, fmt.Errorf("range TLV 1159 not found")
 }
 
 // GetLSSRv6Locator returns a slice of SRv6 locator objects
