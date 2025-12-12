@@ -113,8 +113,19 @@ func (p *PerPeerHeader) GetPeerAddrString() string {
 	return net.IP(p.PeerAddress[12:]).To4().String()
 }
 
-// IsAdjRIBOutPost returns true if PeerType is 0,1 or 2 and O flag is set, otherwise it returns error
-func (p *PerPeerHeader) IsAdjRIBOutPost() (bool, error) {
+// IsAdjRIBIn returns true if route is from Adj-RIB-In (O flag not set)
+// Per RFC 8671: O=0 indicates Adj-RIB-In (routes received from peer)
+func (p *PerPeerHeader) IsAdjRIBIn() (bool, error) {
+	if p.PeerType != PeerType3 {
+		return !p.flagO, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
+}
+
+// IsAdjRIBOut returns true if route is from Adj-RIB-Out (O flag set)
+// Per RFC 8671: O=1 indicates Adj-RIB-Out (routes being advertised to peer)
+func (p *PerPeerHeader) IsAdjRIBOut() (bool, error) {
 	if p.PeerType != PeerType3 {
 		return p.flagO, nil
 	}
@@ -122,10 +133,71 @@ func (p *PerPeerHeader) IsAdjRIBOutPost() (bool, error) {
 	return false, ErrInvFlagRequestForPeerType
 }
 
-// IsAdjRIBInPost returns true if PeerType is 0,1 or 2 and L flag is set, otherwise it returns error
-func (p *PerPeerHeader) IsAdjRIBInPost() (bool, error) {
+// IsPrePolicy returns true if L flag is not set (pre-policy)
+// Per RFC 7854/8671: L=0 indicates pre-policy (before policy application)
+func (p *PerPeerHeader) IsPrePolicy() (bool, error) {
+	if p.PeerType != PeerType3 {
+		return !p.flagL, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
+}
+
+// IsPostPolicy returns true if L flag is set (post-policy)
+// Per RFC 7854/8671: L=1 indicates post-policy (after policy application)
+func (p *PerPeerHeader) IsPostPolicy() (bool, error) {
 	if p.PeerType != PeerType3 {
 		return p.flagL, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
+}
+
+// Is4ByteASN returns true if AS_PATH uses 4-byte ASNs, false for 2-byte ASNs
+// Per RFC 7854: A flag (bit 5) indicates 2-byte AS (0) or 4-byte AS (1)
+func (p *PerPeerHeader) Is4ByteASN() (bool, error) {
+	if p.PeerType != PeerType3 {
+		return p.flagA, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
+}
+
+// IsAdjRIBInPre returns true if route is from Adj-RIB-In Pre-Policy (O=0, L=0)
+// Per RFC 7854/8671: Routes received from peer before inbound policy
+func (p *PerPeerHeader) IsAdjRIBInPre() (bool, error) {
+	if p.PeerType != PeerType3 {
+		return !p.flagO && !p.flagL, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
+}
+
+// IsAdjRIBInPost returns true if route is from Adj-RIB-In Post-Policy (O=0, L=1)
+// Per RFC 7854/8671: Routes received from peer after inbound policy
+func (p *PerPeerHeader) IsAdjRIBInPost() (bool, error) {
+	if p.PeerType != PeerType3 {
+		return !p.flagO && p.flagL, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
+}
+
+// IsAdjRIBOutPre returns true if route is from Adj-RIB-Out Pre-Policy (O=1, L=0)
+// Per RFC 8671: Routes advertised to peer before outbound policy
+func (p *PerPeerHeader) IsAdjRIBOutPre() (bool, error) {
+	if p.PeerType != PeerType3 {
+		return p.flagO && !p.flagL, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
+}
+
+// IsAdjRIBOutPost returns true if route is from Adj-RIB-Out Post-Policy (O=1, L=1)
+// Per RFC 8671: Routes advertised to peer after outbound policy
+func (p *PerPeerHeader) IsAdjRIBOutPost() (bool, error) {
+	if p.PeerType != PeerType3 {
+		return p.flagO && p.flagL, nil
 	}
 
 	return false, ErrInvFlagRequestForPeerType
@@ -141,6 +213,7 @@ func (p *PerPeerHeader) IsLocRIBFiltered() (bool, error) {
 }
 
 // IsRemotePeerIPv6 returns true if Remote Peer is IPv6 for PeerType is 0,1 or 2, for Peer Type 3 always returns false.
+// Per RFC 7854: V flag (bit 7) indicates IPv4 (0) or IPv6 (1) peer address
 func (p *PerPeerHeader) IsRemotePeerIPv6() bool {
 	if p.PeerType != PeerType3 {
 		return p.flagV
