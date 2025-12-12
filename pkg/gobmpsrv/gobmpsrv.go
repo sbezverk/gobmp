@@ -95,16 +95,22 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		header, err := bmp.UnmarshalCommonHeader(headerMsg[:bmp.CommonHeaderLength])
 		if err != nil {
 			glog.Errorf("fail to recover BMP message Common Header with error: %+v", err)
-			continue
+			return
+		}
+		// Validate message length before allocating (prevents panic on corrupted data)
+		msgLen := int(header.MessageLength) - bmp.CommonHeaderLength
+		if msgLen < 0 || msgLen > 1<<20 { // Max 1MB per BMP message
+			glog.Errorf("invalid message length %d from client %+v, closing connection", header.MessageLength, client.RemoteAddr())
+			return
 		}
 		// Allocating space for the message body
-		msg := make([]byte, int(header.MessageLength)-bmp.CommonHeaderLength)
+		msg := make([]byte, msgLen)
 		if _, err := io.ReadFull(client, msg); err != nil {
 			glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
 			return
 		}
 
-		fullMsg := make([]byte, int(header.MessageLength))
+		fullMsg := make([]byte, header.MessageLength)
 		copy(fullMsg, headerMsg)
 		copy(fullMsg[bmp.CommonHeaderLength:], msg)
 		// Sending information to the server only in intercept mode
