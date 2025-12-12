@@ -334,11 +334,17 @@ func type80(subType uint8, value []byte) string {
 			s = fmt.Sprintf("AS: %d Rate: %d bps", binary.BigEndian.Uint16(value[:2]), uint32(math.Float32frombits(binary.BigEndian.Uint32(value[2:])))*8)
 		case 0x08:
 			s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:]))
-		case 0x09:
-			fallthrough
 		case 0x07:
-			// TODO (sbezverk) add corresponding transformation actions
-			fallthrough
+			// Traffic-Action Extended Community (RFC 8955 Section 7.3)
+			// Bit 47 (T): Terminal Action, Bit 46 (S): Sample
+			terminalAction := value[5]&0x01 != 0
+			sampleBit := value[5]&0x02 != 0
+			s = fmt.Sprintf("T=%t S=%t", terminalAction, sampleBit)
+		case 0x09:
+			// Traffic Marking Extended Community (RFC 8955 Section 7.5)
+			// Lower 6 bits of last byte contain DSCP value
+			dscp := value[5] & 0x3F
+			s = fmt.Sprintf("DSCP=%d", dscp)
 		default:
 			s = tools.MessageHex(value)
 		}
