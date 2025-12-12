@@ -35,12 +35,11 @@ func TestParsePMSITunnel_WithLabel(t *testing.T) {
 	data[0] = 0x01 // Flags with L bit set
 	data[1] = 0x01 // TunnelType = RSVP-TE
 
-	// MPLS label 12345: encoded as (12345 << 12) in the upper 20 bits
-	// The parser prepends a 0 byte and reads as uint32, then shifts right by 12
-	// So we need the 3 bytes to be [0x30, 0x39, 0x00] (from 0x3039000)
-	data[2] = 0x30
-	data[3] = 0x39
-	data[4] = 0x00
+	// MPLS label 12345 (0x3039) in RFC 6514 format
+	// Label occupies upper 20 bits: [bits 19-12][bits 11-4][bits 3-0 + EXP + S]
+	data[2] = 0x03 // bits 19-12
+	data[3] = 0x03 // bits 11-4
+	data[4] = 0x90 // bits 3-0 (0x9) in upper nibble
 
 	// Tunnel ID
 	copy(data[5:], []byte{0x01, 0x02, 0x03, 0x04})
@@ -170,11 +169,10 @@ func TestParsePMSITunnel_RFC6514_Example(t *testing.T) {
 	data[0] = 0x01 // L bit set
 	data[1] = 0x07 // Ingress Replication
 
-	// MPLS label 1000: RFC 6514 format (label << 4 for 20-bit label + 4-bit TC/S)
-	// 1000 << 4 = 0x3E80, stored as [0x03, 0xE8, 0x00]
-	data[2] = 0x03
-	data[3] = 0xE8
-	data[4] = 0x00
+	// MPLS label 1000 (0x3E8) in RFC 6514 format
+	data[2] = 0x00 // bits 19-12
+	data[3] = 0x3E // bits 11-4
+	data[4] = 0x80 // bits 3-0 (0x8) in upper nibble
 
 	// Tunnel ID = 192.0.2.1
 	data[5] = 192

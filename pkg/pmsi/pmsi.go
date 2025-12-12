@@ -1,7 +1,6 @@
 package pmsi
 
 import (
-	"encoding/binary"
 	"fmt"
 )
 
@@ -56,9 +55,9 @@ func ParsePMSITunnel(data []byte) (*PMSITunnel, error) {
 		if len(data) < 5 {
 			return nil, fmt.Errorf("PMSI tunnel missing MPLS label: data length %d, expected at least 5", len(data))
 		}
-		// Parse 20-bit MPLS label from 3 bytes (RFC 6514: upper 20 bits, lower 4 bits for TC/S)
-		labelBytes := append([]byte{0}, data[2:5]...)
-		label := binary.BigEndian.Uint32(labelBytes) >> 4
+		// Parse 20-bit MPLS label from 3 bytes (RFC 6514 Section 5)
+		// Label occupies upper 20 bits, followed by 3-bit EXP and 1-bit S
+		label := uint32(data[2])<<12 | uint32(data[3])<<4 | uint32(data[4])>>4
 		tunnel.MPLSLabel = &label
 		offset = 5
 	}
