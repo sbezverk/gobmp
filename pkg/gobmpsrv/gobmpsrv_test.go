@@ -118,7 +118,8 @@ func TestMessageLengthEdgeCases(t *testing.T) {
 		msgLen := int(messageLength) - bmp.CommonHeaderLength
 
 		// This should be rejected (exceeds the limit)
-		if !(msgLen <= 0 || msgLen > 1<<20) {
+		// Apply De Morgan's law: !(A || B) = !A && !B
+		if msgLen > 0 && msgLen <= 1<<20 {
 			t.Errorf("1MB+1 payload should be rejected, got msgLen=%d", msgLen)
 		}
 	})
