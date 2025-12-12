@@ -99,7 +99,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		}
 		// Validate message length before allocating (prevents panic on corrupted data)
 		msgLen := int(header.MessageLength) - bmp.CommonHeaderLength
-		if msgLen < 0 || msgLen > 1<<20 { // Max 1MB per BMP message
+		if msgLen <= 0 || msgLen > 1<<20 { // Max 1MB per BMP message
 			glog.Errorf("invalid message length %d from client %+v, closing connection", header.MessageLength, client.RemoteAddr())
 			return
 		}
