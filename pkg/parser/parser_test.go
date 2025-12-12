@@ -78,10 +78,10 @@ func TestNewParser(t *testing.T) {
 	// Test with nil config
 	p := NewParser(queue, producerQueue, stop, nil)
 	if p == nil {
-		t.Error("NewParser returned nil")
+		t.Fatal("NewParser returned nil")
 	}
 	if p.config == nil {
-		t.Error("NewParser should set default config when nil provided")
+		t.Fatal("NewParser should set default config when nil provided")
 	}
 	if p.config.EnableRawMode {
 		t.Error("Default config should have EnableRawMode = false")
