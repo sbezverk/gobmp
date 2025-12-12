@@ -9,7 +9,6 @@ import (
 
 // mockPublisher implements pub.Publisher interface for testing
 type mockPublisher struct {
-	published []interface{}
 }
 
 func (m *mockPublisher) PublishMessage(msgType int, msgHash []byte, msg []byte) error {
