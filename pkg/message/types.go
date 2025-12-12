@@ -515,6 +515,13 @@ type Flowspec struct {
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
+// AFISAFIStat represents statistics per Address Family (RFC 7854, RFC 8671)
+type AFISAFIStat struct {
+	AFI   uint16 `json:"afi"`   // Address Family Identifier
+	SAFI  uint8  `json:"safi"`  // Subsequent Address Family Identifier
+	Count uint64 `json:"count"` // Route count
+}
+
 // Stats defines a message format sent to as a result of BMP Stats Message
 type Stats struct {
 	Key                        string `json:"_key,omitempty"`
@@ -539,4 +546,17 @@ type Stats struct {
 	LocalRib                   uint64 `json:"local_rib,omitempty"`
 	UpdatesAsWithdraw          uint32 `json:"updates_as_withdraw,omitempty"`
 	PrefixesAsWithdraw         uint32 `json:"prefixes_as_withdraw,omitempty"`
+	PrefixesRejectedInbound    uint32 `json:"prefixes_rejected_inbound,omitempty"`
+	// Type 9: Per-AFI/SAFI Adj-RIB-In (RFC 7854)
+	PerAFIAdjRIBsIn []AFISAFIStat `json:"per_afi_adj_ribs_in,omitempty"`
+	// Type 10: Per-AFI/SAFI Loc-RIB (RFC 7854)
+	PerAFILocRIB []AFISAFIStat `json:"per_afi_loc_rib,omitempty"`
+	// Type 13: Duplicate Updates (RFC 7854)
+	DuplicateUpdates   uint32 `json:"duplicate_updates,omitempty"`
+	PrePolicyAdjRIBOut uint64 `json:"pre_policy_adj_rib_out,omitempty"`
+	PostPolicyAdjRIBOut uint64 `json:"post_policy_adj_rib_out,omitempty"`
+	// Type 16: Per-AFI/SAFI Pre-policy Adj-RIB-Out (RFC 8671)
+	PerAFIPrePolicyAdjRIBOut []AFISAFIStat `json:"per_afi_pre_policy_adj_rib_out,omitempty"`
+	// Type 17: Per-AFI/SAFI Post-policy Adj-RIB-Out (RFC 8671)
+	PerAFIPostPolicyAdjRIBOut []AFISAFIStat `json:"per_afi_post_policy_adj_rib_out,omitempty"`
 }
