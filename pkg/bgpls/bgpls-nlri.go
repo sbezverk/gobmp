@@ -312,6 +312,17 @@ func (ls *NLRI) GetLSPrefixAttrFlags(proto base.ProtoID) (PrefixAttrFlags, error
 
 // GetLSSourceRouterID returns a Prefix Source Router ID
 func (ls *NLRI) GetLSSourceRouterID() (string, error) {
+	// First check for OSPF-specific TLV 1174 (RFC 9085 Section 2.3.4)
+	for _, tlv := range ls.LS {
+		if tlv.Type == 1174 {
+			if len(tlv.Value) != 4 {
+				return "", fmt.Errorf("invalid length %d for OSPF Router-ID TLV 1174, expected 4", len(tlv.Value))
+			}
+			return net.IP(tlv.Value).To4().String(), nil
+		}
+	}
+
+	// Fallback to generic TLV 1171
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1171 {
 			continue
@@ -322,11 +333,11 @@ func (ls *NLRI) GetLSSourceRouterID() (string, error) {
 		case 16:
 			return net.IP(tlv.Value).To16().String(), nil
 		default:
-			return "", fmt.Errorf("invalid length %d of Source Router ID TLV", len(tlv.Value))
+			return "", fmt.Errorf("invalid length %d of Source Router ID TLV 1171", len(tlv.Value))
 		}
 	}
 
-	return "", fmt.Errorf("not found")
+	return "", fmt.Errorf("source router ID TLV not found")
 }
 
 // GetLSSRv6ENDXSID returns SRv6 END.X SID TLV
