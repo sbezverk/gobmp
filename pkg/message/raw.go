@@ -58,61 +58,116 @@ func (p *producer) produceRawMessage(msg bmp.Message) {
 	buf.Grow(totalSize)
 
 	// Write all fields in big-endian byte order
+	// Note: binary.Write to bytes.Buffer never fails, but we check errors for linter compliance
 
 	// Offset 0: Magic Number (4 bytes) = 0x4F424D50 ("OBMP")
-	binary.Write(buf, binary.BigEndian, uint32(0x4F424D50))
+	if err := binary.Write(buf, binary.BigEndian, uint32(0x4F424D50)); err != nil {
+		glog.Errorf("failed to write magic number: %v", err)
+		return
+	}
 
 	// Offset 4: Version Major (1 byte) = 1
-	binary.Write(buf, binary.BigEndian, uint8(1))
+	if err := binary.Write(buf, binary.BigEndian, uint8(1)); err != nil {
+		glog.Errorf("failed to write version major: %v", err)
+		return
+	}
 
 	// Offset 5: Version Minor (1 byte) = 7
-	binary.Write(buf, binary.BigEndian, uint8(7))
+	if err := binary.Write(buf, binary.BigEndian, uint8(7)); err != nil {
+		glog.Errorf("failed to write version minor: %v", err)
+		return
+	}
 
 	// Offset 6: Header Length (2 bytes)
-	binary.Write(buf, binary.BigEndian, headerLen)
+	if err := binary.Write(buf, binary.BigEndian, headerLen); err != nil {
+		glog.Errorf("failed to write header length: %v", err)
+		return
+	}
 
 	// Offset 8: BMP Message Length (4 bytes)
-	binary.Write(buf, binary.BigEndian, uint32(len(rm.Msg)))
+	if err := binary.Write(buf, binary.BigEndian, uint32(len(rm.Msg))); err != nil {
+		glog.Errorf("failed to write BMP message length: %v", err)
+		return
+	}
 
 	// Offset 12: Flags (1 byte)
 	flags := calculateFlags(routerIsIPv6)
-	binary.Write(buf, binary.BigEndian, flags)
+	if err := binary.Write(buf, binary.BigEndian, flags); err != nil {
+		glog.Errorf("failed to write flags: %v", err)
+		return
+	}
 
 	// Offset 13: Message Type (1 byte) = 12 (BMP_RAW)
-	binary.Write(buf, binary.BigEndian, uint8(12))
+	if err := binary.Write(buf, binary.BigEndian, uint8(12)); err != nil {
+		glog.Errorf("failed to write message type: %v", err)
+		return
+	}
 
 	// Offset 14: Timestamp Seconds (4 bytes)
-	binary.Write(buf, binary.BigEndian, timestampSec)
+	if err := binary.Write(buf, binary.BigEndian, timestampSec); err != nil {
+		glog.Errorf("failed to write timestamp seconds: %v", err)
+		return
+	}
 
 	// Offset 18: Timestamp Microseconds (4 bytes)
-	binary.Write(buf, binary.BigEndian, timestampUsec)
+	if err := binary.Write(buf, binary.BigEndian, timestampUsec); err != nil {
+		glog.Errorf("failed to write timestamp microseconds: %v", err)
+		return
+	}
 
 	// Offset 22: Collector Hash (16 bytes)
-	buf.Write(collectorHash[:])
+	if _, err := buf.Write(collectorHash[:]); err != nil {
+		glog.Errorf("failed to write collector hash: %v", err)
+		return
+	}
 
 	// Offset 38: Collector Admin ID Length (2 bytes)
-	binary.Write(buf, binary.BigEndian, uint16(len(p.collectorAdminID)))
+	if err := binary.Write(buf, binary.BigEndian, uint16(len(p.collectorAdminID))); err != nil {
+		glog.Errorf("failed to write collector admin ID length: %v", err)
+		return
+	}
 
 	// Offset 40: Collector Admin ID (N bytes)
-	buf.WriteString(p.collectorAdminID)
+	if _, err := buf.WriteString(p.collectorAdminID); err != nil {
+		glog.Errorf("failed to write collector admin ID: %v", err)
+		return
+	}
 
 	// Offset 40+N: Router Hash (16 bytes)
-	buf.Write(routerHash[:])
+	if _, err := buf.Write(routerHash[:]); err != nil {
+		glog.Errorf("failed to write router hash: %v", err)
+		return
+	}
 
 	// Offset 56+N: Router IP (16 bytes)
-	buf.Write(routerIPBytes[:])
+	if _, err := buf.Write(routerIPBytes[:]); err != nil {
+		glog.Errorf("failed to write router IP: %v", err)
+		return
+	}
 
 	// Offset 72+N: Router Group Length (2 bytes)
-	binary.Write(buf, binary.BigEndian, uint16(len(routerGroup)))
+	if err := binary.Write(buf, binary.BigEndian, uint16(len(routerGroup))); err != nil {
+		glog.Errorf("failed to write router group length: %v", err)
+		return
+	}
 
 	// Offset 74+N: Router Group (M bytes)
-	buf.WriteString(routerGroup)
+	if _, err := buf.WriteString(routerGroup); err != nil {
+		glog.Errorf("failed to write router group: %v", err)
+		return
+	}
 
 	// Offset 74+N+M: Row Count (4 bytes) = 1 (always 1 for BMP_RAW)
-	binary.Write(buf, binary.BigEndian, uint32(1))
+	if err := binary.Write(buf, binary.BigEndian, uint32(1)); err != nil {
+		glog.Errorf("failed to write row count: %v", err)
+		return
+	}
 
 	// Append the raw BMP message
-	buf.Write(rm.Msg)
+	if _, err := buf.Write(rm.Msg); err != nil {
+		glog.Errorf("failed to write BMP message: %v", err)
+		return
+	}
 
 	// Publish to raw topic
 	if err := p.publisher.PublishMessage(bmp.BMPRawMsg, nil, buf.Bytes()); err != nil {
