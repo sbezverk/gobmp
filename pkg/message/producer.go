@@ -34,6 +34,8 @@ type producer struct {
 	addPathCapable map[int]bool
 	// If splitAF is set to true, ipv4 and ipv6 messages will go into separate topics
 	splitAF bool
+	// collectorAdminID is the collector identifier string for OpenBMP binary header
+	collectorAdminID string
 	// adminHash is the MD5 hash of the admin ID for RAW messages
 	adminHash string
 }
@@ -76,6 +78,8 @@ func (p *producer) SetConfig(config *Config) error {
 	}
 
 	if config.AdminID != "" {
+		// Store collector admin ID for OpenBMP binary header
+		p.collectorAdminID = config.AdminID
 		// Generate MD5 hash of admin ID for OpenBMP collector hash
 		hash := md5.Sum([]byte(config.AdminID))
 		p.adminHash = hex.EncodeToString(hash[:])
