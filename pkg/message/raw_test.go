@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -457,4 +458,45 @@ func TestGetCurrentTimestamp(t *testing.T) {
 	if usec >= 1000000 {
 		t.Errorf("Timestamp microseconds = %d, should be < 1000000", usec)
 	}
+}
+
+// TestHeaderWriter tests the error accumulator pattern
+func TestHeaderWriter(t *testing.T) {
+	t.Run("Successful writes", func(t *testing.T) {
+		w := &headerWriter{}
+		w.write(uint32(0x4F424D50))
+		w.write(uint8(1))
+		w.write(uint16(100))
+		w.writeBytes([]byte{0xAA, 0xBB})
+		w.writeString("test")
+
+		if w.err != nil {
+			t.Errorf("Unexpected error: %v", w.err)
+		}
+
+		// Verify buffer has expected size
+		expected := 4 + 1 + 2 + 2 + 4 // uint32 + uint8 + uint16 + 2 bytes + "test"
+		if w.buf.Len() != expected {
+			t.Errorf("Buffer length = %d, want %d", w.buf.Len(), expected)
+		}
+	})
+
+	t.Run("Error stops subsequent writes", func(t *testing.T) {
+		w := &headerWriter{}
+		w.write(uint32(123))
+
+		// Simulate an error
+		w.err = fmt.Errorf("simulated error")
+
+		initialLen := w.buf.Len()
+
+		// These writes should not happen
+		w.write(uint32(456))
+		w.writeBytes([]byte{0xFF})
+
+		// Buffer should not have grown
+		if w.buf.Len() != initialLen {
+			t.Errorf("Buffer grew after error, len = %d, want %d", w.buf.Len(), initialLen)
+		}
+	})
 }
