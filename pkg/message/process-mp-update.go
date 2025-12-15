@@ -113,6 +113,18 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
+	case 23:
+		msgs, err := p.vpls(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce vpls messages with error: %+v", err)
+			return
+		}
+		for _, msg := range msgs {
+			if err := p.marshalAndPublish(&msg, bmp.VPLSMsg, []byte(msg.RouterHash), false); err != nil {
+				glog.Errorf("failed to process VPLS message with error: %+v", err)
+				return
+			}
+		}
 	case 24:
 		msgs, err := p.evpn(nlri, operation, ph, update)
 		if err != nil {

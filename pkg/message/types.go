@@ -539,6 +539,58 @@ type EVPNPrefix struct {
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
+// VPLSPrefix defines the structure of VPLS message (AFI 25, SAFI 65)
+// Supports both RFC 4761 (VPLS-BGP) and RFC 6074 (BGP-AD) formats
+type VPLSPrefix struct {
+	Key            string              `json:"_key,omitempty"`
+	ID             string              `json:"_id,omitempty"`
+	Rev            string              `json:"_rev,omitempty"`
+	Action         string              `json:"action,omitempty"` // Action can be "add" or "del"
+	Sequence       int                 `json:"sequence,omitempty"`
+	Hash           string              `json:"hash,omitempty"`
+	RouterHash     string              `json:"router_hash,omitempty"`
+	RouterIP       string              `json:"router_ip,omitempty"`
+	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash       string              `json:"peer_hash,omitempty"`
+	RemoteBGPID    string              `json:"remote_bgp_id,omitempty"`
+	PeerIP         string              `json:"peer_ip,omitempty"`
+	PeerType       uint8               `json:"peer_type"`
+	PeerASN        uint32              `json:"peer_asn,omitempty"`
+	Timestamp      string              `json:"timestamp,omitempty"`
+	IsIPv4         bool                `json:"is_ipv4"`
+	OriginAS       uint32              `json:"origin_as,omitempty"`
+	Nexthop        string              `json:"nexthop,omitempty"`
+	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
+
+	// VPLS Common Fields
+	VPNRD   string `json:"vpn_rd,omitempty"`
+	RFCType string `json:"rfc_type,omitempty"` // "RFC4761" or "RFC6074"
+
+	// RFC 4761 VPLS-BGP Fields (17-byte NLRI)
+	VEID          *uint16 `json:"ve_id,omitempty"`
+	VEBlockOffset *uint16 `json:"ve_block_offset,omitempty"`
+	VEBlockSize   *uint16 `json:"ve_block_size,omitempty"`
+	LabelBase     *uint32 `json:"label_base,omitempty"`
+	LabelBlockEnd *uint32 `json:"label_block_end,omitempty"` // Calculated: LabelBase + VEBlockSize - 1
+
+	// RFC 6074 BGP-AD Fields (12-byte NLRI)
+	PEAddress *string `json:"pe_address,omitempty"` // IPv4 address of advertising PE
+
+	// Layer2 Info Extended Community (Type 0x800A)
+	EncapType    *string `json:"encap_type,omitempty"`
+	ControlWord  *bool   `json:"control_word,omitempty"`
+	SequencedDel *bool   `json:"sequenced_delivery,omitempty"`
+	MTU          *uint16 `json:"mtu,omitempty"`
+
+	// Route Target Extended Community (Type 0x0002, 0x0102, 0x0202)
+	RouteTargets []string `json:"route_targets,omitempty"` // Array of RT strings (e.g., "RT:65000:100")
+
+	// Values assigned based on PerPeerHeader flags
+	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+}
+
 // SRPolicy defines the structure of SR Policy message
 type SRPolicy struct {
 	Key            string                  `json:"_key,omitempty"`
