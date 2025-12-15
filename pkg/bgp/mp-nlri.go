@@ -7,6 +7,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/mcastvpn"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
+	"github.com/sbezverk/gobmp/pkg/vpls"
 )
 
 // MPNLRI defines a common interface methind for MP Reach and MP Unreach NLRIs
@@ -15,6 +16,7 @@ type MPNLRI interface {
 	GetNLRILU() (*base.MPNLRI, error)
 	GetNLRIUnicast() (*base.MPNLRI, error)
 	GetNLRIEVPN() (*evpn.Route, error)
+	GetNLRIVPLS() (*vpls.Route, error)
 	GetNLRIL3VPN() (*base.MPNLRI, error)
 	GetNLRI71() (*ls.NLRI71, error)
 	GetNLRI73() (*srpolicy.NLRI73, error)
