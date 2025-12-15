@@ -31,8 +31,8 @@ goBMP is a production-ready implementation of the BGP Monitoring Protocol ([RFC 
 
 ## Features
 
-- ✅ **Comprehensive BGP Support:** IPv4/IPv6 Unicast, Labeled Unicast, L3VPN, EVPN, BGP-LS, SR Policy, FlowSpec
-- ✅ **Segment Routing:** Full SRv6 support with BGP-LS extensions (Flex Algo, Application-Specific attributes)
+- ✅ **BGP Support:** IPv4/IPv6 Unicast, Labeled Unicast, L3VPN, VPLS, EVPN, BGP-LS, SR Policy, FlowSpec
+- ✅ **Segment Routing:** SRv6 support with BGP-LS extensions (Flex Algo, Application-Specific attributes)
 - ✅ **Multiple Publishers:** Kafka, NATS, file-based storage, console output
 - ✅ **OpenBMP Compatibility:** RAW mode publishes binary messages compatible with OpenBMP consumers
 - ✅ **Intercept Mode:** Transparent proxy mode for inserting into existing BMP pipelines
@@ -389,8 +389,8 @@ go tool pprof http://localhost:56767/debug/pprof/heap
 Contributions are welcome! goBMP is actively developed with ongoing work to expand protocol support and RFC compliance.
 
 **Areas for contribution:**
-- Additional BGP AFI/SAFI support (VPLS, Multicast, etc.)
-- Enhanced RFC compliance
+- Additional BGP AFI/SAFI support (Multicast, etc.)
+- RFC compliance improvements
 - Performance optimizations
 - Documentation improvements
 - Bug fixes and testing

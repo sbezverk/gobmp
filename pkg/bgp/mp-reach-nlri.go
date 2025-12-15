@@ -14,6 +14,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/unicast"
+	"github.com/sbezverk/gobmp/pkg/vpls"
 	"github.com/sbezverk/tools"
 )
 
@@ -134,6 +135,20 @@ func (mp *MPReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 func (mp *MPReachNLRI) GetNLRIEVPN() (*evpn.Route, error) {
 	if mp.AddressFamilyID == 25 && mp.SubAddressFamilyID == 70 {
 		route, err := evpn.UnmarshalEVPNNLRI(mp.NLRI)
+		if err != nil {
+			return nil, err
+		}
+		return route, nil
+	}
+
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIVPLS check for presense of NLRI VPLS AFI 25 and SAFI 65 in the NLRI 14 NLRI data and if exists, instantiate VPLS object
+func (mp *MPReachNLRI) GetNLRIVPLS() (*vpls.Route, error) {
+	if mp.AddressFamilyID == 25 && mp.SubAddressFamilyID == 65 {
+		route, err := vpls.UnmarshalVPLSNLRI(mp.NLRI)
 		if err != nil {
 			return nil, err
 		}
