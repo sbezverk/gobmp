@@ -108,3 +108,72 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 	}
 	return &psid, nil
 }
+
+// Equal compares two PSid objects for equality (RFC 8669)
+// Returns true if equal, false otherwise, along with a list of differences
+func (p *PSid) Equal(o *PSid) (bool, []string) {
+	if p == nil && o == nil {
+		return true, nil
+	}
+	if p == nil || o == nil {
+		return false, []string{"one prefix sid is nil"}
+	}
+
+	equal := true
+	diffs := make([]string, 0)
+
+	// Compare LabelIndex
+	if (p.LabelIndex == nil) != (o.LabelIndex == nil) {
+		equal = false
+		diffs = append(diffs, "label index nil mismatch")
+	} else if p.LabelIndex != nil {
+		if p.LabelIndex.Flags != o.LabelIndex.Flags {
+			equal = false
+			diffs = append(diffs, "label index flags mismatch")
+		}
+		if p.LabelIndex.LabelIndex != o.LabelIndex.LabelIndex {
+			equal = false
+			diffs = append(diffs, "label index value mismatch")
+		}
+	}
+
+	// Compare OriginatorSRGB
+	if (p.OriginatorSRGB == nil) != (o.OriginatorSRGB == nil) {
+		equal = false
+		diffs = append(diffs, "originator srgb nil mismatch")
+	} else if p.OriginatorSRGB != nil {
+		if p.OriginatorSRGB.Flags != o.OriginatorSRGB.Flags {
+			equal = false
+			diffs = append(diffs, "originator srgb flags mismatch")
+		}
+		if len(p.OriginatorSRGB.SRGB) != len(o.OriginatorSRGB.SRGB) {
+			equal = false
+			diffs = append(diffs, "originator srgb length mismatch")
+		} else {
+			for i := range p.OriginatorSRGB.SRGB {
+				if p.OriginatorSRGB.SRGB[i].First != o.OriginatorSRGB.SRGB[i].First {
+					equal = false
+					diffs = append(diffs, "originator srgb first mismatch")
+				}
+				if p.OriginatorSRGB.SRGB[i].Number != o.OriginatorSRGB.SRGB[i].Number {
+					equal = false
+					diffs = append(diffs, "originator srgb number mismatch")
+				}
+			}
+		}
+	}
+
+	// Compare SRv6L3Service
+	if (p.SRv6L3Service == nil) != (o.SRv6L3Service == nil) {
+		equal = false
+		diffs = append(diffs, "srv6 l3 service nil mismatch")
+	}
+
+	// Compare SRv6L2Service
+	if (p.SRv6L2Service == nil) != (o.SRv6L2Service == nil) {
+		equal = false
+		diffs = append(diffs, "srv6 l2 service nil mismatch")
+	}
+
+	return equal, diffs
+}

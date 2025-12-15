@@ -8,6 +8,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/flowspec"
+	"github.com/sbezverk/gobmp/pkg/pmsi"
 	"github.com/sbezverk/gobmp/pkg/prefixsid"
 	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
@@ -155,13 +156,12 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "labels mismatch")
 	}
-	if u.PrefixSID != ou.PrefixSID {
-		equal = false
-		diffs = append(diffs, "prefix sid mismatch")
+	if u.PrefixSID != nil || ou.PrefixSID != nil {
+		if eq, df := u.PrefixSID.Equal(ou.PrefixSID); !eq {
+			equal = false
+			diffs = append(diffs, df...)
+		}
 	}
-	//	if u.PrefixSID != nil {
-	// TODO (sbezverk) Add calling equal for PrefixSID object when it is implemented
-	//	}
 	if u.IsAdjRIBInPost && !ou.IsAdjRIBInPost {
 		equal = false
 		diffs = append(diffs, "is_adj_rib_in_post_policy mismatch: "+strconv.FormatBool(u.IsAdjRIBInPost)+" and "+strconv.FormatBool(ou.IsAdjRIBInPost))
@@ -441,9 +441,7 @@ type EVPNPrefix struct {
 	MAC            string              `json:"mac,omitempty"`
 	MACLength      uint8               `json:"mac_len,omitempty"`
 	RouteType      uint8               `json:"route_type,omitempty"`
-	// TODO Type 3 carries nlri 22
-	// https://tools.ietf.org/html/rfc6514
-	// Add to the message
+	PMSITunnel     *pmsi.PMSITunnel    `json:"pmsi_tunnel,omitempty"` // RFC 6514 PMSI Tunnel for Type 3 routes
 	// Values are assigned based on PerPeerHeader flas
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`

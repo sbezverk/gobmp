@@ -9,6 +9,11 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
+const (
+	// ESILength defines the Ethernet Segment Identifier length in bytes (RFC 7432 Section 5)
+	ESILength = 10
+)
+
 // evpn process MP_REACH_NLRI AFI 25 SAFI 70 update message and returns
 // EVPN prefix object.
 func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]EVPNPrefix, error) {
@@ -58,11 +63,9 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			prfx.RouteType = e.GetEVPNRouteType()
 			esi := e.GetEVPNESI()
 			if esi != nil {
-				// TODO Change 10 for a const for ESI length
-				for i := 0; i < 10; i++ {
+				for i := 0; i < ESILength; i++ {
 					prfx.ESI += fmt.Sprintf("%02d", esi[i])
-					// TODO same here ESI length -1
-					if i < 9 {
+					if i < ESILength-1 {
 						prfx.ESI += ":"
 					}
 				}
@@ -105,6 +108,10 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			for _, l := range e.GetEVPNLabel() {
 				prfx.Labels = append(prfx.Labels, l.Value)
 				prfx.RawLabels = append(prfx.RawLabels, l.GetRawValue())
+			}
+			// Extract PMSI Tunnel for Type 3 routes (RFC 6514, RFC 7432 Section 7.3)
+			if prfx.RouteType == 3 && update.BaseAttributes.PMSITunnel != nil {
+				prfx.PMSITunnel = update.BaseAttributes.PMSITunnel
 			}
 			if f, err := ph.IsAdjRIBInPost(); err == nil {
 				prfx.IsAdjRIBInPost = f

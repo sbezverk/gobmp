@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/pmsi"
 	"github.com/sbezverk/tools"
 	"github.com/sbezverk/tools/sort"
 )
@@ -35,8 +36,8 @@ type BaseAttributes struct {
 	AS4Path          []uint32 `json:"as4_path,omitempty"`
 	AS4PathCount     int32    `json:"as4_path_count,omitempty"`
 	AS4Aggregator    []byte   `json:"as4_aggregator,omitempty"`
-	// PMSITunnel
-	TunnelEncapAttr []byte `json:"-"`
+	PMSITunnel       *pmsi.PMSITunnel `json:"pmsi_tunnel,omitempty"` // RFC 6514 PMSI Tunnel Attribute (Type 22)
+	TunnelEncapAttr  []byte           `json:"-"`
 	// TraficEng
 	// IPv6SpecExtCommunity
 	// AIGP
@@ -170,6 +171,13 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 		case 18:
 			baseAttr.AS4Aggregator = unmarshalAttrAS4Aggregator(b[p : p+int(l)])
 		case 22:
+			// RFC 6514 PMSI Tunnel Attribute
+			tunnel, err := pmsi.ParsePMSITunnel(b[p : p+int(l)])
+			if err != nil {
+				glog.Warningf("failed to parse PMSI Tunnel attribute: %v", err)
+			} else {
+				baseAttr.PMSITunnel = tunnel
+			}
 		case 23:
 			baseAttr.TunnelEncapAttr = make([]byte, l)
 			copy(baseAttr.TunnelEncapAttr, b[p:p+int(l)])
