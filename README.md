@@ -125,6 +125,18 @@ List of currently supported NLRI and AFI/SAFI:
    <td>2/5
    </td>
   </tr>
+  <tr>
+   <td>MVPN for v4
+   </td>
+   <td>1/129
+   </td>
+  </tr>
+  <tr>
+   <td>MVPN for v6
+   </td>
+   <td>2/129
+   </td>
+  </tr>
 </table>
 
 

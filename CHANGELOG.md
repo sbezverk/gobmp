@@ -13,6 +13,9 @@ Message updates and major project changes should be documented here.
 - MCAST-VPN support for IPv4 (AFI 1, SAFI 5) per RFC 6514
 - MCAST-VPN support for IPv6 (AFI 2, SAFI 5) per RFC 6514
 - Support for all 7 MCAST-VPN route types: Intra-AS I-PMSI A-D, Inter-AS I-PMSI A-D, S-PMSI A-D, Leaf A-D, Source Active A-D, Shared Tree Join, Source Tree Join
+- MVPN support for IPv4 (AFI 1, SAFI 129) per RFC 6514
+- MVPN support for IPv6 (AFI 2, SAFI 129) per RFC 6514
+- Support for all 7 MVPN route types (reusing MCAST-VPN parser): Intra-AS I-PMSI A-D, Inter-AS I-PMSI A-D, S-PMSI A-D, Leaf A-D, Source Active A-D, Shared Tree Join, Source Tree Join
 
 ### 2025-12-15
 

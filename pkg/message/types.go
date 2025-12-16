@@ -376,6 +376,10 @@ type MCASTVPNPrefix struct {
 	IsLocRIBFiltered bool                `json:"is_loc_rib_filtered"`
 }
 
+// MVPNPrefix defines structure for Multicast VPN (SAFI 129)
+// Reuses MCASTVPNPrefix structure (same RFC 6514 format)
+type MVPNPrefix = MCASTVPNPrefix
+
 // L3VPNPrefix defines the structure of Layer 3 VPN message
 type L3VPNPrefix struct {
 	Key            string              `json:"_key,omitempty"`

@@ -68,4 +68,8 @@ const (
 	MCASTVPNV4Msg = 204
 	// MCASTVPNV6Msg defines BMP Route Monitoring message carrying MCAST-VPN IPv6 NLRI
 	MCASTVPNV6Msg = 206
+	// MVPNV4Msg defines BMP Route Monitoring message carrying MVPN IPv4 NLRI
+	MVPNV4Msg = 208
+	// MVPNV6Msg defines BMP Route Monitoring message carrying MVPN IPv6 NLRI
+	MVPNV6Msg = 210
 )

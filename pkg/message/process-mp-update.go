@@ -195,6 +195,24 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
+	case 34:
+		fallthrough
+	case 35:
+		msgs, err := p.mvpn(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce mvpn messages with error: %+v", err)
+			return
+		}
+		for _, m := range msgs {
+			topicType := bmp.MVPNV6Msg
+			if m.IsIPv4 {
+				topicType = bmp.MVPNV4Msg
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
+				glog.Errorf("failed to process MVPN message with error: %+v", err)
+				return
+			}
+		}
 	case 71:
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
 	}

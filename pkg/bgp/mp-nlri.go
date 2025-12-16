@@ -23,6 +23,7 @@ type MPNLRI interface {
 	GetFlowspecNLRI() (*flowspec.NLRI, error)
 	GetNLRIRTC() (*rtc.Route, error)
 	GetNLRIMCASTVPN() (*mcastvpn.Route, error)
+	GetNLRIMVPN() (*mcastvpn.Route, error)
 	GetNextHop() string
 	IsIPv6NLRI() bool
 	IsNextHopIPv6() bool
@@ -95,6 +96,12 @@ func NLRIMessageType(afi uint16, safi uint8) int {
 		// AFI 2 and SAFI 5 MCAST-VPN v6
 	case afi == 2 && safi == 5:
 		return 33
+		// AFI 1 and SAFI 129 Multicast VPN v4
+	case afi == 1 && safi == 129:
+		return 34
+		// AFI 2 and SAFI 129 Multicast VPN v6
+	case afi == 2 && safi == 129:
+		return 35
 	}
 
 	return 0

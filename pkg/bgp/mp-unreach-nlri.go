@@ -177,6 +177,15 @@ func (mp *MPUnReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
 	return nil, fmt.Errorf("not found")
 }
 
+// GetNLRIMVPN instantiates Multicast VPN (SAFI 129) NLRI
+func (mp *MPUnReachNLRI) GetNLRIMVPN() (*mcastvpn.Route, error) {
+	if mp.SubAddressFamilyID == 129 {
+		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes)
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
 // UnmarshalMPUnReachNLRI builds MP Reach NLRI attributes
 func UnmarshalMPUnReachNLRI(b []byte, addPath map[int]bool) (MPNLRI, error) {
 	if glog.V(6) {
