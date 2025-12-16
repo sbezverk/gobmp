@@ -4,6 +4,13 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2025-12-15
+
+#### Added
+
+- IPv4 Multicast support (AFI 1, SAFI 2) per RFC 4760
+- IPv6 Multicast support (AFI 2, SAFI 2) per RFC 4760
+
 ### 2023-04-13
 
 #### Changed
