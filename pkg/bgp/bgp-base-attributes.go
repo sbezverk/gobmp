@@ -40,7 +40,7 @@ type BaseAttributes struct {
 	TunnelEncapAttr  []byte           `json:"-"`
 	// TraficEng
 	// IPv6SpecExtCommunity
-	// AIGP
+	AIGP *AIGP `json:"aigp,omitempty"` // RFC 7311 AIGP Attribute (Type 26)
 	// PEDistinguisherLable
 	LgCommunityList []string      `json:"large_community_list,omitempty"`
 	BGPPrefixSID    *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
@@ -185,6 +185,13 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 		case 24:
 		case 25:
 		case 26:
+			// RFC 7311: AIGP Attribute
+			aigp, err := UnmarshalAIGP(b[p : p+int(l)])
+			if err != nil {
+				glog.Warningf("failed to unmarshal AIGP attribute with error: %+v", err)
+			} else {
+				baseAttr.AIGP = aigp
+			}
 		case 27:
 		case 28:
 		case 29:
