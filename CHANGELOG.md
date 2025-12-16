@@ -4,6 +4,15 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2025-12-16
+
+#### Added
+
+- RFC 8669 support: BGP Prefix-SID path attribute
+- BGP Prefix-SID Label-Index TLV (Type 1)
+- BGP Prefix-SID Originator SRGB TLV (Type 3)
+- Enables Segment Routing prefix SID distribution via BGP
+
 ### 2023-04-13
 
 #### Changed
