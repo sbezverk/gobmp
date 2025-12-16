@@ -56,4 +56,6 @@ const (
 	FlowspecV4Msg = 164
 	// FlowspecV6Msg defines BMP Route Monitoring message carrying Flowspec NLRI
 	FlowspecV6Msg = 166
+	// BMPRawMsg defines BMP RAW message type for unprocessed BMP messages
+	BMPRawMsg = 255
 )
