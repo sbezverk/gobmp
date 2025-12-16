@@ -48,6 +48,18 @@ List of currently supported NLRI and AFI/SAFI:
    </td>
   </tr>
   <tr>
+   <td>IPv4 Multicast
+   </td>
+   <td>1/2
+   </td>
+  </tr>
+  <tr>
+   <td>IPv6 Multicast
+   </td>
+   <td>2/2
+   </td>
+  </tr>
+  <tr>
    <td>VPNv4 unicast
    </td>
    <td>1/128
@@ -87,6 +99,42 @@ List of currently supported NLRI and AFI/SAFI:
   <td>SR Policy for v6
    </td>
    <td>2/73
+   </td>
+  </tr>
+  <tr>
+   <td>Route Target Constraint for v4
+   </td>
+   <td>1/132
+   </td>
+  </tr>
+  <tr>
+   <td>Route Target Constraint for v6
+   </td>
+   <td>2/132
+   </td>
+  </tr>
+  <tr>
+   <td>MCAST-VPN for v4
+   </td>
+   <td>1/5
+   </td>
+  </tr>
+  <tr>
+   <td>MCAST-VPN for v6
+   </td>
+   <td>2/5
+   </td>
+  </tr>
+  <tr>
+   <td>MVPN for v4
+   </td>
+   <td>1/129
+   </td>
+  </tr>
+  <tr>
+   <td>MVPN for v6
+   </td>
+   <td>2/129
    </td>
   </tr>
 </table>

@@ -56,4 +56,20 @@ const (
 	FlowspecV4Msg = 164
 	// FlowspecV6Msg defines BMP Route Monitoring message carrying Flowspec NLRI
 	FlowspecV6Msg = 166
+	// MulticastV4Msg defines BMP Route Monitoring message carrying Multicast IPv4 NLRI
+	MulticastV4Msg = 184
+	// MulticastV6Msg defines BMP Route Monitoring message carrying Multicast IPv6 NLRI
+	MulticastV6Msg = 186
+	// RTCV4Msg defines BMP Route Monitoring message carrying Route Target Constraint IPv4 NLRI
+	RTCV4Msg = 194
+	// RTCV6Msg defines BMP Route Monitoring message carrying Route Target Constraint IPv6 NLRI
+	RTCV6Msg = 196
+	// MCASTVPNV4Msg defines BMP Route Monitoring message carrying MCAST-VPN IPv4 NLRI
+	MCASTVPNV4Msg = 204
+	// MCASTVPNV6Msg defines BMP Route Monitoring message carrying MCAST-VPN IPv6 NLRI
+	MCASTVPNV6Msg = 206
+	// MVPNV4Msg defines BMP Route Monitoring message carrying MVPN IPv4 NLRI
+	MVPNV4Msg = 208
+	// MVPNV6Msg defines BMP Route Monitoring message carrying MVPN IPv6 NLRI
+	MVPNV6Msg = 210
 )

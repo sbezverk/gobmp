@@ -7,109 +7,109 @@ import (
 // TestPerPeerHeaderFlags tests the interpretation of all flags per RFC 7854, RFC 8671, RFC 9069
 func TestPerPeerHeaderFlags(t *testing.T) {
 	tests := []struct {
-		name              string
-		flagsByte         byte
-		peerType          uint8
-		expectIPv6        bool
-		expect4ByteASN    bool
-		expectAdjRIBIn    bool
-		expectAdjRIBOut   bool
-		expectPrePolicy   bool
-		expectPostPolicy  bool
-		expectRIBInPre    bool
-		expectRIBInPost   bool
-		expectRIBOutPre   bool
-		expectRIBOutPost  bool
+		name             string
+		flagsByte        byte
+		peerType         uint8
+		expectIPv6       bool
+		expect4ByteASN   bool
+		expectAdjRIBIn   bool
+		expectAdjRIBOut  bool
+		expectPrePolicy  bool
+		expectPostPolicy bool
+		expectRIBInPre   bool
+		expectRIBInPost  bool
+		expectRIBOutPre  bool
+		expectRIBOutPost bool
 	}{
 		{
-			name:              "RFC 7854: Adj-RIB-In Pre-Policy, IPv4, 2-byte AS (V=0, L=0, A=0, O=0)",
-			flagsByte:         0x00, // 0000 0000
-			peerType:          0,
-			expectIPv6:        false,
-			expect4ByteASN:    false,
-			expectAdjRIBIn:    true,
-			expectAdjRIBOut:   false,
-			expectPrePolicy:   true,
-			expectPostPolicy:  false,
-			expectRIBInPre:    true,
-			expectRIBInPost:   false,
-			expectRIBOutPre:   false,
-			expectRIBOutPost:  false,
+			name:             "RFC 7854: Adj-RIB-In Pre-Policy, IPv4, 2-byte AS (V=0, L=0, A=0, O=0)",
+			flagsByte:        0x00, // 0000 0000
+			peerType:         0,
+			expectIPv6:       false,
+			expect4ByteASN:   false,
+			expectAdjRIBIn:   true,
+			expectAdjRIBOut:  false,
+			expectPrePolicy:  true,
+			expectPostPolicy: false,
+			expectRIBInPre:   true,
+			expectRIBInPost:  false,
+			expectRIBOutPre:  false,
+			expectRIBOutPost: false,
 		},
 		{
-			name:              "RFC 8671: Adj-RIB-Out Pre-Policy, IPv4, 2-byte AS (V=0, L=0, A=0, O=1)",
-			flagsByte:         0x10, // 0001 0000
-			peerType:          0,
-			expectIPv6:        false,
-			expect4ByteASN:    false,
-			expectAdjRIBIn:    false,
-			expectAdjRIBOut:   true,
-			expectPrePolicy:   true,
-			expectPostPolicy:  false,
-			expectRIBInPre:    false,
-			expectRIBInPost:   false,
-			expectRIBOutPre:   true,
-			expectRIBOutPost:  false,
+			name:             "RFC 8671: Adj-RIB-Out Pre-Policy, IPv4, 2-byte AS (V=0, L=0, A=0, O=1)",
+			flagsByte:        0x10, // 0001 0000
+			peerType:         0,
+			expectIPv6:       false,
+			expect4ByteASN:   false,
+			expectAdjRIBIn:   false,
+			expectAdjRIBOut:  true,
+			expectPrePolicy:  true,
+			expectPostPolicy: false,
+			expectRIBInPre:   false,
+			expectRIBInPost:  false,
+			expectRIBOutPre:  true,
+			expectRIBOutPost: false,
 		},
 		{
-			name:              "RFC 7854: Adj-RIB-In Post-Policy, IPv4, 2-byte AS (V=0, L=1, A=0, O=0)",
-			flagsByte:         0x40, // 0100 0000
-			peerType:          0,
-			expectIPv6:        false,
-			expect4ByteASN:    false,
-			expectAdjRIBIn:    true,
-			expectAdjRIBOut:   false,
-			expectPrePolicy:   false,
-			expectPostPolicy:  true,
-			expectRIBInPre:    false,
-			expectRIBInPost:   true,
-			expectRIBOutPre:   false,
-			expectRIBOutPost:  false,
+			name:             "RFC 7854: Adj-RIB-In Post-Policy, IPv4, 2-byte AS (V=0, L=1, A=0, O=0)",
+			flagsByte:        0x40, // 0100 0000
+			peerType:         0,
+			expectIPv6:       false,
+			expect4ByteASN:   false,
+			expectAdjRIBIn:   true,
+			expectAdjRIBOut:  false,
+			expectPrePolicy:  false,
+			expectPostPolicy: true,
+			expectRIBInPre:   false,
+			expectRIBInPost:  true,
+			expectRIBOutPre:  false,
+			expectRIBOutPost: false,
 		},
 		{
-			name:              "RFC 8671: Adj-RIB-Out Post-Policy, IPv4, 2-byte AS (V=0, L=1, A=0, O=1) - ORIGINAL ISSUE",
-			flagsByte:         0x50, // 0101 0000
-			peerType:          0,
-			expectIPv6:        false,
-			expect4ByteASN:    false,
-			expectAdjRIBIn:    false,
-			expectAdjRIBOut:   true,
-			expectPrePolicy:   false,
-			expectPostPolicy:  true,
-			expectRIBInPre:    false,
-			expectRIBInPost:   false,
-			expectRIBOutPre:   false,
-			expectRIBOutPost:  true,
+			name:             "RFC 8671: Adj-RIB-Out Post-Policy, IPv4, 2-byte AS (V=0, L=1, A=0, O=1) - ORIGINAL ISSUE",
+			flagsByte:        0x50, // 0101 0000
+			peerType:         0,
+			expectIPv6:       false,
+			expect4ByteASN:   false,
+			expectAdjRIBIn:   false,
+			expectAdjRIBOut:  true,
+			expectPrePolicy:  false,
+			expectPostPolicy: true,
+			expectRIBInPre:   false,
+			expectRIBInPost:  false,
+			expectRIBOutPre:  false,
+			expectRIBOutPost: true,
 		},
 		{
-			name:              "RFC 7854: IPv6 peer, 4-byte AS, Adj-RIB-In Pre-Policy (V=1, L=0, A=1, O=0)",
-			flagsByte:         0xA0, // 1010 0000
-			peerType:          0,
-			expectIPv6:        true,
-			expect4ByteASN:    true,
-			expectAdjRIBIn:    true,
-			expectAdjRIBOut:   false,
-			expectPrePolicy:   true,
-			expectPostPolicy:  false,
-			expectRIBInPre:    true,
-			expectRIBInPost:   false,
-			expectRIBOutPre:   false,
-			expectRIBOutPost:  false,
+			name:             "RFC 7854: IPv6 peer, 4-byte AS, Adj-RIB-In Pre-Policy (V=1, L=0, A=1, O=0)",
+			flagsByte:        0xA0, // 1010 0000
+			peerType:         0,
+			expectIPv6:       true,
+			expect4ByteASN:   true,
+			expectAdjRIBIn:   true,
+			expectAdjRIBOut:  false,
+			expectPrePolicy:  true,
+			expectPostPolicy: false,
+			expectRIBInPre:   true,
+			expectRIBInPost:  false,
+			expectRIBOutPre:  false,
+			expectRIBOutPost: false,
 		},
 		{
-			name:              "RFC 8671: IPv6 peer, 4-byte AS, Adj-RIB-Out Post-Policy (V=1, L=1, A=1, O=1)",
-			flagsByte:         0xF0, // 1111 0000
-			peerType:          0,
-			expectIPv6:        true,
-			expect4ByteASN:    true,
-			expectAdjRIBIn:    false,
-			expectAdjRIBOut:   true,
-			expectPrePolicy:   false,
-			expectPostPolicy:  true,
-			expectRIBInPre:    false,
-			expectRIBInPost:   false,
-			expectRIBOutPre:   false,
-			expectRIBOutPost:  true,
+			name:             "RFC 8671: IPv6 peer, 4-byte AS, Adj-RIB-Out Post-Policy (V=1, L=1, A=1, O=1)",
+			flagsByte:        0xF0, // 1111 0000
+			peerType:         0,
+			expectIPv6:       true,
+			expect4ByteASN:   true,
+			expectAdjRIBIn:   false,
+			expectAdjRIBOut:  true,
+			expectPrePolicy:  false,
+			expectPostPolicy: true,
+			expectRIBInPre:   false,
+			expectRIBInPost:  false,
+			expectRIBOutPre:  false,
+			expectRIBOutPost: true,
 		},
 	}
 

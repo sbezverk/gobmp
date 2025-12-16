@@ -10,6 +10,9 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
+	"github.com/sbezverk/gobmp/pkg/mcastvpn"
+	"github.com/sbezverk/gobmp/pkg/multicast"
+	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/unicast"
 	"github.com/sbezverk/tools"
@@ -116,6 +119,21 @@ func (mp *MPUnReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 	return nil, fmt.Errorf("not found")
 }
 
+// GetNLRIMulticast check for presense of NLRI Multicast AFI 1 or 2 and SAFI 2 in the NLRI 15 NLRI data and if exists, instantiate Multicast object
+func (mp *MPUnReachNLRI) GetNLRIMulticast() (*base.MPNLRI, error) {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 2 {
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		nlri, err := multicast.UnmarshalMulticastNLRI(mp.WithdrawnRoutes, pathID)
+		if err != nil {
+			return nil, err
+		}
+		return nlri, nil
+	}
+
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
 // GetNLRILU check for presense of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
 func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 4 {
@@ -138,6 +156,33 @@ func (mp *MPUnReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	}
 
 	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIRTC checks for presence of NLRI 132 Route Target Constraint in the NLRI 15 NLRI data and if exists, instantiate RTC NLRI object
+func (mp *MPUnReachNLRI) GetNLRIRTC() (*rtc.Route, error) {
+	if mp.SubAddressFamilyID == 132 {
+		return rtc.UnmarshalRTCNLRI(mp.WithdrawnRoutes)
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIMCASTVPN instantiates a MCAST-VPN NLRI structure based on withdrawn routes
+func (mp *MPUnReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
+	if mp.SubAddressFamilyID == 5 {
+		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes)
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIMVPN instantiates Multicast VPN (SAFI 129) NLRI
+func (mp *MPUnReachNLRI) GetNLRIMVPN() (*mcastvpn.Route, error) {
+	if mp.SubAddressFamilyID == 129 {
+		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes)
+	}
+
 	return nil, fmt.Errorf("not found")
 }
 

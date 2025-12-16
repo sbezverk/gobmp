@@ -31,9 +31,9 @@ func TestStatsType0_PrefixesRejectedInbound(t *testing.T) {
 	statsMsg := &bmp.StatsReport{
 		StatsTLV: []bmp.InformationalTLV{
 			{
-				InformationType: 0,
-				InformationLength:  4,
-				Information:     make([]byte, 4),
+				InformationType:   0,
+				InformationLength: 4,
+				Information:       make([]byte, 4),
 			},
 		},
 	}
@@ -79,9 +79,9 @@ func TestStatsType14_PrePolicyAdjRIBOut(t *testing.T) {
 	statsMsg := &bmp.StatsReport{
 		StatsTLV: []bmp.InformationalTLV{
 			{
-				InformationType: 14,
-				InformationLength:  8,
-				Information:     make([]byte, 8),
+				InformationType:   14,
+				InformationLength: 8,
+				Information:       make([]byte, 8),
 			},
 		},
 	}
@@ -124,9 +124,9 @@ func TestStatsType15_PostPolicyAdjRIBOut(t *testing.T) {
 	statsMsg := &bmp.StatsReport{
 		StatsTLV: []bmp.InformationalTLV{
 			{
-				InformationType: 15,
-				InformationLength:  8,
-				Information:     make([]byte, 8),
+				InformationType:   15,
+				InformationLength: 8,
+				Information:       make([]byte, 8),
 			},
 		},
 	}
@@ -174,20 +174,20 @@ func TestStatsMultipleTLVs(t *testing.T) {
 	// Create message with multiple TLVs (excluding types 16/17 which require AFI/SAFI structure)
 	statsMsg := &bmp.StatsReport{
 		StatsTLV: []bmp.InformationalTLV{
-			{InformationType: 0, InformationLength: 4, Information: make([]byte, 4)},   // Type 0
-			{InformationType: 1, InformationLength: 4, Information: make([]byte, 4)},   // Type 1 (existing)
-			{InformationType: 7, InformationLength: 8, Information: make([]byte, 8)},   // Type 7 (existing)
-			{InformationType: 14, InformationLength: 8, Information: make([]byte, 8)},  // Type 14
-			{InformationType: 15, InformationLength: 8, Information: make([]byte, 8)},  // Type 15
+			{InformationType: 0, InformationLength: 4, Information: make([]byte, 4)},  // Type 0
+			{InformationType: 1, InformationLength: 4, Information: make([]byte, 4)},  // Type 1 (existing)
+			{InformationType: 7, InformationLength: 8, Information: make([]byte, 8)},  // Type 7 (existing)
+			{InformationType: 14, InformationLength: 8, Information: make([]byte, 8)}, // Type 14
+			{InformationType: 15, InformationLength: 8, Information: make([]byte, 8)}, // Type 15
 		},
 	}
 
 	// Set test values
-	binary.BigEndian.PutUint32(statsMsg.StatsTLV[0].Information, 100)  // Type 0
-	binary.BigEndian.PutUint32(statsMsg.StatsTLV[1].Information, 200)  // Type 1
-	binary.BigEndian.PutUint64(statsMsg.StatsTLV[2].Information, 300)  // Type 7
-	binary.BigEndian.PutUint64(statsMsg.StatsTLV[3].Information, 400)  // Type 14
-	binary.BigEndian.PutUint64(statsMsg.StatsTLV[4].Information, 500)  // Type 15
+	binary.BigEndian.PutUint32(statsMsg.StatsTLV[0].Information, 100) // Type 0
+	binary.BigEndian.PutUint32(statsMsg.StatsTLV[1].Information, 200) // Type 1
+	binary.BigEndian.PutUint64(statsMsg.StatsTLV[2].Information, 300) // Type 7
+	binary.BigEndian.PutUint64(statsMsg.StatsTLV[3].Information, 400) // Type 14
+	binary.BigEndian.PutUint64(statsMsg.StatsTLV[4].Information, 500) // Type 15
 
 	msg := bmp.Message{
 		PeerHeader: &bmp.PerPeerHeader{
@@ -246,10 +246,10 @@ func TestStatsDataTypes(t *testing.T) {
 	// - Types 14-17: 8-byte Gauge64 (uint64)
 
 	tests := []struct {
-		name       string
-		statType   uint16
-		dataSize   int
-		isGauge64  bool
+		name      string
+		statType  uint16
+		dataSize  int
+		isGauge64 bool
 	}{
 		{"Type 0 - Prefixes Rejected", 0, 4, false},
 		{"Type 14 - Pre-policy Adj-RIB-Out", 14, 8, true},

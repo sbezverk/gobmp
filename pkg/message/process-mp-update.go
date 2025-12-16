@@ -141,6 +141,78 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
+	case 28:
+		fallthrough
+	case 29:
+		msgs, err := p.multicast(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce multicast messages with error: %+v", err)
+			return
+		}
+		for _, m := range msgs {
+			topicType := bmp.MulticastV6Msg
+			if m.IsIPv4 {
+				topicType = bmp.MulticastV4Msg
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
+				glog.Errorf("failed to process Multicast message with error: %+v", err)
+				return
+			}
+		}
+	case 30:
+		fallthrough
+	case 31:
+		msgs, err := p.rtc(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce rtc messages with error: %+v", err)
+			return
+		}
+		for _, m := range msgs {
+			topicType := bmp.RTCV6Msg
+			if m.IsIPv4 {
+				topicType = bmp.RTCV4Msg
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
+				glog.Errorf("failed to process RTC message with error: %+v", err)
+				return
+			}
+		}
+	case 32:
+		fallthrough
+	case 33:
+		msgs, err := p.mcastvpn(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce mcastvpn messages with error: %+v", err)
+			return
+		}
+		for _, m := range msgs {
+			topicType := bmp.MCASTVPNV6Msg
+			if m.IsIPv4 {
+				topicType = bmp.MCASTVPNV4Msg
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
+				glog.Errorf("failed to process MCAST-VPN message with error: %+v", err)
+				return
+			}
+		}
+	case 34:
+		fallthrough
+	case 35:
+		msgs, err := p.mvpn(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce mvpn messages with error: %+v", err)
+			return
+		}
+		for _, m := range msgs {
+			topicType := bmp.MVPNV6Msg
+			if m.IsIPv4 {
+				topicType = bmp.MVPNV4Msg
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
+				glog.Errorf("failed to process MVPN message with error: %+v", err)
+				return
+			}
+		}
 	case 71:
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
 	}

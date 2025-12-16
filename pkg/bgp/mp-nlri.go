@@ -5,6 +5,8 @@ import (
 	"github.com/sbezverk/gobmp/pkg/evpn"
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/ls"
+	"github.com/sbezverk/gobmp/pkg/mcastvpn"
+	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 )
 
@@ -13,11 +15,15 @@ type MPNLRI interface {
 	GetAFISAFIType() int
 	GetNLRILU() (*base.MPNLRI, error)
 	GetNLRIUnicast() (*base.MPNLRI, error)
+	GetNLRIMulticast() (*base.MPNLRI, error)
 	GetNLRIEVPN() (*evpn.Route, error)
 	GetNLRIL3VPN() (*base.MPNLRI, error)
 	GetNLRI71() (*ls.NLRI71, error)
 	GetNLRI73() (*srpolicy.NLRI73, error)
 	GetFlowspecNLRI() (*flowspec.NLRI, error)
+	GetNLRIRTC() (*rtc.Route, error)
+	GetNLRIMCASTVPN() (*mcastvpn.Route, error)
+	GetNLRIMVPN() (*mcastvpn.Route, error)
 	GetNextHop() string
 	IsIPv6NLRI() bool
 	IsNextHopIPv6() bool
@@ -36,6 +42,12 @@ func NLRIMessageType(afi uint16, safi uint8) int {
 	// 2 IP6 (IP version 6) : 1 unicast forwarding
 	case afi == 2 && safi == 1:
 		return 2
+	// 1 IP (IP version 4) : 2 multicast forwarding
+	case afi == 1 && safi == 2:
+		return 28
+	// 2 IP6 (IP version 6) : 2 multicast forwarding
+	case afi == 2 && safi == 2:
+		return 29
 	// 1 IP (IP version 4) : 4 MPLS Labels
 	case afi == 1 && safi == 4:
 		return 16
@@ -72,6 +84,24 @@ func NLRIMessageType(afi uint16, safi uint8) int {
 		// AFI 2 and SAFI 134 FlowSpec VPNv6
 	case afi == 2 && safi == 134:
 		return 27
+		// AFI 1 and SAFI 132 Route Target Constraint v4
+	case afi == 1 && safi == 132:
+		return 30
+		// AFI 2 and SAFI 132 Route Target Constraint v6
+	case afi == 2 && safi == 132:
+		return 31
+		// AFI 1 and SAFI 5 MCAST-VPN v4
+	case afi == 1 && safi == 5:
+		return 32
+		// AFI 2 and SAFI 5 MCAST-VPN v6
+	case afi == 2 && safi == 5:
+		return 33
+		// AFI 1 and SAFI 129 Multicast VPN v4
+	case afi == 1 && safi == 129:
+		return 34
+		// AFI 2 and SAFI 129 Multicast VPN v6
+	case afi == 2 && safi == 129:
+		return 35
 	}
 
 	return 0

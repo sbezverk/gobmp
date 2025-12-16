@@ -97,9 +97,9 @@ func TestStatsType9_PerAFIAdjRIBsIn(t *testing.T) {
 func TestStatsType9_MultipleAFISAFI(t *testing.T) {
 	statsMsg := &bmp.StatsReport{
 		StatsTLV: []bmp.InformationalTLV{
-			{InformationType: 9, InformationLength: 11, Information: makeAFISAFIData(1, 1, 10000)},   // IPv4 Unicast
-			{InformationType: 9, InformationLength: 11, Information: makeAFISAFIData(2, 1, 5000)},    // IPv6 Unicast
-			{InformationType: 9, InformationLength: 11, Information: makeAFISAFIData(1, 128, 2000)},  // IPv4 MPLS VPN
+			{InformationType: 9, InformationLength: 11, Information: makeAFISAFIData(1, 1, 10000)},  // IPv4 Unicast
+			{InformationType: 9, InformationLength: 11, Information: makeAFISAFIData(2, 1, 5000)},   // IPv6 Unicast
+			{InformationType: 9, InformationLength: 11, Information: makeAFISAFIData(1, 128, 2000)}, // IPv4 MPLS VPN
 		},
 	}
 
