@@ -64,4 +64,8 @@ const (
 	RTCV4Msg = 194
 	// RTCV6Msg defines BMP Route Monitoring message carrying Route Target Constraint IPv6 NLRI
 	RTCV6Msg = 196
+	// MCASTVPNV4Msg defines BMP Route Monitoring message carrying MCAST-VPN IPv4 NLRI
+	MCASTVPNV4Msg = 204
+	// MCASTVPNV6Msg defines BMP Route Monitoring message carrying MCAST-VPN IPv6 NLRI
+	MCASTVPNV6Msg = 206
 )

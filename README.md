@@ -113,6 +113,18 @@ List of currently supported NLRI and AFI/SAFI:
    <td>2/132
    </td>
   </tr>
+  <tr>
+   <td>MCAST-VPN for v4
+   </td>
+   <td>1/5
+   </td>
+  </tr>
+  <tr>
+   <td>MCAST-VPN for v6
+   </td>
+   <td>2/5
+   </td>
+  </tr>
 </table>
 
 

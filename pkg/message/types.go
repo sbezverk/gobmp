@@ -343,6 +343,39 @@ type RTCPrefix struct {
 	IsLocRIBFiltered bool                `json:"is_loc_rib_filtered"`
 }
 
+// MCASTVPNPrefix defines the structure of MCAST-VPN message (AFI 1/2, SAFI 5)
+// Supports all 7 route types as defined in RFC 6514
+type MCASTVPNPrefix struct {
+	Key              string              `json:"_key,omitempty"`
+	ID               string              `json:"_id,omitempty"`
+	Rev              string              `json:"_rev,omitempty"`
+	Action           string              `json:"action,omitempty"`
+	Sequence         int                 `json:"sequence,omitempty"`
+	Hash             string              `json:"hash,omitempty"`
+	RouterHash       string              `json:"router_hash,omitempty"`
+	RouterIP         string              `json:"router_ip,omitempty"`
+	BaseAttributes   *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash         string              `json:"peer_hash,omitempty"`
+	PeerIP           string              `json:"peer_ip,omitempty"`
+	PeerType         uint8               `json:"peer_type"`
+	PeerASN          uint32              `json:"peer_asn,omitempty"`
+	Timestamp        string              `json:"timestamp,omitempty"`
+	RouteType        uint8               `json:"route_type"`
+	RD               string              `json:"rd,omitempty"`
+	OriginatorIP     string              `json:"originator_ip,omitempty"`
+	MulticastSource  string              `json:"multicast_source,omitempty"`
+	MulticastGroup   string              `json:"multicast_group,omitempty"`
+	SourceAS         uint32              `json:"source_as,omitempty"`
+	RouteKey         string              `json:"route_key,omitempty"`
+	Nexthop          string              `json:"nexthop,omitempty"`
+	IsIPv4           bool                `json:"is_ipv4"`
+	IsNexthopIPv4    bool                `json:"is_nexthop_ipv4"`
+	IsEOR            bool                `json:"is_eor,omitempty"`
+	IsAdjRIBInPost   bool                `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool                `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool                `json:"is_loc_rib_filtered"`
+}
+
 // L3VPNPrefix defines the structure of Layer 3 VPN message
 type L3VPNPrefix struct {
 	Key            string              `json:"_key,omitempty"`

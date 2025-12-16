@@ -10,6 +10,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
+	"github.com/sbezverk/gobmp/pkg/mcastvpn"
 	"github.com/sbezverk/gobmp/pkg/multicast"
 	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
@@ -162,6 +163,15 @@ func (mp *MPUnReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 func (mp *MPUnReachNLRI) GetNLRIRTC() (*rtc.Route, error) {
 	if mp.SubAddressFamilyID == 132 {
 		return rtc.UnmarshalRTCNLRI(mp.WithdrawnRoutes)
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIMCASTVPN instantiates a MCAST-VPN NLRI structure based on withdrawn routes
+func (mp *MPUnReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
+	if mp.SubAddressFamilyID == 5 {
+		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes)
 	}
 
 	return nil, fmt.Errorf("not found")
