@@ -16,8 +16,7 @@ type PrefixAttrTLVs struct {
 	LSPrefixSID []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
 	// TODO (sbezverk) Add "Range" TLV 1159
 	Flags          PrefixAttrFlags `json:"flags,omitempty"`
-	SourceRouterID string          `json:"source_router_id,omitempty"`
-	// TODO (sbezverk) Add "Source OSPF Router-ID" TLV 1174
+	SourceRouterID string          `json:"source_router_id,omitempty"` // RFC 9085 Section 2.3.4 - TLV 1174 (OSPF) or TLV 1171 (generic)
 }
 
 // PrefixAttrFlags defines Prefix Attribute Flags interface
