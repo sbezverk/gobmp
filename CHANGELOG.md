@@ -15,6 +15,10 @@ Message updates and major project changes should be documented here.
 - RPKI origin validation state extraction in Unicast and L3VPN prefixes
 - Origin validation state field in UnicastPrefix and L3VPNPrefix message types
 - Enables RPKI route validation monitoring and security analysis
+- RFC 7311 support: AIGP (Accumulated IGP Metric) path attribute
+- AIGP attribute parsing for IGP metric propagation across AS boundaries
+- AIGP field in BaseAttributes for traffic engineering applications
+- Enables IGP metric visibility in large service provider networks
 - Route Target Constraint support for IPv4 (AFI 1, SAFI 132) per RFC 4684
 - Route Target Constraint support for IPv6 (AFI 2, SAFI 132) per RFC 4684
 - MCAST-VPN support for IPv4 (AFI 1, SAFI 5) per RFC 6514

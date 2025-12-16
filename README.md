@@ -150,6 +150,8 @@ RFC 9723 (BGP Colored Prefix Routing for SRv6) is supported via Color Extended C
 
 RFC 8097 (BGP Prefix Origin Validation State) is supported via Origin Validation State Extended Community extraction in IPv4 and IPv6 Unicast and L3VPN prefixes, enabling RPKI validation state propagation within autonomous systems.
 
+RFC 7311 (AIGP - Accumulated IGP Metric) is supported via BGP Path Attribute 26, enabling IGP metric propagation across AS boundaries for traffic engineering in large service provider networks.
+
 For the complete list of supported extensions and drafts follow this link: [Support RFCs and Drafts.](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
 
  
