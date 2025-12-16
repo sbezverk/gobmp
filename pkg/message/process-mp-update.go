@@ -150,11 +150,9 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 			return
 		}
 		for _, m := range msgs {
-			topicType := bmp.MulticastV4Msg
+			topicType := bmp.MulticastV6Msg
 			if m.IsIPv4 {
 				topicType = bmp.MulticastV4Msg
-			} else {
-				topicType = bmp.MulticastV6Msg
 			}
 			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
 				glog.Errorf("failed to process Multicast message with error: %+v", err)
