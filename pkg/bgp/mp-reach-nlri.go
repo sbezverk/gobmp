@@ -13,6 +13,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/multicast"
+	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/unicast"
 	"github.com/sbezverk/tools"
@@ -197,6 +198,15 @@ func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	}
 
 	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIRTC checks for presence of NLRI 132 Route Target Constraint in the NLRI 14 NLRI data and if exists, instantiate RTC NLRI object
+func (mp *MPReachNLRI) GetNLRIRTC() (*rtc.Route, error) {
+	if mp.SubAddressFamilyID == 132 {
+		return rtc.UnmarshalRTCNLRI(mp.NLRI)
+	}
+
 	return nil, fmt.Errorf("not found")
 }
 

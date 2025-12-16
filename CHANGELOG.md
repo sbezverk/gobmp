@@ -4,6 +4,13 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2025-12-16
+
+#### Added
+
+- Route Target Constraint support for IPv4 (AFI 1, SAFI 132) per RFC 4684
+- Route Target Constraint support for IPv6 (AFI 2, SAFI 132) per RFC 4684
+
 ### 2025-12-15
 
 #### Added
