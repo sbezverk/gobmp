@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"strconv"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
@@ -304,6 +305,32 @@ func type6(subType uint8, value []byte) string {
 	return getSubType(evpnSubTypes, subType) + s
 }
 
+// Transitive IPv6 Address Specific Extended Community (RFC 5701)
+// Type 0x05, Format: Type (1) + Sub-Type (1) + IPv6 Address (16) + Local Admin (2)
+func type5(subType uint8, value []byte) string {
+	if len(value) < 18 {
+		return "invalid-ipv6-ec-length"
+	}
+
+	// Extract IPv6 address (first 16 bytes)
+	ipv6 := net.IP(value[0:16])
+
+	// Extract local administrator (last 2 bytes)
+	localAdmin := binary.BigEndian.Uint16(value[16:18])
+
+	var s string
+	switch subType {
+	case 0x02:
+		s = "rt=" + ipv6.String() + ":" + strconv.Itoa(int(localAdmin))
+	case 0x03:
+		s = "ro=" + ipv6.String() + ":" + strconv.Itoa(int(localAdmin))
+	default:
+		s = "subtype-" + strconv.Itoa(int(subType)) + "=" + ipv6.String() + ":" + strconv.Itoa(int(localAdmin))
+	}
+
+	return s
+}
+
 // 0x08 Flow spec redirect/mirror to IP next-hop [draft-simpson-idr-flowspec-redirect] 2012-09-28
 func type8(subType uint8, value []byte) string {
 	return ECPFlowspec + "redirect_to_ip_next_hop"
@@ -392,6 +419,7 @@ var extComm = map[uint8]func(uint8, []byte) string{
 	0x1:  type1,
 	0x2:  type2,
 	0x3:  type3,
+	0x5:  type5,
 	0x6:  type6,
 	0x8:  type8,
 	0x40: type40,
