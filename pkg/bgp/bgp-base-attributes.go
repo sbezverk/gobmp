@@ -20,22 +20,22 @@ import (
 // codes for each can be found:
 // https://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml#bgp-parameters-2
 type BaseAttributes struct {
-	BaseAttrHash     string   `json:"base_attr_hash,omitempty"`
-	Origin           string   `json:"origin,omitempty"`
-	ASPath           []uint32 `json:"as_path,omitempty"`
-	ASPathCount      int32    `json:"as_path_count,omitempty"`
-	Nexthop          string   `json:"nexthop,omitempty"`
-	MED              uint32   `json:"med,omitempty"`
-	LocalPref        uint32   `json:"local_pref,omitempty"`
-	IsAtomicAgg      bool     `json:"is_atomic_agg"`
-	Aggregator       []byte   `json:"aggregator,omitempty"`
-	CommunityList    []string `json:"community_list,omitempty"`
-	OriginatorID     string   `json:"originator_id,omitempty"`
-	ClusterList      string   `json:"cluster_list,omitempty"`
-	ExtCommunityList []string `json:"ext_community_list,omitempty"`
-	AS4Path          []uint32 `json:"as4_path,omitempty"`
-	AS4PathCount     int32    `json:"as4_path_count,omitempty"`
-	AS4Aggregator    []byte   `json:"as4_aggregator,omitempty"`
+	BaseAttrHash     string           `json:"base_attr_hash,omitempty"`
+	Origin           string           `json:"origin,omitempty"`
+	ASPath           []uint32         `json:"as_path,omitempty"`
+	ASPathCount      int32            `json:"as_path_count,omitempty"`
+	Nexthop          string           `json:"nexthop,omitempty"`
+	MED              uint32           `json:"med,omitempty"`
+	LocalPref        uint32           `json:"local_pref,omitempty"`
+	IsAtomicAgg      bool             `json:"is_atomic_agg"`
+	Aggregator       []byte           `json:"aggregator,omitempty"`
+	CommunityList    []string         `json:"community_list,omitempty"`
+	OriginatorID     string           `json:"originator_id,omitempty"`
+	ClusterList      string           `json:"cluster_list,omitempty"`
+	ExtCommunityList []string         `json:"ext_community_list,omitempty"`
+	AS4Path          []uint32         `json:"as4_path,omitempty"`
+	AS4PathCount     int32            `json:"as4_path_count,omitempty"`
+	AS4Aggregator    []byte           `json:"as4_aggregator,omitempty"`
 	PMSITunnel       *pmsi.PMSITunnel `json:"pmsi_tunnel,omitempty"` // RFC 6514 PMSI Tunnel Attribute (Type 22)
 	TunnelEncapAttr  []byte           `json:"-"`
 	// TraficEng

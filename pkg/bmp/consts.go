@@ -56,4 +56,8 @@ const (
 	FlowspecV4Msg = 164
 	// FlowspecV6Msg defines BMP Route Monitoring message carrying Flowspec NLRI
 	FlowspecV6Msg = 166
+	// MulticastV4Msg defines BMP Route Monitoring message carrying Multicast IPv4 NLRI
+	MulticastV4Msg = 184
+	// MulticastV6Msg defines BMP Route Monitoring message carrying Multicast IPv6 NLRI
+	MulticastV6Msg = 186
 )
