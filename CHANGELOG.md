@@ -8,6 +8,9 @@ Message updates and major project changes should be documented here.
 
 #### Added
 
+- RFC 9723 support: BGP Colored Prefix Routing (CPR) for SRv6
+- Color Extended Community extraction in IPv4 and IPv6 Unicast prefixes
+- Color field in UnicastPrefix message type for intent-aware routing
 - Route Target Constraint support for IPv4 (AFI 1, SAFI 132) per RFC 4684
 - Route Target Constraint support for IPv6 (AFI 2, SAFI 132) per RFC 4684
 - MCAST-VPN support for IPv4 (AFI 1, SAFI 5) per RFC 6514

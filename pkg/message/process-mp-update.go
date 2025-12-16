@@ -1,12 +1,35 @@
 package message
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 )
+
+// extractColorEC extracts Color Extended Community from BaseAttributes per RFC 9723.
+// RFC 9723 defines BGP Colored Prefix Routing (CPR) for SRv6, which uses the Color
+// Extended Community (Type 0x0b, RFC 5512) to associate intent-aware routing colors
+// with IPv6 (and IPv4) Unicast prefixes. Returns nil if no Color EC is present.
+func extractColorEC(attrs *bgp.BaseAttributes) *uint32 {
+	if attrs == nil || attrs.ExtCommunityList == nil {
+		return nil
+	}
+	for _, ec := range attrs.ExtCommunityList {
+		if strings.HasPrefix(ec, bgp.ECPColor) {
+			// Parse color value (format: "color=12345")
+			if val, err := strconv.ParseUint(ec[len(bgp.ECPColor):], 10, 32); err == nil {
+				color := uint32(val)
+				return &color
+			}
+		}
+	}
+	return nil
+}
 
 func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
 	labeled := false
@@ -44,6 +67,9 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		}
 		// Loop through and publish all collected messages
 		for _, m := range msgs {
+			// Extract Color EC for RFC 9723 CPR
+			m.Color = extractColorEC(update.BaseAttributes)
+
 			topicType := bmp.UnicastPrefixMsg
 			if p.splitAF {
 				if m.IsIPv4 {

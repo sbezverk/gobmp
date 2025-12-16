@@ -82,6 +82,7 @@ type UnicastPrefix struct {
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
 	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
+	Color          *uint32             `json:"color,omitempty"` // RFC 9723 BGP Colored Prefix Routing (CPR) for SRv6
 	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
 	IsEOR          bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
@@ -155,6 +156,10 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 	if !reflect.DeepEqual(sort.SortMergeComparableSlice(u.Labels), sort.SortMergeComparableSlice(ou.Labels)) {
 		equal = false
 		diffs = append(diffs, "labels mismatch")
+	}
+	if (u.Color == nil) != (ou.Color == nil) || (u.Color != nil && *u.Color != *ou.Color) {
+		equal = false
+		diffs = append(diffs, "color mismatch")
 	}
 	if u.PrefixSID != nil || ou.PrefixSID != nil {
 		if eq, df := u.PrefixSID.Equal(ou.PrefixSID); !eq {

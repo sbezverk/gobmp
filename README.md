@@ -140,11 +140,13 @@ List of currently supported NLRI and AFI/SAFI:
 </table>
 
 
- 
 
- 
 
-goBMP also supports a number of drafts for under development protocols and extensions, such as BGP LS extensions for SRv6 support, Flex Algo, Application Specific attributes etc. 
+
+
+goBMP also supports a number of drafts for under development protocols and extensions, such as BGP LS extensions for SRv6 support, Flex Algo, Application Specific attributes etc.
+
+RFC 9723 (BGP Colored Prefix Routing for SRv6) is supported via Color Extended Community extraction in IPv4 and IPv6 Unicast prefixes, enabling intent-aware routing for SRv6 deployments.
 
 For the complete list of supported extensions and drafts follow this link: [Support RFCs and Drafts.](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
 
