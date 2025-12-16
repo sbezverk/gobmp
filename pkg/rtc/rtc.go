@@ -130,7 +130,7 @@ func (n *NLRI) String() string {
 	if n.Length == 32 {
 		return fmt.Sprintf("RTC{AS=%d}", n.OriginAS)
 	}
-	if n.RouteTarget != nil && len(n.RouteTarget) == 8 {
+	if len(n.RouteTarget) == 8 {
 		// Format Route Target based on type
 		rtType := n.RouteTarget[0] & 0x3f
 		switch rtType {
