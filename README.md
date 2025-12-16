@@ -152,6 +152,8 @@ RFC 8097 (BGP Prefix Origin Validation State) is supported via Origin Validation
 
 RFC 7311 (AIGP - Accumulated IGP Metric) is supported via BGP Path Attribute 26, enabling IGP metric propagation across AS boundaries for traffic engineering in large service provider networks.
 
+RFC 5701 (IPv6 Address Specific Extended Community) is supported for IPv6 VPN deployments, enabling IPv6-based route targets and route origin extended communities.
+
 For the complete list of supported extensions and drafts follow this link: [Support RFCs and Drafts.](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
 
  

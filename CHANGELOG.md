@@ -19,6 +19,10 @@ Message updates and major project changes should be documented here.
 - AIGP attribute parsing for IGP metric propagation across AS boundaries
 - AIGP field in BaseAttributes for traffic engineering applications
 - Enables IGP metric visibility in large service provider networks
+- RFC 5701 support: IPv6 Address Specific Extended Community
+- IPv6-based Route Target and Route Origin extended communities
+- Type 0x05 Extended Community parsing
+- Enables IPv6 VPN route target filtering
 - Route Target Constraint support for IPv4 (AFI 1, SAFI 132) per RFC 4684
 - Route Target Constraint support for IPv6 (AFI 2, SAFI 132) per RFC 4684
 - MCAST-VPN support for IPv4 (AFI 1, SAFI 5) per RFC 6514
