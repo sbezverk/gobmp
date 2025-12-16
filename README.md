@@ -101,6 +101,18 @@ List of currently supported NLRI and AFI/SAFI:
    <td>2/73
    </td>
   </tr>
+  <tr>
+   <td>Route Target Constraint for v4
+   </td>
+   <td>1/132
+   </td>
+  </tr>
+  <tr>
+   <td>Route Target Constraint for v6
+   </td>
+   <td>2/132
+   </td>
+  </tr>
 </table>
 
 

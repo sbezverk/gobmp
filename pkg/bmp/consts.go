@@ -60,4 +60,8 @@ const (
 	MulticastV4Msg = 184
 	// MulticastV6Msg defines BMP Route Monitoring message carrying Multicast IPv6 NLRI
 	MulticastV6Msg = 186
+	// RTCV4Msg defines BMP Route Monitoring message carrying Route Target Constraint IPv4 NLRI
+	RTCV4Msg = 194
+	// RTCV6Msg defines BMP Route Monitoring message carrying Route Target Constraint IPv6 NLRI
+	RTCV6Msg = 196
 )
