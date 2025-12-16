@@ -31,6 +31,27 @@ func extractColorEC(attrs *bgp.BaseAttributes) *uint32 {
 	return nil
 }
 
+// extractOriginValidation extracts RPKI Origin Validation State from BaseAttributes per RFC 8097.
+// RFC 8097 defines Origin Validation State Extended Community to propagate RPKI validation
+// results within an AS. Returns nil if no validation state EC is present.
+// Validation states: "valid" (0), "not-found" (1), "invalid" (2)
+func extractOriginValidation(attrs *bgp.BaseAttributes) *string {
+	if attrs == nil || attrs.ExtCommunityList == nil {
+		return nil
+	}
+	for _, ec := range attrs.ExtCommunityList {
+		if strings.HasPrefix(ec, bgp.ECPOriginValidation) {
+			// Parse validation state (format: "ov-state=valid|not-found|invalid")
+			state := ec[len(bgp.ECPOriginValidation):]
+			// Only return valid states
+			if state == "valid" || state == "not-found" || state == "invalid" {
+				return &state
+			}
+		}
+	}
+	return nil
+}
+
 func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
 	labeled := false
 	labeledSet := false
@@ -69,6 +90,8 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		for _, m := range msgs {
 			// Extract Color EC for RFC 9723 CPR
 			m.Color = extractColorEC(update.BaseAttributes)
+			// Extract RPKI Origin Validation State for RFC 8097
+			m.OriginValidation = extractOriginValidation(update.BaseAttributes)
 
 			topicType := bmp.UnicastPrefixMsg
 			if p.splitAF {
@@ -100,6 +123,9 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 			return
 		}
 		for _, m := range msgs {
+			// Extract RPKI Origin Validation State for RFC 8097
+			m.OriginValidation = extractOriginValidation(update.BaseAttributes)
+
 			topicType := bmp.L3VPNMsg
 			if p.splitAF {
 				if m.IsIPv4 {

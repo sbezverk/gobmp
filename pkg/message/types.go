@@ -62,31 +62,32 @@ type PeerStateChange struct {
 // UnicastPrefix defines a message format sent as a result of BMP Route Monitor message
 // which carries BGP Update with original NLRI information.
 type UnicastPrefix struct {
-	Key            string              `json:"_key,omitempty"`
-	ID             string              `json:"_id,omitempty"`
-	Rev            string              `json:"_rev,omitempty"`
-	Action         string              `json:"action,omitempty"` // Action can be "add" or "del"
-	Sequence       int                 `json:"sequence,omitempty"`
-	Hash           string              `json:"hash,omitempty"`
-	RouterHash     string              `json:"router_hash,omitempty"`
-	RouterIP       string              `json:"router_ip,omitempty"`
-	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
-	PeerHash       string              `json:"peer_hash,omitempty"`
-	PeerIP         string              `json:"peer_ip,omitempty"`
-	PeerType       uint8               `json:"peer_type"`
-	PeerASN        uint32              `json:"peer_asn,omitempty"`
-	Timestamp      string              `json:"timestamp,omitempty"`
-	Prefix         string              `json:"prefix,omitempty"`
-	PrefixLen      int32               `json:"prefix_len,omitempty"`
-	IsIPv4         bool                `json:"is_ipv4"`
-	OriginAS       uint32              `json:"origin_as,omitempty"`
-	Nexthop        string              `json:"nexthop,omitempty"`
-	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
-	PathID         int32               `json:"path_id,omitempty"`
-	Labels         []uint32            `json:"labels,omitempty"`
-	Color          *uint32             `json:"color,omitempty"` // RFC 9723 BGP Colored Prefix Routing (CPR) for SRv6
-	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
-	IsEOR          bool                `json:"is_eor,omitempty"`
+	Key              string              `json:"_key,omitempty"`
+	ID               string              `json:"_id,omitempty"`
+	Rev              string              `json:"_rev,omitempty"`
+	Action           string              `json:"action,omitempty"` // Action can be "add" or "del"
+	Sequence         int                 `json:"sequence,omitempty"`
+	Hash             string              `json:"hash,omitempty"`
+	RouterHash       string              `json:"router_hash,omitempty"`
+	RouterIP         string              `json:"router_ip,omitempty"`
+	BaseAttributes   *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash         string              `json:"peer_hash,omitempty"`
+	PeerIP           string              `json:"peer_ip,omitempty"`
+	PeerType         uint8               `json:"peer_type"`
+	PeerASN          uint32              `json:"peer_asn,omitempty"`
+	Timestamp        string              `json:"timestamp,omitempty"`
+	Prefix           string              `json:"prefix,omitempty"`
+	PrefixLen        int32               `json:"prefix_len,omitempty"`
+	IsIPv4           bool                `json:"is_ipv4"`
+	OriginAS         uint32              `json:"origin_as,omitempty"`
+	Nexthop          string              `json:"nexthop,omitempty"`
+	IsNexthopIPv4    bool                `json:"is_nexthop_ipv4"`
+	PathID           int32               `json:"path_id,omitempty"`
+	Labels           []uint32            `json:"labels,omitempty"`
+	Color            *uint32             `json:"color,omitempty"`             // RFC 9723 BGP Colored Prefix Routing (CPR) for SRv6
+	OriginValidation *string             `json:"origin_validation,omitempty"` // RFC 8097 RPKI Origin Validation State
+	PrefixSID        *prefixsid.PSid     `json:"prefix_sid,omitempty"`
+	IsEOR            bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
@@ -171,6 +172,11 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 	} else if u.Color != nil && *u.Color != *ou.Color {
 		equal = false
 		diffs = append(diffs, "color mismatch")
+	}
+	if (u.OriginValidation == nil) != (ou.OriginValidation == nil) ||
+		(u.OriginValidation != nil && *u.OriginValidation != *ou.OriginValidation) {
+		equal = false
+		diffs = append(diffs, "origin_validation mismatch")
 	}
 	if u.PrefixSID != nil || ou.PrefixSID != nil {
 		if eq, df := u.PrefixSID.Equal(ou.PrefixSID); !eq {
@@ -341,32 +347,33 @@ type MCASTVPNPrefix struct {
 }
 // L3VPNPrefix defines the structure of Layer 3 VPN message
 type L3VPNPrefix struct {
-	Key            string              `json:"_key,omitempty"`
-	ID             string              `json:"_id,omitempty"`
-	Rev            string              `json:"_rev,omitempty"`
-	Action         string              `json:"action,omitempty"` // Action can be "add" or "del"
-	Sequence       int                 `json:"sequence,omitempty"`
-	Hash           string              `json:"hash,omitempty"`
-	RouterHash     string              `json:"router_hash,omitempty"`
-	RouterIP       string              `json:"router_ip,omitempty"`
-	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
-	PeerHash       string              `json:"peer_hash,omitempty"`
-	PeerIP         string              `json:"peer_ip,omitempty"`
-	PeerType       uint8               `json:"peer_type"`
-	PeerASN        uint32              `json:"peer_asn,omitempty"`
-	Timestamp      string              `json:"timestamp,omitempty"`
-	Prefix         string              `json:"prefix,omitempty"`
-	PrefixLen      int32               `json:"prefix_len,omitempty"`
-	IsIPv4         bool                `json:"is_ipv4"`
-	OriginAS       uint32              `json:"origin_as,omitempty"`
-	Nexthop        string              `json:"nexthop,omitempty"`
-	ClusterList    string              `json:"cluster_list,omitempty"`
-	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
-	PathID         int32               `json:"path_id,omitempty"`
-	Labels         []uint32            `json:"labels,omitempty"`
-	VPNRD          string              `json:"vpn_rd,omitempty"`
-	VPNRDType      uint16              `json:"vpn_rd_type"`
-	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
+	Key              string              `json:"_key,omitempty"`
+	ID               string              `json:"_id,omitempty"`
+	Rev              string              `json:"_rev,omitempty"`
+	Action           string              `json:"action,omitempty"` // Action can be "add" or "del"
+	Sequence         int                 `json:"sequence,omitempty"`
+	Hash             string              `json:"hash,omitempty"`
+	RouterHash       string              `json:"router_hash,omitempty"`
+	RouterIP         string              `json:"router_ip,omitempty"`
+	BaseAttributes   *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash         string              `json:"peer_hash,omitempty"`
+	PeerIP           string              `json:"peer_ip,omitempty"`
+	PeerType         uint8               `json:"peer_type"`
+	PeerASN          uint32              `json:"peer_asn,omitempty"`
+	Timestamp        string              `json:"timestamp,omitempty"`
+	Prefix           string              `json:"prefix,omitempty"`
+	PrefixLen        int32               `json:"prefix_len,omitempty"`
+	IsIPv4           bool                `json:"is_ipv4"`
+	OriginAS         uint32              `json:"origin_as,omitempty"`
+	Nexthop          string              `json:"nexthop,omitempty"`
+	ClusterList      string              `json:"cluster_list,omitempty"`
+	IsNexthopIPv4    bool                `json:"is_nexthop_ipv4"`
+	PathID           int32               `json:"path_id,omitempty"`
+	Labels           []uint32            `json:"labels,omitempty"`
+	OriginValidation *string             `json:"origin_validation,omitempty"` // RFC 8097 RPKI Origin Validation State
+	VPNRD            string              `json:"vpn_rd,omitempty"`
+	VPNRDType        uint16              `json:"vpn_rd_type"`
+	PrefixSID        *prefixsid.PSid     `json:"prefix_sid,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`

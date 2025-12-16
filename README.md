@@ -114,6 +114,8 @@ RFC 9723 (BGP Colored Prefix Routing for SRv6) is supported via Color Extended C
 
 RFC 5701 (IPv6 Address Specific Extended Community) is supported for IPv6 VPN deployments, enabling IPv6-based route targets and route origin extended communities.
 
+RFC 8097 (BGP Prefix Origin Validation State) is supported via Origin Validation State Extended Community extraction in IPv4 and IPv6 Unicast and L3VPN prefixes, enabling RPKI validation state propagation within autonomous systems.
+
 For the complete list of supported extensions and drafts follow this link: [Support RFCs and Drafts.](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
 
  
