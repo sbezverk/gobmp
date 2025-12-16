@@ -12,6 +12,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
+	"github.com/sbezverk/gobmp/pkg/mcastvpn"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/unicast"
 	"github.com/sbezverk/tools"
@@ -181,6 +182,15 @@ func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	}
 
 	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIMCASTVPN instantiates a MCAST-VPN NLRI structure based on passed slice
+func (mp *MPReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
+	if mp.SubAddressFamilyID == 5 {
+		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.NLRI)
+	}
+
 	return nil, fmt.Errorf("not found")
 }
 
