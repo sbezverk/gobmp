@@ -167,6 +167,26 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
+	case 28:
+		fallthrough
+	case 29:
+		msgs, err := p.multicast(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce multicast messages with error: %+v", err)
+			return
+		}
+		for _, m := range msgs {
+			topicType := bmp.MulticastV4Msg
+			if m.IsIPv4 {
+				topicType = bmp.MulticastV4Msg
+			} else {
+				topicType = bmp.MulticastV6Msg
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
+				glog.Errorf("failed to process Multicast message with error: %+v", err)
+				return
+			}
+		}
 	case 32:
 		fallthrough
 	case 33:

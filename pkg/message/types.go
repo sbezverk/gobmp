@@ -307,6 +307,36 @@ type LSLink struct {
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
+// MulticastPrefix defines a message format sent as a result of BMP Route Monitor message
+// which carries BGP Update with multicast NLRI information.
+type MulticastPrefix struct {
+	Key              string              `json:"_key,omitempty"`
+	ID               string              `json:"_id,omitempty"`
+	Rev              string              `json:"_rev,omitempty"`
+	Action           string              `json:"action,omitempty"`
+	Sequence         int                 `json:"sequence,omitempty"`
+	Hash             string              `json:"hash,omitempty"`
+	RouterHash       string              `json:"router_hash,omitempty"`
+	RouterIP         string              `json:"router_ip,omitempty"`
+	BaseAttributes   *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash         string              `json:"peer_hash,omitempty"`
+	PeerIP           string              `json:"peer_ip,omitempty"`
+	PeerType         uint8               `json:"peer_type"`
+	PeerASN          uint32              `json:"peer_asn,omitempty"`
+	Timestamp        string              `json:"timestamp,omitempty"`
+	Prefix           string              `json:"prefix,omitempty"`
+	PrefixLen        int32               `json:"prefix_len,omitempty"`
+	IsIPv4           bool                `json:"is_ipv4"`
+	OriginAS         uint32              `json:"origin_as,omitempty"`
+	Nexthop          string              `json:"nexthop,omitempty"`
+	IsNexthopIPv4    bool                `json:"is_nexthop_ipv4"`
+	PathID           int32               `json:"path_id,omitempty"`
+	IsEOR            bool                `json:"is_eor,omitempty"`
+	IsAdjRIBInPost   bool                `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool                `json:"is_adj_rib_out_post_policy"`
+	IsLocRIBFiltered bool                `json:"is_loc_rib_filtered"`
+}
+
 // MCASTVPNPrefix defines the structure of MCAST-VPN message (AFI 1/2, SAFI 5)
 // Supports all 7 route types as defined in RFC 6514
 type MCASTVPNPrefix struct {
@@ -339,6 +369,7 @@ type MCASTVPNPrefix struct {
 	IsAdjRIBOutPost  bool                `json:"is_adj_rib_out_post_policy"`
 	IsLocRIBFiltered bool                `json:"is_loc_rib_filtered"`
 }
+
 // L3VPNPrefix defines the structure of Layer 3 VPN message
 type L3VPNPrefix struct {
 	Key            string              `json:"_key,omitempty"`
@@ -614,8 +645,8 @@ type Stats struct {
 	// Type 10: Per-AFI/SAFI Loc-RIB (RFC 7854)
 	PerAFILocRIB []AFISAFIStat `json:"per_afi_loc_rib,omitempty"`
 	// Type 13: Duplicate Updates (RFC 7854)
-	DuplicateUpdates   uint32 `json:"duplicate_updates,omitempty"`
-	PrePolicyAdjRIBOut uint64 `json:"pre_policy_adj_rib_out,omitempty"`
+	DuplicateUpdates    uint32 `json:"duplicate_updates,omitempty"`
+	PrePolicyAdjRIBOut  uint64 `json:"pre_policy_adj_rib_out,omitempty"`
 	PostPolicyAdjRIBOut uint64 `json:"post_policy_adj_rib_out,omitempty"`
 	// Type 16: Per-AFI/SAFI Pre-policy Adj-RIB-Out (RFC 8671)
 	PerAFIPrePolicyAdjRIBOut []AFISAFIStat `json:"per_afi_pre_policy_adj_rib_out,omitempty"`
