@@ -148,6 +148,8 @@ goBMP also supports a number of drafts for under development protocols and exten
 
 RFC 9723 (BGP Colored Prefix Routing for SRv6) is supported via Color Extended Community extraction in IPv4 and IPv6 Unicast prefixes, enabling intent-aware routing for SRv6 deployments.
 
+RFC 8097 (BGP Prefix Origin Validation State) is supported via Origin Validation State Extended Community extraction in IPv4 and IPv6 Unicast and L3VPN prefixes, enabling RPKI validation state propagation within autonomous systems.
+
 For the complete list of supported extensions and drafts follow this link: [Support RFCs and Drafts.](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
 
  
