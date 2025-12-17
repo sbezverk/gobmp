@@ -1,6 +1,7 @@
 package bgpls
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 
@@ -13,10 +14,10 @@ import (
 // PrefixAttrTLVs defines a struvture for Prefix Attributes as defined in the following RFC proposal:
 // https://datatracker.ietf.org/doc/html/draft-ietf-idr-bgp-ls-segment-routing-ext-17#section-2.3
 type PrefixAttrTLVs struct {
-	LSPrefixSID []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
-	// TODO (sbezverk) Add "Range" TLV 1159
-	Flags          PrefixAttrFlags `json:"flags,omitempty"`
-	SourceRouterID string          `json:"source_router_id,omitempty"` // RFC 9085 Section 2.3.4 - TLV 1174 (OSPF) or TLV 1171 (generic)
+	LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
+	Range          *RangeTLV          `json:"range,omitempty"`          // RFC 9085 Section 2.3.5
+	Flags          PrefixAttrFlags    `json:"flags,omitempty"`
+	SourceRouterID string             `json:"source_router_id,omitempty"` // RFC 9085 Section 2.3.4 - TLV 1174 (OSPF) or TLV 1171 (generic)
 }
 
 // PrefixAttrFlags defines Prefix Attribute Flags interface
@@ -300,11 +301,143 @@ func (f *UnknownProtoFlags) GetPrefixAttrFlagsByte() byte {
 	return f.Flags
 }
 
+// RangeTLV defines Range TLV Object per RFC 9085 Section 2.3.5
+type RangeTLV struct {
+	Flags     RangeTLVFlags      `json:"flags,omitempty"`
+	RangeSize uint16             `json:"range_size"`
+	PrefixSID []*sr.PrefixSIDTLV `json:"prefix_sid,omitempty"`
+}
+
+// RangeTLVFlags interface for protocol-specific flags
+type RangeTLVFlags interface {
+	GetRangeFlagsByte() byte
+}
+
+// ISISRangeFlags for IS-IS protocol (RFC 8667)
+type ISISRangeFlags struct {
+	FFlag bool `json:"f_flag"` // Address-Family Flag
+	MFlag bool `json:"m_flag"` // Mirror Context Flag
+	SFlag bool `json:"s_flag"` // Scope Flag
+	DFlag bool `json:"d_flag"` // Down Flag
+	AFlag bool `json:"a_flag"` // Attached Flag
+}
+
+func (f *ISISRangeFlags) GetRangeFlagsByte() byte {
+	var b byte
+	if f.FFlag {
+		b |= 0x80
+	}
+	if f.MFlag {
+		b |= 0x40
+	}
+	if f.SFlag {
+		b |= 0x20
+	}
+	if f.DFlag {
+		b |= 0x10
+	}
+	if f.AFlag {
+		b |= 0x08
+	}
+	return b
+}
+
+// OSPFRangeFlags for OSPF/OSPFv3 (RFC 8665)
+type OSPFRangeFlags struct {
+	IAFlag bool `json:"ia_flag"` // Inter-Area Flag
+}
+
+func (f *OSPFRangeFlags) GetRangeFlagsByte() byte {
+	if f.IAFlag {
+		return 0x80
+	}
+	return 0x00
+}
+
+// UnknownProtoRangeFlags for unknown protocols
+type UnknownProtoRangeFlags struct {
+	Flags byte `json:"flags"`
+}
+
+func (f *UnknownProtoRangeFlags) GetRangeFlagsByte() byte {
+	return f.Flags
+}
+
+// UnmarshalRangeTLVFlags parses protocol-specific Range TLV flags
+func UnmarshalRangeTLVFlags(b byte, proto base.ProtoID) (RangeTLVFlags, error) {
+	switch proto {
+	case base.ISISL1, base.ISISL2:
+		return &ISISRangeFlags{
+			FFlag: b&0x80 == 0x80,
+			MFlag: b&0x40 == 0x40,
+			SFlag: b&0x20 == 0x20,
+			DFlag: b&0x10 == 0x10,
+			AFlag: b&0x08 == 0x08,
+		}, nil
+	case base.OSPFv2, base.OSPFv3:
+		return &OSPFRangeFlags{
+			IAFlag: b&0x80 == 0x80,
+		}, nil
+	default:
+		return &UnknownProtoRangeFlags{Flags: b}, nil
+	}
+}
+
+// UnmarshalRangeTLV builds Range TLV Object (RFC 9085 Section 2.3.5)
+func UnmarshalRangeTLV(b []byte, proto base.ProtoID) (*RangeTLV, error) {
+	if len(b) < 4 {
+		return nil, fmt.Errorf("range TLV too short: %d bytes, expected at least 4", len(b))
+	}
+
+	rtlv := &RangeTLV{}
+	p := 0
+
+	// Parse flags (1 byte)
+	flags, err := UnmarshalRangeTLVFlags(b[p], proto)
+	if err != nil {
+		return nil, err
+	}
+	rtlv.Flags = flags
+	p++
+
+	// Skip reserved byte
+	p++
+
+	// Parse Range Size (2 bytes)
+	rtlv.RangeSize = binary.BigEndian.Uint16(b[p : p+2])
+	p += 2
+
+	// Parse sub-TLVs (remaining bytes)
+	if p < len(b) {
+		subTLVs, err := base.UnmarshalSubTLV(b[p:])
+		if err != nil {
+			return nil, err
+		}
+
+		// Extract Prefix-SID TLVs (Type 1158)
+		rtlv.PrefixSID = make([]*sr.PrefixSIDTLV, 0)
+		for _, stlv := range subTLVs {
+			if stlv.Type == 1158 {
+				psid, err := sr.UnmarshalPrefixSIDTLV(stlv.Value, proto)
+				if err != nil {
+					return nil, err
+				}
+				rtlv.PrefixSID = append(rtlv.PrefixSID, psid)
+			}
+		}
+	}
+
+	return rtlv, nil
+}
+
 func (ls *NLRI) GetPrefixAttrTLVs(proto base.ProtoID) (*PrefixAttrTLVs, error) {
 	pr := &PrefixAttrTLVs{}
 
 	if ps, err := ls.GetLSPrefixSID(proto); err == nil {
 		pr.LSPrefixSID = ps
+	}
+	if r, err := ls.GetLSRangeTLV(proto); err == nil {
+		pr.Range = r
 	}
 	if paf, err := ls.GetLSPrefixAttrFlags(proto); err == nil {
 		pr.Flags = paf
@@ -314,7 +447,7 @@ func (ls *NLRI) GetPrefixAttrTLVs(proto base.ProtoID) (*PrefixAttrTLVs, error) {
 	}
 	// Do not want to return instantiated but empty object if non of attributes present
 	// returning instantiated object if there is at least 1 initialized attribute.
-	if len(pr.LSPrefixSID) == 0 && pr.Flags == nil && pr.SourceRouterID == "" {
+	if len(pr.LSPrefixSID) == 0 && pr.Range == nil && pr.Flags == nil && pr.SourceRouterID == "" {
 		return nil, fmt.Errorf("none of prefix attribute tlvs is present")
 	}
 

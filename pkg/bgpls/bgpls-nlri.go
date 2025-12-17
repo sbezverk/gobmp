@@ -286,6 +286,17 @@ func (ls *NLRI) GetLSPrefixSID(proto base.ProtoID) ([]*sr.PrefixSIDTLV, error) {
 	return ps, nil
 }
 
+// GetLSRangeTLV returns Range TLV object (RFC 9085 Section 2.3.5)
+func (ls *NLRI) GetLSRangeTLV(proto base.ProtoID) (*RangeTLV, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1159 {
+			continue
+		}
+		return UnmarshalRangeTLV(tlv.Value, proto)
+	}
+	return nil, fmt.Errorf("range TLV 1159 not found")
+}
+
 // GetLSSRv6Locator returns a slice of SRv6 locator objects
 func (ls *NLRI) GetLSSRv6Locator() (*srv6.LocatorTLV, error) {
 	for _, tlv := range ls.LS {
