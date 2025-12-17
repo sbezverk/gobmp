@@ -42,7 +42,8 @@ type BaseAttributes struct {
 	// IPv6SpecExtCommunity
 	// AIGP
 	// PEDistinguisherLable
-	LgCommunityList []string `json:"large_community_list,omitempty"`
+	LgCommunityList []string      `json:"large_community_list,omitempty"`
+	BGPPrefixSID    *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
 	// SecPath
 	// AttrSet
 }
@@ -190,6 +191,13 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 		case 32:
 			baseAttr.LgCommunityList = unmarshalAttrLgCommunity(b[p : p+int(l)])
 		case 33:
+		case 40:
+			// RFC 8669: BGP Prefix-SID
+			var err error
+			baseAttr.BGPPrefixSID, err = UnmarshalBGPPrefixSID(b[p : p+int(l)])
+			if err != nil {
+				glog.Errorf("failed to unmarshal BGP Prefix-SID attribute with error: %+v", err)
+			}
 		case 128:
 		}
 		p += int(l)
