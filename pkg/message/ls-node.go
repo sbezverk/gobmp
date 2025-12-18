@@ -35,6 +35,9 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 	if f, err := ph.IsAdjRIBOutPost(); err == nil {
 		msg.IsAdjRIBOutPost = f
 	}
+	if f, err := ph.IsAdjRIBOut(); err == nil {
+		msg.IsAdjRIBOut = f
+	}
 	if f, err := ph.IsLocRIBFiltered(); err == nil {
 		msg.IsLocRIBFiltered = f
 	}

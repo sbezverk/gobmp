@@ -51,9 +51,10 @@ type PeerStateChange struct {
 	IsPrepolicy     bool           `json:"is_prepolicy"`
 	IsIPv4          bool           `json:"is_ipv4"`
 	TableName       string         `json:"table_name,omitempty"`
-	// Values are assigned based on PerPeerHeader flas
+	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -87,6 +88,7 @@ type UnicastPrefix struct {
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -210,9 +212,10 @@ type LSNode struct {
 	SRv6CapabilitiesTLV *srv6.CapabilityTLV             `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             []*base.MSDTV                   `json:"node_msd,omitempty"`
 	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition     `json:"flex_algo_definition,omitempty"`
-	// Values are assigned based on PerPeerHeader flas
+	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -281,9 +284,10 @@ type LSLink struct {
 	UnidirResidualBW      uint32                        `json:"unidir_residual_bw,omitempty"`
 	UnidirAvailableBW     uint32                        `json:"unidir_available_bw,omitempty"`
 	UnidirBWUtilization   uint32                        `json:"unidir_bw_utilization,omitempty"`
-	// Values are assigned based on PerPeerHeader flas
+	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -315,9 +319,10 @@ type L3VPNPrefix struct {
 	VPNRD          string              `json:"vpn_rd,omitempty"`
 	VPNRDType      uint16              `json:"vpn_rd_type"`
 	PrefixSID      *prefixsid.PSid     `json:"prefix_sid,omitempty"`
-	// Values are assigned based on PerPeerHeader flas
+	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -357,9 +362,10 @@ type LSPrefix struct {
 	PrefixAttrTLVs       *bgpls.PrefixAttrTLVs         `json:"prefix_attr_tlvs,omitempty"`
 	FlexAlgoPrefixMetric []*bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
 	SRv6Locator          *srv6.LocatorTLV              `json:"srv6_locator,omitempty"`
-	// Values are assigned based on PerPeerHeader flas
+	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -400,9 +406,10 @@ type LSSRv6SID struct {
 	SRv6EndpointBehavior *srv6.EndpointBehavior        `json:"srv6_endpoint_behavior,omitempty"`
 	SRv6BGPPeerNodeSID   *srv6.BGPPeerNodeSID          `json:"srv6_bgp_peer_node_sid,omitempty"`
 	SRv6SIDStructure     *srv6.SIDStructure            `json:"srv6_sid_structure,omitempty"`
-	// Values are assigned based on PerPeerHeader flas
+	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -442,9 +449,10 @@ type EVPNPrefix struct {
 	MACLength      uint8               `json:"mac_len,omitempty"`
 	RouteType      uint8               `json:"route_type,omitempty"`
 	PMSITunnel     *pmsi.PMSITunnel    `json:"pmsi_tunnel,omitempty"` // RFC 6514 PMSI Tunnel for Type 3 routes
-	// Values are assigned based on PerPeerHeader flas
+	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -481,9 +489,10 @@ type SRPolicy struct {
 	PolicyPathName string                  `json:"policy_path_name,omitempty"`
 	ENLP           *srpolicy.ENLP          `json:"enlp_subtlv,omitempty"`
 	SegmentList    []*srpolicy.SegmentList `json:"segment_list_subtlv,omitempty"`
-	// Values are assigned based on PerPeerHeader flas
+	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -507,9 +516,10 @@ type Flowspec struct {
 	PathID         int32               `json:"path_id,omitempty"`
 	SpecHash       string              `json:"spec_hash,omitempty"`
 	Spec           []flowspec.Spec     `json:"spec,omitempty"`
-	// Values are assigned based on PerPeerHeader flas
+	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 

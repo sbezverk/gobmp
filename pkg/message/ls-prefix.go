@@ -35,6 +35,9 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	if f, err := ph.IsAdjRIBOutPost(); err == nil {
 		msg.IsAdjRIBOutPost = f
 	}
+	if f, err := ph.IsAdjRIBOut(); err == nil {
+		msg.IsAdjRIBOut = f
+	}
 	if f, err := ph.IsLocRIBFiltered(); err == nil {
 		msg.IsLocRIBFiltered = f
 	}
