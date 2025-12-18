@@ -55,6 +55,7 @@ type PeerStateChange struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -89,6 +90,7 @@ type UnicastPrefix struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -216,6 +218,7 @@ type LSNode struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -288,6 +291,7 @@ type LSLink struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -323,6 +327,7 @@ type L3VPNPrefix struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -366,6 +371,7 @@ type LSPrefix struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -410,6 +416,7 @@ type LSSRv6SID struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -453,6 +460,7 @@ type EVPNPrefix struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -493,6 +501,7 @@ type SRPolicy struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 
@@ -520,6 +529,7 @@ type Flowspec struct {
 	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
 	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
+	IsLocRIB         bool `json:"is_loc_rib"`
 	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
 }
 

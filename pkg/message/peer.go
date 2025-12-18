@@ -46,6 +46,9 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		if f, err := msg.PeerHeader.IsAdjRIBOut(); err == nil {
 			m.IsAdjRIBOut = f
 		}
+		if f, err := msg.PeerHeader.IsLocRIB(); err == nil {
+			m.IsLocRIB = f
+		}
 		if f, err := msg.PeerHeader.IsLocRIBFiltered(); err == nil {
 			m.IsLocRIBFiltered = f
 		}

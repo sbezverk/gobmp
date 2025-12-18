@@ -411,3 +411,228 @@ func TestRFC8671Compliance(t *testing.T) {
 		})
 	}
 }
+
+// TestLocRIBFlagPropagation verifies RFC 9069 Loc-RIB support
+// Tests that PeerType 3 routes are correctly identified as Loc-RIB
+// and that the F flag properly distinguishes filtered vs non-filtered routes.
+func TestLocRIBFlagPropagation(t *testing.T) {
+	tests := []struct {
+		name                 string
+		flagsByte            byte
+		expectIsLocRIB       bool
+		expectIsLocRIBFiltered bool
+	}{
+		{
+			name:                 "Loc-RIB (PeerType 3, F=0)",
+			flagsByte:            0x00,
+			expectIsLocRIB:       true,
+			expectIsLocRIBFiltered: false,
+		},
+		{
+			name:                 "Loc-RIB-Filtered (PeerType 3, F=1)",
+			flagsByte:            0x80,
+			expectIsLocRIB:       true,
+			expectIsLocRIBFiltered: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a PerPeerHeader with PeerType 3 (Loc-RIB)
+			flagsData := []byte{
+				byte(bmp.PeerType3), // PeerType 3 for Loc-RIB
+				tt.flagsByte,        // F flag: 0x80 = filtered, 0x00 = non-filtered
+			}
+			flagsData = append(flagsData, make([]byte, 8)...)  // Peer Distinguisher (RD)
+			flagsData = append(flagsData, make([]byte, 16)...) // Peer Address
+			flagsData = append(flagsData, 0x00, 0x00, 0xFD, 0xE8) // Peer AS = 65000
+			flagsData = append(flagsData, make([]byte, 4)...)  // Peer BGP ID
+			flagsData = append(flagsData, make([]byte, 8)...)  // Timestamp
+
+			pph, err := bmp.UnmarshalPerPeerHeader(flagsData)
+			if err != nil {
+				t.Fatalf("Failed to unmarshal PerPeerHeader: %v", err)
+			}
+
+			// Verify PerPeerHeader methods for Loc-RIB
+			if gotIsLocRIB, _ := pph.IsLocRIB(); gotIsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("PerPeerHeader.IsLocRIB() = %v, want %v", gotIsLocRIB, tt.expectIsLocRIB)
+			}
+			if gotIsLocRIBFiltered, _ := pph.IsLocRIBFiltered(); gotIsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("PerPeerHeader.IsLocRIBFiltered() = %v, want %v", gotIsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+
+			// Verify that Adj-RIB methods return errors for PeerType 3
+			if _, err := pph.IsAdjRIBInPost(); err == nil {
+				t.Error("IsAdjRIBInPost() should return error for PeerType 3")
+			}
+			if _, err := pph.IsAdjRIBOutPost(); err == nil {
+				t.Error("IsAdjRIBOutPost() should return error for PeerType 3")
+			}
+			if _, err := pph.IsAdjRIBOut(); err == nil {
+				t.Error("IsAdjRIBOut() should return error for PeerType 3")
+			}
+
+			// Test message struct population for Loc-RIB routes
+			// 1. Test UnicastPrefix
+			unicastPrefix := &UnicastPrefix{}
+			if f, err := pph.IsLocRIB(); err == nil {
+				unicastPrefix.IsLocRIB = f
+			}
+			if f, err := pph.IsLocRIBFiltered(); err == nil {
+				unicastPrefix.IsLocRIBFiltered = f
+			}
+
+			if unicastPrefix.IsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("UnicastPrefix.IsLocRIB = %v, want %v", unicastPrefix.IsLocRIB, tt.expectIsLocRIB)
+			}
+			if unicastPrefix.IsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("UnicastPrefix.IsLocRIBFiltered = %v, want %v", unicastPrefix.IsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+
+			// 2. Test L3VPNPrefix
+			l3vpnPrefix := &L3VPNPrefix{}
+			if f, err := pph.IsLocRIB(); err == nil {
+				l3vpnPrefix.IsLocRIB = f
+			}
+			if f, err := pph.IsLocRIBFiltered(); err == nil {
+				l3vpnPrefix.IsLocRIBFiltered = f
+			}
+
+			if l3vpnPrefix.IsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("L3VPNPrefix.IsLocRIB = %v, want %v", l3vpnPrefix.IsLocRIB, tt.expectIsLocRIB)
+			}
+			if l3vpnPrefix.IsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("L3VPNPrefix.IsLocRIBFiltered = %v, want %v", l3vpnPrefix.IsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+
+			// 3. Test EVPNPrefix
+			evpnPrefix := &EVPNPrefix{}
+			if f, err := pph.IsLocRIB(); err == nil {
+				evpnPrefix.IsLocRIB = f
+			}
+			if f, err := pph.IsLocRIBFiltered(); err == nil {
+				evpnPrefix.IsLocRIBFiltered = f
+			}
+
+			if evpnPrefix.IsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("EVPNPrefix.IsLocRIB = %v, want %v", evpnPrefix.IsLocRIB, tt.expectIsLocRIB)
+			}
+			if evpnPrefix.IsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("EVPNPrefix.IsLocRIBFiltered = %v, want %v", evpnPrefix.IsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+
+			// 4. Test LSNode
+			lsNode := &LSNode{}
+			if f, err := pph.IsLocRIB(); err == nil {
+				lsNode.IsLocRIB = f
+			}
+			if f, err := pph.IsLocRIBFiltered(); err == nil {
+				lsNode.IsLocRIBFiltered = f
+			}
+
+			if lsNode.IsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("LSNode.IsLocRIB = %v, want %v", lsNode.IsLocRIB, tt.expectIsLocRIB)
+			}
+			if lsNode.IsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("LSNode.IsLocRIBFiltered = %v, want %v", lsNode.IsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+
+			// 5. Test LSLink
+			lsLink := &LSLink{}
+			if f, err := pph.IsLocRIB(); err == nil {
+				lsLink.IsLocRIB = f
+			}
+			if f, err := pph.IsLocRIBFiltered(); err == nil {
+				lsLink.IsLocRIBFiltered = f
+			}
+
+			if lsLink.IsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("LSLink.IsLocRIB = %v, want %v", lsLink.IsLocRIB, tt.expectIsLocRIB)
+			}
+			if lsLink.IsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("LSLink.IsLocRIBFiltered = %v, want %v", lsLink.IsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+
+			// 6. Test LSPrefix
+			lsPrefix := &LSPrefix{}
+			if f, err := pph.IsLocRIB(); err == nil {
+				lsPrefix.IsLocRIB = f
+			}
+			if f, err := pph.IsLocRIBFiltered(); err == nil {
+				lsPrefix.IsLocRIBFiltered = f
+			}
+
+			if lsPrefix.IsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("LSPrefix.IsLocRIB = %v, want %v", lsPrefix.IsLocRIB, tt.expectIsLocRIB)
+			}
+			if lsPrefix.IsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("LSPrefix.IsLocRIBFiltered = %v, want %v", lsPrefix.IsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+
+			// 7. Test LSSRv6SID
+			srv6sid := &LSSRv6SID{}
+			if f, err := pph.IsLocRIB(); err == nil {
+				srv6sid.IsLocRIB = f
+			}
+			if f, err := pph.IsLocRIBFiltered(); err == nil {
+				srv6sid.IsLocRIBFiltered = f
+			}
+
+			if srv6sid.IsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("LSSRv6SID.IsLocRIB = %v, want %v", srv6sid.IsLocRIB, tt.expectIsLocRIB)
+			}
+			if srv6sid.IsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("LSSRv6SID.IsLocRIBFiltered = %v, want %v", srv6sid.IsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+
+			// 8. Test SRPolicy
+			srpolicy := &SRPolicy{}
+			if f, err := pph.IsLocRIB(); err == nil {
+				srpolicy.IsLocRIB = f
+			}
+			if f, err := pph.IsLocRIBFiltered(); err == nil {
+				srpolicy.IsLocRIBFiltered = f
+			}
+
+			if srpolicy.IsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("SRPolicy.IsLocRIB = %v, want %v", srpolicy.IsLocRIB, tt.expectIsLocRIB)
+			}
+			if srpolicy.IsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("SRPolicy.IsLocRIBFiltered = %v, want %v", srpolicy.IsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+
+			// 9. Test Flowspec
+			flowspec := &Flowspec{}
+			if f, err := pph.IsLocRIB(); err == nil {
+				flowspec.IsLocRIB = f
+			}
+			if f, err := pph.IsLocRIBFiltered(); err == nil {
+				flowspec.IsLocRIBFiltered = f
+			}
+
+			if flowspec.IsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("Flowspec.IsLocRIB = %v, want %v", flowspec.IsLocRIB, tt.expectIsLocRIB)
+			}
+			if flowspec.IsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("Flowspec.IsLocRIBFiltered = %v, want %v", flowspec.IsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+
+			// 10. Test PeerStateChange
+			peerStateChange := &PeerStateChange{}
+			if f, err := pph.IsLocRIB(); err == nil {
+				peerStateChange.IsLocRIB = f
+			}
+			if f, err := pph.IsLocRIBFiltered(); err == nil {
+				peerStateChange.IsLocRIBFiltered = f
+			}
+
+			if peerStateChange.IsLocRIB != tt.expectIsLocRIB {
+				t.Errorf("PeerStateChange.IsLocRIB = %v, want %v", peerStateChange.IsLocRIB, tt.expectIsLocRIB)
+			}
+			if peerStateChange.IsLocRIBFiltered != tt.expectIsLocRIBFiltered {
+				t.Errorf("PeerStateChange.IsLocRIBFiltered = %v, want %v", peerStateChange.IsLocRIBFiltered, tt.expectIsLocRIBFiltered)
+			}
+		})
+	}
+}

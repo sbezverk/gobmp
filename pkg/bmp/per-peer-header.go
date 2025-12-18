@@ -212,6 +212,16 @@ func (p *PerPeerHeader) IsLocRIBFiltered() (bool, error) {
 	return false, ErrInvFlagRequestForPeerType
 }
 
+// IsLocRIB returns true if PeerType is 3 (Loc-RIB), regardless of F flag
+// Per RFC 9069: All routes from PeerType 3 are Loc-RIB routes (filtered or not)
+func (p *PerPeerHeader) IsLocRIB() (bool, error) {
+	if p.PeerType == PeerType3 {
+		return true, nil
+	}
+
+	return false, ErrInvFlagRequestForPeerType
+}
+
 // IsRemotePeerIPv6 returns true if Remote Peer is IPv6 for PeerType is 0,1 or 2, for Peer Type 3 always returns false.
 // Per RFC 7854: V flag (bit 7) indicates IPv4 (0) or IPv6 (1) peer address
 func (p *PerPeerHeader) IsRemotePeerIPv6() bool {
