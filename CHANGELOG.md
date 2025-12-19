@@ -12,6 +12,10 @@ Message updates and major project changes should be documented here.
 - BGP Prefix-SID Label-Index TLV (Type 1)
 - BGP Prefix-SID Originator SRGB TLV (Type 3)
 - Enables Segment Routing prefix SID distribution via BGP
+- RFC 7311 support: AIGP (Accumulated IGP Metric) path attribute
+- AIGP attribute parsing for IGP metric propagation across AS boundaries
+- AIGP field in BaseAttributes for traffic engineering applications
+- Enables IGP metric visibility in large service provider networks
 
 ### 2023-04-13
 
