@@ -16,6 +16,9 @@ Message updates and major project changes should be documented here.
 - AIGP attribute parsing for IGP metric propagation across AS boundaries
 - AIGP field in BaseAttributes for traffic engineering applications
 - Enables IGP metric visibility in large service provider networks
+- RFC 9723 support: BGP Colored Prefix Routing (CPR) for SRv6
+- Color Extended Community extraction in IPv4 and IPv6 Unicast prefixes
+- Color field in UnicastPrefix message type for intent-aware routing
 
 ### 2023-04-13
 

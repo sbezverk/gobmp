@@ -92,13 +92,13 @@ List of currently supported NLRI and AFI/SAFI:
 </table>
 
 
- 
 
- 
 
 goBMP also supports a number of drafts for under development protocols and extensions, such as BGP LS extensions for SRv6 support, Flex Algo, Application Specific attributes etc. RFC 8669 (BGP Prefix-SID) is supported via BGP Path Attribute 40, enabling Segment Routing prefix segment identifier distribution for SR-MPLS and SRv6 deployments.
 
 RFC 7311 (AIGP - Accumulated IGP Metric) is supported via BGP Path Attribute 26, enabling IGP metric propagation across AS boundaries for traffic engineering in large service provider networks.
+
+RFC 9723 (BGP Colored Prefix Routing for SRv6) is supported via Color Extended Community extraction in IPv4 and IPv6 Unicast prefixes, enabling intent-aware routing for SRv6 deployments.
 
 For the complete list of supported extensions and drafts follow this link: [Support RFCs and Drafts.](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
 
