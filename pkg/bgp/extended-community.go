@@ -184,6 +184,12 @@ var transOpaqueSubTypes = map[uint8]string{
 	0xaa: ECPLoadBalance,
 }
 
+// Non-Transitive Opaque Extended Community Sub-Types
+// 0x00	Origin Validation State	[RFC8097]
+var nonTransOpaqueSubTypes = map[uint8]string{
+	0x00: ECPOriginValidation,
+}
+
 // EVPN Extended Community Sub-Types
 // 0x00	MAC Mobility	[RFC7432]
 // 0x01	ESI Label	[RFC7432]
@@ -351,6 +357,36 @@ func type40(subType uint8, value []byte) string {
 	return getSubType(nonTransAS2SubTypes, subType) + s
 }
 
+// Non-Transitive Opaque Extended Community (RFC 8097)
+// Type 0x43, Subtype 0x00 - Origin Validation State
+func type43(subType uint8, value []byte) string {
+	var s string
+	switch subType {
+	case 0x00:
+		// RFC 8097: Last byte contains validation state
+		// 0 = valid, 1 = not found, 2 = invalid
+		if len(value) >= 6 {
+			state := value[5] // Last byte of 6-byte value
+			switch state {
+			case 0:
+				s = "valid"
+			case 1:
+				s = "not-found"
+			case 2:
+				s = "invalid"
+			default:
+				// RFC 8097: Values > 2 should trigger discard
+				s = fmt.Sprintf("unknown=%d", state)
+			}
+		} else {
+			s = "invalid-length"
+		}
+	default:
+		s = fmt.Sprintf("unknown-subtype=%d", subType)
+	}
+	return getSubType(nonTransOpaqueSubTypes, subType) + s
+}
+
 // Flowspec Extended Community
 func type80(subType uint8, value []byte) string {
 	var s string
@@ -423,6 +459,7 @@ var extComm = map[uint8]func(uint8, []byte) string{
 	0x6:  type6,
 	0x8:  type8,
 	0x40: type40,
+	0x43: type43,
 	0x80: type80,
 	0x81: type81,
 	0x82: type82,
