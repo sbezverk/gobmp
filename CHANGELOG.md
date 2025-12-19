@@ -19,6 +19,10 @@ Message updates and major project changes should be documented here.
 - RFC 9723 support: BGP Colored Prefix Routing (CPR) for SRv6
 - Color Extended Community extraction in IPv4 and IPv6 Unicast prefixes
 - Color field in UnicastPrefix message type for intent-aware routing
+- RFC 5701 support: IPv6 Address Specific Extended Community
+- IPv6-based Route Target and Route Origin extended communities
+- Type 0x05 Extended Community parsing
+- Enables IPv6 VPN route target filtering
 
 ### 2023-04-13
 
