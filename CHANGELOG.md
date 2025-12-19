@@ -8,6 +8,9 @@ Message updates and major project changes should be documented here.
 
 #### Added
 
+- Route Target Constraint support for IPv4 (AFI 1, SAFI 132) per RFC 4684
+- Route Target Constraint support for IPv6 (AFI 2, SAFI 132) per RFC 4684
+
 - RFC 8669 support: BGP Prefix-SID path attribute
 - BGP Prefix-SID Label-Index TLV (Type 1)
 - BGP Prefix-SID Originator SRGB TLV (Type 3)
