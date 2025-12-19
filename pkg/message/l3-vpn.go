@@ -75,6 +75,12 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		if f, err := ph.IsAdjRIBOutPost(); err == nil {
 			prfx.IsAdjRIBOutPost = f
 		}
+		if f, err := ph.IsAdjRIBOut(); err == nil {
+			prfx.IsAdjRIBOut = f
+		}
+		if f, err := ph.IsLocRIB(); err == nil {
+			prfx.IsLocRIB = f
+		}
 		if f, err := ph.IsLocRIBFiltered(); err == nil {
 			prfx.IsLocRIBFiltered = f
 		}

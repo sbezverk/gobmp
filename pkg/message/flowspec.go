@@ -52,6 +52,12 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	if f, err := ph.IsAdjRIBOutPost(); err == nil {
 		fs.IsAdjRIBOutPost = f
 	}
+	if f, err := ph.IsAdjRIBOut(); err == nil {
+		fs.IsAdjRIBOut = f
+	}
+	if f, err := ph.IsLocRIB(); err == nil {
+		fs.IsLocRIB = f
+	}
 	if f, err := ph.IsLocRIBFiltered(); err == nil {
 		fs.IsLocRIBFiltered = f
 	}

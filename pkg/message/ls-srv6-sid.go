@@ -34,6 +34,12 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 	if f, err := ph.IsAdjRIBOutPost(); err == nil {
 		msg.IsAdjRIBOutPost = f
 	}
+	if f, err := ph.IsAdjRIBOut(); err == nil {
+		msg.IsAdjRIBOut = f
+	}
+	if f, err := ph.IsLocRIB(); err == nil {
+		msg.IsLocRIB = f
+	}
 	if f, err := ph.IsLocRIBFiltered(); err == nil {
 		msg.IsLocRIBFiltered = f
 	}
