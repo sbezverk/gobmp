@@ -14,6 +14,7 @@ type MPNLRI interface {
 	GetAFISAFIType() int
 	GetNLRILU() (*base.MPNLRI, error)
 	GetNLRIUnicast() (*base.MPNLRI, error)
+	GetNLRIMulticast() (*base.MPNLRI, error)
 	GetNLRIEVPN() (*evpn.Route, error)
 	GetNLRIL3VPN() (*base.MPNLRI, error)
 	GetNLRI71() (*ls.NLRI71, error)
@@ -38,6 +39,12 @@ func NLRIMessageType(afi uint16, safi uint8) int {
 	// 2 IP6 (IP version 6) : 1 unicast forwarding
 	case afi == 2 && safi == 1:
 		return 2
+	// 1 IP (IP version 4) : 2 multicast forwarding
+	case afi == 1 && safi == 2:
+		return 28
+	// 2 IP6 (IP version 6) : 2 multicast forwarding
+	case afi == 2 && safi == 2:
+		return 29
 	// 1 IP (IP version 4) : 4 MPLS Labels
 	case afi == 1 && safi == 4:
 		return 16

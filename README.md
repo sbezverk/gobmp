@@ -48,6 +48,18 @@ List of currently supported NLRI and AFI/SAFI:
    </td>
   </tr>
   <tr>
+   <td>IPv4 Multicast
+   </td>
+   <td>1/2
+   </td>
+  </tr>
+  <tr>
+   <td>IPv6 Multicast
+   </td>
+   <td>2/2
+   </td>
+  </tr>
+  <tr>
    <td>VPNv4 unicast
    </td>
    <td>1/128

@@ -13,6 +13,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/mcastvpn"
+	"github.com/sbezverk/gobmp/pkg/multicast"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/unicast"
 	"github.com/sbezverk/tools"
@@ -150,6 +151,21 @@ func (mp *MPReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 1 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
 		nlri, err := unicast.UnmarshalUnicastNLRI(mp.NLRI, pathID)
+		if err != nil {
+			return nil, err
+		}
+		return nlri, nil
+	}
+
+	// TODO return new type of errors to be able to check for the code
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIMulticast check for presense of NLRI Multicast AFI 1 or 2 and SAFI 2 in the NLRI 14 NLRI data and if exists, instantiate Multicast object
+func (mp *MPReachNLRI) GetNLRIMulticast() (*base.MPNLRI, error) {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 2 {
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		nlri, err := multicast.UnmarshalMulticastNLRI(mp.NLRI, pathID)
 		if err != nil {
 			return nil, err
 		}
