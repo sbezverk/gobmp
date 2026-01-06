@@ -247,16 +247,7 @@ In order to establish BMP session between an external BMP speaker and **goBMP** 
 
 #### Quick start with RIS Live feed from RIPE
 
-<<<<<<< HEAD
 Start gobmp daemon :
-=======
-**Areas for contribution:**
-- Additional BGP AFI/SAFI support (Multicast, etc.)
-- RFC compliance improvements
-- Performance optimizations
-- Documentation improvements
-- Bug fixes and testing
->>>>>>> 65c3b85 (Add VPLS support (AFI 25, SAFI 65))
 
 ```
 sudo docker run --net=host sbezverk/gobmp --dump=console
