@@ -56,6 +56,8 @@ const (
 	FlowspecV4Msg = 164
 	// FlowspecV6Msg defines BMP Route Monitoring message carrying Flowspec NLRI
 	FlowspecV6Msg = 166
+	// VPLSMsg defines BMP Route Monitoring message carrying VPLS NLRI AFI 25 SAFI 65
+	VPLSMsg = 17
 	// MulticastV4Msg defines BMP Route Monitoring message carrying Multicast IPv4 NLRI
 	MulticastV4Msg = 184
 	// MulticastV6Msg defines BMP Route Monitoring message carrying Multicast IPv6 NLRI
@@ -64,4 +66,6 @@ const (
 	MCASTVPNV4Msg = 204
 	// MCASTVPNV6Msg defines BMP Route Monitoring message carrying MCAST-VPN IPv6 NLRI
 	MCASTVPNV6Msg = 206
+	// BMPRawMsg defines BMP RAW message type for unprocessed BMP messages
+	BMPRawMsg = 255
 )
