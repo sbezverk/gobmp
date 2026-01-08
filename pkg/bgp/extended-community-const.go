@@ -54,6 +54,8 @@ const (
 	ECPContextLabelSpaceID = "cls="
 	// ECPColor extended community prefix for Color Extended Community	[RFC5512]
 	ECPColor = "color="
+	// ECPOriginValidation extended community prefix for Origin Validation State [RFC8097]
+	ECPOriginValidation = "ov-state="
 	// ECPEncapsulation extended community prefix for Encapsulation Extended Community	[RFC5512]
 	ECPEncapsulation = "encap="
 	// ECPDefaultGateway extended community prefix for Default Gateway	[Yakov_Rekhter]
