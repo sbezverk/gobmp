@@ -1,6 +1,10 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/sbezverk/gobmp/pkg/bmp"
+)
 
 func TestParsingWorker(t *testing.T) {
 	tests := []struct {
@@ -14,7 +18,79 @@ func TestParsingWorker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsingWorker(tt.input, nil)
+			producerQueue := make(chan bmp.Message, 1)
+			p := &parser{
+				producerQueue: producerQueue,
+				config:        &Config{EnableRawMode: false},
+			}
+			p.parsingWorker(tt.input)
 		})
+	}
+}
+
+// TestParserRawMode tests parser in raw mode
+func TestParserRawMode(t *testing.T) {
+	input := []byte{3, 0, 0, 0, 32, 4, 0, 1, 0, 10, 32, 55, 46, 50, 46, 49, 46, 50, 51, 73, 0, 2, 0, 8, 120, 114, 118, 57, 107, 45, 114, 49}
+
+	producerQueue := make(chan bmp.Message, 1)
+	p := &parser{
+		producerQueue: producerQueue,
+		config:        &Config{EnableRawMode: true},
+	}
+
+	p.parsingWorker(input)
+
+	// Check that a message was produced
+	select {
+	case msg := <-producerQueue:
+		if msg.Payload == nil {
+			t.Error("Expected payload in raw mode, got nil")
+		}
+		if _, ok := msg.Payload.(*bmp.RawMessage); !ok {
+			t.Errorf("Expected RawMessage payload, got %T", msg.Payload)
+		}
+	default:
+		t.Error("Expected message in producer queue, got none")
+	}
+}
+
+// TestParserNormalMode tests parser in normal (parsed) mode
+func TestParserNormalMode(t *testing.T) {
+	input := []byte{3, 0, 0, 0, 32, 4, 0, 1, 0, 10, 32, 55, 46, 50, 46, 49, 46, 50, 51, 73, 0, 2, 0, 8, 120, 114, 118, 57, 107, 45, 114, 49}
+
+	producerQueue := make(chan bmp.Message, 1)
+	p := &parser{
+		producerQueue: producerQueue,
+		config:        &Config{EnableRawMode: false},
+	}
+
+	p.parsingWorker(input)
+	// In normal mode, initiation messages don't produce output to queue
+	// This test just verifies no panic occurs
+}
+
+// TestNewParser tests parser constructor
+func TestNewParser(t *testing.T) {
+	queue := make(chan []byte)
+	producerQueue := make(chan bmp.Message)
+	stop := make(chan struct{})
+
+	// Test with nil config
+	p := NewParser(queue, producerQueue, stop, nil)
+	if p == nil {
+		t.Fatal("NewParser returned nil")
+	}
+	if p.config == nil {
+		t.Fatal("NewParser should set default config when nil provided")
+	}
+	if p.config.EnableRawMode {
+		t.Error("Default config should have EnableRawMode = false")
+	}
+
+	// Test with explicit config
+	config := &Config{EnableRawMode: true}
+	p2 := NewParser(queue, producerQueue, stop, config)
+	if p2.config.EnableRawMode != true {
+		t.Error("NewParser should use provided config")
 	}
 }
