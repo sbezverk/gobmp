@@ -345,4 +345,5 @@ func (m *mockMPNLRI) GetNLRI71() (*ls.NLRI71, error)           { return nil, nil
 func (m *mockMPNLRI) GetNLRI73() (*srpolicy.NLRI73, error)     { return nil, nil }
 func (m *mockMPNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) { return nil, nil }
 func (m *mockMPNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) { return nil, nil }
+func (m *mockMPNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)     { return nil, nil }
 func (m *mockMPNLRI) GetNLRIMulticast() (*base.MPNLRI, error)  { return nil, nil }
