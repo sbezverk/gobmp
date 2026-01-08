@@ -14,6 +14,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/mcastvpn"
 	"github.com/sbezverk/gobmp/pkg/multicast"
+	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/unicast"
 	"github.com/sbezverk/gobmp/pkg/vpls"
@@ -229,6 +230,15 @@ func (mp *MPReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
 func (mp *MPReachNLRI) GetNLRIMVPN() (*mcastvpn.Route, error) {
 	if mp.SubAddressFamilyID == 129 {
 		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.NLRI)
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
+// GetNLRIRTC checks for presence of NLRI 132 Route Target Constraint in the NLRI 14 NLRI data and if exists, instantiate RTC NLRI object
+func (mp *MPReachNLRI) GetNLRIRTC() (*rtc.Route, error) {
+	if mp.SubAddressFamilyID == 132 {
+		return rtc.UnmarshalRTCNLRI(mp.NLRI)
 	}
 
 	return nil, fmt.Errorf("not found")

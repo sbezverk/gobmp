@@ -259,6 +259,24 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
+	case 30:
+		fallthrough
+	case 31:
+		msgs, err := p.rtc(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce rtc messages with error: %+v", err)
+			return
+		}
+		for _, m := range msgs {
+			topicType := bmp.RTCV6Msg
+			if m.IsIPv4 {
+				topicType = bmp.RTCV4Msg
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash), false); err != nil {
+				glog.Errorf("failed to process RTC message with error: %+v", err)
+				return
+			}
+		}
 	case 71:
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
 	}
