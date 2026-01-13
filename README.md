@@ -422,3 +422,4 @@ This project follows the licensing terms of the original repository.
 - **Pull Requests:** [GitHub PRs](https://github.com/sbezverk/gobmp/pulls)
 - **Documentation:** [BMP Protocol Details](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
 - **Message Schemas:** [types.go](https://github.com/sbezverk/gobmp/blob/master/pkg/message/types.go)
+
