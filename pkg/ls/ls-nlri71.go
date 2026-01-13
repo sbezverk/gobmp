@@ -71,8 +71,8 @@ func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 				return nil, err
 			}
 			el.LS = n
-			// TODO (sbezverk)
-			// https://tools.ietf.org/html/draft-ietf-idr-te-lsp-distribution-14#ref-I-D.ietf-spring-segment-routing-policy
+			// TE Policy (SR Policy) NLRI - handled below in case 5
+			// Reference: draft-ietf-idr-te-lsp-distribution-14
 		case 5:
 			n, err := te.UnmarshalTEPolicyNLRI(b[p : p+int(el.Length)])
 			if err != nil {
