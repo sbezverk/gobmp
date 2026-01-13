@@ -18,13 +18,13 @@ jobs:
     steps:
       # --- Setup ---
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Environment
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Install Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.sum"
@@ -75,7 +75,7 @@ jobs:
         run: |
             go test -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
@@ -109,7 +109,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: setup host kernel parameters
         run: ./build/set_kernel_params.sh
       - name: Setup Environment
@@ -239,7 +239,7 @@ jobs:
     if: github.event_name == 'pull_request' # Only run on PRs for now
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Go
         uses: actions/setup-go@v5
