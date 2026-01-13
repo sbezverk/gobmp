@@ -41,7 +41,7 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           # Require: The version of golangci-lint to use.
-          version: v1.61.0
+          version: v2.8.0
           args: --timeout=5m
 
       # --- Unit Tests ---
@@ -54,15 +54,19 @@ jobs:
         run: |
           echo "### Test Results :test_tube:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if grep -q "FAIL" test-output.txt; then
-            echo "❌ Some tests failed" >> $GITHUB_STEP_SUMMARY
+          if [ -f test-output.txt ]; then
+            if grep -q "FAIL" test-output.txt; then
+              echo "❌ Some tests failed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ All tests passed" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -20 test-output.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           else
-            echo "✅ All tests passed" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Test output file not found" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          tail -20 test-output.txt >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
       # --- Benchmarks ---
       - name: Run benchmarks
