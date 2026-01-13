@@ -68,6 +68,12 @@ func main() {
 				TopicType: bmp.UnicastPrefixV4Msg,
 				TopicChan: make(chan []byte),
 			})
+		case "vpls":
+			topics = append(topics, &kafka.TopicDescriptor{
+				TopicName: kafka.VPLSMessageTopic,
+				TopicType: bmp.VPLSMsg,
+				TopicChan: make(chan []byte),
+			})
 		default:
 			glog.Errorf("Unsupported or invalid test case %s", test)
 			os.Exit(1)
