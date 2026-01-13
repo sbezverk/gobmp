@@ -16,5 +16,9 @@ perf
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+coverage.txt
+benchmark.txt
+test-output.txt
+rfc-test-output.txt
 
 # Dependency directories (remove the comment below to include it)
