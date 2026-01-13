@@ -32,6 +32,8 @@ var (
 	splitAF   string
 	dump      string
 	file      string
+	bmpRaw    string
+	adminID   string
 )
 
 func init() {
@@ -46,6 +48,8 @@ func init() {
 	flag.IntVar(&perfPort, "performance-port", 56767, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\", to standard output when \"dump=console\" or to NATS when \"dump=nats\"")
 	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "Full path anf file name to store messages when \"dump=file\"")
+	flag.StringVar(&bmpRaw, "bmp-raw", "false", "When set \"true\", BMP messages are published in RAW format without parsing (OpenBMP compatibility mode)")
+	flag.StringVar(&adminID, "admin-id", "", "Collector admin ID for RAW messages (defaults to hostname). Used to generate collector hash for OpenBMP compatibility")
 }
 
 func main() {
@@ -104,7 +108,25 @@ func main() {
 		glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
 		os.Exit(1)
 	}
-	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag)
+	bmpRawFlag, err := strconv.ParseBool(bmpRaw)
+	if err != nil {
+		glog.Errorf("failed to parse to bool the value of the bmp-raw flag with error: %+v", err)
+		os.Exit(1)
+	}
+
+	// Set default admin ID to hostname if not provided
+	collectorAdminID := adminID
+	if collectorAdminID == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			glog.Warningf("failed to get hostname, using 'gobmp-collector' as admin ID: %+v", err)
+			collectorAdminID = "gobmp-collector"
+		} else {
+			collectorAdminID = hostname
+		}
+	}
+
+	bmpSrv, err := gobmpsrv.NewBMPServer(srcPort, dstPort, interceptFlag, publisher, splitAFFlag, bmpRawFlag, collectorAdminID)
 	if err != nil {
 		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
 		os.Exit(1)
