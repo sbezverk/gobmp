@@ -18,7 +18,7 @@ jobs:
     steps:
       # --- Setup ---
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup Environment
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
@@ -113,7 +113,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: setup host kernel parameters
         run: ./build/set_kernel_params.sh
       - name: Setup Environment
@@ -191,7 +191,7 @@ jobs:
     if: github.event_name == 'pull_request' # Only run on PRs for now
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Go
         uses: actions/setup-go@v5
@@ -243,7 +243,7 @@ jobs:
     if: github.event_name == 'pull_request' # Only run on PRs for now
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Go
         uses: actions/setup-go@v5
