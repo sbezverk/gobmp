@@ -35,6 +35,14 @@ const (
 )
 
 // SRBindingSID defines the struct of SR Binding SID object
+// TLV Type 1201 per draft-ietf-idr-bgp-ls-sr-policy-17
+//
+// Flags (per RFC 9256 section 6.2):
+//   - FlagD (Dataplane): SRv6 (set) or SR-MPLS (clear)
+//   - FlagB (Binding/Allocation): BSID allocated (set) or not allocated (clear)
+//   - FlagU (Unavailable): Specified BSID unavailable (set) or in use (clear)
+//   - FlagL (Local/SRLB): BSID from SRLB (set) or dynamic pool (clear)
+//   - FlagF (Fallback): BSID allocated via fallback (set) or no fallback (clear)
 type SRBindingSID struct {
 	FlagD bool `json:"d_flag"`
 	FlagB bool `json:"b_flag"`
@@ -65,7 +73,10 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 	p += 2
 	l := 0
 	var err error
-	// TODO (sbezverk) the beahaviour for B FLag
+	// Per draft-ietf-idr-bgp-ls-sr-policy-17, the B-Flag indicates allocation status
+	// (set = BSID allocated, clear = not allocated). It does not affect parsing logic
+	// as both BSID and PSID fields are always present regardless of flag state.
+	// The D-Flag determines field size: set = 16 octets (SRv6), clear = 4 octets (MPLS)
 	if bsid.FlagD {
 		// BSID is ipv6 address
 		bsid.BSID, err = UnmarshalSRv6SID(b[p : p+16])

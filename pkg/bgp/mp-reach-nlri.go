@@ -101,8 +101,7 @@ func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 		return nlri71, nil
 	}
 
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetNLRI73 check for presense of NLRI 73 in the NLRI 14 NLRI data and if exists, instantiate NLRI73 object
@@ -115,8 +114,7 @@ func (mp *MPReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
 		return nlri73, nil
 	}
 
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetNLRIL3VPN check for presense of NLRI L3VPN AFI 1 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
@@ -130,8 +128,7 @@ func (mp *MPReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 		return nlri, nil
 	}
 
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetNLRIEVPN check for presense of NLRI EVPN AFI 25 and SAFI 70 in the NLRI 14 NLRI data and if exists, instantiate EVPN object
@@ -144,8 +141,7 @@ func (mp *MPReachNLRI) GetNLRIEVPN() (*evpn.Route, error) {
 		return route, nil
 	}
 
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetNLRIVPLS check for presense of NLRI VPLS AFI 25 and SAFI 65 in the NLRI 14 NLRI data and if exists, instantiate VPLS object
@@ -158,8 +154,7 @@ func (mp *MPReachNLRI) GetNLRIVPLS() (*vpls.Route, error) {
 		return route, nil
 	}
 
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetNLRIUnicast check for presense of NLRI EVPN AFI 1 or 2  and SAFI 1 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
@@ -173,8 +168,7 @@ func (mp *MPReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 		return nlri, nil
 	}
 
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetNLRIMulticast check for presense of NLRI Multicast AFI 1 or 2 and SAFI 2 in the NLRI 14 NLRI data and if exists, instantiate Multicast object
@@ -188,8 +182,7 @@ func (mp *MPReachNLRI) GetNLRIMulticast() (*base.MPNLRI, error) {
 		return nlri, nil
 	}
 
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetNLRILU check for presense of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
@@ -203,8 +196,7 @@ func (mp *MPReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 		return nlri, nil
 	}
 
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetFlowspecNLRI checks for presense of NLRI 133 IPv4 Flowspec in the NLRI 14 NLRI data and if exists, instantiate NLRI object
@@ -213,8 +205,7 @@ func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 		return flowspec.UnmarshalFlowspecNLRI(mp.NLRI)
 	}
 
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetNLRIMCASTVPN instantiates a MCAST-VPN NLRI structure based on passed slice

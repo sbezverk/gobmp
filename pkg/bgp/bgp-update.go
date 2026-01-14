@@ -60,8 +60,7 @@ func (up *Update) GetNLRI29() (*bgpls.NLRI, error) {
 			return nlri29, nil
 		}
 	}
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewAttributeNotFoundError(29, "BGP-LS")
 }
 
 // GetAttrPrefixSID check for presense of BGP Attribute Prefix SID (40) and instantiates it
@@ -75,8 +74,7 @@ func (up *Update) GetAttrPrefixSID() (*prefixsid.PSid, error) {
 			return psid, nil
 		}
 	}
-	// TODO return new type of errors to be able to check for the code
-	return nil, fmt.Errorf("not found")
+	return nil, NewAttributeNotFoundError(40, "Prefix SID")
 }
 
 // HasPrefixSID check for presense of BGP Attribute Prefix SID (40) and returns true is found

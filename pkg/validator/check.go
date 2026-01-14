@@ -20,7 +20,12 @@ func buildMessgesMap(b []byte) (map[int][][]byte, error) {
 			return nil, fmt.Errorf("invalid length of byte array")
 		}
 		mt := binary.BigEndian.Uint32(b[p : p+4])
-		// TODO (sbezverk) Checking message type against valid types would be great
+		// Validate message type is in expected range
+		// Standard BMP message types: 0-6 (RFC 7854)
+		// Internal gobmp message types: 7-116
+		if mt > 116 {
+			return nil, fmt.Errorf("invalid message type: %d (expected 0-116)", mt)
+		}
 		p += 4
 		ml := binary.BigEndian.Uint32(b[p : p+4])
 		p += 4
@@ -70,7 +75,11 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 			workersErrChan <- err
 			return
 		}
-		// TODO (sbezverk) there should be no duplication, add check if the key already exists
+		// Check for duplicate keys in test data
+		if _, exists := dictionary[k]; exists {
+			workersErrChan <- fmt.Errorf("duplicate key found in test data: %s", k)
+			return
+		}
 		dictionary[k] = u
 	}
 	glog.Infof("Dictionaly for topic type %d contains %d test messages", topic.TopicType, len(dictionary))

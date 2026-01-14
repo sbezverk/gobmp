@@ -59,7 +59,12 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 		return nil, err
 	}
 	// Since HeadEnd Node Descriptor MUST include 512 and 516 TLVs
-	// TODO Add check and return error if these two TLVs are missing
+	if _, ok := he.SubTLV[512]; !ok {
+		return nil, fmt.Errorf("HeadEnd Node Descriptor missing mandatory TLV 512 (ASN)")
+	}
+	if _, ok := he.SubTLV[516]; !ok {
+		return nil, fmt.Errorf("HeadEnd Node Descriptor missing mandatory TLV 516 (BGP Router ID)")
+	}
 	te.HeadEnd = he
 	te.HeadEndHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(l)+4]))
 	p += int(l)
