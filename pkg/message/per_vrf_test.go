@@ -12,27 +12,38 @@ import (
 func TestGetTableKey(t *testing.T) {
 	tests := []struct {
 		name     string
+		peerType bmp.PeerType
 		bgpID    []byte
 		rd       []byte
 		expected string
 	}{
 		{
 			name:     "IPv4 no RD (PeerType0)",
+			peerType: bmp.PeerType0,
 			bgpID:    []byte{10, 0, 0, 1},
 			rd:       []byte{0, 0, 0, 0, 0, 0, 0, 0},
 			expected: "10.0.0.10:0",
 		},
 		{
-			name:     "IPv4 with RD Type 1",
+			name:     "IPv4 with RD Type 1 (PeerType1)",
+			peerType: bmp.PeerType1,
 			bgpID:    []byte{192, 168, 1, 1},
 			rd:       []byte{0, 1, 192, 168, 1, 1, 0, 100}, // Type 1: IP:ASN
 			expected: "192.168.1.1192.168.1.1:100",
+		},
+		{
+			name:     "LocRIB with RD Type 0 (PeerType3)",
+			peerType: bmp.PeerType3,
+			bgpID:    []byte{10, 0, 0, 1},
+			rd:       []byte{0, 0, 0, 100, 0, 0, 0, 200}, // Type 0: ASN:NN -> 100:200
+			expected: "10.0.0.1100:200",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ph := &bmp.PerPeerHeader{
+				PeerType:          tt.peerType,
 				PeerBGPID:         tt.bgpID,
 				PeerDistinguisher: tt.rd,
 			}
