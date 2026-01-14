@@ -3,6 +3,7 @@ package message
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"sync"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -13,6 +14,15 @@ const (
 	peerUP = iota
 	peerDown
 )
+
+// PerTableProperties holds per-VRF/per-table properties
+// Each VRF (identified by BGP-ID + Peer Distinguisher) has its own:
+// - AddPath capability map (per AFI/SAFI)
+// - Table Informational TLVs (including Table Name per RFC 9069)
+type PerTableProperties struct {
+	addPathCapable map[int]bool
+	tableInfoTLVs  []bmp.InformationalTLV
+}
 
 // Config holds producer configuration options
 type Config struct {
@@ -28,10 +38,14 @@ type Producer interface {
 }
 
 type producer struct {
-	publisher      pub.Publisher
-	speakerIP      string
-	speakerHash    string
-	addPathCapable map[int]bool
+	publisher   pub.Publisher
+	speakerIP   string
+	speakerHash string
+	// Per-VRF table properties tracking (replaces global addPathCapable)
+	// Key format: BGP-ID + Peer Distinguisher (e.g., "10.0.0.10:0")
+	// Per RFC 9069 Section 4: uniquely identifies each Loc-RIB instance
+	tableLock       sync.RWMutex
+	tableProperties map[string]PerTableProperties
 	// If splitAF is set to true, ipv4 and ipv6 messages will go into separate topics
 	splitAF bool
 	// collectorAdminID is the collector identifier string for OpenBMP binary header
@@ -88,11 +102,50 @@ func (p *producer) SetConfig(config *Config) error {
 	return nil
 }
 
+// GetAddPathCapability returns AddPath capability map for a specific table
+// Returns nil if table doesn't exist (caller must handle gracefully)
+// Accessing nil map in Go returns zero value (false) for all keys, which is safe
+// Per RFC 7911 Section 3: AddPath capability is advertised per BGP session
+func (p *producer) GetAddPathCapability(tableKey string) map[int]bool {
+	p.tableLock.RLock()
+	defer p.tableLock.RUnlock()
+
+	if props, ok := p.tableProperties[tableKey]; ok {
+		return props.addPathCapable
+	}
+
+	// Return nil - parsers will treat nil map as "no AddPath capability"
+	// This is safe: accessing nil map returns zero value (false)
+	return nil
+}
+
+// GetTableName returns table name from Table Informational TLVs
+// Used for populating TableName field in LocRIB routes
+// Per RFC 9069 Section 5: TLV Type 3 contains the Table Name string
+func (p *producer) GetTableName(bgpID, rd string) string {
+	p.tableLock.RLock()
+	defer p.tableLock.RUnlock()
+
+	tableKey := bgpID + rd
+	tn := ""
+
+	if properties, ok := p.tableProperties[tableKey]; ok {
+		for _, tlv := range properties.tableInfoTLVs {
+			if tlv.InformationType == 3 {
+				// Information is []byte, convert to string
+				tn += string(tlv.Information)
+			}
+		}
+	}
+
+	return tn
+}
+
 // NewProducer instantiates a new instance of a producer with Publisher interface
 func NewProducer(publisher pub.Publisher, splitAF bool) Producer {
 	return &producer{
-		publisher:      publisher,
-		splitAF:        splitAF,
-		addPathCapable: make(map[int]bool),
+		publisher:       publisher,
+		splitAF:         splitAF,
+		tableProperties: make(map[string]PerTableProperties),
 	}
 }

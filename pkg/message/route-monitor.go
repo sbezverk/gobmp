@@ -42,14 +42,20 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	// Using first attribute type to select which nlri processor to call
 	switch attrType {
 	case 14:
-		nlri, err := bgp.UnmarshalMPReachNLRI(routeMonitorMsg.Update.PathAttributes[index].Attribute, routeMonitorMsg.Update.HasPrefixSID(), p.addPathCapable)
+		// MP_REACH_NLRI - Use per-table AddPath capability
+		nlri, err := bgp.UnmarshalMPReachNLRI(
+			routeMonitorMsg.Update.PathAttributes[index].Attribute,
+			routeMonitorMsg.Update.HasPrefixSID(),
+			p.GetAddPathCapability(msg.PeerHeader.GetTableKey()))
 		if err != nil {
 			glog.Errorf("failed to process MP_REACH_NLRI with error: %+v", err)
 		}
 		p.processMPUpdate(nlri, AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 	case 15:
-		// MP_UNREACH_NLRI
-		nlri, err := bgp.UnmarshalMPUnReachNLRI(routeMonitorMsg.Update.PathAttributes[index].Attribute, p.addPathCapable)
+		// MP_UNREACH_NLRI - Use per-table AddPath capability
+		nlri, err := bgp.UnmarshalMPUnReachNLRI(
+			routeMonitorMsg.Update.PathAttributes[index].Attribute,
+			p.GetAddPathCapability(msg.PeerHeader.GetTableKey()))
 		if err != nil {
 			glog.Errorf("failed to process MP_UNREACH_NLRI with error: %+v", err)
 		}

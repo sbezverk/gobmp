@@ -68,25 +68,42 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			// Local BGP speaker is 4 bytes AS capable
 			m.LocalASN = lasn
 		}
-		// Check if local router advertises AddPath Send/Receive for any AFI/SAFI,
-		// if map comes back empty no further AddPath Capability is needed
+
+		// Create per-table properties for this VRF
+		// Per RFC 9069: Each table identified by BGP-ID + Peer Distinguisher
+		// Per RFC 7911: AddPath capability is per BGP session (not global)
+		p.tableLock.Lock()
+		ptp := PerTableProperties{
+			addPathCapable: make(map[int]bool),
+		}
+
+		// Check AddPath capability for this specific peer/table
+		// Only enable AddPath for AFI/SAFI types where BOTH peers support it
 		if lAddPath := peerUpMsg.SentOpen.AddPathCapability(); len(lAddPath) != 0 {
-			// Check if remote router advertises AddPath Send/Receive for any AFI/SAFI,
-			// if map comes back empty no further AddPath Capability is needed
 			if rAddPath := peerUpMsg.ReceivedOpen.AddPathCapability(); len(rAddPath) != 0 {
 				for k := range lAddPath {
-					// Enable AddPath only for AFI/SAFI types existing in both local and remote maps
 					if capable, ok := rAddPath[k]; ok {
-						// AFI/SAFI type exists in both maps, which means both peers support Send/Receive of AddPath
-						p.addPathCapable[k] = capable
+						ptp.addPathCapable[k] = capable
 					}
 				}
 			}
 		}
+
+		// Copy table informational TLVs (includes Table Name per RFC 9069 Section 5)
+		ptp.tableInfoTLVs = make([]bmp.InformationalTLV, len(peerUpMsg.Information))
+		copy(ptp.tableInfoTLVs, peerUpMsg.Information)
+
+		// Store properties for this table
+		p.tableProperties[msg.PeerHeader.GetTableKey()] = ptp
+		p.tableLock.Unlock()
+
 		m.AdvCapabilities = peerUpMsg.SentOpen.GetCapabilities()
 		m.RcvCapabilities = peerUpMsg.ReceivedOpen.GetCapabilities()
 		if glog.V(6) {
-			glog.Infof("producer for speaker ip: %s add path: %+v", p.speakerIP, p.addPathCapable)
+			glog.Infof("producer for speaker ip: %s table: %s add path: %+v",
+				p.speakerIP,
+				msg.PeerHeader.GetTableKey(),
+				ptp.addPathCapable)
 		}
 	} else {
 		peerDownMsg, ok := msg.Payload.(*bmp.PeerDownMessage)
@@ -110,6 +127,11 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m.InfoData = make([]byte, len(peerDownMsg.Data))
 		copy(m.InfoData, peerDownMsg.Data)
 
+		// Clean up table properties when peer goes down
+		// This prevents memory leaks and ensures stale data isn't used
+		p.tableLock.Lock()
+		delete(p.tableProperties, msg.PeerHeader.GetTableKey())
+		p.tableLock.Unlock()
 	}
 	if err := p.marshalAndPublish(&m, bmp.PeerStateChangeMsg, []byte(m.RouterHash), false); err != nil {
 		glog.Errorf("failed to process peer message with error: %+v", err)

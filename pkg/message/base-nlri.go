@@ -16,7 +16,9 @@ import (
 func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*UnicastPrefix, error) {
 	var operation string
 	var routes []base.Route
-	pathID := p.addPathCapable[bgp.NLRIMessageType(1, 1)]
+	// Use per-table AddPath capability
+	addPathCap := p.GetAddPathCapability(ph.GetTableKey())
+	pathID := addPathCap[bgp.NLRIMessageType(1, 1)]
 	switch op {
 	case 0:
 		operation = "add"
