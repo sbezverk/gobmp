@@ -9,6 +9,18 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/sbezverk/gobmp/actions/workflows/cicd.yml">
+    <img src="https://github.com/sbezverk/gobmp/actions/workflows/cicd.yml/badge.svg" alt="CI/CD">
+  </a>
+  <a href="https://codecov.io/gh/sbezverk/gobmp">
+    <img src="https://codecov.io/gh/sbezverk/gobmp/branch/master/graph/badge.svg" alt="codecov">
+  </a>
+  <a href="https://goreportcard.com/report/github.com/sbezverk/gobmp">
+    <img src="https://goreportcard.com/badge/github.com/sbezverk/gobmp" alt="Go Report Card">
+  </a>
+</p>
+
+<p align="center">
   <a href="#features">Features</a> •
   <a href="#supported-protocols">Supported Protocols</a> •
   <a href="#quick-start">Quick Start</a> •

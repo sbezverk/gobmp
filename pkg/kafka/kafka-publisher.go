@@ -38,6 +38,7 @@ const (
 	FlowspecMessageTopic   = "gobmp.parsed.flowspec"
 	FlowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
 	FlowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
+	VPLSMessageTopic       = "gobmp.parsed.vpls"
 	StatsMessageTopic      = "gobmp.parsed.statistics"
 	RawMessageTopic        = "gobmp.raw"
 )
@@ -71,6 +72,7 @@ var (
 		FlowspecMessageTopic,
 		FlowspecMessageV4Topic,
 		FlowspecMessageV6Topic,
+		VPLSMessageTopic,
 		StatsMessageTopic,
 		RawMessageTopic,
 	}
@@ -121,6 +123,8 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 		return p.produceMessage(FlowspecMessageV4Topic, key, msg)
 	case bmp.FlowspecV6Msg:
 		return p.produceMessage(FlowspecMessageV6Topic, key, msg)
+	case bmp.VPLSMsg:
+		return p.produceMessage(VPLSMessageTopic, key, msg)
 	case bmp.StatsReportMsg:
 		return p.produceMessage(StatsMessageTopic, key, msg)
 	case bmp.BMPRawMsg:
