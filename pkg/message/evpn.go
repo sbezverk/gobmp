@@ -128,6 +128,10 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			if f, err := ph.IsLocRIBFiltered(); err == nil {
 				prfx.IsLocRIBFiltered = f
 			}
+			// RFC 9069: Set TableName for LocRIB peers
+			if prfx.IsLocRIB {
+				prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			}
 		}
 		prfxs = append(prfxs, prfx)
 	}
