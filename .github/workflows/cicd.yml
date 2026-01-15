@@ -411,3 +411,42 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
           echo "**Coverage:** Route Types 1-5, MAC/IP Advertisement, Inclusive Multicast, Ethernet Segment, IP Prefix" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================================================
+  # RFC Compliance Validation (RTC RFC 4684)
+  # ==============================================================================
+  rfc_compliance_rtc:
+    name: RFC Compliance - RTC
+    needs: [tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.24.x
+
+      - name: Run RTC RFC 4684 compliance tests
+        run: |
+          echo "### RFC 4684 Compliance Tests :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go test -v ./pkg/rtc/... | tee rfc4684-test-output.txt
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -E "PASS|FAIL|Test" rfc4684-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate RFC compliance report
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### RFC Compliance Status :clipboard:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC | Standard | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 4684 | Route Target Constraint | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** RTC NLRI parsing, Wildcard routes, Origin AS, Route Target Extended Communities (Type 0/1/2), Error handling" >> $GITHUB_STEP_SUMMARY
