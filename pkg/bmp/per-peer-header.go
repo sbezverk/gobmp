@@ -254,6 +254,15 @@ func (p *PerPeerHeader) GetPeerDistinguisherString() string {
 	return pd
 }
 
+// GetTableKey returns unique table identifier combining BGP-ID and Peer Distinguisher
+// This key is used to track per-VRF properties (AddPath capability, table info)
+// Format: "<bgp-id><rd>" e.g., "10.0.0.10:0" or "192.168.1.165000:100"
+// Per RFC 9069 Section 4: Each Loc-RIB instance is uniquely identified by
+// the combination of Peer BGP ID and Peer Distinguisher fields
+func (p *PerPeerHeader) GetTableKey() string {
+	return p.GetPeerBGPIDString() + p.GetPeerDistinguisherString()
+}
+
 // UnmarshalPerPeerHeader processes Per-Peer header
 func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	if glog.V(6) {
