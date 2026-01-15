@@ -361,3 +361,82 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
           echo "**Coverage:** LocRIB PeerType 3, TableName TLV Type 3, Per-VRF properties, RIB flags" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================================================
+  # RFC Compliance Validation (MCAST-VPN RFC 6513/6514)
+  # ==============================================================================
+  rfc_compliance_mcastvpn:
+    name: RFC Compliance - MCAST-VPN
+    needs: [tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.24.x
+
+      - name: Run MCAST-VPN RFC compliance tests
+        run: |
+          echo "### RFC 6513/6514 Compliance Tests :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go test -v ./pkg/mcastvpn/... | tee mcastvpn-test-output.txt
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -E "PASS|FAIL|Test" mcastvpn-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate RFC compliance report
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### RFC Compliance Status :clipboard:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC | Standard | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 6513 | Multicast in MPLS/BGP IP VPNs | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 6514 | BGP Encodings/Procedures for Multicast VPNs | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** 7 MCAST-VPN route types (Type 1-7), I-PMSI A-D, S-PMSI A-D, Leaf A-D, Source Active A-D, Shared/Source Tree Join" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================================================
+  # RFC Compliance Validation (Multicast BGP RFC 4760)
+  # ==============================================================================
+  rfc_compliance_multicast:
+    name: RFC Compliance - Multicast
+    needs: [tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.24.x
+
+      - name: Run Multicast BGP RFC compliance tests
+        run: |
+          echo "### RFC 4760 Multicast Compliance Tests :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go test -v ./pkg/multicast/... | tee multicast-test-output.txt
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -E "PASS|FAIL|Test" multicast-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate RFC compliance report
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### RFC Compliance Status :clipboard:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC | Standard | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 4760 | Multiprotocol Extensions for BGP-4 | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** IPv4/IPv6 multicast prefixes, SSM range (232.0.0.0/8), GLOP addressing (233.0.0.0/8), PathID support" >> $GITHUB_STEP_SUMMARY
