@@ -61,6 +61,10 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	if f, err := ph.IsLocRIBFiltered(); err == nil {
 		fs.IsLocRIBFiltered = f
 	}
+	// RFC 9069: Set TableName for LocRIB peers
+	if fs.IsLocRIB {
+		fs.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+	}
 
 	return []*Flowspec{fs}, nil
 }

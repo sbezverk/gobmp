@@ -89,11 +89,12 @@ type UnicastPrefix struct {
 	PrefixSID        *prefixsid.PSid     `json:"prefix_sid,omitempty"`
 	IsEOR            bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
-	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
-	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
-	IsLocRIB         bool `json:"is_loc_rib"`
-	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
@@ -233,11 +234,12 @@ type LSNode struct {
 	NodeMSD             []*base.MSDTV                   `json:"node_msd,omitempty"`
 	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition     `json:"flex_algo_definition,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
-	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
-	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
-	IsLocRIB         bool `json:"is_loc_rib"`
-	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // LSLink defines a structure of LS link message
@@ -306,11 +308,12 @@ type LSLink struct {
 	UnidirAvailableBW     uint32                        `json:"unidir_available_bw,omitempty"`
 	UnidirBWUtilization   uint32                        `json:"unidir_bw_utilization,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
-	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
-	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
-	IsLocRIB         bool `json:"is_loc_rib"`
-	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // MulticastPrefix defines a message format sent as a result of BMP Route Monitor message
@@ -338,9 +341,13 @@ type MulticastPrefix struct {
 	IsNexthopIPv4    bool                `json:"is_nexthop_ipv4"`
 	PathID           int32               `json:"path_id,omitempty"`
 	IsEOR            bool                `json:"is_eor,omitempty"`
-	IsAdjRIBInPost   bool                `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool                `json:"is_adj_rib_out_post_policy"`
-	IsLocRIBFiltered bool                `json:"is_loc_rib_filtered"`
+	// Values are assigned based on PerPeerHeader flags
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // MCASTVPNPrefix defines the structure of MCAST-VPN message (AFI 1/2, SAFI 5)
@@ -371,9 +378,13 @@ type MCASTVPNPrefix struct {
 	IsIPv4           bool                `json:"is_ipv4"`
 	IsNexthopIPv4    bool                `json:"is_nexthop_ipv4"`
 	IsEOR            bool                `json:"is_eor,omitempty"`
-	IsAdjRIBInPost   bool                `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool                `json:"is_adj_rib_out_post_policy"`
-	IsLocRIBFiltered bool                `json:"is_loc_rib_filtered"`
+	// Values are assigned based on PerPeerHeader flags
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // MVPNPrefix defines structure for Multicast VPN (SAFI 129)
@@ -401,9 +412,13 @@ type RTCPrefix struct {
 	RouteTarget      string              `json:"route_target,omitempty"`
 	IsIPv4           bool                `json:"is_ipv4"`
 	IsEOR            bool                `json:"is_eor,omitempty"`
-	IsAdjRIBInPost   bool                `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool                `json:"is_adj_rib_out_post_policy"`
-	IsLocRIBFiltered bool                `json:"is_loc_rib_filtered"`
+	// Values are assigned based on PerPeerHeader flags
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // L3VPNPrefix defines the structure of Layer 3 VPN message
@@ -436,11 +451,12 @@ type L3VPNPrefix struct {
 	VPNRDType        uint16              `json:"vpn_rd_type"`
 	PrefixSID        *prefixsid.PSid     `json:"prefix_sid,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
-	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
-	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
-	IsLocRIB         bool `json:"is_loc_rib"`
-	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // LSPrefix defines a structure of LS Prefix message
@@ -480,11 +496,12 @@ type LSPrefix struct {
 	FlexAlgoPrefixMetric []*bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
 	SRv6Locator          *srv6.LocatorTLV              `json:"srv6_locator,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
-	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
-	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
-	IsLocRIB         bool `json:"is_loc_rib"`
-	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // LSSRv6SID defines a structure of LS SRv6 SID message
@@ -525,11 +542,12 @@ type LSSRv6SID struct {
 	SRv6BGPPeerNodeSID   *srv6.BGPPeerNodeSID          `json:"srv6_bgp_peer_node_sid,omitempty"`
 	SRv6SIDStructure     *srv6.SIDStructure            `json:"srv6_sid_structure,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
-	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
-	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
-	IsLocRIB         bool `json:"is_loc_rib"`
-	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // EVPNPrefix defines the structure of EVPN message
@@ -569,11 +587,12 @@ type EVPNPrefix struct {
 	RouteType      uint8               `json:"route_type,omitempty"`
 	PMSITunnel     *pmsi.PMSITunnel    `json:"pmsi_tunnel,omitempty"` // RFC 6514 PMSI Tunnel for Type 3 routes
 	// Values are assigned based on PerPeerHeader flags
-	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
-	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
-	IsLocRIB         bool `json:"is_loc_rib"`
-	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // VPLSPrefix defines the structure of VPLS message (AFI 25, SAFI 65)
@@ -623,9 +642,12 @@ type VPLSPrefix struct {
 	RouteTargets []string `json:"route_targets,omitempty"` // Array of RT strings (e.g., "RT:65000:100")
 
 	// Values assigned based on PerPeerHeader flags
-	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
-	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // SRPolicy defines the structure of SR Policy message
@@ -662,11 +684,12 @@ type SRPolicy struct {
 	ENLP           *srpolicy.ENLP          `json:"enlp_subtlv,omitempty"`
 	SegmentList    []*srpolicy.SegmentList `json:"segment_list_subtlv,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
-	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
-	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
-	IsLocRIB         bool `json:"is_loc_rib"`
-	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // Flowspec defines the structure of SR Policy message
@@ -690,11 +713,12 @@ type Flowspec struct {
 	SpecHash       string              `json:"spec_hash,omitempty"`
 	Spec           []flowspec.Spec     `json:"spec,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
-	IsAdjRIBInPost   bool `json:"is_adj_rib_in_post_policy"`
-	IsAdjRIBOutPost  bool `json:"is_adj_rib_out_post_policy"`
-	IsAdjRIBOut      bool `json:"is_adj_rib_out"`
-	IsLocRIB         bool `json:"is_loc_rib"`
-	IsLocRIBFiltered bool `json:"is_loc_rib_filtered"`
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
 }
 
 // AFISAFIStat represents statistics per Address Family (RFC 7854, RFC 8671)

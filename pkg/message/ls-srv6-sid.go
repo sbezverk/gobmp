@@ -43,6 +43,10 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 	if f, err := ph.IsLocRIBFiltered(); err == nil {
 		msg.IsLocRIBFiltered = f
 	}
+	// RFC 9069: Set TableName for LocRIB peers
+	if msg.IsLocRIB {
+		msg.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
 	msg.ProtocolID = nlri6.ProtocolID
