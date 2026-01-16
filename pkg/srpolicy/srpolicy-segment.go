@@ -117,7 +117,11 @@ func (sl *SegmentList) UnmarshalJSON(b []byte) error {
 				}
 				seg = t
 			case TypeE:
-				fallthrough
+				t := &typeESegment{}
+				if err := t.unmarshalJSONObj(s); err != nil {
+					return err
+				}
+				seg = t
 			case TypeF:
 				fallthrough
 			case TypeG:
@@ -231,7 +235,18 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeE):
-			glog.Infof("Segment of type E not implemented")
+			glog.Infof("Segment of type E")
+			l := b[p]
+			p++
+			if l != 10 && l != 14 {
+				return nil, fmt.Errorf("invalid length %d of raw data for Type E Segment Sub TLV", l)
+			}
+			s, err := UnmarshalTypeESegment(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			sl.Segment = append(sl.Segment, s)
+			p += int(l)
 		case int(TypeF):
 			glog.Infof("Segment of type F not implemented")
 		case int(TypeG):
@@ -736,6 +751,125 @@ func UnmarshalTypeDSegment(b []byte) (Segment, error) {
 	p += 16
 	// Optional SID (4 bytes) if length is 22
 	if len(b) == 22 {
+		sid := binary.BigEndian.Uint32(b[p : p+4])
+		s.sid = &sid
+	}
+
+	return s, nil
+}
+
+// TypeESegment defines methods to access Type E specific elements (IPv4 + Interface ID)
+type TypeESegment interface {
+	GetIPv4Address() []byte
+	GetLocalInterfaceID() uint32
+	GetSID() (uint32, bool) // SID and whether it's present
+}
+
+type typeESegment struct {
+	flags             *SegmentFlags
+	localInterfaceID  uint32
+	ipv4Address       []byte  // 4 bytes
+	sid               *uint32 // Optional SR-MPLS SID
+}
+
+var _ Segment = &typeESegment{}
+var _ TypeESegment = &typeESegment{}
+
+func (te *typeESegment) GetFlags() *SegmentFlags {
+	return te.flags
+}
+
+func (te *typeESegment) GetType() SegmentType {
+	return TypeE
+}
+
+func (te *typeESegment) GetIPv4Address() []byte {
+	return te.ipv4Address
+}
+
+func (te *typeESegment) GetLocalInterfaceID() uint32 {
+	return te.localInterfaceID
+}
+
+func (te *typeESegment) GetSID() (uint32, bool) {
+	if te.sid != nil {
+		return *te.sid, true
+	}
+	return 0, false
+}
+
+func (te *typeESegment) MarshalJSON() ([]byte, error) {
+	v := struct {
+		SegmentType      SegmentType   `json:"segment_type,omitempty"`
+		Flags            *SegmentFlags `json:"flags,omitempty"`
+		LocalInterfaceID uint32        `json:"local_interface_id,omitempty"`
+		IPv4Address      []byte        `json:"ipv4_address,omitempty"`
+		SID              *uint32       `json:"sid,omitempty"`
+	}{
+		SegmentType:      TypeE,
+		Flags:            te.flags,
+		LocalInterfaceID: te.localInterfaceID,
+		IPv4Address:      te.ipv4Address,
+		SID:              te.sid,
+	}
+	return json.Marshal(v)
+}
+
+func (te *typeESegment) unmarshalJSONObj(objmap map[string]json.RawMessage) error {
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &te.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["local_interface_id"]; ok {
+		if err := json.Unmarshal(b, &te.localInterfaceID); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["ipv4_address"]; ok {
+		if err := json.Unmarshal(b, &te.ipv4Address); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["sid"]; ok {
+		if err := json.Unmarshal(b, &te.sid); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (te *typeESegment) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	return te.unmarshalJSONObj(objmap)
+}
+
+// UnmarshalTypeESegment instantiates an instance of Type E Segment sub tlv (IPv4 + Interface ID)
+func UnmarshalTypeESegment(b []byte) (Segment, error) {
+	if glog.V(5) {
+		glog.Infof("SR Policy Type E Segment STLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 10 && len(b) != 14 {
+		return nil, fmt.Errorf("invalid length %d of Type E Segment STLV, expected 10 or 14", len(b))
+	}
+	s := &typeESegment{}
+	p := 0
+	s.flags = NewSegmentFlags(b[p])
+	p++
+	// Skip reserved byte per RFC 9831
+	p++
+	// Local Interface ID is 4 bytes
+	s.localInterfaceID = binary.BigEndian.Uint32(b[p : p+4])
+	p += 4
+	// IPv4 address is 4 bytes
+	s.ipv4Address = make([]byte, 4)
+	copy(s.ipv4Address, b[p:p+4])
+	p += 4
+	// Optional SID (4 bytes) if length is 14
+	if len(b) == 14 {
 		sid := binary.BigEndian.Uint32(b[p : p+4])
 		s.sid = &sid
 	}
