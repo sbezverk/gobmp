@@ -488,3 +488,314 @@ func TestSegmentList_JSON_MultipleTypeB(t *testing.T) {
 		}
 	}
 }
+
+// ============================================================================
+// Type C Segment Tests (IPv4 + SR Algorithm + optional SID)
+// ============================================================================
+
+func TestUnmarshalTypeCSegment_Valid(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       []byte
+		wantIPv4    []byte
+		wantAlgo    byte
+		wantSID     *uint32
+	}{
+		{
+			name: "Without SID (6 bytes)",
+			input: []byte{
+				0x00, // Flags
+				0x00, // SR Algorithm
+				192, 168, 1, 1, // IPv4: 192.168.1.1
+			},
+			wantIPv4: []byte{192, 168, 1, 1},
+			wantAlgo: 0x00,
+			wantSID:  nil,
+		},
+		{
+			name: "With SID (10 bytes)",
+			input: []byte{
+				0x80, // Flags (V flag set)
+				0x01, // SR Algorithm
+				10, 0, 0, 1, // IPv4: 10.0.0.1
+				0x00, 0x00, 0x03, 0xE8, // SID: 1000
+			},
+			wantIPv4: []byte{10, 0, 0, 1},
+			wantAlgo: 0x01,
+			wantSID:  ptrUint32(1000),
+		},
+		{
+			name: "All zeros without SID",
+			input: []byte{
+				0x00, 0x00, // Flags, SR Algorithm
+				0x00, 0x00, 0x00, 0x00, // IPv4
+			},
+			wantIPv4: []byte{0, 0, 0, 0},
+			wantAlgo: 0x00,
+			wantSID:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			seg, err := UnmarshalTypeCSegment(tt.input)
+			if err != nil {
+				t.Errorf("UnmarshalTypeCSegment() error = %v", err)
+				return
+			}
+
+			typeCSegg, ok := seg.(TypeCSegment)
+			if !ok {
+				t.Error("Segment is not TypeCSegment")
+				return
+			}
+
+			ipv4 := typeCSegg.GetIPv4Address()
+			if len(ipv4) != 4 {
+				t.Errorf("IPv4 address length = %d, want 4", len(ipv4))
+				return
+			}
+
+			for i, b := range tt.wantIPv4 {
+				if ipv4[i] != b {
+					t.Errorf("IPv4 byte %d = %d, want %d", i, ipv4[i], b)
+				}
+			}
+
+			if typeCSegg.GetSRAlgorithm() != tt.wantAlgo {
+				t.Errorf("SR Algorithm = %d, want %d", typeCSegg.GetSRAlgorithm(), tt.wantAlgo)
+			}
+
+			sid, hasSID := typeCSegg.GetSID()
+			if tt.wantSID == nil {
+				if hasSID {
+					t.Error("Expected no SID, but got one")
+				}
+			} else {
+				if !hasSID {
+					t.Error("Expected SID, but got none")
+				} else if sid != *tt.wantSID {
+					t.Errorf("SID = %d, want %d", sid, *tt.wantSID)
+				}
+			}
+
+			if seg.GetType() != TypeC {
+				t.Errorf("GetType() = %v, want TypeC", seg.GetType())
+			}
+		})
+	}
+}
+
+func TestUnmarshalTypeCSegment_InvalidLength(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []byte
+		length int
+	}{
+		{
+			name:   "Too short - 5 bytes",
+			input:  make([]byte, 5),
+			length: 5,
+		},
+		{
+			name:   "Too short - 3 bytes",
+			input:  make([]byte, 3),
+			length: 3,
+		},
+		{
+			name:   "Invalid - 7 bytes",
+			input:  make([]byte, 7),
+			length: 7,
+		},
+		{
+			name:   "Invalid - 9 bytes",
+			input:  make([]byte, 9),
+			length: 9,
+		},
+		{
+			name:   "Too long - 11 bytes",
+			input:  make([]byte, 11),
+			length: 11,
+		},
+		{
+			name:   "Empty",
+			input:  []byte{},
+			length: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalTypeCSegment(tt.input)
+			if err == nil {
+				t.Errorf("UnmarshalTypeCSegment() expected error for length %d, got nil", tt.length)
+			}
+		})
+	}
+}
+
+func TestTypeCSegment_JSON(t *testing.T) {
+	tests := []struct {
+		name string
+		seg  *typeCSegment
+	}{
+		{
+			name: "Without SID",
+			seg: &typeCSegment{
+				flags:       NewSegmentFlags(0x00),
+				srAlgorithm: 0x00,
+				ipv4Address: []byte{192, 168, 1, 1},
+				sid:         nil,
+			},
+		},
+		{
+			name: "With SID",
+			seg: &typeCSegment{
+				flags:       NewSegmentFlags(0x80),
+				srAlgorithm: 0x01,
+				ipv4Address: []byte{10, 0, 0, 1},
+				sid:         ptrUint32(1000),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Marshal
+			data, err := json.Marshal(tt.seg)
+			if err != nil {
+				t.Errorf("Marshal() error = %v", err)
+				return
+			}
+
+			// Unmarshal
+			var result typeCSegment
+			if err := json.Unmarshal(data, &result); err != nil {
+				t.Errorf("Unmarshal() error = %v", err)
+				return
+			}
+
+			// Verify IPv4
+			if len(result.ipv4Address) != 4 {
+				t.Errorf("Unmarshal() IPv4 length = %d, want 4", len(result.ipv4Address))
+				return
+			}
+
+			for i, b := range tt.seg.ipv4Address {
+				if result.ipv4Address[i] != b {
+					t.Errorf("Unmarshal() IPv4 byte %d = %d, want %d", i, result.ipv4Address[i], b)
+				}
+			}
+
+			// Verify SR Algorithm
+			if result.srAlgorithm != tt.seg.srAlgorithm {
+				t.Errorf("Unmarshal() SR Algorithm = %d, want %d", result.srAlgorithm, tt.seg.srAlgorithm)
+			}
+
+			// Verify SID
+			if tt.seg.sid == nil {
+				if result.sid != nil {
+					t.Error("Unmarshal() expected no SID, but got one")
+				}
+			} else {
+				if result.sid == nil {
+					t.Error("Unmarshal() expected SID, but got none")
+				} else if *result.sid != *tt.seg.sid {
+					t.Errorf("Unmarshal() SID = %d, want %d", *result.sid, *tt.seg.sid)
+				}
+			}
+		})
+	}
+}
+
+func TestUnmarshalSegmentListSTLV_TypeC(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []byte
+		wantIPv4 []byte
+		wantAlgo byte
+		wantSID  *uint32
+	}{
+		{
+			name: "Type C without SID",
+			input: []byte{
+				0x03, // Type: Type C (3)
+				0x06, // Length: 6 bytes
+				0x00, // Flags
+				0x00, // SR Algorithm
+				192, 168, 1, 1, // IPv4
+			},
+			wantIPv4: []byte{192, 168, 1, 1},
+			wantAlgo: 0x00,
+			wantSID:  nil,
+		},
+		{
+			name: "Type C with SID",
+			input: []byte{
+				0x03, // Type: Type C (3)
+				0x0A, // Length: 10 bytes
+				0x80, // Flags (V flag)
+				0x01, // SR Algorithm
+				10, 0, 0, 1, // IPv4
+				0x00, 0x00, 0x03, 0xE8, // SID: 1000
+			},
+			wantIPv4: []byte{10, 0, 0, 1},
+			wantAlgo: 0x01,
+			wantSID:  ptrUint32(1000),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sl, err := UnmarshalSegmentListSTLV(tt.input)
+			if err != nil {
+				t.Errorf("UnmarshalSegmentListSTLV() error = %v", err)
+				return
+			}
+
+			if len(sl.Segment) != 1 {
+				t.Errorf("Expected 1 segment, got %d", len(sl.Segment))
+				return
+			}
+
+			typeCSeg, ok := sl.Segment[0].(TypeCSegment)
+			if !ok {
+				t.Error("Segment is not TypeCSegment")
+				return
+			}
+
+			ipv4 := typeCSeg.GetIPv4Address()
+			if len(ipv4) != 4 {
+				t.Errorf("IPv4 address length = %d, want 4", len(ipv4))
+			}
+
+			for i, b := range tt.wantIPv4 {
+				if ipv4[i] != b {
+					t.Errorf("IPv4 byte %d = %d, want %d", i, ipv4[i], b)
+				}
+			}
+
+			if typeCSeg.GetSRAlgorithm() != tt.wantAlgo {
+				t.Errorf("SR Algorithm = %d, want %d", typeCSeg.GetSRAlgorithm(), tt.wantAlgo)
+			}
+
+			sid, hasSID := typeCSeg.GetSID()
+			if tt.wantSID == nil {
+				if hasSID {
+					t.Error("Expected no SID, but got one")
+				}
+			} else {
+				if !hasSID {
+					t.Error("Expected SID, but got none")
+				} else if sid != *tt.wantSID {
+					t.Errorf("SID = %d, want %d", sid, *tt.wantSID)
+				}
+			}
+		})
+	}
+}
+
+// Helper function to create pointer to uint32
+func ptrUint32(v uint32) *uint32 {
+	return &v
+}

@@ -105,7 +105,11 @@ func (sl *SegmentList) UnmarshalJSON(b []byte) error {
 				}
 				seg = t
 			case TypeC:
-				fallthrough
+				t := &typeCSegment{}
+				if err := t.unmarshalJSONObj(s); err != nil {
+					return err
+				}
+				seg = t
 			case TypeD:
 				fallthrough
 			case TypeE:
@@ -193,7 +197,18 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeC):
-			glog.Infof("Segment of type C not implemented")
+			glog.Infof("Segment of type C")
+			l := b[p]
+			p++
+			if l != 6 && l != 10 {
+				return nil, fmt.Errorf("invalid length %d of raw data for Type C Segment Sub TLV", l)
+			}
+			s, err := UnmarshalTypeCSegment(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			sl.Segment = append(sl.Segment, s)
+			p += int(l)
 		case int(TypeD):
 			glog.Infof("Segment of type D not implemented")
 		case int(TypeE):
@@ -458,6 +473,124 @@ func UnmarshalTypeBSegment(b []byte) (Segment, error) {
 	// SRv6 SID is 16 bytes (128 bits)
 	s.sid = make([]byte, 16)
 	copy(s.sid, b[p:p+16])
+
+	return s, nil
+}
+
+// TypeCSegment defines methods to access Type C specific elements (IPv4 + SR Algorithm)
+type TypeCSegment interface {
+	GetIPv4Address() []byte
+	GetSRAlgorithm() byte
+	GetSID() (uint32, bool) // SID and whether it's present
+}
+
+type typeCSegment struct {
+	flags       *SegmentFlags
+	srAlgorithm byte
+	ipv4Address []byte // 4 bytes
+	sid         *uint32 // Optional SR-MPLS SID
+}
+
+var _ Segment = &typeCSegment{}
+var _ TypeCSegment = &typeCSegment{}
+
+func (tc *typeCSegment) GetFlags() *SegmentFlags {
+	return tc.flags
+}
+
+func (tc *typeCSegment) GetType() SegmentType {
+	return TypeC
+}
+
+func (tc *typeCSegment) GetIPv4Address() []byte {
+	return tc.ipv4Address
+}
+
+func (tc *typeCSegment) GetSRAlgorithm() byte {
+	return tc.srAlgorithm
+}
+
+func (tc *typeCSegment) GetSID() (uint32, bool) {
+	if tc.sid == nil {
+		return 0, false
+	}
+	return *tc.sid, true
+}
+
+func (tc *typeCSegment) MarshalJSON() ([]byte, error) {
+	type jsonSegment struct {
+		SegmentType SegmentType   `json:"segment_type,omitempty"`
+		Flags       *SegmentFlags `json:"flags,omitempty"`
+		SRAlgorithm byte          `json:"sr_algorithm,omitempty"`
+		IPv4Address []byte        `json:"ipv4_address,omitempty"`
+		SID         *uint32       `json:"sid,omitempty"`
+	}
+	return json.Marshal(jsonSegment{
+		SegmentType: TypeC,
+		Flags:       tc.flags,
+		SRAlgorithm: tc.srAlgorithm,
+		IPv4Address: tc.ipv4Address,
+		SID:         tc.sid,
+	})
+}
+
+func (tc *typeCSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) error {
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &tc.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["sr_algorithm"]; ok {
+		if err := json.Unmarshal(b, &tc.srAlgorithm); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["ipv4_address"]; ok {
+		if err := json.Unmarshal(b, &tc.ipv4Address); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["sid"]; ok {
+		var sid uint32
+		if err := json.Unmarshal(b, &sid); err != nil {
+			return err
+		}
+		tc.sid = &sid
+	}
+	return nil
+}
+
+func (tc *typeCSegment) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	return tc.unmarshalJSONObj(objmap)
+}
+
+// UnmarshalTypeCSegment instantiates an instance of Type C Segment sub tlv (IPv4 + SR Algorithm)
+func UnmarshalTypeCSegment(b []byte) (Segment, error) {
+	if glog.V(5) {
+		glog.Infof("SR Policy Type C Segment STLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 6 && len(b) != 10 {
+		return nil, fmt.Errorf("invalid length %d of Type C Segment STLV, expected 6 or 10", len(b))
+	}
+	s := &typeCSegment{}
+	p := 0
+	s.flags = NewSegmentFlags(b[p])
+	p++
+	s.srAlgorithm = b[p]
+	p++
+	// IPv4 address is 4 bytes (no reserved bytes per RFC 9831)
+	s.ipv4Address = make([]byte, 4)
+	copy(s.ipv4Address, b[p:p+4])
+	p += 4
+	// Optional SID (4 bytes) if length is 10
+	if len(b) == 10 {
+		sid := binary.BigEndian.Uint32(b[p : p+4])
+		s.sid = &sid
+	}
 
 	return s, nil
 }
