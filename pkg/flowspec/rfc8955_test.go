@@ -1007,8 +1007,7 @@ func TestRFC8955_TCPFlags(t *testing.T) {
 			name: "TCP Flag - SYN only (connection establishment)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x09, (excludes length field)
-				0x09,       // Type: TCP Flags
+						0x09,       // Type: TCP Flags
 				0x81,       // Operator: EOL=1, Length=1, Match
 				0x02,       // Value: SYN (0000 0010)
 			},
@@ -1019,8 +1018,7 @@ func TestRFC8955_TCPFlags(t *testing.T) {
 			name: "TCP Flag - ACK only (established connection)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x09, (excludes length field)
-				0x09,       // Type: TCP Flags
+						0x09,       // Type: TCP Flags
 				0x81,       // Operator: EOL=1, Length=1, Match
 				0x10,       // Value: ACK (0001 0000)
 			},
@@ -1031,8 +1029,7 @@ func TestRFC8955_TCPFlags(t *testing.T) {
 			name: "TCP Flags - SYN+ACK (connection accept)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x09, (excludes length field)
-				0x09,       // Type: TCP Flags
+						0x09,       // Type: TCP Flags
 				0x81,       // Operator: EOL=1, Length=1, Match
 				0x12,       // Value: SYN+ACK (0001 0010)
 			},
@@ -1043,8 +1040,7 @@ func TestRFC8955_TCPFlags(t *testing.T) {
 			name: "TCP Flags - FIN+ACK (graceful close)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x09, (excludes length field)
-				0x09,       // Type: TCP Flags
+						0x09,       // Type: TCP Flags
 				0x81,       // Operator: EOL=1, Length=1, Match
 				0x11,       // Value: FIN+ACK (0001 0001)
 			},
@@ -1055,8 +1051,7 @@ func TestRFC8955_TCPFlags(t *testing.T) {
 			name: "TCP Flags - PSH+ACK (data transfer)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x09, (excludes length field)
-				0x09,       // Type: TCP Flags
+						0x09,       // Type: TCP Flags
 				0x81,       // Operator: EOL=1, Length=1, Match
 				0x18,       // Value: PSH+ACK (0001 1000)
 			},
@@ -1067,8 +1062,7 @@ func TestRFC8955_TCPFlags(t *testing.T) {
 			name: "TCP Flags - RST+ACK (connection reset)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x09, (excludes length field)
-				0x09,       // Type: TCP Flags
+						0x09,       // Type: TCP Flags
 				0x81,       // Operator: EOL=1, Length=1, Match
 				0x14,       // Value: RST+ACK (0001 0100)
 			},
@@ -1079,8 +1073,7 @@ func TestRFC8955_TCPFlags(t *testing.T) {
 			name: "TCP Flags - Xmas scan (FIN+PSH+URG)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x09, (excludes length field)
-				0x09,       // Type: TCP Flags
+						0x09,       // Type: TCP Flags
 				0x81,       // Operator: Match
 				0x29,       // Value: FIN+PSH+URG (0010 1001)
 			},
@@ -1091,8 +1084,7 @@ func TestRFC8955_TCPFlags(t *testing.T) {
 			name: "TCP Flags - NULL scan (no flags)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x09, (excludes length field)
-				0x09,       // Type: TCP Flags
+						0x09,       // Type: TCP Flags
 				0x81,       // Operator: Match
 				0x00,       // Value: No flags (NULL scan)
 			},
@@ -1132,8 +1124,7 @@ func TestRFC8955_Fragment(t *testing.T) {
 			name: "Fragment - IsF (packet is a fragment)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x0C, (excludes length field)
-				0x0C,       // Type: Fragment
+						0x0C,       // Type: Fragment
 				0x81,       // Operator: EOL=1, Length=1, Match
 				0x04,       // Value: IsF bit (0000 0100)
 			},
@@ -1144,8 +1135,7 @@ func TestRFC8955_Fragment(t *testing.T) {
 			name: "Fragment - First Fragment (FF)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x0C, (excludes length field)
-				0x0C,       // Type: Fragment
+						0x0C,       // Type: Fragment
 				0x81,       // Operator: EOL=1, Length=1, Match
 				0x02,       // Value: FF bit (0000 0010)
 			},
@@ -1156,8 +1146,7 @@ func TestRFC8955_Fragment(t *testing.T) {
 			name: "Fragment - Last Fragment (LF)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x0C, (excludes length field)
-				0x0C,       // Type: Fragment
+						0x0C,       // Type: Fragment
 				0x81,       // Operator: EOL=1, Length=1, Match
 				0x01,       // Value: LF bit (0000 0001)
 			},
@@ -1168,8 +1157,7 @@ func TestRFC8955_Fragment(t *testing.T) {
 			name: "Fragment - Don't Fragment (DF)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x0C, (excludes length field)
-				0x0C,       // Type: Fragment
+						0x0C,       // Type: Fragment
 				0x81,       // Operator: EOL=1, Length=1, Match
 				0x08,       // Value: DF bit (0000 1000)
 			},
@@ -1180,8 +1168,7 @@ func TestRFC8955_Fragment(t *testing.T) {
 			name: "Fragment - NOT First (IsF=1, FF=0 - middle/last fragments)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x0C, (excludes length field)
-				0x0C,       // Type: Fragment
+						0x0C,       // Type: Fragment
 				0x81,       // Operator: Match
 				0x04,       // Value: IsF=1, FF=0
 			},
@@ -1192,8 +1179,7 @@ func TestRFC8955_Fragment(t *testing.T) {
 			name: "Fragment - First Fragment (IsF=1, FF=1)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x0C, (excludes length field)
-				0x0C,       // Type: Fragment
+						0x0C,       // Type: Fragment
 				0x81,       // Operator: Match
 				0x06,       // Value: IsF=1, FF=1 (0000 0110)
 			},
@@ -1204,8 +1190,7 @@ func TestRFC8955_Fragment(t *testing.T) {
 			name: "Fragment - Last Fragment (IsF=1, LF=1)",
 			input: []byte{
 				0x03,       // Length: 4 bytes
-				0x0C, (excludes length field)
-				0x0C,       // Type: Fragment
+						0x0C,       // Type: Fragment
 				0x81,       // Operator: Match
 				0x05,       // Value: IsF=1, LF=1 (0000 0101)
 			},
@@ -1492,31 +1477,8 @@ func TestRFC8955_EdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("Type 9 - TCP Flags (not implemented)", func(t *testing.T) {
-		nlri := []byte{
-			0x03, // Length
-			0x09, // Type: TCP Flags
-			0x81, // Operator
-			0x02, // SYN
-		}
-		_, err := UnmarshalFlowspecNLRI(nlri)
-		if err == nil {
-			t.Error("Expected error for Type 9")
-		}
-	})
-
-	t.Run("Type 12 - Fragment (not implemented)", func(t *testing.T) {
-		nlri := []byte{
-			0x03, // Length
-			0x0C, // Type: Fragment
-			0x81, // Operator
-			0x01, // LF
-		}
-		_, err := UnmarshalFlowspecNLRI(nlri)
-		if err == nil {
-			t.Error("Expected error for Type 12")
-		}
-	})
+	// Type 9 and Type 12 are now implemented and tested in dedicated test functions
+	// See TestRFC8955_TCPFlags and TestRFC8955_Fragment for comprehensive coverage
 
 	t.Run("Unknown Type 255", func(t *testing.T) {
 		nlri := []byte{
