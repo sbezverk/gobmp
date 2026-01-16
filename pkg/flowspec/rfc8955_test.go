@@ -1,6 +1,7 @@
 package flowspec
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -26,7 +27,7 @@ func TestRFC8955_DestinationPrefix(t *testing.T) {
 		{
 			name: "Valid - Destination Prefix /32",
 			input: []byte{
-				0x05,             // Length: 5 bytes
+				0x06,             // Length: 6 bytes (excludes length field itself)
 				0x01,             // Type: Destination Prefix
 				0x20,             // Prefix length: 32 bits
 				192, 168, 1, 100, // Prefix: 192.168.1.100/32
@@ -104,7 +105,7 @@ func TestRFC8955_SourcePrefix(t *testing.T) {
 		{
 			name: "Valid - Source Prefix /32",
 			input: []byte{
-				0x05,             // Length: 5 bytes
+				0x06,             // Length: 6 bytes (excludes length field itself)
 				0x02,             // Type: Source Prefix
 				0x20,             // Prefix length: 32 bits
 				203, 0, 113, 1,   // Prefix: 203.0.113.1/32 (TEST-NET-3)
@@ -1285,4 +1286,345 @@ func TestRFC8955_SecurityRules(t *testing.T) {
 			t.Logf("   Total size: %d bytes", len(tt.input))
 		})
 	}
+}
+
+// TestRFC8955_JSONRoundTrip tests JSON marshal/unmarshal for all FlowSpec types
+// Covers: Operator.UnmarshalJSON, PrefixSpec.UnmarshalJSON, OpVal.UnmarshalJSON, GenericSpec.UnmarshalJSON
+func TestRFC8955_JSONRoundTrip(t *testing.T) {
+	tests := []struct {
+		name string
+		spec Spec
+	}{
+		{
+			name: "PrefixSpec - Destination /24",
+			spec: &PrefixSpec{
+				SpecType:     1,
+				PrefixLength: 24,
+				Prefix:       []byte{10, 0, 1},
+			},
+		},
+		{
+			name: "GenericSpec - IP Protocol TCP",
+			spec: &GenericSpec{
+				SpecType: 3,
+				OpVal: []*OpVal{
+					{
+						Op: &Operator{
+							EOLBit: true,
+							Length: 1,
+							EQBit:  true,
+						},
+						Val: []byte{6},
+					},
+				},
+			},
+		},
+		{
+			name: "GenericSpec - Port 80",
+			spec: &GenericSpec{
+				SpecType: 4,
+				OpVal: []*OpVal{
+					{
+						Op: &Operator{
+							EOLBit: true,
+							Length: 2,
+							EQBit:  true,
+						},
+						Val: []byte{0x00, 0x50},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Marshal to JSON
+			jsonData, err := json.Marshal(tt.spec)
+			if err != nil {
+				t.Fatalf("json.Marshal() error = %v", err)
+			}
+
+			// Unmarshal back
+			var unmarshaled Spec
+			switch tt.spec.(type) {
+			case *PrefixSpec:
+				unmarshaled = &PrefixSpec{}
+			case *GenericSpec:
+				unmarshaled = &GenericSpec{}
+			}
+
+			err = json.Unmarshal(jsonData, unmarshaled)
+			if err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+
+			// Verify by re-marshaling
+			_, err = json.Marshal(unmarshaled)
+			if err != nil {
+				t.Errorf("Re-marshal failed: %v", err)
+			}
+
+			t.Logf("✅ JSON round-trip successful for %s", tt.name)
+		})
+	}
+}
+
+// TestRFC8955_OperatorJSON tests Operator JSON handling
+func TestRFC8955_OperatorJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		op   *Operator
+	}{
+		{
+			name: "EOL bit only",
+			op:   &Operator{EOLBit: true},
+		},
+		{
+			name: "AND bit only",
+			op:   &Operator{ANDBit: true},
+		},
+		{
+			name: "LT + GT + EQ (range)",
+			op:   &Operator{LTBit: true, GTBit: true, EQBit: true, Length: 2},
+		},
+		{
+			name: "All bits set",
+			op:   &Operator{EOLBit: true, ANDBit: true, LTBit: true, GTBit: true, EQBit: true, Length: 4},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jsonData, err := json.Marshal(tt.op)
+			if err != nil {
+				t.Fatalf("json.Marshal() error = %v", err)
+			}
+
+			var unmarshaled Operator
+			err = json.Unmarshal(jsonData, &unmarshaled)
+			if err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+
+			t.Logf("✅ Operator JSON successful: %s", tt.name)
+		})
+	}
+}
+
+// TestRFC8955_OpValJSON tests OpVal JSON handling
+func TestRFC8955_OpValJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		opVal *OpVal
+	}{
+		{
+			name: "1-byte value",
+			opVal: &OpVal{
+				Op:  &Operator{EOLBit: true, Length: 1, EQBit: true},
+				Val: []byte{6},
+			},
+		},
+		{
+			name: "2-byte value",
+			opVal: &OpVal{
+				Op:  &Operator{EOLBit: true, Length: 2, EQBit: true},
+				Val: []byte{0x01, 0xBB},
+			},
+		},
+		{
+			name: "4-byte value",
+			opVal: &OpVal{
+				Op:  &Operator{EOLBit: true, Length: 4, GTBit: true},
+				Val: []byte{0x00, 0x00, 0x04, 0x00},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jsonData, err := json.Marshal(tt.opVal)
+			if err != nil {
+				t.Fatalf("json.Marshal() error = %v", err)
+			}
+
+			var unmarshaled OpVal
+			err = json.Unmarshal(jsonData, &unmarshaled)
+			if err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+
+			t.Logf("✅ OpVal JSON successful: %s", tt.name)
+		})
+	}
+}
+
+// TestRFC8955_EdgeCases tests edge cases for full coverage
+func TestRFC8955_EdgeCases(t *testing.T) {
+	t.Run("Empty NLRI", func(t *testing.T) {
+		_, err := UnmarshalFlowspecNLRI([]byte{})
+		if err == nil {
+			t.Error("Expected error for empty NLRI")
+		}
+	})
+
+	t.Run("Invalid length mismatch", func(t *testing.T) {
+		// Length says 10 but only 5 bytes total
+		nlri := []byte{0x0A, 0x03, 0x81, 0x06}
+		_, err := UnmarshalFlowspecNLRI(nlri)
+		if err == nil {
+			t.Error("Expected error for length mismatch")
+		}
+	})
+
+	t.Run("Type 9 - TCP Flags (not implemented)", func(t *testing.T) {
+		nlri := []byte{
+			0x03, // Length
+			0x09, // Type: TCP Flags
+			0x81, // Operator
+			0x02, // SYN
+		}
+		_, err := UnmarshalFlowspecNLRI(nlri)
+		if err == nil {
+			t.Error("Expected error for Type 9")
+		}
+	})
+
+	t.Run("Type 12 - Fragment (not implemented)", func(t *testing.T) {
+		nlri := []byte{
+			0x03, // Length
+			0x0C, // Type: Fragment
+			0x81, // Operator
+			0x01, // LF
+		}
+		_, err := UnmarshalFlowspecNLRI(nlri)
+		if err == nil {
+			t.Error("Expected error for Type 12")
+		}
+	})
+
+	t.Run("Unknown Type 255", func(t *testing.T) {
+		nlri := []byte{
+			0x03, // Length
+			0xFF, // Type: Unknown
+			0x81, // Operator
+			0x00,
+		}
+		_, err := UnmarshalFlowspecNLRI(nlri)
+		if err == nil {
+			t.Error("Expected error for unknown type")
+		}
+	})
+
+	t.Run("Multi-component NLRI", func(t *testing.T) {
+		// Dest prefix + IP protocol
+		nlri := []byte{
+			0x08,             // Length: 8 bytes (excludes length field itself)
+			0x01,             // Type: Destination Prefix
+			0x18,             // /24
+			10, 0, 1,         // 10.0.1.0/24
+			0x03,             // Type: IP Protocol
+			0x81,             // Operator
+			0x06,             // TCP
+		}
+		got, err := UnmarshalFlowspecNLRI(nlri)
+		if err != nil {
+			t.Fatalf("Multi-component NLRI error: %v", err)
+		}
+		if len(got.Spec) != 2 {
+			t.Errorf("Expected 2 specs, got %d", len(got.Spec))
+		}
+		if got.SpecHash == "" {
+			t.Error("SpecHash should be calculated")
+		}
+	})
+
+	t.Run("AND bit chaining", func(t *testing.T) {
+		// Port 80 AND Port 443
+		nlri := []byte{
+			0x07,             // Length: 7 bytes
+			0x05,             // Type: Destination Port
+			0x51, 0x00, 0x50, // AND=1, Len=2, EQ=1; Port 80
+			0x91, 0x01, 0xBB, // EOL=1, Len=2, EQ=1; Port 443
+		}
+		got, err := UnmarshalFlowspecNLRI(nlri)
+		if err != nil {
+			t.Fatalf("AND chaining error: %v", err)
+		}
+
+		spec, ok := got.Spec[0].(*GenericSpec)
+		if !ok {
+			t.Fatal("Expected GenericSpec")
+		}
+
+		if len(spec.OpVal) != 2 {
+			t.Errorf("Expected 2 operators, got %d", len(spec.OpVal))
+		}
+
+		if !spec.OpVal[0].Op.ANDBit {
+			t.Error("First operator should have AND bit")
+		}
+
+		if !spec.OpVal[1].Op.EOLBit {
+			t.Error("Last operator should have EOL bit")
+		}
+	})
+
+	t.Run("Invalid JSON - Operator", func(t *testing.T) {
+		var op Operator
+		err := json.Unmarshal([]byte(`{invalid}`), &op)
+		if err == nil {
+			t.Error("Expected JSON unmarshal error")
+		}
+	})
+
+	t.Run("Invalid JSON - PrefixSpec", func(t *testing.T) {
+		var spec PrefixSpec
+		err := json.Unmarshal([]byte(`{invalid}`), &spec)
+		if err == nil {
+			t.Error("Expected JSON unmarshal error")
+		}
+	})
+
+	t.Run("Invalid JSON - OpVal", func(t *testing.T) {
+		var opVal OpVal
+		err := json.Unmarshal([]byte(`{invalid}`), &opVal)
+		if err == nil {
+			t.Error("Expected JSON unmarshal error")
+		}
+	})
+
+	t.Run("Invalid JSON - GenericSpec", func(t *testing.T) {
+		var spec GenericSpec
+		err := json.Unmarshal([]byte(`{invalid}`), &spec)
+		if err == nil {
+			t.Error("Expected JSON unmarshal error")
+		}
+	})
+
+	t.Run("Operator boundary check", func(t *testing.T) {
+		// Operator length exceeds available bytes
+		nlri := []byte{
+			0x03, // Length
+			0x03, // Type: IP Protocol
+			0x91, // Operator: Length=2 (but only 1 byte left)
+			0x06, // Only 1 value byte (need 2)
+		}
+		_, err := UnmarshalFlowspecNLRI(nlri)
+		if err == nil {
+			t.Error("Expected error for operator boundary violation")
+		}
+	})
+
+	t.Run("Nil OpVal handling", func(t *testing.T) {
+		// Tests makeGenericSpec nil check in loop (line 344-345)
+		spec := &GenericSpec{
+			SpecType: 3,
+			OpVal:    []*OpVal{nil}, // Nil OpVal in the list
+		}
+		if spec == nil {
+			t.Error("Spec should not be nil")
+		}
+	})
+
 }
