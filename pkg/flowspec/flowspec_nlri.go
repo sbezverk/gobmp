@@ -191,11 +191,16 @@ func (o *Operator) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON creates a new instance of Flowspec Operator
 func (o *Operator) UnmarshalJSON(b []byte) error {
-	t := &Operator{}
-	if err := json.Unmarshal(b, t); err != nil {
+	// Use type alias to avoid infinite recursion
+	type Alias Operator
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(o),
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-	*o = *t
 
 	return nil
 }
@@ -227,11 +232,16 @@ func makePrefixSpec(b []byte) (Spec, int, error) {
 
 // UnmarshalJSON unmarshals a slice of bytes into a new FlowSPec PrefixSpec
 func (t *PrefixSpec) UnmarshalJSON(b []byte) error {
-	s := &PrefixSpec{}
-	if err := json.Unmarshal(b, s); err != nil {
+	// Use type alias to avoid infinite recursion
+	type Alias PrefixSpec
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(t),
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-	*t = *s
 
 	return nil
 }
@@ -257,11 +267,16 @@ type OpVal struct {
 
 // UnmarshalJSON unmarshals a slice of bytes into a new Operator/Value pair
 func (o *OpVal) UnmarshalJSON(b []byte) error {
-	ov := &OpVal{}
-	if err := json.Unmarshal(b, ov); err != nil {
+	// Use type alias to avoid infinite recursion
+	type Alias OpVal
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(o),
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-	*o = *ov
 
 	return nil
 }
@@ -340,11 +355,16 @@ func makeGenericSpec(b []byte) (Spec, int, error) {
 
 // UnmarshalJSON unmarshals a slice of bytes into a new FlowSPec GenericSpec
 func (t *GenericSpec) UnmarshalJSON(b []byte) error {
-	s := &GenericSpec{}
-	if err := json.Unmarshal(b, s); err != nil {
+	// Use type alias to avoid infinite recursion
+	type Alias GenericSpec
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(t),
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-	*t = *s
 
 	return nil
 }
