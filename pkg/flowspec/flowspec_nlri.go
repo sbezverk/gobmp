@@ -2,7 +2,6 @@ package flowspec
 
 import (
 	"crypto/md5"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -71,7 +70,8 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 	p := 0
 	if b[p]&0xf0 == 0xf0 {
 		// NLRI length is encoded into 2 bytes
-		binary.BigEndian.PutUint16(b[p:p+2], fs.Length)
+		// Mask off the 0xf indicator nibble and read actual length
+		fs.Length = ((uint16(b[p]) & 0x0f) << 8) | uint16(b[p+1])
 		p += 2
 	} else {
 		// Otherwise it is encoded in the single byte
@@ -106,17 +106,17 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 			fallthrough
 		case Type8:
 			fallthrough
+		case Type9:
+			fallthrough
 		case Type10:
 			fallthrough
 		case Type11:
+			fallthrough
+		case Type12:
 			spec, l, err = makeGenericSpec(b[p:])
 			if err != nil {
 				return nil, err
 			}
-		case Type9:
-			fallthrough
-		case Type12:
-			return nil, fmt.Errorf("not implemented Flowspec type: %+v", t)
 		default:
 			return nil, fmt.Errorf("unknown Flowspec type: %+v", t)
 		}
