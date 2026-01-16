@@ -1599,8 +1599,9 @@ func TestRFC8955_EdgeCases(t *testing.T) {
 			SpecType: 3,
 			OpVal:    []*OpVal{nil}, // Nil OpVal in the list
 		}
-		if spec == nil {
-			t.Error("Spec should not be nil")
+		// Verify spec was created and contains the nil OpVal
+		if len(spec.OpVal) != 1 || spec.OpVal[0] != nil {
+			t.Error("Expected spec with one nil OpVal")
 		}
 	})
 
