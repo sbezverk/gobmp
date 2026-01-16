@@ -172,7 +172,18 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeB):
-			glog.Infof("Segment of type B not implemented")
+			glog.Infof("Segment of type B")
+			l := b[p]
+			p++
+			if l != 18 {
+				return nil, fmt.Errorf("invalid length %d of raw data for Type B Segment Sub TLV", l)
+			}
+			s, err := UnmarshalTypeBSegment(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			sl.Segment = append(sl.Segment, s)
+			p += int(l)
 		case int(TypeC):
 			glog.Infof("Segment of type C not implemented")
 		case int(TypeD):
@@ -353,6 +364,86 @@ func UnmarshalTypeASegment(b []byte) (Segment, error) {
 	s.tc = (b[p+2] & 0x0e) >> 1
 	s.s = b[p+2]&0x01 == 0x01
 	s.ttl = b[p+3]
+
+	return s, nil
+}
+
+// TypeBSegment defines method to access Type B specific elements (SRv6 SID)
+type TypeBSegment interface {
+	GetSRv6SID() []byte
+}
+
+type typeBSegment struct {
+	flags *SegmentFlags
+	sid   []byte // 16 bytes - SRv6 SID
+}
+
+var _ Segment = &typeBSegment{}
+var _ TypeBSegment = &typeBSegment{}
+
+func (tb *typeBSegment) GetFlags() *SegmentFlags {
+	return tb.flags
+}
+
+func (tb *typeBSegment) GetType() SegmentType {
+	return TypeB
+}
+
+func (tb *typeBSegment) GetSRv6SID() []byte {
+	return tb.sid
+}
+
+func (tb *typeBSegment) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		SegmentType SegmentType   `json:"segment_type,omitempty"`
+		Flags       *SegmentFlags `json:"flags,omitempty"`
+		SRv6SID     []byte        `json:"srv6_sid,omitempty"`
+	}{
+		SegmentType: TypeB,
+		Flags:       tb.flags,
+		SRv6SID:     tb.sid,
+	})
+}
+
+func (tb *typeBSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) error {
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &tb.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["srv6_sid"]; ok {
+		if err := json.Unmarshal(b, &tb.sid); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (tb *typeBSegment) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	return tb.unmarshalJSONObj(objmap)
+}
+
+// UnmarshalTypeBSegment instantiates an instance of Type B Segment sub tlv (SRv6 SID)
+func UnmarshalTypeBSegment(b []byte) (Segment, error) {
+	if glog.V(5) {
+		glog.Infof("SR Policy Type B Segment STLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 18 {
+		return nil, fmt.Errorf("invalid length %d of Type B Segment STLV, expected 18", len(b))
+	}
+	s := &typeBSegment{}
+	p := 0
+	s.flags = NewSegmentFlags(b[p])
+	p++
+	// Skip reserved byte
+	p++
+	// SRv6 SID is 16 bytes (128 bits)
+	s.sid = make([]byte, 16)
+	copy(s.sid, b[p:p+16])
 
 	return s, nil
 }
