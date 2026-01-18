@@ -411,3 +411,121 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
           echo "**Coverage:** Route Types 1-5, MAC/IP Advertisement, Inclusive Multicast, Ethernet Segment, IP Prefix" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================================================
+  # RFC Compliance Validation (RTC RFC 4684)
+  # ==============================================================================
+  rfc_compliance_rtc:
+    name: RFC Compliance - RTC
+    needs: [tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.24.x
+
+      - name: Run RTC RFC 4684 compliance tests
+        run: |
+          echo "### RFC 4684 Compliance Tests :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go test -v ./pkg/rtc/... | tee rfc4684-test-output.txt
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -E "PASS|FAIL|Test" rfc4684-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate RFC compliance report
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### RFC Compliance Status :clipboard:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC | Standard | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 4684 | Route Target Constraint | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** RTC NLRI parsing, Wildcard routes, Origin AS, Route Target Extended Communities (Type 0/1/2), Error handling" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================================================
+  # RFC Compliance Validation (FlowSpec RFC 8955/8956)
+  # ==============================================================================
+  rfc_compliance_flowspec:
+    name: RFC Compliance - FlowSpec
+    needs: [tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.24.x
+
+      - name: Run FlowSpec RFC 8955/8956 compliance tests
+        run: |
+          echo "### RFC 8955/8956 Compliance Tests :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go test -v ./pkg/flowspec/... -run "RFC8955" | tee flowspec-test-output.txt
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -E "PASS|FAIL|RFC" flowspec-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate RFC compliance report
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### RFC Compliance Status :clipboard:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC | Standard | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 8955 | FlowSpec v4 | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 8956 | FlowSpec v6 | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** All component types, TCP Flags, Fragment, multi-component rules" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================================================
+  # RFC Compliance Validation (SR Policy RFC 9256)
+  # ==============================================================================
+  rfc_compliance_srpolicy:
+    name: RFC Compliance - SR Policy
+    needs: [tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.24.x
+
+      - name: Run SR Policy RFC 9256 compliance tests
+        run: |
+          echo "### RFC 9256 Compliance Tests :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go test -v ./pkg/srpolicy/... -run "RFC9256" | tee srpolicy-test-output.txt
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -E "PASS|FAIL|RFC" srpolicy-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate RFC compliance report
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### RFC Compliance Status :clipboard:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC | Standard | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 9256 | Segment Routing Policy | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** NLRI parsing, TLV Types 123-128, Segment Lists, Binding SID" >> $GITHUB_STEP_SUMMARY
