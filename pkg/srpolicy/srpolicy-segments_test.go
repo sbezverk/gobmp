@@ -544,13 +544,13 @@ func TestUnmarshalTypeCSegment_Valid(t *testing.T) {
 				return
 			}
 
-			typeCseg, ok := seg.(TypeCSegment)
+			typeCSeg, ok := seg.(TypeCSegment)
 			if !ok {
 				t.Error("Segment is not TypeCSegment")
 				return
 			}
 
-			ipv4 := typeCseg.GetIPv4Address()
+			ipv4 := typeCSeg.GetIPv4Address()
 			if len(ipv4) != 4 {
 				t.Errorf("IPv4 address length = %d, want 4", len(ipv4))
 				return
@@ -562,11 +562,11 @@ func TestUnmarshalTypeCSegment_Valid(t *testing.T) {
 				}
 			}
 
-			if typeCseg.GetSRAlgorithm() != tt.wantAlgo {
-				t.Errorf("SR Algorithm = %d, want %d", typeCseg.GetSRAlgorithm(), tt.wantAlgo)
+			if typeCSeg.GetSRAlgorithm() != tt.wantAlgo {
+				t.Errorf("SR Algorithm = %d, want %d", typeCSeg.GetSRAlgorithm(), tt.wantAlgo)
 			}
 
-			sid, hasSID := typeCseg.GetSID()
+			sid, hasSID := typeCSeg.GetSID()
 			if tt.wantSID == nil {
 				if hasSID {
 					t.Error("Expected no SID, but got one")

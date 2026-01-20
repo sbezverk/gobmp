@@ -476,7 +476,7 @@ func UnmarshalTypeBSegment(b []byte) (Segment, error) {
 	return s, nil
 }
 
-// TypeCSegment defines methods to access Type C specific elements (IPv4 + SR Algorithm)
+// TypeCSegment defines methods to access Type C specific elements (IPv4 + SR Algorithm + optional SID)
 type TypeCSegment interface {
 	GetIPv4Address() []byte
 	GetSRAlgorithm() byte
