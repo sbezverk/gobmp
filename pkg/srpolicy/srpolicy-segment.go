@@ -172,7 +172,6 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeB):
-			glog.Infof("Segment of type B")
 			l := b[p]
 			p++
 			if l != 18 {
@@ -433,7 +432,7 @@ func UnmarshalTypeBSegment(b []byte) (Segment, error) {
 		glog.Infof("SR Policy Type B Segment STLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) != 18 {
-		return nil, fmt.Errorf("invalid length %d of Type B Segment STLV, expected 18", len(b))
+		return nil, fmt.Errorf("invalid length of Type B Segment STLV")
 	}
 	s := &typeBSegment{}
 	p := 0
