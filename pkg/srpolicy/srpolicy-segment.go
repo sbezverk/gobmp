@@ -197,7 +197,6 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeC):
-			glog.Infof("Segment of type C")
 			l := b[p]
 			p++
 			if l != 6 && l != 10 {
@@ -574,7 +573,7 @@ func UnmarshalTypeCSegment(b []byte) (Segment, error) {
 		glog.Infof("SR Policy Type C Segment STLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) != 6 && len(b) != 10 {
-		return nil, fmt.Errorf("invalid length %d of Type C Segment STLV, expected 6 or 10", len(b))
+		return nil, fmt.Errorf("invalid length of Type C Segment STLV")
 	}
 	s := &typeCSegment{}
 	p := 0
