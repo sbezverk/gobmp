@@ -99,7 +99,11 @@ func (sl *SegmentList) UnmarshalJSON(b []byte) error {
 				}
 				seg = t
 			case TypeB:
-				fallthrough
+				t := &typeBSegment{}
+				if err := t.unmarshalJSONObj(s); err != nil {
+					return err
+				}
+				seg = t
 			case TypeC:
 				fallthrough
 			case TypeD:
@@ -176,6 +180,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			p++
 			if l != 18 {
 				return nil, fmt.Errorf("invalid length %d of raw data for Type B Segment Sub TLV", l)
+			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type B Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
 			}
 			s, err := UnmarshalTypeBSegment(b[p : p+int(l)])
 			if err != nil {
