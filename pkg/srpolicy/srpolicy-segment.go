@@ -388,6 +388,8 @@ func (tb *typeBSegment) GetType() SegmentType {
 	return TypeB
 }
 
+// GetSRv6SID returns the 16-byte SRv6 SID. The returned slice is the internal
+// representation and should be treated as read-only by callers.
 func (tb *typeBSegment) GetSRv6SID() []byte {
 	return tb.sid
 }

@@ -133,26 +133,45 @@ func TestUnmarshalTypeBSegment_InvalidLength(t *testing.T) {
 
 func TestTypeBSegment_JSON(t *testing.T) {
 	tests := []struct {
-		name string
-		sid  []byte
+		name  string
+		flags uint8
+		sid   []byte
 	}{
 		{
-			name: "Standard SRv6 SID",
+			name:  "Standard SRv6 SID with no flags",
+			flags: 0x00,
 			sid: []byte{
 				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 			},
 		},
 		{
-			name: "All zeros",
-			sid:  make([]byte, 16),
+			name:  "All zeros SID",
+			flags: 0x00,
+			sid:   make([]byte, 16),
+		},
+		{
+			name:  "All flags set (V=0x80, A=0x40, S=0x20, B=0x10)",
+			flags: 0xF0,
+			sid: []byte{
+				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+			},
+		},
+		{
+			name:  "Only V-flag set",
+			flags: 0x80,
+			sid: []byte{
+				0xfc, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			seg := &typeBSegment{
-				flags: NewSegmentFlags(0x00),
+				flags: NewSegmentFlags(tt.flags),
 				sid:   tt.sid,
 			}
 
@@ -170,7 +189,21 @@ func TestTypeBSegment_JSON(t *testing.T) {
 				return
 			}
 
-			// Verify SID
+			// Verify all flags preserved
+			if result.flags.Vflag != seg.flags.Vflag {
+				t.Errorf("Unmarshal() Vflag = %v, want %v", result.flags.Vflag, seg.flags.Vflag)
+			}
+			if result.flags.Aflag != seg.flags.Aflag {
+				t.Errorf("Unmarshal() Aflag = %v, want %v", result.flags.Aflag, seg.flags.Aflag)
+			}
+			if result.flags.Sflag != seg.flags.Sflag {
+				t.Errorf("Unmarshal() Sflag = %v, want %v", result.flags.Sflag, seg.flags.Sflag)
+			}
+			if result.flags.Bflag != seg.flags.Bflag {
+				t.Errorf("Unmarshal() Bflag = %v, want %v", result.flags.Bflag, seg.flags.Bflag)
+			}
+
+			// Verify SID length and content
 			if len(result.sid) != 16 {
 				t.Errorf("Unmarshal() SID length = %d, want 16", len(result.sid))
 				return
@@ -217,5 +250,17 @@ func TestUnmarshalSegmentListSTLV_TypeB(t *testing.T) {
 	sid := typeBSeg.GetSRv6SID()
 	if len(sid) != 16 {
 		t.Errorf("SRv6 SID length = %d, want 16", len(sid))
+		return
+	}
+
+	// Verify actual SID value matches expected (2001:db8::1)
+	expectedSID := []byte{
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+	}
+	for i, b := range expectedSID {
+		if sid[i] != b {
+			t.Errorf("SID byte %d = %02x, want %02x", i, sid[i], b)
+		}
 	}
 }
