@@ -2,7 +2,6 @@ package flowspec
 
 import (
 	"crypto/md5"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -71,7 +70,8 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 	p := 0
 	if b[p]&0xf0 == 0xf0 {
 		// NLRI length is encoded into 2 bytes
-		binary.BigEndian.PutUint16(b[p:p+2], fs.Length)
+		// Mask off the 0xf indicator nibble and read actual length
+		fs.Length = ((uint16(b[p]) & 0x0f) << 8) | uint16(b[p+1])
 		p += 2
 	} else {
 		// Otherwise it is encoded in the single byte
@@ -106,17 +106,17 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 			fallthrough
 		case Type8:
 			fallthrough
+		case Type9:
+			fallthrough
 		case Type10:
 			fallthrough
 		case Type11:
+			fallthrough
+		case Type12:
 			spec, l, err = makeGenericSpec(b[p:])
 			if err != nil {
 				return nil, err
 			}
-		case Type9:
-			fallthrough
-		case Type12:
-			return nil, fmt.Errorf("not implemented Flowspec type: %+v", t)
 		default:
 			return nil, fmt.Errorf("unknown Flowspec type: %+v", t)
 		}
@@ -191,11 +191,16 @@ func (o *Operator) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON creates a new instance of Flowspec Operator
 func (o *Operator) UnmarshalJSON(b []byte) error {
-	t := &Operator{}
-	if err := json.Unmarshal(b, t); err != nil {
+	// Use type alias to avoid infinite recursion
+	type Alias Operator
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(o),
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-	*o = *t
 
 	return nil
 }
@@ -227,11 +232,16 @@ func makePrefixSpec(b []byte) (Spec, int, error) {
 
 // UnmarshalJSON unmarshals a slice of bytes into a new FlowSPec PrefixSpec
 func (t *PrefixSpec) UnmarshalJSON(b []byte) error {
-	s := &PrefixSpec{}
-	if err := json.Unmarshal(b, s); err != nil {
+	// Use type alias to avoid infinite recursion
+	type Alias PrefixSpec
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(t),
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-	*t = *s
 
 	return nil
 }
@@ -257,11 +267,16 @@ type OpVal struct {
 
 // UnmarshalJSON unmarshals a slice of bytes into a new Operator/Value pair
 func (o *OpVal) UnmarshalJSON(b []byte) error {
-	ov := &OpVal{}
-	if err := json.Unmarshal(b, ov); err != nil {
+	// Use type alias to avoid infinite recursion
+	type Alias OpVal
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(o),
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-	*o = *ov
 
 	return nil
 }
@@ -340,11 +355,16 @@ func makeGenericSpec(b []byte) (Spec, int, error) {
 
 // UnmarshalJSON unmarshals a slice of bytes into a new FlowSPec GenericSpec
 func (t *GenericSpec) UnmarshalJSON(b []byte) error {
-	s := &GenericSpec{}
-	if err := json.Unmarshal(b, s); err != nil {
+	// Use type alias to avoid infinite recursion
+	type Alias GenericSpec
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(t),
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-	*t = *s
 
 	return nil
 }
