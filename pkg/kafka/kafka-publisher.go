@@ -83,52 +83,53 @@ type publisher struct {
 	config       *sarama.Config
 	producer     sarama.AsyncProducer
 	stopCh       chan struct{}
+	topicPrefix  string
 }
 
 func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 	switch t {
 	case bmp.PeerStateChangeMsg:
-		return p.produceMessage(PeerTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, PeerTopic), key, msg)
 	case bmp.UnicastPrefixMsg:
-		return p.produceMessage(UnicastMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, UnicastMessageTopic), key, msg)
 	case bmp.UnicastPrefixV4Msg:
-		return p.produceMessage(UnicastMessageV4Topic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, UnicastMessageV4Topic), key, msg)
 	case bmp.UnicastPrefixV6Msg:
-		return p.produceMessage(UnicastMessageV6Topic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, UnicastMessageV6Topic), key, msg)
 	case bmp.LSNodeMsg:
-		return p.produceMessage(LSNodeMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, LSNodeMessageTopic), key, msg)
 	case bmp.LSLinkMsg:
-		return p.produceMessage(LSLinkMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, LSLinkMessageTopic), key, msg)
 	case bmp.L3VPNMsg:
-		return p.produceMessage(L3vpnMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, L3vpnMessageTopic), key, msg)
 	case bmp.L3VPNV4Msg:
-		return p.produceMessage(L3vpnMessageV4Topic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, L3vpnMessageV4Topic), key, msg)
 	case bmp.L3VPNV6Msg:
-		return p.produceMessage(L3vpnMessageV6Topic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, L3vpnMessageV6Topic), key, msg)
 	case bmp.LSPrefixMsg:
-		return p.produceMessage(LSPrefixMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, LSPrefixMessageTopic), key, msg)
 	case bmp.LSSRv6SIDMsg:
-		return p.produceMessage(LSSRv6SIDMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, LSSRv6SIDMessageTopic), key, msg)
 	case bmp.EVPNMsg:
-		return p.produceMessage(EVPNMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, EVPNMessageTopic), key, msg)
 	case bmp.SRPolicyMsg:
-		return p.produceMessage(SRPolicyMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, SRPolicyMessageTopic), key, msg)
 	case bmp.SRPolicyV4Msg:
-		return p.produceMessage(SRPolicyMessageV4Topic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, SRPolicyMessageV4Topic), key, msg)
 	case bmp.SRPolicyV6Msg:
-		return p.produceMessage(SRPolicyMessageV6Topic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, SRPolicyMessageV6Topic), key, msg)
 	case bmp.FlowspecMsg:
-		return p.produceMessage(FlowspecMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, FlowspecMessageTopic), key, msg)
 	case bmp.FlowspecV4Msg:
-		return p.produceMessage(FlowspecMessageV4Topic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, FlowspecMessageV4Topic), key, msg)
 	case bmp.FlowspecV6Msg:
-		return p.produceMessage(FlowspecMessageV6Topic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, FlowspecMessageV6Topic), key, msg)
 	case bmp.VPLSMsg:
-		return p.produceMessage(VPLSMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, VPLSMessageTopic), key, msg)
 	case bmp.StatsReportMsg:
-		return p.produceMessage(StatsMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, StatsMessageTopic), key, msg)
 	case bmp.BMPRawMsg:
-		return p.produceMessage(RawMessageTopic, key, msg)
+		return p.produceMessage(WithTopicPrefix(p.topicPrefix, RawMessageTopic), key, msg)
 	}
 
 	return fmt.Errorf("not implemented")
@@ -188,7 +189,8 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
 
 	for _, t := range topicNames {
-		if err := ensureTopic(ca, topicCreateTimeout, t); err != nil {
+		topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
+		if err := ensureTopic(ca, topicCreateTimeout, topicName); err != nil {
 			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 			return nil, err
 		}
@@ -218,6 +220,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 		clusterAdmin: ca,
 		config:       config,
 		producer:     producer,
+		topicPrefix:  kConfig.TopicPrefix,
 	}, nil
 }
 

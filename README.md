@@ -226,6 +226,17 @@ Full path and filename for storing processed messages when `--dump=file` is used
 Kafka broker address for publishing BMP messages. When specified, goBMP publishes parsed messages to topic-specific Kafka topics. Example: `--kafka-server=kafka.example.com:9092`
 
 ```
+--kafka-topic-prefix={prefix}
+```
+**Default:** empty (no prefix)
+
+Optional prefix prepended to all Kafka topic names. This is useful to isolate environments/tenants in a shared Kafka cluster.
+
+Examples:
+- default: `gobmp.parsed.peer`
+- `--kafka-topic-prefix=prod`: `prod.gobmp.parsed.peer`
+
+```
 --kafka-topic-retention-time-ms={milliseconds}
 ```
 **Default:** 900000 (15 minutes)

@@ -20,6 +20,7 @@ import (
 var (
 	msgSrvAddr      string
 	topicRetnTimeMs string
+	kafkaTopicPrefix string
 	file            string
 	delay           int
 	iterations      int
@@ -28,6 +29,7 @@ var (
 func init() {
 	flag.StringVar(&msgSrvAddr, "message-server", "", "URL to the messages supplying server")
 	flag.StringVar(&topicRetnTimeMs, "topic-retention-time-ms", "900000", "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
+	flag.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "Optional prefix prepended to all Kafka topic names (e.g. 'prod' -> 'prod.gobmp.parsed.peer')")
 	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "File with the bmp messages to replay")
 	flag.IntVar(&delay, "delay", 0, "Delay in seconds to add between sending messages")
 	flag.IntVar(&iterations, "iterations", 1, "Number of iterations to replay messages")
@@ -48,6 +50,7 @@ func main() {
 	kConfig := &kafka.Config{
 		ServerAddress:        msgSrvAddr,
 		TopicRetentionTimeMs: topicRetnTimeMs,
+		TopicPrefix:          kafkaTopicPrefix,
 	}
 	publisher, err := kafka.NewKafkaPublisher(kConfig)
 	if err != nil {

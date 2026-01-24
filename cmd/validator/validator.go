@@ -19,10 +19,12 @@ var (
 	validatorFlag bool
 	testCase      string
 	timeout       int
+	kafkaTopicPrefix string
 )
 
 func init() {
 	flag.StringVar(&msgSrvAddr, "kafka", "kafka:9092", "kafka server url, default: kafka:9092")
+	flag.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "Optional prefix prepended to all Kafka topic names (e.g. 'prod' -> 'prod.gobmp.parsed.peer')")
 	flag.StringVar(&msgFile, "msg-file", "./messages.json", "file to read from or to store to processed bmp messages")
 	flag.IntVar(&timeout, "timeout", 300, "timeout in seconds, default 300, for the test to complete all processing.")
 	flag.BoolVar(&validatorFlag, "validate", false, "when validator is true, incomming messages are validated against stored in the message file, otherwise the messages are stored in the file.")
@@ -64,13 +66,13 @@ func main() {
 		switch test {
 		case "u4":
 			topics = append(topics, &kafka.TopicDescriptor{
-				TopicName: kafka.UnicastMessageV4Topic,
+				TopicName: kafka.WithTopicPrefix(kafkaTopicPrefix, kafka.UnicastMessageV4Topic),
 				TopicType: bmp.UnicastPrefixV4Msg,
 				TopicChan: make(chan []byte),
 			})
 		case "vpls":
 			topics = append(topics, &kafka.TopicDescriptor{
-				TopicName: kafka.VPLSMessageTopic,
+				TopicName: kafka.WithTopicPrefix(kafkaTopicPrefix, kafka.VPLSMessageTopic),
 				TopicType: bmp.VPLSMsg,
 				TopicChan: make(chan []byte),
 			})
