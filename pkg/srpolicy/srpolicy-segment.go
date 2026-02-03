@@ -169,6 +169,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			if l != 6 {
 				return nil, fmt.Errorf("invalid length %d of raw data for Type A Segment Sub TLV", l)
 			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type A Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
+			}
 			s, err := UnmarshalTypeASegment(b[p : p+int(l)])
 			if err != nil {
 				return nil, err
@@ -395,10 +398,10 @@ func (tb *typeBSegment) GetType() SegmentType {
 	return TypeB
 }
 
-// GetSRv6SID returns the 16-byte SRv6 SID. The returned slice is the internal
-// representation and should be treated as read-only by callers.
+// GetSRv6SID returns a copy of the 16-byte SRv6 SID.
+// Callers can safely modify the returned slice without affecting internal state.
 func (tb *typeBSegment) GetSRv6SID() []byte {
-	return tb.sid
+	return append([]byte(nil), tb.sid...)
 }
 
 func (tb *typeBSegment) MarshalJSON() ([]byte, error) {
@@ -422,6 +425,10 @@ func (tb *typeBSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) erro
 	if b, ok := objmap["srv6_sid"]; ok {
 		if err := json.Unmarshal(b, &tb.sid); err != nil {
 			return err
+		}
+		// SRv6 SID must be exactly 16 bytes, to match UnmarshalTypeBSegment behavior.
+		if len(tb.sid) != 16 {
+			return fmt.Errorf("invalid SRv6 SID length: got %d bytes, want 16", len(tb.sid))
 		}
 	}
 	return nil
