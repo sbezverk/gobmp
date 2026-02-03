@@ -200,7 +200,10 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			l := b[p]
 			p++
 			if l != 6 && l != 10 {
-				return nil, fmt.Errorf("invalid length %d of raw data for Type C Segment Sub TLV", l)
+				return nil, fmt.Errorf("invalid length of Type C Segment STLV")
+			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type C Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
 			}
 			s, err := UnmarshalTypeCSegment(b[p : p+int(l)])
 			if err != nil {
@@ -501,8 +504,10 @@ func (tc *typeCSegment) GetType() SegmentType {
 	return TypeC
 }
 
+// GetIPv4Address returns a copy of the 4-byte IPv4 address.
+// Callers can safely modify the returned slice without affecting internal state.
 func (tc *typeCSegment) GetIPv4Address() []byte {
-	return tc.ipv4Address
+	return append([]byte(nil), tc.ipv4Address...)
 }
 
 func (tc *typeCSegment) GetSRAlgorithm() byte {
@@ -547,6 +552,10 @@ func (tc *typeCSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) erro
 	if b, ok := objmap["ipv4_address"]; ok {
 		if err := json.Unmarshal(b, &tc.ipv4Address); err != nil {
 			return err
+		}
+		// IPv4 address must be exactly 4 bytes, to match UnmarshalTypeCSegment behavior.
+		if len(tc.ipv4Address) != 4 {
+			return fmt.Errorf("invalid IPv4 address length: got %d bytes, want 4", len(tc.ipv4Address))
 		}
 	}
 	if b, ok := objmap["sid"]; ok {
