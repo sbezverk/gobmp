@@ -576,7 +576,7 @@ func (tc *typeCSegment) UnmarshalJSON(b []byte) error {
 	return tc.unmarshalJSONObj(objmap)
 }
 
-// UnmarshalTypeCSegment instantiates an instance of Type C Segment sub tlv (IPv4 + SR Algorithm)
+// UnmarshalTypeCSegment instantiates an instance of Type C Segment sub tlv (IPv4 + SR Algorithm + optional SID)
 func UnmarshalTypeCSegment(b []byte) (Segment, error) {
 	if glog.V(5) {
 		glog.Infof("SR Policy Type C Segment STLV Raw: %s", tools.MessageHex(b))
@@ -590,7 +590,7 @@ func UnmarshalTypeCSegment(b []byte) (Segment, error) {
 	p++
 	s.srAlgorithm = b[p]
 	p++
-	// IPv4 address is 4 bytes (no reserved bytes per RFC 9831)
+	// IPv4 address is 4 bytes
 	s.ipv4Address = make([]byte, 4)
 	copy(s.ipv4Address, b[p:p+4])
 	p += 4

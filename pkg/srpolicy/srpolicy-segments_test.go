@@ -534,6 +534,30 @@ func TestUnmarshalTypeCSegment_Valid(t *testing.T) {
 			wantAlgo: 0x00,
 			wantSID:  nil,
 		},
+		{
+			name: "With SID = 0 (edge case)",
+			input: []byte{
+				0x00, // Flags
+				0x00, // SR Algorithm
+				192, 168, 1, 1, // IPv4: 192.168.1.1
+				0x00, 0x00, 0x00, 0x00, // SID: 0
+			},
+			wantIPv4: []byte{192, 168, 1, 1},
+			wantAlgo: 0x00,
+			wantSID:  ptrUint32(0),
+		},
+		{
+			name: "With SID = 0xFFFFFFFF (max uint32)",
+			input: []byte{
+				0x00, // Flags
+				0x00, // SR Algorithm
+				10, 0, 0, 1, // IPv4: 10.0.0.1
+				0xFF, 0xFF, 0xFF, 0xFF, // SID: 4294967295
+			},
+			wantIPv4: []byte{10, 0, 0, 1},
+			wantAlgo: 0x00,
+			wantSID:  ptrUint32(4294967295),
+		},
 	}
 
 	for _, tt := range tests {
