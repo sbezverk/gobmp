@@ -200,7 +200,7 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			l := b[p]
 			p++
 			if l != 6 && l != 10 {
-				return nil, fmt.Errorf("invalid length of Type C Segment STLV")
+				return nil, fmt.Errorf("invalid length of Type C Segment STLV: got %d, expected 6 or 10", l)
 			}
 			if p+int(l) > len(b) {
 				return nil, fmt.Errorf("insufficient data for Type C Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
@@ -489,7 +489,7 @@ type TypeCSegment interface {
 type typeCSegment struct {
 	flags       *SegmentFlags
 	srAlgorithm byte
-	ipv4Address []byte // 4 bytes
+	ipv4Address []byte  // 4 bytes
 	sid         *uint32 // Optional SR-MPLS SID
 }
 
@@ -582,7 +582,7 @@ func UnmarshalTypeCSegment(b []byte) (Segment, error) {
 		glog.Infof("SR Policy Type C Segment STLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) != 6 && len(b) != 10 {
-		return nil, fmt.Errorf("invalid length of Type C Segment STLV")
+		return nil, fmt.Errorf("invalid length of Type C Segment STLV: got %d, expected 6 or 10", len(b))
 	}
 	s := &typeCSegment{}
 	p := 0
