@@ -163,11 +163,10 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Weight = w
 			p += int(l)
 		case int(TypeA):
-			glog.Infof("Segment of type A")
 			l := b[p]
 			p++
 			if l != 6 {
-				return nil, fmt.Errorf("invalid length %d of raw data for Type A Segment Sub TLV", l)
+				return nil, fmt.Errorf("invalid length of Type A Segment STLV")
 			}
 			if p+int(l) > len(b) {
 				return nil, fmt.Errorf("insufficient data for Type A Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
@@ -182,7 +181,7 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			l := b[p]
 			p++
 			if l != 18 {
-				return nil, fmt.Errorf("invalid length %d of raw data for Type B Segment Sub TLV", l)
+				return nil, fmt.Errorf("invalid length of Type B Segment STLV")
 			}
 			if p+int(l) > len(b) {
 				return nil, fmt.Errorf("insufficient data for Type B Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
