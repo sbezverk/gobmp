@@ -37,7 +37,7 @@ func NewKafkaMConsumer(kafkaSrv string, topics []*TopicDescriptor) (Srv, error) 
 	config := sarama.NewConfig()
 	config.ClientID = "validator" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Consumer.Return.Errors = true
-	config.Version = sarama.V2_1_0_0
+	config.Version = sarama.V3_0_0_0
 
 	brokers := strings.Split(kafkaSrv, ",")
 	for _, broker := range brokers {

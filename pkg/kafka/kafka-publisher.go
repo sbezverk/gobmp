@@ -172,7 +172,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	config.Admin.Retry.Backoff = time.Second
 	config.Metadata.Retry.Max = 300
 	config.Metadata.Retry.Backoff = time.Second * 10
-	config.Version = sarama.V2_1_0_0
+	config.Version = sarama.V3_0_0_0
 
 	kafkaSrvs := strings.Split(kConfig.ServerAddress, ",")
 	ca, err := sarama.NewClusterAdmin(kafkaSrvs, config)
