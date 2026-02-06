@@ -8,8 +8,8 @@ import (
 	"github.com/sbezverk/gobmp/pkg/base"
 )
 
-// TestType9_PerRegionIPMSIAD tests RFC 9572 Section 3.1 Per-Region I-PMSI A-D Route
-func TestType9_PerRegionIPMSIAD(t *testing.T) {
+// TestRFC9572_PerRegionIPMSIAD tests RFC 9572 Section 3.1 Per-Region I-PMSI A-D Route
+func TestRFC9572_PerRegionIPMSIAD(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       []byte
@@ -220,8 +220,8 @@ func TestType9_PerRegionIPMSIAD(t *testing.T) {
 	}
 }
 
-// TestType9_InterfaceMethods tests that Type 9 implements RouteTypeSpec correctly
-func TestType9_InterfaceMethods(t *testing.T) {
+// TestRFC9572_InterfaceMethods tests that Type 9 implements RouteTypeSpec correctly
+func TestRFC9572_InterfaceMethods(t *testing.T) {
 	rd, _ := base.MakeRD([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8})
 	route := &PerRegionIPMSIAD{
 		RD:       rd,
@@ -271,8 +271,8 @@ func TestType9_InterfaceMethods(t *testing.T) {
 	}
 }
 
-// TestType9_UnmarshalEVPNNLRI tests Type 9 integration with full NLRI parsing
-func TestType9_UnmarshalEVPNNLRI(t *testing.T) {
+// TestRFC9572_UnmarshalEVPNNLRI tests Type 9 integration with full NLRI parsing
+func TestRFC9572_UnmarshalEVPNNLRI(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   []byte
@@ -351,8 +351,8 @@ func containsHelper(s, substr string) bool {
 	return false
 }
 
-// TestType9_RDTypes tests all three RD types with Type 9
-func TestType9_RDTypes(t *testing.T) {
+// TestRFC9572_RDTypes tests all three RD types with Type 9
+func TestRFC9572_RDTypes(t *testing.T) {
 	tests := []struct {
 		name   string
 		rdType uint16
