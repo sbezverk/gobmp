@@ -3,6 +3,7 @@ package evpn
 import (
 	"encoding/binary"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -201,20 +202,14 @@ func TestRFC9572_PerRegionIPMSIAD(t *testing.T) {
 			}
 			if tt.wantErr {
 				if tt.errContains != "" && err != nil {
-					if !contains(err.Error(), tt.errContains) {
+					if !strings.Contains(err.Error(), tt.errContains) {
 						t.Errorf("UnmarshalEVPNPerRegionIPMSIAD() error = %v, should contain %v", err, tt.errContains)
 					}
 				}
 				return
 			}
-			if !reflect.DeepEqual(got.EthTag, tt.want.EthTag) {
-				t.Errorf("UnmarshalEVPNPerRegionIPMSIAD() EthTag = %v, want %v", got.EthTag, tt.want.EthTag)
-			}
-			if !reflect.DeepEqual(got.RegionID, tt.want.RegionID) {
-				t.Errorf("UnmarshalEVPNPerRegionIPMSIAD() RegionID = %v, want %v", got.RegionID, tt.want.RegionID)
-			}
-			if got.RD.Type != tt.want.RD.Type {
-				t.Errorf("UnmarshalEVPNPerRegionIPMSIAD() RD.Type = %v, want %v", got.RD.Type, tt.want.RD.Type)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("UnmarshalEVPNPerRegionIPMSIAD() = %+v, want %+v", got, tt.want)
 			}
 		})
 	}
@@ -335,20 +330,6 @@ func TestRFC9572_UnmarshalEVPNNLRI(t *testing.T) {
 			}
 		})
 	}
-}
-
-// Helper function to check if string contains substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 // TestRFC9572_RDTypes tests all three RD types with Type 9
