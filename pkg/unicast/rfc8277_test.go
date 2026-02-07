@@ -660,12 +660,14 @@ func TestRFC8277_ErrorCases(t *testing.T) {
 		input   []byte
 		pathID  bool
 		wantErr bool
+		want    *base.MPNLRI
 	}{
 		{
 			name:    "Empty input returns empty NLRI",
 			input:   []byte{},
 			pathID:  false,
-			wantErr: false, // Returns empty NLRI, not error
+			wantErr: false,
+			want:    &base.MPNLRI{NLRI: []base.Route{}},
 		},
 		{
 			name:    "Truncated PathID - only 3 bytes",
@@ -709,7 +711,10 @@ func TestRFC8277_ErrorCases(t *testing.T) {
 				}
 			} else {
 				if err != nil {
-					t.Errorf("UnmarshalLUNLRI() unexpected error: %v", err)
+					t.Fatalf("UnmarshalLUNLRI() unexpected error: %v", err)
+				}
+				if tt.want != nil && !reflect.DeepEqual(got, tt.want) {
+					t.Errorf("UnmarshalLUNLRI() = %+v, want %+v", got, tt.want)
 				}
 			}
 		})
