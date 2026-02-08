@@ -398,6 +398,16 @@ jobs:
           grep -E "PASS|FAIL|RFC" rfc8365-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
+      - name: Run EVPN RFC 9572 compliance tests
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### RFC 9572 Compliance Tests :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go test -v ./pkg/evpn/... -run "RFC9572" | tee rfc9572-test-output.txt
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -E "PASS|FAIL|RFC" rfc9572-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
       - name: Generate RFC compliance report
         if: always()
         run: |
@@ -408,9 +418,10 @@ jobs:
           echo "|-----|----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| RFC 7432 | BGP MPLS-Based Ethernet VPN | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
           echo "| RFC 8365 | EVPN Network Virtualization Overlay | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 9572 | EVPN Optimized Inter-Subnet Multicast Forwarding | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
-          echo "**Coverage:** Route Types 1-5, MAC/IP Advertisement, Inclusive Multicast, Ethernet Segment, IP Prefix" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** Route Types 1-5, 9 (MAC/IP Advertisement, Inclusive Multicast, Ethernet Segment, IP Prefix, Per-Region I-PMSI A-D)" >> $GITHUB_STEP_SUMMARY
 
   # ==============================================================================
   # RFC Compliance Validation (RTC RFC 4684)
