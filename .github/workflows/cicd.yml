@@ -436,7 +436,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
           echo "**Coverage:** Route Types 1-5, 9 (MAC/IP Advertisement, Inclusive Multicast, Ethernet Segment, IP Prefix, Per-Region I-PMSI A-D)" >> $GITHUB_STEP_SUMMARY
- (Add RFC 9251 compliance testing to CI/CD)
 
   # ==============================================================================
   # RFC Compliance Validation (RTC RFC 4684)
