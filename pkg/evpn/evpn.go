@@ -130,6 +130,11 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 			if err != nil {
 				return nil, err
 			}
+		case 6:
+			n.RouteTypeSpec, err = UnmarshalEVPNSMET(b[p : p+l])
+			if err != nil {
+				return nil, err
+			}
 		case 9:
 			n.RouteTypeSpec, err = UnmarshalEVPNPerRegionIPMSIAD(b[p : p+l])
 			if err != nil {
