@@ -104,6 +104,13 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 		n.Length = b[p]
 		p++
 		l := int(n.Length)
+		// Validate length before slicing to prevent infinite loop or panic
+		if l == 0 {
+			return nil, fmt.Errorf("invalid EVPN NLRI length: length cannot be zero")
+		}
+		if p+l > len(b) {
+			return nil, fmt.Errorf("invalid EVPN NLRI length: need %d bytes at offset %d, have %d total", l, p, len(b))
+		}
 		switch n.RouteType {
 		case 1:
 			n.RouteTypeSpec, err = UnmarshalEVPNEthAutoDiscovery(b[p : p+l])
@@ -127,6 +134,11 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 			}
 		case 5:
 			n.RouteTypeSpec, err = UnmarshalEVPNIPPrefix(b[p:p+l], l)
+			if err != nil {
+				return nil, err
+			}
+		case 6:
+			n.RouteTypeSpec, err = UnmarshalEVPNSMET(b[p : p+l])
 			if err != nil {
 				return nil, err
 			}
