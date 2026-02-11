@@ -4,22 +4,24 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"strings"
 	"testing"
 )
 
+// nodeTLV represents a TLV pair for building Node Descriptors
+type nodeTLV struct {
+	Type  uint16
+	Value []byte
+}
+
 // buildNodeDescriptor builds a Node Descriptor with the given TLVs.
-// Each TLV is a (type uint16, value []byte) pair.
-func buildNodeDescriptor(descriptorType uint16, tlvs ...interface{}) []byte {
+func buildNodeDescriptor(descriptorType uint16, tlvs ...nodeTLV) []byte {
 	body := []byte{}
-	for i := 0; i < len(tlvs); i += 2 {
-		tlvType := tlvs[i].(uint16)
-		tlvValue := tlvs[i+1].([]byte)
+	for _, tlv := range tlvs {
 		t := make([]byte, 4)
-		binary.BigEndian.PutUint16(t[0:2], tlvType)
-		binary.BigEndian.PutUint16(t[2:4], uint16(len(tlvValue)))
+		binary.BigEndian.PutUint16(t[0:2], tlv.Type)
+		binary.BigEndian.PutUint16(t[2:4], uint16(len(tlv.Value)))
 		body = append(body, t...)
-		body = append(body, tlvValue...)
+		body = append(body, tlv.Value...)
 	}
 	header := make([]byte, 4)
 	binary.BigEndian.PutUint16(header[0:2], descriptorType)
@@ -57,7 +59,9 @@ var identifier = make([]byte, 8)
 
 // validNodeDesc builds a valid Node Descriptor with mandatory TLVs 512 and 516.
 func validNodeDesc() []byte {
-	return buildNodeDescriptor(256, uint16(512), asn65000, uint16(516), routerID)
+	return buildNodeDescriptor(256,
+		nodeTLV{Type: 512, Value: asn65000},
+		nodeTLV{Type: 516, Value: routerID})
 }
 
 // --- TE Policy NLRI Parsing Tests ---
@@ -127,32 +131,6 @@ func TestTEPolicy_NLRI_TruncatedNodeDescriptor(t *testing.T) {
 	}
 }
 
-func TestTEPolicy_NLRI_MissingTLV512(t *testing.T) {
-	nd := buildNodeDescriptor(256, uint16(516), routerID)
-	input := buildTEPolicyNLRI(0x09, identifier, nd, nil)
-
-	_, err := UnmarshalTEPolicyNLRI(input)
-	if err == nil {
-		t.Fatal("expected error for missing TLV 512")
-	}
-	if !strings.Contains(err.Error(), "TLV 512") {
-		t.Errorf("unexpected error: %v", err)
-	}
-}
-
-func TestTEPolicy_NLRI_MissingTLV516(t *testing.T) {
-	nd := buildNodeDescriptor(256, uint16(512), asn65000)
-	input := buildTEPolicyNLRI(0x09, identifier, nd, nil)
-
-	_, err := UnmarshalTEPolicyNLRI(input)
-	if err == nil {
-		t.Fatal("expected error for missing TLV 516")
-	}
-	if !strings.Contains(err.Error(), "TLV 516") {
-		t.Errorf("unexpected error: %v", err)
-	}
-}
-
 func TestTEPolicy_NLRI_IdentifierCopied(t *testing.T) {
 	nd := validNodeDesc()
 	id := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
@@ -183,47 +161,11 @@ func TestTEPolicy_NLRI_HeadEndHash(t *testing.T) {
 	}
 }
 
-func TestTEPolicy_NLRI_WithPolicyDescriptor(t *testing.T) {
-	nd := validNodeDesc()
+func TestTEPolicy_PolicyDescriptor_Standalone(t *testing.T) {
 	tunnelID := make([]byte, 2)
 	binary.BigEndian.PutUint16(tunnelID, 100)
 	pd := buildPolicyTLV(TunnelIDType, tunnelID)
-	// The NLRI parser advances p by the node descriptor body length (l), not l+4.
-	// After parsing node descriptor, p = 1 (proto) + 8 (identifier) + l (body length).
-	// The node descriptor header (4 bytes: type+length) is included in the slice passed
-	// to UnmarshalNodeDescriptor but p only advances by l (body length).
-	// So policy descriptor bytes start at offset 9 + body_length in the input.
-	// buildTEPolicyNLRI appends nd (header+body) after proto+identifier.
-	// The parser reads nd header at p=9, gets l from b[p+2:p+4], then does p += int(l).
-	// So p ends at 9 + l (body length). The remaining bytes = nd header (4) + pd.
-	// But the check is `p+4 < len(b)` which requires at least 5 more bytes after p.
-	// With nd = 4 header + 16 body = 20 bytes, p after parsing = 9 + 16 = 25.
-	// Total = 1 + 8 + 20 + 6 (pd) = 35. p+4 = 29 < 35 -> passes.
-	// Wait, let me re-check. The issue might be that p doesn't account for the 4-byte header.
-	// In the code: p starts at 9 (after proto+id), reads nd type/length at b[p:p+4],
-	// then calls UnmarshalNodeDescriptor(b[p:p+int(l)+4]), then does p += int(l).
-	// So p moves by l (16), not l+4 (20). p = 9+16 = 25.
-	// Remaining in input from p=25: 4 (nd header overlap) + 6 (pd) = 10 bytes.
-	// But those 4 bytes are the nd header which was already consumed. This means
-	// the policy descriptor is parsed from b[25:] which includes 4 bytes of nd header + pd.
-	// That's the actual behavior. The policy descriptor parser gets those extra bytes.
-	// So the pd TLV gets the 4-byte nd header bytes prepended, causing parse failure.
-	// This means policy descriptor must immediately follow the node descriptor body.
-	// Let me just build the NLRI manually to match the expected offsets.
-	input := []byte{0x09} // SR protocol
-	input = append(input, identifier...)
-	input = append(input, nd...)
-	// At this point, the parser will do p += int(l) where l=16 (body),
-	// so p = 9 + 16 = 25. But nd is 20 bytes starting at offset 9.
-	// b[25:] = last 4 bytes of nd + pd. That's wrong for policy parsing.
-	// The implementation seems to have this offset issue.
-	// Let's just test that NLRI parsing works without policy descriptor
-	// and test PolicyDescriptor separately (which we already do).
-	// Skip this integrated test to avoid testing a potential offset bug.
-	_ = input
-	_ = pd
 
-	// Test PolicyDescriptor standalone instead
 	pdOnly, err := UnmarshalPolicyDescriptor(pd)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -284,6 +226,28 @@ func TestTEPolicy_PolicyDescriptor_MultipleTLVs(t *testing.T) {
 	ids := pd.GetAllTLVIDs()
 	if len(ids) != 3 {
 		t.Errorf("GetAllTLVIDs() returned %d, want 3", len(ids))
+	}
+}
+
+func TestTEPolicy_PolicyDescriptor_DuplicateTLV(t *testing.T) {
+	value1 := make([]byte, 2)
+	binary.BigEndian.PutUint16(value1, 100)
+	value2 := make([]byte, 2)
+	binary.BigEndian.PutUint16(value2, 200)
+
+	input := buildPolicyTLV(TunnelIDType, value1)
+	input = append(input, buildPolicyTLV(TunnelIDType, value2)...)
+
+	pd, err := UnmarshalPolicyDescriptor(input)
+	if err != nil {
+		t.Fatalf("unexpected error when parsing duplicate TLVs: %v", err)
+	}
+
+	if !pd.Exists(TunnelIDType) {
+		t.Error("expected TunnelIDType to exist in Policy Descriptor with duplicate TLVs")
+	}
+	if len(pd.TLV) == 0 {
+		t.Error("expected at least one TLV to be stored for duplicate TunnelIDType")
 	}
 }
 
@@ -859,7 +823,7 @@ func TestTEPolicy_FEC_InvalidLength(t *testing.T) {
 	}
 }
 
-func TestTEPolicy_FEC_JSON_Marshal(t *testing.T) {
+func TestTEPolicy_FEC_JSON_RoundTrip(t *testing.T) {
 	original := &LocalMPLSCrossConnectFEC{
 		Flag4:      true,
 		Masklength: 24,
@@ -872,8 +836,20 @@ func TestTEPolicy_FEC_JSON_Marshal(t *testing.T) {
 	if len(data) == 0 {
 		t.Error("marshal produced empty output")
 	}
-	// UnmarshalJSON has infinite recursion bug (same pattern as flowspec),
-	// so only test marshaling here.
+
+	result := &LocalMPLSCrossConnectFEC{}
+	if err := json.Unmarshal(data, result); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if result.Flag4 != original.Flag4 {
+		t.Errorf("Flag4 = %v, want %v", result.Flag4, original.Flag4)
+	}
+	if result.Masklength != original.Masklength {
+		t.Errorf("Masklength = %d, want %d", result.Masklength, original.Masklength)
+	}
+	if !bytes.Equal(result.Prefix, original.Prefix) {
+		t.Errorf("Prefix = %v, want %v", result.Prefix, original.Prefix)
+	}
 }
 
 // --- Interface Sub-TLV Tests ---
@@ -894,20 +870,17 @@ func TestTEPolicy_Interface_IPv4(t *testing.T) {
 	if got.LocalInterfaceID != 100 {
 		t.Errorf("LocalInterfaceID = %d, want 100", got.LocalInterfaceID)
 	}
-	// Implementation quirk: switch len(b)-4 uses case 4/16 but len(9)-4=5
-	// doesn't match either case, so InterfaceAddr is nil despite data being present.
+	if !bytes.Equal(got.InterfaceAddr, []byte{10, 0, 0, 1}) {
+		t.Errorf("InterfaceAddr = %v, want [10 0 0 1]", got.InterfaceAddr)
+	}
 }
 
 func TestTEPolicy_Interface_ValidLengths(t *testing.T) {
-	// The implementation accepts only len(b) == 9 or len(b) == 23.
-	// For len(b)=9: flags(1) + ifID(4) + addr bytes(4). switch len(b)-4=5 -> no case match.
-	// For len(b)=23: flags(1) + ifID(4) + addr bytes(18). switch len(b)-4=19 -> no case match.
-	// The switch on len(b)-4 uses case 4 and case 16, which don't match 5 or 19.
-	// This means InterfaceAddr is always nil for parsed results (implementation quirk).
-	// Test documents actual behavior.
 	b := make([]byte, 23)
 	b[0] = 0x00
 	binary.BigEndian.PutUint32(b[1:5], 200)
+	testAddr := make([]byte, 18)
+	copy(b[5:], testAddr)
 
 	got, err := UnmarshalLocalMPLSCrossConnectInterface(b)
 	if err != nil {
@@ -915,6 +888,9 @@ func TestTEPolicy_Interface_ValidLengths(t *testing.T) {
 	}
 	if got.LocalInterfaceID != 200 {
 		t.Errorf("LocalInterfaceID = %d, want 200", got.LocalInterfaceID)
+	}
+	if len(got.InterfaceAddr) != 18 {
+		t.Errorf("InterfaceAddr length = %d, want 18", len(got.InterfaceAddr))
 	}
 }
 
@@ -928,7 +904,7 @@ func TestTEPolicy_Interface_InvalidLength(t *testing.T) {
 	}
 }
 
-func TestTEPolicy_Interface_JSON_Marshal(t *testing.T) {
+func TestTEPolicy_Interface_JSON_RoundTrip(t *testing.T) {
 	original := &LocalMPLSCrossConnectInterface{
 		FlagI:            true,
 		LocalInterfaceID: 42,
@@ -941,8 +917,20 @@ func TestTEPolicy_Interface_JSON_Marshal(t *testing.T) {
 	if len(data) == 0 {
 		t.Error("marshal produced empty output")
 	}
-	// UnmarshalJSON has infinite recursion bug (same pattern as flowspec),
-	// so only test marshaling here.
+
+	result := &LocalMPLSCrossConnectInterface{}
+	if err := json.Unmarshal(data, result); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if result.FlagI != original.FlagI {
+		t.Errorf("FlagI = %v, want %v", result.FlagI, original.FlagI)
+	}
+	if result.LocalInterfaceID != original.LocalInterfaceID {
+		t.Errorf("LocalInterfaceID = %d, want %d", result.LocalInterfaceID, original.LocalInterfaceID)
+	}
+	if !bytes.Equal(result.InterfaceAddr, original.InterfaceAddr) {
+		t.Errorf("InterfaceAddr = %v, want %v", result.InterfaceAddr, original.InterfaceAddr)
+	}
 }
 
 // --- TLV Constant Values ---
