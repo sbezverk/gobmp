@@ -39,6 +39,7 @@ func UnmarshalPolicyDescriptor(b []byte) (*PolicyDescriptor, error) {
 		if _, ok := tlvs[tlv.Type]; ok {
 			glog.Warningf("Found duplicate TLV of type %d in the list of TE Policy Descriptor's TLVs, please file an issue for gobmp", tlv.Type)
 			glog.Infof("TE Policy Descriptor Raw: %s", tools.MessageHex(b))
+			p += int(tlv.Length)
 			continue
 		}
 		tlvs[tlv.Type] = tlv
