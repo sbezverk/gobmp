@@ -716,6 +716,20 @@ func TestTypeCSegment_JSON(t *testing.T) {
 				t.Errorf("Unmarshal() SR Algorithm = %d, want %d", result.srAlgorithm, tt.seg.srAlgorithm)
 			}
 
+			// Verify flags
+			if result.flags.Vflag != tt.seg.flags.Vflag {
+				t.Errorf("Unmarshal() Vflag = %v, want %v", result.flags.Vflag, tt.seg.flags.Vflag)
+			}
+			if result.flags.Aflag != tt.seg.flags.Aflag {
+				t.Errorf("Unmarshal() Aflag = %v, want %v", result.flags.Aflag, tt.seg.flags.Aflag)
+			}
+			if result.flags.Sflag != tt.seg.flags.Sflag {
+				t.Errorf("Unmarshal() Sflag = %v, want %v", result.flags.Sflag, tt.seg.flags.Sflag)
+			}
+			if result.flags.Bflag != tt.seg.flags.Bflag {
+				t.Errorf("Unmarshal() Bflag = %v, want %v", result.flags.Bflag, tt.seg.flags.Bflag)
+			}
+
 			// Verify SID
 			if tt.seg.sid == nil {
 				if result.sid != nil {
