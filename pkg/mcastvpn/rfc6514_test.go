@@ -490,13 +490,14 @@ func TestRFC6514_Type4_TooShort(t *testing.T) {
 func TestRFC6514_Type4_RouteKeyTooShort(t *testing.T) {
 	// 4 bytes total: route key = 0 bytes (< 8 required), originator = 4 bytes
 	_, err := UnmarshalType4([]byte{10, 0, 0, 1})
-	if err != nil {
-		// Route key length < 8, but implementation tries IPv4 first:
-		// routeKeyLen = 4-4 = 0, which is < 8, so it tries IPv6
-		// len(b) = 4 < 16, so IPv6 fails too -> error
-		if !strings.Contains(err.Error(), "invalid Type4 format") {
-			t.Errorf("unexpected error: %v", err)
-		}
+	if err == nil {
+		t.Fatal("expected error for route key shorter than 8 bytes")
+	}
+	// Route key length < 8, but implementation tries IPv4 first:
+	// routeKeyLen = 4-4 = 0, which is < 8, so it tries IPv6
+	// len(b) = 4 < 16, so IPv6 fails too -> error
+	if !strings.Contains(err.Error(), "invalid Type4 format") {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
@@ -1311,8 +1312,6 @@ func TestRFC6514_Type1_DataIsolation(t *testing.T) {
 	rd := makeRD(100, 100)
 	origIP := []byte{10, 0, 0, 1}
 	input := append(rd, origIP...)
-	inputCopy := make([]byte, len(input))
-	copy(inputCopy, input)
 
 	got, err := UnmarshalType1(input)
 	if err != nil {
@@ -1441,23 +1440,23 @@ func TestRFC6514_Type3_MissingSourceLength(t *testing.T) {
 	}
 }
 
-func TestRFC6514_Type6_MissingSourceLength(t *testing.T) {
-	// RD(8) + AS(4) = 12 bytes, missing source length
+func TestRFC6514_Type6_ZeroLengthWildcard(t *testing.T) {
+	// RD(8) + AS(4) + source-len(1) + group-len(1) = 14 bytes
+	// Both source and group lengths are 0 (wildcard/any-source case)
 	rd := makeRD(100, 100)
 	as := make([]byte, 4)
 	input := append(rd, as...)
-	// Need 14 bytes minimum to pass initial check
-	input = append(input, 0, 0)
+	input = append(input, 0, 0) // source-len=0, group-len=0
 
-	// This passes minimum check (14 bytes) but source length byte at position 12
-	// says 0, group length at position 13 says 0 -> consumed 14 == len(b) 14 -> passes
 	got, err := UnmarshalType6(input)
 	if err != nil {
-		// Both source and group are 0 length, and consumed == total -> valid
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("unexpected error for zero-length wildcard: %v", err)
 	}
 	if got.MulticastSourceLen != 0 {
 		t.Errorf("expected 0 source len, got %d", got.MulticastSourceLen)
+	}
+	if got.MulticastGroupLen != 0 {
+		t.Errorf("expected 0 group len, got %d", got.MulticastGroupLen)
 	}
 }
 
