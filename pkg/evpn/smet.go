@@ -73,9 +73,11 @@ func (s *SMET) getLabel() []*base.Label {
 // UnmarshalEVPNSMET parses EVPN Type 6 SMET Route from wire format
 // RFC 9251 Section 9.1
 func UnmarshalEVPNSMET(b []byte) (*SMET, error) {
-	// Check minimum fields: RD(8) + EthTag(4) + McastSrcLen(1) = 13 bytes
-	if len(b) < 13 {
-		return nil, fmt.Errorf("invalid length of SMET route: need at least 13 bytes, have %d", len(b))
+	// Minimum SMET length:
+	// RD(8) + EthTag(4) + McastSrcLen(1) + McastGrpLen(1) + McastGrpAddr(4) +
+	// OriginatorRtrLen(1) + OriginatorRtrAddr(4) + Flags(1) = 24 bytes
+	if len(b) < 24 {
+		return nil, fmt.Errorf("invalid length of SMET route: need at least 24 bytes, have %d", len(b))
 	}
 
 	s := &SMET{}

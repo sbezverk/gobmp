@@ -406,6 +406,7 @@ jobs:
           go test -v ./pkg/evpn/... -run "RFC9251" | tee rfc9251-test-output.txt
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           grep -E "PASS|FAIL|RFC" rfc9251-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Run EVPN RFC 9572 compliance tests
         run: |
@@ -430,7 +431,7 @@ jobs:
           echo "| RFC 9251 | IGMP/MLD Proxies for EVPN | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
-          echo "**Coverage:** Route Types 1-6 (MAC/IP Advertisement, Inclusive Multicast, Ethernet Segment, IP Prefix, SMET)" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** Route Type 6 (SMET - Selective Multicast Ethernet Tag)" >> $GITHUB_STEP_SUMMARY
 
           echo "| RFC 9572 | EVPN Optimized Inter-Subnet Multicast Forwarding | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

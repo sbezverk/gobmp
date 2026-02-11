@@ -218,7 +218,7 @@ func TestRFC9251_SMET(t *testing.T) {
 				// Missing originator address and flags
 			},
 			wantErr:     true,
-			errContains: "truncated",
+			errContains: "need at least 24 bytes",
 		},
 		{
 			name: "Invalid - Invalid multicast source length (64)",
@@ -242,6 +242,7 @@ func TestRFC9251_SMET(t *testing.T) {
 				0x00, 0x00, 0x03, 0xe8,
 				0x00,
 				0x00, // Invalid: 0 bits
+				0x00, 0x00, 0x00, 0x00, // Pad to 24 bytes: dummy group addr
 				0x20,
 				0x0a, 0x00, 0x00, 0x01,
 				0x0f,
@@ -273,7 +274,7 @@ func TestRFC9251_SMET(t *testing.T) {
 				0x0a, 0x01,   // Only 2 bytes provided
 			},
 			wantErr:     true,
-			errContains: "truncated multicast source address",
+			errContains: "need at least 24 bytes",
 		},
 		{
 			name: "Invalid - Truncated multicast group address",
@@ -285,7 +286,7 @@ func TestRFC9251_SMET(t *testing.T) {
 				0xef, 0x01, // Only 2 bytes instead of 4
 			},
 			wantErr:     true,
-			errContains: "truncated multicast group address",
+			errContains: "need at least 24 bytes",
 		},
 		{
 			name: "Invalid - Truncated originator router address",
@@ -299,7 +300,7 @@ func TestRFC9251_SMET(t *testing.T) {
 				0x0a, 0x00, // Only 2 bytes instead of 4
 			},
 			wantErr:     true,
-			errContains: "truncated originator router address",
+			errContains: "need at least 24 bytes",
 		},
 		{
 			name: "Invalid - Missing flags byte",
@@ -314,7 +315,7 @@ func TestRFC9251_SMET(t *testing.T) {
 				// Missing flags byte
 			},
 			wantErr:     true,
-			errContains: "truncated at flags",
+			errContains: "need at least 24 bytes",
 		},
 		{
 			name: "Invalid - Extra bytes after flags",
@@ -359,7 +360,10 @@ func TestRFC9251_SMET(t *testing.T) {
 
 // TestRFC9251_SMET_InterfaceMethods tests that Type 6 implements RouteTypeSpec correctly
 func TestRFC9251_SMET_InterfaceMethods(t *testing.T) {
-	rd, _ := base.MakeRD([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8})
+	rd, err := base.MakeRD([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8})
+	if err != nil {
+		t.Fatalf("base.MakeRD() error = %v", err)
+	}
 	smet := &SMET{
 		RD:                rd,
 		EthTag:            []byte{0x00, 0x00, 0x03, 0xe8},
