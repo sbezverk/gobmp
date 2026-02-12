@@ -18,10 +18,10 @@ import (
 // - Section 6: Color absence handling - Color field must be nil when not present
 // - Integration with BMP Route Monitor messages for Unicast prefixes
 
-// Helper functions are defined in unicast_color_test.go:
-// - uint32Ptr: creates pointer to uint32 value
-// - equalUint32Ptr: compares two uint32 pointers for equality
-// - formatUint32Ptr: formats uint32 pointer for error messages
+// Helper functions used by these tests:
+// - uint32Ptr: creates pointer to uint32 value (defined in unicast_color_test.go)
+// - equalUint32Ptr: compares two uint32 pointers for equality (defined in unicast_color_test.go)
+// - formatUint32Ptr: formats uint32 pointer for error messages (defined locally below)
 
 func formatUint32Ptr(p *uint32) string {
 	if p == nil {
@@ -297,7 +297,7 @@ func TestRFC9723_UnicastPrefix_ColorField(t *testing.T) {
 		{
 			name: "Prefix with Color value 100",
 			prefix: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     uint32Ptr(100),
 			},
@@ -307,7 +307,7 @@ func TestRFC9723_UnicastPrefix_ColorField(t *testing.T) {
 		{
 			name: "Prefix with Color value 0",
 			prefix: &UnicastPrefix{
-				Prefix:    "10.0.0.0/8",
+				Prefix:    "10.0.0.0",
 				PrefixLen: 8,
 				Color:     uint32Ptr(0),
 			},
@@ -317,7 +317,7 @@ func TestRFC9723_UnicastPrefix_ColorField(t *testing.T) {
 		{
 			name: "Prefix with max Color value",
 			prefix: &UnicastPrefix{
-				Prefix:    "192.0.2.0/24",
+				Prefix:    "192.0.2.0",
 				PrefixLen: 24,
 				Color:     uint32Ptr(4294967295),
 			},
@@ -327,7 +327,7 @@ func TestRFC9723_UnicastPrefix_ColorField(t *testing.T) {
 		{
 			name: "Prefix without Color",
 			prefix: &UnicastPrefix{
-				Prefix:    "2001:db8:1::/48",
+				Prefix:    "2001:db8:1::",
 				PrefixLen: 48,
 				Color:     nil,
 			},
@@ -358,7 +358,7 @@ func TestRFC9723_UnicastPrefix_ColorFieldJSON(t *testing.T) {
 		{
 			name: "JSON serialization with Color",
 			prefix: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     uint32Ptr(500),
 			},
@@ -368,7 +368,7 @@ func TestRFC9723_UnicastPrefix_ColorFieldJSON(t *testing.T) {
 		{
 			name: "JSON serialization without Color",
 			prefix: &UnicastPrefix{
-				Prefix:    "10.0.0.0/8",
+				Prefix:    "10.0.0.0",
 				PrefixLen: 8,
 				Color:     nil,
 			},
@@ -414,12 +414,12 @@ func TestRFC9723_UnicastPrefix_Equal_WithColor(t *testing.T) {
 		{
 			name: "Equal prefixes with same Color",
 			prefix1: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     uint32Ptr(100),
 			},
 			prefix2: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     uint32Ptr(100),
 			},
@@ -429,12 +429,12 @@ func TestRFC9723_UnicastPrefix_Equal_WithColor(t *testing.T) {
 		{
 			name: "Different Color values",
 			prefix1: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     uint32Ptr(100),
 			},
 			prefix2: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     uint32Ptr(200),
 			},
@@ -444,12 +444,12 @@ func TestRFC9723_UnicastPrefix_Equal_WithColor(t *testing.T) {
 		{
 			name: "One Color nil, other set",
 			prefix1: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     uint32Ptr(100),
 			},
 			prefix2: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     nil,
 			},
@@ -459,12 +459,12 @@ func TestRFC9723_UnicastPrefix_Equal_WithColor(t *testing.T) {
 		{
 			name: "Both Color nil",
 			prefix1: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     nil,
 			},
 			prefix2: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     nil,
 			},
@@ -474,12 +474,12 @@ func TestRFC9723_UnicastPrefix_Equal_WithColor(t *testing.T) {
 		{
 			name: "Color zero vs nil",
 			prefix1: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     uint32Ptr(0),
 			},
 			prefix2: &UnicastPrefix{
-				Prefix:    "2001:db8::/32",
+				Prefix:    "2001:db8::",
 				PrefixLen: 32,
 				Color:     nil,
 			},
