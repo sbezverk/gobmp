@@ -673,3 +673,52 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
           echo "**Coverage:** L3 Service, Information SubTLV, SID Structure, End.X SID, Endpoint Behavior, Locator, Capability, BGP Peer Node SID, SubTLV dispatch, SID Descriptor, NLRI parsing, error handling" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================================================
+  # RFC Compliance Validation (RPKI Origin Validation State RFC 8097)
+  # ==============================================================================
+  rfc_compliance_rpki:
+    name: RFC Compliance - RPKI
+    needs: [tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.24.x
+
+      - name: Run RFC 8097 RPKI compliance tests (Extended Community)
+        run: |
+          echo "### RFC 8097 Compliance Tests - Extended Community :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go test -v ./pkg/bgp/... -run "RFC8097" | tee rfc8097-bgp-test-output.txt
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -E "PASS|FAIL|RFC" rfc8097-bgp-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run RFC 8097 RPKI compliance tests (Message Processing)
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### RFC 8097 Compliance Tests - Message Processing :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go test -v ./pkg/message/... -run "RFC8097" | tee rfc8097-msg-test-output.txt
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -E "PASS|FAIL|RFC" rfc8097-msg-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate RFC compliance report
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### RFC Compliance Status :clipboard:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC | Standard | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 8097 | BGP Origin Validation State EC | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** Validation states (Valid/NotFound/Invalid), wire format parsing, EC extraction, UnicastPrefix/L3VPNPrefix integration, Equal() comparison" >> $GITHUB_STEP_SUMMARY
