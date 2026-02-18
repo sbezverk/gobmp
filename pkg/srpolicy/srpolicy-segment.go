@@ -235,11 +235,13 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeE):
-			glog.Infof("Segment of type E")
 			l := b[p]
 			p++
 			if l != 10 && l != 14 {
-				return nil, fmt.Errorf("invalid length %d of raw data for Type E Segment Sub TLV", l)
+				return nil, fmt.Errorf("invalid length of Type E Segment STLV: got %d, expected 10 or 14", l)
+			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type E Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
 			}
 			s, err := UnmarshalTypeESegment(b[p : p+int(l)])
 			if err != nil {
@@ -834,13 +836,15 @@ func (te *typeESegment) unmarshalJSONObj(objmap map[string]json.RawMessage) erro
 			return err
 		}
 		if len(te.ipv4Address) != 4 {
-			return fmt.Errorf("invalid IPv4 address length: %d bytes, expected 4", len(te.ipv4Address))
+			return fmt.Errorf("invalid IPv4 address length: got %d bytes, want 4", len(te.ipv4Address))
 		}
 	}
 	if b, ok := objmap["sid"]; ok {
-		if err := json.Unmarshal(b, &te.sid); err != nil {
+		var sid uint32
+		if err := json.Unmarshal(b, &sid); err != nil {
 			return err
 		}
+		te.sid = &sid
 	}
 	return nil
 }
@@ -859,7 +863,7 @@ func UnmarshalTypeESegment(b []byte) (Segment, error) {
 		glog.Infof("SR Policy Type E Segment STLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) != 10 && len(b) != 14 {
-		return nil, fmt.Errorf("invalid length %d of Type E Segment STLV, expected 10 or 14", len(b))
+		return nil, fmt.Errorf("invalid length of Type E Segment STLV: got %d, expected 10 or 14", len(b))
 	}
 	s := &typeESegment{}
 	p := 0

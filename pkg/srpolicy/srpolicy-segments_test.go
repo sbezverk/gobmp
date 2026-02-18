@@ -1367,3 +1367,124 @@ func TestUnmarshalSegmentListSTLV_TypeE(t *testing.T) {
 		})
 	}
 }
+
+// ============================================================================
+// Type E Segment Tests (Direct Unmarshal)
+// ============================================================================
+
+func TestUnmarshalTypeESegment_Valid(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     []byte
+		wantSID   bool
+	}{
+		{
+			name:    "IPv4 and InterfaceID only (10 bytes)",
+			// Flags + Reserved + 4 bytes Interface ID + 4 bytes IPv4
+			input:   []byte{0, 0, 0, 0, 0, 1, 192, 0, 2, 1},
+			wantSID: false,
+		},
+		{
+			name:    "IPv4, InterfaceID and SID (14 bytes)",
+			// Flags + Reserved + 4 bytes Interface ID + 4 bytes IPv4 + 4 bytes SID
+			input:   []byte{0, 0, 0, 0, 0, 2, 192, 0, 2, 2, 0, 0, 0, 42},
+			wantSID: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			seg, err := UnmarshalTypeESegment(tt.input)
+			if err != nil {
+				t.Fatalf("UnmarshalTypeESegment() error = %v", err)
+			}
+
+			typeESeg, ok := seg.(TypeESegment)
+			if !ok {
+				t.Fatal("Segment is not TypeESegment")
+			}
+
+			ipv4 := typeESeg.GetIPv4Address()
+			if len(ipv4) != 4 {
+				t.Errorf("IPv4 address length = %d, want 4", len(ipv4))
+			}
+
+			_, hasSID := typeESeg.GetSID()
+			if hasSID != tt.wantSID {
+				t.Errorf("GetSID presence = %v, want %v", hasSID, tt.wantSID)
+			}
+		})
+	}
+}
+
+func TestUnmarshalTypeESegment_InvalidLength(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "empty",
+			input: []byte{},
+		},
+		{
+			name:  "1 byte",
+			input: []byte{0x00},
+		},
+		{
+			name:  "2 bytes",
+			input: []byte{0x00, 0x01},
+		},
+		{
+			name:  "3 bytes",
+			input: []byte{0x00, 0x01, 0x02},
+		},
+		{
+			name:  "4 bytes",
+			input: []byte{0x00, 0x01, 0x02, 0x03},
+		},
+		{
+			name:  "5 bytes",
+			input: []byte{0x00, 0x01, 0x02, 0x03, 0x04},
+		},
+		{
+			name:  "6 bytes",
+			input: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05},
+		},
+		{
+			name:  "7 bytes",
+			input: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
+		},
+		{
+			name:  "8 bytes",
+			input: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+		},
+		{
+			name:  "9 bytes",
+			input: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
+		},
+		{
+			name:  "11 bytes",
+			input: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a},
+		},
+		{
+			name:  "12 bytes",
+			input: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b},
+		},
+		{
+			name:  "13 bytes",
+			input: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c},
+		},
+		{
+			name:  "15 bytes",
+			input: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalTypeESegment(tt.input); err == nil {
+				t.Errorf("UnmarshalTypeESegment() with %s input length %d, expected error but got none", tt.name, len(tt.input))
+			}
+		})
+	}
+}
