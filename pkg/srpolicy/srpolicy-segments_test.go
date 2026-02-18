@@ -837,3 +837,353 @@ func TestUnmarshalSegmentListSTLV_TypeC(t *testing.T) {
 func ptrUint32(v uint32) *uint32 {
 	return &v
 }
+
+// ============================================================================
+// Type D Segment Tests (IPv6 + SR Algorithm + optional SID)
+// ============================================================================
+
+func TestUnmarshalTypeDSegment_Valid(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       []byte
+		wantIPv6    []byte
+		wantAlgo    byte
+		wantSID     *uint32
+	}{
+		{
+			name: "Without SID (18 bytes)",
+			input: []byte{
+				0x00, // Flags
+				0x00, // SR Algorithm
+				// IPv6: 2001:db8::1
+				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+			},
+			wantIPv6: []byte{
+				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+			},
+			wantAlgo: 0x00,
+			wantSID:  nil,
+		},
+		{
+			name: "With SID (22 bytes)",
+			input: []byte{
+				0x80, // Flags (V flag set)
+				0x01, // SR Algorithm
+				// IPv6: fe80::1
+				0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+				0x00, 0x00, 0x07, 0xD0, // SID: 2000
+			},
+			wantIPv6: []byte{
+				0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+			},
+			wantAlgo: 0x01,
+			wantSID:  ptrUint32(2000),
+		},
+		{
+			name: "All zeros without SID",
+			input: []byte{
+				0x00, 0x00, // Flags, SR Algorithm
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // IPv6
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			wantIPv6: []byte{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			wantAlgo: 0x00,
+			wantSID:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			seg, err := UnmarshalTypeDSegment(tt.input)
+			if err != nil {
+				t.Errorf("UnmarshalTypeDSegment() error = %v", err)
+				return
+			}
+
+			typeDSeg, ok := seg.(TypeDSegment)
+			if !ok {
+				t.Error("Segment is not TypeDSegment")
+				return
+			}
+
+			ipv6 := typeDSeg.GetIPv6Address()
+			if len(ipv6) != 16 {
+				t.Errorf("IPv6 address length = %d, want 16", len(ipv6))
+				return
+			}
+
+			for i, b := range tt.wantIPv6 {
+				if ipv6[i] != b {
+					t.Errorf("IPv6 byte %d = %02x, want %02x", i, ipv6[i], b)
+				}
+			}
+
+			if typeDSeg.GetSRAlgorithm() != tt.wantAlgo {
+				t.Errorf("SR Algorithm = %d, want %d", typeDSeg.GetSRAlgorithm(), tt.wantAlgo)
+			}
+
+			sid, hasSID := typeDSeg.GetSID()
+			if tt.wantSID == nil {
+				if hasSID {
+					t.Error("Expected no SID, but got one")
+				}
+			} else {
+				if !hasSID {
+					t.Error("Expected SID, but got none")
+				} else if sid != *tt.wantSID {
+					t.Errorf("SID = %d, want %d", sid, *tt.wantSID)
+				}
+			}
+
+			if seg.GetType() != TypeD {
+				t.Errorf("GetType() = %v, want TypeD", seg.GetType())
+			}
+		})
+	}
+}
+
+func TestUnmarshalTypeDSegment_InvalidLength(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []byte
+		length int
+	}{
+		{
+			name:   "Too short - 17 bytes",
+			input:  make([]byte, 17),
+			length: 17,
+		},
+		{
+			name:   "Too short - 10 bytes",
+			input:  make([]byte, 10),
+			length: 10,
+		},
+		{
+			name:   "Invalid - 19 bytes",
+			input:  make([]byte, 19),
+			length: 19,
+		},
+		{
+			name:   "Invalid - 21 bytes",
+			input:  make([]byte, 21),
+			length: 21,
+		},
+		{
+			name:   "Too long - 23 bytes",
+			input:  make([]byte, 23),
+			length: 23,
+		},
+		{
+			name:   "Empty",
+			input:  []byte{},
+			length: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalTypeDSegment(tt.input)
+			if err == nil {
+				t.Errorf("UnmarshalTypeDSegment() expected error for length %d, got nil", tt.length)
+			}
+		})
+	}
+}
+
+func TestTypeDSegment_JSON(t *testing.T) {
+	tests := []struct {
+		name string
+		seg  *typeDSegment
+	}{
+		{
+			name: "Without SID",
+			seg: &typeDSegment{
+				flags:       NewSegmentFlags(0x00),
+				srAlgorithm: 0x00,
+				ipv6Address: []byte{
+					0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+				},
+				sid: nil,
+			},
+		},
+		{
+			name: "With SID",
+			seg: &typeDSegment{
+				flags:       NewSegmentFlags(0x80),
+				srAlgorithm: 0x01,
+				ipv6Address: []byte{
+					0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+				},
+				sid: ptrUint32(2000),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Marshal
+			data, err := json.Marshal(tt.seg)
+			if err != nil {
+				t.Errorf("Marshal() error = %v", err)
+				return
+			}
+
+			// Unmarshal
+			var result typeDSegment
+			if err := json.Unmarshal(data, &result); err != nil {
+				t.Errorf("Unmarshal() error = %v", err)
+				return
+			}
+
+			// Verify IPv6
+			if len(result.ipv6Address) != 16 {
+				t.Errorf("Unmarshal() IPv6 length = %d, want 16", len(result.ipv6Address))
+				return
+			}
+
+			for i, b := range tt.seg.ipv6Address {
+				if result.ipv6Address[i] != b {
+					t.Errorf("Unmarshal() IPv6 byte %d = %02x, want %02x", i, result.ipv6Address[i], b)
+				}
+			}
+
+			// Verify SR Algorithm
+			if result.srAlgorithm != tt.seg.srAlgorithm {
+				t.Errorf("Unmarshal() SR Algorithm = %d, want %d", result.srAlgorithm, tt.seg.srAlgorithm)
+			}
+
+			// Verify flags
+			if result.flags.Vflag != tt.seg.flags.Vflag {
+				t.Errorf("Unmarshal() Vflag = %v, want %v", result.flags.Vflag, tt.seg.flags.Vflag)
+			}
+			if result.flags.Aflag != tt.seg.flags.Aflag {
+				t.Errorf("Unmarshal() Aflag = %v, want %v", result.flags.Aflag, tt.seg.flags.Aflag)
+			}
+			if result.flags.Sflag != tt.seg.flags.Sflag {
+				t.Errorf("Unmarshal() Sflag = %v, want %v", result.flags.Sflag, tt.seg.flags.Sflag)
+			}
+			if result.flags.Bflag != tt.seg.flags.Bflag {
+				t.Errorf("Unmarshal() Bflag = %v, want %v", result.flags.Bflag, tt.seg.flags.Bflag)
+			}
+
+			// Verify SID
+			if tt.seg.sid == nil {
+				if result.sid != nil {
+					t.Error("Unmarshal() expected no SID, but got one")
+				}
+			} else {
+				if result.sid == nil {
+					t.Error("Unmarshal() expected SID, but got none")
+				} else if *result.sid != *tt.seg.sid {
+					t.Errorf("Unmarshal() SID = %d, want %d", *result.sid, *tt.seg.sid)
+				}
+			}
+		})
+	}
+}
+
+func TestUnmarshalSegmentListSTLV_TypeD(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []byte
+		wantIPv6 []byte
+		wantAlgo byte
+		wantSID  *uint32
+	}{
+		{
+			name: "Type D without SID",
+			input: []byte{
+				0x04, // Type: Type D (4)
+				0x12, // Length: 18 bytes
+				0x00, // Flags
+				0x00, // SR Algorithm
+				// IPv6: 2001:db8::1
+				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+			},
+			wantIPv6: []byte{
+				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+			},
+			wantAlgo: 0x00,
+			wantSID:  nil,
+		},
+		{
+			name: "Type D with SID",
+			input: []byte{
+				0x04, // Type: Type D (4)
+				0x16, // Length: 22 bytes
+				0x80, // Flags (V flag)
+				0x01, // SR Algorithm
+				// IPv6: fe80::1
+				0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+				0x00, 0x00, 0x07, 0xD0, // SID: 2000
+			},
+			wantIPv6: []byte{
+				0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+			},
+			wantAlgo: 0x01,
+			wantSID:  ptrUint32(2000),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sl, err := UnmarshalSegmentListSTLV(tt.input)
+			if err != nil {
+				t.Errorf("UnmarshalSegmentListSTLV() error = %v", err)
+				return
+			}
+
+			if len(sl.Segment) != 1 {
+				t.Errorf("Expected 1 segment, got %d", len(sl.Segment))
+				return
+			}
+
+			typeDSeg, ok := sl.Segment[0].(TypeDSegment)
+			if !ok {
+				t.Error("Segment is not TypeDSegment")
+				return
+			}
+
+			ipv6 := typeDSeg.GetIPv6Address()
+			if len(ipv6) != 16 {
+				t.Errorf("IPv6 address length = %d, want 16", len(ipv6))
+			}
+
+			for i, b := range tt.wantIPv6 {
+				if ipv6[i] != b {
+					t.Errorf("IPv6 byte %d = %02x, want %02x", i, ipv6[i], b)
+				}
+			}
+
+			if typeDSeg.GetSRAlgorithm() != tt.wantAlgo {
+				t.Errorf("SR Algorithm = %d, want %d", typeDSeg.GetSRAlgorithm(), tt.wantAlgo)
+			}
+
+			sid, hasSID := typeDSeg.GetSID()
+			if tt.wantSID == nil {
+				if hasSID {
+					t.Error("Expected no SID, but got one")
+				}
+			} else {
+				if !hasSID {
+					t.Error("Expected SID, but got none")
+				} else if sid != *tt.wantSID {
+					t.Errorf("SID = %d, want %d", sid, *tt.wantSID)
+				}
+			}
+		})
+	}
+}

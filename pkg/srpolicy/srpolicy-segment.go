@@ -111,7 +111,11 @@ func (sl *SegmentList) UnmarshalJSON(b []byte) error {
 				}
 				seg = t
 			case TypeD:
-				fallthrough
+				t := &typeDSegment{}
+				if err := t.unmarshalJSONObj(s); err != nil {
+					return err
+				}
+				seg = t
 			case TypeE:
 				fallthrough
 			case TypeF:
@@ -212,7 +216,20 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeD):
-			glog.Infof("Segment of type D not implemented")
+			l := b[p]
+			p++
+			if l != 18 && l != 22 {
+				return nil, fmt.Errorf("invalid length of Type D Segment STLV: got %d, expected 18 or 22", l)
+			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type D Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
+			}
+			s, err := UnmarshalTypeDSegment(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			sl.Segment = append(sl.Segment, s)
+			p += int(l)
 		case int(TypeE):
 			glog.Infof("Segment of type E not implemented")
 		case int(TypeF):
@@ -596,6 +613,129 @@ func UnmarshalTypeCSegment(b []byte) (Segment, error) {
 	p += 4
 	// Optional SID (4 bytes) if length is 10
 	if len(b) == 10 {
+		sid := binary.BigEndian.Uint32(b[p : p+4])
+		s.sid = &sid
+	}
+
+	return s, nil
+}
+
+// TypeDSegment defines methods to access Type D specific elements (IPv6 + SR Algorithm + optional SID)
+type TypeDSegment interface {
+	GetIPv6Address() []byte
+	GetSRAlgorithm() byte
+	GetSID() (uint32, bool) // SID and whether it's present
+}
+
+type typeDSegment struct {
+	flags       *SegmentFlags
+	srAlgorithm byte
+	ipv6Address []byte // 16 bytes
+	sid         *uint32 // Optional SR-MPLS SID
+}
+
+var _ Segment = &typeDSegment{}
+var _ TypeDSegment = &typeDSegment{}
+
+func (td *typeDSegment) GetFlags() *SegmentFlags {
+	return td.flags
+}
+
+func (td *typeDSegment) GetType() SegmentType {
+	return TypeD
+}
+
+// GetIPv6Address returns a 16-byte copy of the IPv6 address safe for modification
+func (td *typeDSegment) GetIPv6Address() []byte {
+	return append([]byte(nil), td.ipv6Address...)
+}
+
+func (td *typeDSegment) GetSRAlgorithm() byte {
+	return td.srAlgorithm
+}
+
+func (td *typeDSegment) GetSID() (uint32, bool) {
+	if td.sid == nil {
+		return 0, false
+	}
+	return *td.sid, true
+}
+
+func (td *typeDSegment) MarshalJSON() ([]byte, error) {
+	type jsonSegment struct {
+		SegmentType SegmentType   `json:"segment_type,omitempty"`
+		Flags       *SegmentFlags `json:"flags,omitempty"`
+		SRAlgorithm byte          `json:"sr_algorithm,omitempty"`
+		IPv6Address []byte        `json:"ipv6_address,omitempty"`
+		SID         *uint32       `json:"sid,omitempty"`
+	}
+	return json.Marshal(jsonSegment{
+		SegmentType: TypeD,
+		Flags:       td.flags,
+		SRAlgorithm: td.srAlgorithm,
+		IPv6Address: td.ipv6Address,
+		SID:         td.sid,
+	})
+}
+
+func (td *typeDSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) error {
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &td.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["sr_algorithm"]; ok {
+		if err := json.Unmarshal(b, &td.srAlgorithm); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["ipv6_address"]; ok {
+		if err := json.Unmarshal(b, &td.ipv6Address); err != nil {
+			return err
+		}
+		// IPv6 address must be exactly 16 bytes, to match UnmarshalTypeDSegment behavior.
+		if len(td.ipv6Address) != 16 {
+			return fmt.Errorf("invalid IPv6 address length: got %d bytes, want 16", len(td.ipv6Address))
+		}
+	}
+	if b, ok := objmap["sid"]; ok {
+		var sid uint32
+		if err := json.Unmarshal(b, &sid); err != nil {
+			return err
+		}
+		td.sid = &sid
+	}
+	return nil
+}
+
+func (td *typeDSegment) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	return td.unmarshalJSONObj(objmap)
+}
+
+// UnmarshalTypeDSegment instantiates an instance of Type D Segment sub tlv (IPv6 + SR Algorithm + optional SID)
+func UnmarshalTypeDSegment(b []byte) (Segment, error) {
+	if glog.V(5) {
+		glog.Infof("SR Policy Type D Segment STLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 18 && len(b) != 22 {
+		return nil, fmt.Errorf("invalid length of Type D Segment STLV: got %d, expected 18 or 22", len(b))
+	}
+	s := &typeDSegment{}
+	p := 0
+	s.flags = NewSegmentFlags(b[p])
+	p++
+	s.srAlgorithm = b[p]
+	p++
+	// IPv6 address is 16 bytes (no reserved bytes per RFC 9831, same as Type C)
+	s.ipv6Address = make([]byte, 16)
+	copy(s.ipv6Address, b[p:p+16])
+	p += 16
+	// Optional SID (4 bytes) if length is 22
+	if len(b) == 22 {
 		sid := binary.BigEndian.Uint32(b[p : p+4])
 		s.sid = &sid
 	}
