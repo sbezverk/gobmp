@@ -620,7 +620,7 @@ func UnmarshalTypeCSegment(b []byte) (Segment, error) {
 	return s, nil
 }
 
-// TypeDSegment defines methods to access Type D specific elements (IPv6 + SR Algorithm)
+// TypeDSegment defines methods to access Type D specific elements (IPv6 + SR Algorithm + optional SID)
 type TypeDSegment interface {
 	GetIPv6Address() []byte
 	GetSRAlgorithm() byte
@@ -645,8 +645,9 @@ func (td *typeDSegment) GetType() SegmentType {
 	return TypeD
 }
 
+// GetIPv6Address returns a 16-byte copy of the IPv6 address safe for modification
 func (td *typeDSegment) GetIPv6Address() []byte {
-	return td.ipv6Address
+	return append([]byte(nil), td.ipv6Address...)
 }
 
 func (td *typeDSegment) GetSRAlgorithm() byte {
@@ -715,7 +716,7 @@ func (td *typeDSegment) UnmarshalJSON(b []byte) error {
 	return td.unmarshalJSONObj(objmap)
 }
 
-// UnmarshalTypeDSegment instantiates an instance of Type D Segment sub tlv (IPv6 + SR Algorithm)
+// UnmarshalTypeDSegment instantiates an instance of Type D Segment sub tlv (IPv6 + SR Algorithm + optional SID)
 func UnmarshalTypeDSegment(b []byte) (Segment, error) {
 	if glog.V(5) {
 		glog.Infof("SR Policy Type D Segment STLV Raw: %s", tools.MessageHex(b))
