@@ -758,7 +758,7 @@ func UnmarshalTypeDSegment(b []byte) (Segment, error) {
 	return s, nil
 }
 
-// TypeESegment defines methods to access Type E specific elements (IPv4 + Interface ID)
+// TypeESegment defines methods to access Type E specific elements (IPv4 + Interface ID + optional SID)
 type TypeESegment interface {
 	GetIPv4Address() []byte
 	GetLocalInterfaceID() uint32
@@ -783,14 +783,17 @@ func (te *typeESegment) GetType() SegmentType {
 	return TypeE
 }
 
+// GetIPv4Address returns a 4-byte copy of the IPv4 address safe for modification
 func (te *typeESegment) GetIPv4Address() []byte {
-	return te.ipv4Address
+	return append([]byte(nil), te.ipv4Address...)
 }
 
+// GetLocalInterfaceID returns the 32-bit local interface identifier
 func (te *typeESegment) GetLocalInterfaceID() uint32 {
 	return te.localInterfaceID
 }
 
+// GetSID returns the optional SR-MPLS SID and whether it is present
 func (te *typeESegment) GetSID() (uint32, bool) {
 	if te.sid != nil {
 		return *te.sid, true
@@ -830,6 +833,9 @@ func (te *typeESegment) unmarshalJSONObj(objmap map[string]json.RawMessage) erro
 		if err := json.Unmarshal(b, &te.ipv4Address); err != nil {
 			return err
 		}
+		if len(te.ipv4Address) != 4 {
+			return fmt.Errorf("invalid IPv4 address length: %d bytes, expected 4", len(te.ipv4Address))
+		}
 	}
 	if b, ok := objmap["sid"]; ok {
 		if err := json.Unmarshal(b, &te.sid); err != nil {
@@ -847,7 +853,7 @@ func (te *typeESegment) UnmarshalJSON(b []byte) error {
 	return te.unmarshalJSONObj(objmap)
 }
 
-// UnmarshalTypeESegment instantiates an instance of Type E Segment sub tlv (IPv4 + Interface ID)
+// UnmarshalTypeESegment instantiates an instance of Type E Segment sub tlv (IPv4 + Interface ID + optional SID)
 func UnmarshalTypeESegment(b []byte) (Segment, error) {
 	if glog.V(5) {
 		glog.Infof("SR Policy Type E Segment STLV Raw: %s", tools.MessageHex(b))

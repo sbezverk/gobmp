@@ -1187,10 +1187,6 @@ func TestUnmarshalSegmentListSTLV_TypeD(t *testing.T) {
 		})
 	}
 }
-			}
-		})
-	}
-}
 
 // TestTypeESegment_JSON tests Type E JSON marshaling/unmarshaling
 func TestTypeESegment_JSON(t *testing.T) {
@@ -1230,6 +1226,48 @@ func TestTypeESegment_JSON(t *testing.T) {
 			if err := json.Unmarshal(data, &decoded); err != nil {
 				t.Errorf("Unmarshal() error = %v", err)
 				return
+			}
+
+			// Verify all flags preserved
+			if decoded.flags.Vflag != tt.segment.flags.Vflag {
+				t.Errorf("Unmarshal() Vflag = %v, want %v", decoded.flags.Vflag, tt.segment.flags.Vflag)
+			}
+			if decoded.flags.Aflag != tt.segment.flags.Aflag {
+				t.Errorf("Unmarshal() Aflag = %v, want %v", decoded.flags.Aflag, tt.segment.flags.Aflag)
+			}
+			if decoded.flags.Sflag != tt.segment.flags.Sflag {
+				t.Errorf("Unmarshal() Sflag = %v, want %v", decoded.flags.Sflag, tt.segment.flags.Sflag)
+			}
+			if decoded.flags.Bflag != tt.segment.flags.Bflag {
+				t.Errorf("Unmarshal() Bflag = %v, want %v", decoded.flags.Bflag, tt.segment.flags.Bflag)
+			}
+
+			// Verify IPv4 address
+			if len(decoded.ipv4Address) != len(tt.segment.ipv4Address) {
+				t.Errorf("IPv4 address length = %d, want %d", len(decoded.ipv4Address), len(tt.segment.ipv4Address))
+			}
+			for i := range tt.segment.ipv4Address {
+				if decoded.ipv4Address[i] != tt.segment.ipv4Address[i] {
+					t.Errorf("IPv4 byte %d = %d, want %d", i, decoded.ipv4Address[i], tt.segment.ipv4Address[i])
+				}
+			}
+
+			// Verify interface ID
+			if decoded.localInterfaceID != tt.segment.localInterfaceID {
+				t.Errorf("LocalInterfaceID = %d, want %d", decoded.localInterfaceID, tt.segment.localInterfaceID)
+			}
+
+			// Verify SID
+			if tt.segment.sid == nil {
+				if decoded.sid != nil {
+					t.Errorf("Expected no SID, but got %v", *decoded.sid)
+				}
+			} else {
+				if decoded.sid == nil {
+					t.Error("Expected SID, but got nil")
+				} else if *decoded.sid != *tt.segment.sid {
+					t.Errorf("SID = %d, want %d", *decoded.sid, *tt.segment.sid)
+				}
 			}
 
 			// Verify round-trip
