@@ -314,11 +314,12 @@ func (f *LocalMPLSCrossConnectFEC) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON instantiates Local MPLS Cross Connect FEC Sub TLV object from a slice of bytes
 func (f *LocalMPLSCrossConnectFEC) UnmarshalJSON(b []byte) error {
-	t := &LocalMPLSCrossConnectFEC{}
+	type alias LocalMPLSCrossConnectFEC
+	t := &alias{}
 	if err := json.Unmarshal(b, t); err != nil {
-		return nil
+		return err
 	}
-	*f = *t
+	*f = LocalMPLSCrossConnectFEC(*t)
 
 	return nil
 }
@@ -346,12 +347,12 @@ func UnmarshalLocalMPLSCrossConnectInterface(b []byte) (*LocalMPLSCrossConnectIn
 	p++
 	i.LocalInterfaceID = binary.BigEndian.Uint32(b[p : p+4])
 	p += 4
-	switch len(b) - 4 {
+	switch len(b) - 5 {
 	case 4:
 		i.InterfaceAddr = make([]byte, 4)
 		copy(i.InterfaceAddr, b[p:])
-	case 16:
-		i.InterfaceAddr = make([]byte, 16)
+	case 18:
+		i.InterfaceAddr = make([]byte, 18)
 		copy(i.InterfaceAddr, b[p:])
 	}
 
@@ -371,13 +372,14 @@ func (i *LocalMPLSCrossConnectInterface) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// UnmarshalJSON instantiates Local MPLS Cross Connect FEC Sub TLV object from a slice of bytes
+// UnmarshalJSON instantiates Local MPLS Cross Connect Interface Sub TLV object from a slice of bytes
 func (i *LocalMPLSCrossConnectInterface) UnmarshalJSON(b []byte) error {
-	t := &LocalMPLSCrossConnectInterface{}
+	type alias LocalMPLSCrossConnectInterface
+	t := &alias{}
 	if err := json.Unmarshal(b, t); err != nil {
-		return nil
+		return err
 	}
-	*i = *t
+	*i = LocalMPLSCrossConnectInterface(*t)
 
 	return nil
 }
