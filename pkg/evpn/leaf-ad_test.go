@@ -109,6 +109,34 @@ func TestUnmarshalEVPNLeafAD_Valid(t *testing.T) {
 			wantOriginatorLen: 128,
 			wantOriginatorIP:  []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
 		},
+		{
+			name: "IPv6 originator where byte 11 is 32 (edge case for backward parsing)",
+			input: append(
+				// Route Key (10 bytes of test data)
+				bytes.Repeat([]byte{0xCC}, 10),
+				// Originator Address Length (1 byte) = 128 bits
+				128,
+				// Originator Address (16 bytes) with 11th byte equal to 32 (0x20)
+				0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 32, 11, 12, 13, 14, 15,
+			),
+			wantRouteKeyLen:   10,
+			wantOriginatorLen: 128,
+			wantOriginatorIP:  []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 32, 11, 12, 13, 14, 15},
+		},
+		{
+			name: "RouteKey ending with 128 followed by IPv4 originator",
+			input: append(
+				// Route Key ending with byte 128 (0x80)
+				[]byte{10, 20, 128},
+				// Originator Address Length (1 byte) = 32 bits
+				32,
+				// Originator Address (4 bytes) - 203.0.113.5
+				203, 0, 113, 5,
+			),
+			wantRouteKeyLen:   3,
+			wantOriginatorLen: 32,
+			wantOriginatorIP:  []byte{203, 0, 113, 5},
+		},
 	}
 
 	for _, tt := range tests {
@@ -166,6 +194,16 @@ func TestUnmarshalEVPNLeafAD_Invalid(t *testing.T) {
 			name:        "too short - only 5 bytes",
 			input:       []byte{0x01, 0x02, 0x03, 0x04, 0x05},
 			errContains: "invalid length",
+		},
+		{
+			name: "empty RouteKey with IPv6 originator (exactly 17 bytes, first byte 128)",
+			input: []byte{
+				// Originator Address Length at position 0 (1 byte) = 128 bits
+				128,
+				// Originator Address (16 bytes) - 2001:db8::1
+				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+			},
+			errContains: "RouteKey must be at least 1 byte",
 		},
 		{
 			name: "invalid originator length - not 32 or 128",
