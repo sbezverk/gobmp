@@ -312,22 +312,25 @@ func TestUnmarshalEVPNMcastMembershipReport(t *testing.T) {
 			errContains: "invalid multicast source length: 64 (must be 0, 32, or 128)",
 		},
 		{
-			name: "Invalid - Invalid multicast group length (0 bits) - 30 bytes total",
+			name: "Invalid - Invalid multicast group length (0 bits)",
 			input: []byte{
 				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // ESI
 				0x00, 0x00, 0x00, 0x00, // EthTag
 				0x00, // McastSrcLen: 0
 				0x00, // McastGrpLen: 0 (invalid - must be 32 or 128)
+				// Need enough bytes to pass minimum length check (34 bytes)
+				// Add dummy group address (won't be read)
+				0x00, 0x00, 0x00, 0x00, // Dummy McastGrpAddr
 				0x20,                   // OriginatorRtrLen: 32
 				0x0a, 0x00, 0x00, 0x01, // OriginatorRtrAddr
 				0x0f, // Flags
 			},
 			wantErr:     true,
-			errContains: "invalid length",
+			errContains: "invalid multicast group length: 0 (must be 32 or 128)",
 		},
 		{
-			name: "Invalid - Invalid originator length (16 bits) - 32 bytes total",
+			name: "Invalid - Invalid originator length (16 bits)",
 			input: []byte{
 				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // ESI
@@ -335,12 +338,13 @@ func TestUnmarshalEVPNMcastMembershipReport(t *testing.T) {
 				0x00,                   // McastSrcLen: 0
 				0x20,                   // McastGrpLen: 32
 				0xef, 0x01, 0x01, 0x01, // McastGrpAddr
-				0x10,       // OriginatorRtrLen: 16 bits (invalid - must be 32 or 128)
-				0x0a, 0x00, // 2 bytes
+				0x10,                   // OriginatorRtrLen: 16 bits (invalid - must be 32 or 128)
+				// Need enough bytes to pass minimum length check (34 bytes)
+				0x0a, 0x00, 0x00, 0x00, // Dummy OriginatorRtrAddr (4 bytes to reach minimum)
 				0x0f, // Flags
 			},
 			wantErr:     true,
-			errContains: "invalid length",
+			errContains: "invalid originator router length: 16 (must be 32 or 128)",
 		},
 		{
 			name: "Invalid - Extra trailing bytes",
