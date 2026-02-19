@@ -221,29 +221,31 @@ func TestUnmarshalEVPNSPMSI(t *testing.T) {
 			errContains: "invalid length",
 		},
 		{
-			name: "Invalid - Truncated multicast source address (15 bytes total)",
+			name: "Invalid - Truncated multicast source address",
 			input: []byte{
-				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD
-				0x00, 0x00, 0x00, 0x00, // EthTag
-				0x20,       // McastSrcLen: 32 bits (expects 4 bytes)
-				0xc0, 0x00, // Partial source (only 2 of 4 bytes)
+				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD (8 bytes)
+				0x00, 0x00, 0x00, 0x00, // EthTag (4 bytes)
+				0x80, // McastSrcLen: 128 bits (expects 16 bytes)
+				// Partial source (only 10 bytes of 16) to trigger truncation check at line 121
+				0xc0, 0x00, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				// Total: 8+4+1+10 = 23 bytes (minimum), but source needs 16
 			},
 			wantErr:     true,
-			errContains: "invalid length",
+			errContains: "truncated multicast source address",
 		},
 		{
-			name: "Invalid - Truncated originator address (21 bytes total)",
+			name: "Invalid - Truncated originator address",
 			input: []byte{
 				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD
 				0x00, 0x00, 0x00, 0x00, // EthTag
 				0x00,                   // McastSrcLen: 0 (no source)
 				0x20,                   // McastGrpLen: 32 bits
 				0xef, 0x01, 0x01, 0x01, // McastGrpAddr
-				0x20,       // OriginatorLen: 32 bits (expects 4 bytes)
-				0x0a, 0x00, // Partial originator (only 2 of 4 bytes)
+				0x80,                                           // OriginatorLen: 128 bits (expects 16 bytes)
+				0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Partial originator (only 8 of 16 bytes) - TRUNCATED
 			},
 			wantErr:     true,
-			errContains: "invalid length",
+			errContains: "truncated originator address",
 		},
 		{
 			name: "Invalid - Invalid multicast source length (64 bits)",
