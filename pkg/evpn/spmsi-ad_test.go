@@ -260,7 +260,7 @@ func TestUnmarshalEVPNSPMSI(t *testing.T) {
 				0x0a, 0x00, 0x00, 0x01, // OriginatorAddr
 			},
 			wantErr:     true,
-			errContains: "invalid multicast source length: 64 (must be 0, 32, or 128)",
+			errContains: "invalid multicast source address length: 64 (must be 0, 32, or 128)",
 		},
 		{
 			name: "Invalid - Invalid multicast group length (64 bits)",
@@ -274,7 +274,7 @@ func TestUnmarshalEVPNSPMSI(t *testing.T) {
 				0x0a, 0x00, 0x00, 0x01, // OriginatorAddr
 			},
 			wantErr:     true,
-			errContains: "invalid multicast group length: 64 (must be 32 or 128)",
+			errContains: "invalid multicast group address length: 64 (must be 32 or 128)",
 		},
 		{
 			name: "Invalid - Invalid originator length (64 bits)",

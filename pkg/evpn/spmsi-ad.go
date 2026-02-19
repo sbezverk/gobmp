@@ -101,84 +101,35 @@ func UnmarshalEVPNSPMSI(b []byte) (*SPMSI, error) {
 	copy(s.EthTag, b[p:p+4])
 	p += 4
 
-	// Parse Multicast Source Length (1 byte)
+	// Parse Multicast Source Length and Address
 	s.McastSrcLen = b[p]
 	p++
-
-	// Validate and parse Multicast Source Address
-	var mcastSrcBytes int
-	switch s.McastSrcLen {
-	case 0:
-		mcastSrcBytes = 0
-	case 32:
-		mcastSrcBytes = 4
-	case 128:
-		mcastSrcBytes = 16
-	default:
-		return nil, fmt.Errorf("invalid multicast source length: %d (must be 0, 32, or 128)", s.McastSrcLen)
+	s.McastSrcAddr, p, err = parseVariableLengthAddr(b, p, s.McastSrcLen, "multicast source address", true)
+	if err != nil {
+		return nil, err
 	}
 
-	if p+mcastSrcBytes > len(b) {
-		return nil, fmt.Errorf("truncated multicast source address: need %d bytes, have %d", mcastSrcBytes, len(b)-p)
-	}
-
-	if mcastSrcBytes > 0 {
-		s.McastSrcAddr = make([]byte, mcastSrcBytes)
-		copy(s.McastSrcAddr, b[p:p+mcastSrcBytes])
-		p += mcastSrcBytes
-	}
-
-	// Parse Multicast Group Length (1 byte)
+	// Parse Multicast Group Length and Address
 	if p >= len(b) {
 		return nil, fmt.Errorf("truncated at multicast group length")
 	}
 	s.McastGrpLen = b[p]
 	p++
-
-	// Validate and parse Multicast Group Address
-	var mcastGrpBytes int
-	switch s.McastGrpLen {
-	case 32:
-		mcastGrpBytes = 4
-	case 128:
-		mcastGrpBytes = 16
-	default:
-		return nil, fmt.Errorf("invalid multicast group length: %d (must be 32 or 128)", s.McastGrpLen)
+	s.McastGrpAddr, p, err = parseVariableLengthAddr(b, p, s.McastGrpLen, "multicast group address", false)
+	if err != nil {
+		return nil, err
 	}
 
-	if p+mcastGrpBytes > len(b) {
-		return nil, fmt.Errorf("truncated multicast group address: need %d bytes, have %d", mcastGrpBytes, len(b)-p)
-	}
-
-	s.McastGrpAddr = make([]byte, mcastGrpBytes)
-	copy(s.McastGrpAddr, b[p:p+mcastGrpBytes])
-	p += mcastGrpBytes
-
-	// Parse Originator Address Length (1 byte)
+	// Parse Originator Address Length and Address
 	if p >= len(b) {
 		return nil, fmt.Errorf("truncated at originator address length")
 	}
 	s.OriginatorLen = b[p]
 	p++
-
-	// Validate and parse Originator Address
-	var originatorBytes int
-	switch s.OriginatorLen {
-	case 32:
-		originatorBytes = 4
-	case 128:
-		originatorBytes = 16
-	default:
-		return nil, fmt.Errorf("invalid originator address length: %d (must be 32 or 128)", s.OriginatorLen)
+	s.OriginatorAddr, p, err = parseVariableLengthAddr(b, p, s.OriginatorLen, "originator address", false)
+	if err != nil {
+		return nil, err
 	}
-
-	if p+originatorBytes > len(b) {
-		return nil, fmt.Errorf("truncated originator address: need %d bytes, have %d", originatorBytes, len(b)-p)
-	}
-
-	s.OriginatorAddr = make([]byte, originatorBytes)
-	copy(s.OriginatorAddr, b[p:p+originatorBytes])
-	p += originatorBytes
 
 	// Verify exact length
 	if p != len(b) {
