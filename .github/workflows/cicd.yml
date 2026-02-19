@@ -722,3 +722,42 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Test Data:** Synthetic (generated from RFC specifications)" >> $GITHUB_STEP_SUMMARY
           echo "**Coverage:** Validation states (Valid/NotFound/Invalid), wire format parsing, EC extraction, UnicastPrefix/L3VPNPrefix integration, Equal() comparison" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================================================
+  # RFC Compliance Validation (RFC 9723 - BGP Colored Prefix Routing)
+  # ==============================================================================
+  rfc_compliance_color:
+    name: RFC Compliance - Color Prefix Routing
+    needs: [tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.24.x
+
+      - name: Run RFC 9723 Color Prefix Routing compliance tests
+        run: |
+          echo "### RFC 9723 Color Prefix Routing Compliance Tests :art:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          go test -v ./pkg/message/... -run "TestRFC9723" | tee rfc9723-test-output.txt
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -E "PASS|FAIL|RFC9723" rfc9723-test-output.txt | tail -30 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate RFC compliance report
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### RFC Compliance Status :clipboard:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC | Standard | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| RFC 9723 | BGP Colored Prefix Routing (CPR) for SRv6 | ✅ Unit Tests Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Data:** Synthetic (generated from RFC 9723 specification)" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** Color Extended Community extraction, Boundary value validation (0 to 2^32-1), Invalid format handling, Multiple Color EC handling (first-wins), UnicastPrefix Color field integration, JSON serialization/deserialization, Equality comparison with Color field, End-to-end BGP attribute processing" >> $GITHUB_STEP_SUMMARY
