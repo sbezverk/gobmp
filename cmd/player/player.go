@@ -2,14 +2,14 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"sync"
 	"time"
-
-	"encoding/json"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/filer"
@@ -18,18 +18,20 @@ import (
 )
 
 var (
-	msgSrvAddr      string
-	topicRetnTimeMs string
-	kafkaTopicPrefix string
-	file            string
-	delay           int
-	iterations      int
+	msgSrvAddr             string
+	topicRetnTimeMs        string
+	kafkaTopicPrefix       string
+	kafkaSkipTopicCreation string
+	file                   string
+	delay                  int
+	iterations             int
 )
 
 func init() {
 	flag.StringVar(&msgSrvAddr, "message-server", "", "URL to the messages supplying server")
 	flag.StringVar(&topicRetnTimeMs, "topic-retention-time-ms", "900000", "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
 	flag.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "Optional prefix prepended to all Kafka topic names (e.g. 'prod' -> 'prod.gobmp.parsed.peer')")
+	flag.StringVar(&kafkaSkipTopicCreation, "kafka-skip-topic-creation", "false", "When true, do not create topics via Kafka Admin API (use with Kafka 4.0+)")
 	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "File with the bmp messages to replay")
 	flag.IntVar(&delay, "delay", 0, "Delay in seconds to add between sending messages")
 	flag.IntVar(&iterations, "iterations", 1, "Number of iterations to replay messages")
@@ -47,10 +49,12 @@ func main() {
 	}
 
 	// Initializing publisher process
+	skipTopicCreation, _ := strconv.ParseBool(kafkaSkipTopicCreation)
 	kConfig := &kafka.Config{
 		ServerAddress:        msgSrvAddr,
-		TopicRetentionTimeMs: topicRetnTimeMs,
-		TopicPrefix:          kafkaTopicPrefix,
+		TopicRetentionTimeMs:  topicRetnTimeMs,
+		TopicPrefix:           kafkaTopicPrefix,
+		SkipTopicCreation:     skipTopicCreation,
 	}
 	publisher, err := kafka.NewKafkaPublisher(kConfig)
 	if err != nil {

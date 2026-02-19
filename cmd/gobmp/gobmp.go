@@ -28,6 +28,7 @@ var (
 	kafkaSrv  string
 	kafkaTpRetnTimeMs string // Kafka topic retention time in ms
 	kafkaTopicPrefix string
+	kafkaSkipTopicCreation string
 	natsSrv   string
 	intercept string
 	splitAF   string
@@ -44,6 +45,7 @@ func init() {
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
 	flag.StringVar(&kafkaTpRetnTimeMs, "kafka-topic-retention-time-ms", "900000", "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
 	flag.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "Optional prefix prepended to all Kafka topic names (e.g. 'prod' -> 'prod.gobmp.parsed.peer')")
+	flag.StringVar(&kafkaSkipTopicCreation, "kafka-skip-topic-creation", "false", "When true, do not create topics via Kafka Admin API (use with Kafka 4.0+ or when topics are pre-created)")
 	flag.StringVar(&natsSrv, "nats-server", "", "URL to access NATS server")
 	flag.StringVar(&intercept, "intercept", "false", "When intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
 	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" (default) ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
@@ -87,10 +89,12 @@ func main() {
 		}
 		glog.V(5).Infof("NATS publisher has been successfully initialized.")
 	default:
+		skipTopicCreation, _ := strconv.ParseBool(kafkaSkipTopicCreation)
 		kConfig := &kafka.Config{
-			ServerAddress: kafkaSrv,
-			TopicRetentionTimeMs: kafkaTpRetnTimeMs,
-			TopicPrefix: kafkaTopicPrefix,
+			ServerAddress:        kafkaSrv,
+			TopicRetentionTimeMs:  kafkaTpRetnTimeMs,
+			TopicPrefix:           kafkaTopicPrefix,
+			SkipTopicCreation:     skipTopicCreation,
 		}
 		publisher, err = kafka.NewKafkaPublisher(kConfig)
 		if err != nil {
