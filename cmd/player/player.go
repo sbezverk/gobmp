@@ -22,6 +22,12 @@ var (
 	topicRetnTimeMs        string
 	kafkaTopicPrefix       string
 	kafkaSkipTopicCreation string
+	kafkaSASLUser          string
+	kafkaSASLPassword      string
+	kafkaSASLMechanism     string
+	kafkaTLS               string
+	kafkaTLSSkipVerify     string
+	kafkaTLSCAFile         string
 	file                   string
 	delay                  int
 	iterations             int
@@ -32,6 +38,12 @@ func init() {
 	flag.StringVar(&topicRetnTimeMs, "topic-retention-time-ms", "900000", "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
 	flag.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "Optional prefix prepended to all Kafka topic names (e.g. 'prod' -> 'prod.gobmp.parsed.peer')")
 	flag.StringVar(&kafkaSkipTopicCreation, "kafka-skip-topic-creation", "false", "When true, do not create topics via Kafka Admin API (use with Kafka 4.0+)")
+	flag.StringVar(&kafkaSASLUser, "kafka-sasl-username", "", "Kafka SASL username (enables SASL when set)")
+	flag.StringVar(&kafkaSASLPassword, "kafka-sasl-password", "", "Kafka SASL password (required if kafka-sasl-username is set)")
+	flag.StringVar(&kafkaSASLMechanism, "kafka-sasl-mechanism", "SCRAM-SHA-512", "SASL mechanism: SCRAM-SHA-512 or SCRAM-SHA-256")
+	flag.StringVar(&kafkaTLS, "kafka-tls", "true", "Use TLS for Kafka")
+	flag.StringVar(&kafkaTLSSkipVerify, "kafka-tls-skip-verify", "false", "Skip Kafka broker TLS cert and hostname verification (use if broker cert has no SANs; insecure)")
+	flag.StringVar(&kafkaTLSCAFile, "kafka-tls-ca", "", "Path to CA certificate (PEM) for Kafka broker TLS verification")
 	flag.StringVar(&file, "msg-file", "/tmp/messages.json", "File with the bmp messages to replay")
 	flag.IntVar(&delay, "delay", 0, "Delay in seconds to add between sending messages")
 	flag.IntVar(&iterations, "iterations", 1, "Number of iterations to replay messages")
@@ -50,11 +62,19 @@ func main() {
 
 	// Initializing publisher process
 	skipTopicCreation, _ := strconv.ParseBool(kafkaSkipTopicCreation)
+	useTLS, _ := strconv.ParseBool(kafkaTLS)
+	tlsSkipVerify, _ := strconv.ParseBool(kafkaTLSSkipVerify)
 	kConfig := &kafka.Config{
 		ServerAddress:        msgSrvAddr,
-		TopicRetentionTimeMs:  topicRetnTimeMs,
-		TopicPrefix:           kafkaTopicPrefix,
-		SkipTopicCreation:     skipTopicCreation,
+		TopicRetentionTimeMs: topicRetnTimeMs,
+		TopicPrefix:          kafkaTopicPrefix,
+		SkipTopicCreation:    skipTopicCreation,
+		SASLUser:             kafkaSASLUser,
+		SASLPassword:         kafkaSASLPassword,
+		SASLMechanism:        kafkaSASLMechanism,
+		UseTLS:               useTLS,
+		TLSSkipVerify:        tlsSkipVerify,
+		TLSCAFilePath:        kafkaTLSCAFile,
 	}
 	publisher, err := kafka.NewKafkaPublisher(kConfig)
 	if err != nil {

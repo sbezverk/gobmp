@@ -275,6 +275,41 @@ Kafka topic retention time in milliseconds. Topics are created with this retenti
 
 When set to `true`, goBMP does not create topics via the Kafka Admin API. Use this with **Apache Kafka 4.0+**, where the client library's CreateTopics API version can be rejected by the broker (`UnsupportedVersionException`). Pre-create the required topics (see [Kafka Topics](#kafka-topics)) using your broker's tools (e.g. `kafka-topics.sh`) or another admin client, then run goBMP with `--kafka-skip-topic-creation=true`.
 
+**SASL_SSL with SCRAM-SHA-512 (or SCRAM-SHA-256):**
+
+For clusters that use `security.protocol=SASL_SSL` and SCRAM authentication, set:
+
+```
+--kafka-sasl-username={username}
+--kafka-sasl-password={password}
+```
+
+TLS is enabled by default when using SASL. Optional flags:
+
+- `--kafka-sasl-mechanism=SCRAM-SHA-512|SCRAM-SHA-256` — SASL mechanism (default: SCRAM-SHA-512)
+- `--kafka-tls=false` — use SASL without TLS (SASL_PLAINTEXT; not recommended)
+- `--kafka-tls-skip-verify=true` — skip broker TLS certificate and hostname verification (insecure). Use this if you see `x509: certificate relies on legacy Common Name field, use SANs instead` (broker cert has no SANs).
+- `--kafka-tls-ca={path}` — path to CA certificate (PEM) for broker verification
+
+Example for SASL_SSL with SCRAM-SHA-512 (default mechanism):
+
+```bash
+./bin/gobmp --kafka-server=broker:9093 \
+  --kafka-sasl-username=myuser --kafka-sasl-password=mypass \
+  --kafka-skip-topic-creation=true
+```
+
+For SCRAM-SHA-256:
+
+```bash
+./bin/gobmp --kafka-server=broker:9093 \
+  --kafka-sasl-username=myuser --kafka-sasl-password=mypass \
+  --kafka-sasl-mechanism=SCRAM-SHA-256 \
+  --kafka-skip-topic-creation=true
+```
+
+If TLS fails with **`x509: certificate relies on legacy Common Name field, use SANs instead`**, the broker certificate has no Subject Alternative Names (SANs). Use `--kafka-tls-skip-verify=true` to skip hostname/certificate verification (insecure; prefer fixing the broker cert to include SANs).
+
 ```
 --nats-server={url}
 ```
