@@ -233,7 +233,7 @@ func TestRFC9251_SMET(t *testing.T) {
 				0x0f,
 			},
 			wantErr:     true,
-			errContains: "invalid multicast source length",
+			errContains: "invalid multicast source address length",
 		},
 		{
 			name: "Invalid - Invalid multicast group length (0)",
@@ -248,7 +248,7 @@ func TestRFC9251_SMET(t *testing.T) {
 				0x0f,
 			},
 			wantErr:     true,
-			errContains: "invalid multicast group length",
+			errContains: "invalid multicast group address length",
 		},
 		{
 			name: "Invalid - Invalid originator router length (64)",
@@ -263,7 +263,7 @@ func TestRFC9251_SMET(t *testing.T) {
 				0x0f,
 			},
 			wantErr:     true,
-			errContains: "invalid originator router length",
+			errContains: "invalid originator router address length",
 		},
 		{
 			name: "Invalid - Truncated multicast source address",

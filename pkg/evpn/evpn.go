@@ -147,6 +147,11 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 			if err != nil {
 				return nil, err
 			}
+		case 10:
+			n.RouteTypeSpec, err = UnmarshalEVPNSPMSI(b[p : p+l])
+			if err != nil {
+				return nil, err
+			}
 		default:
 			return nil, fmt.Errorf("unknown route type %d", n.RouteType)
 		}
