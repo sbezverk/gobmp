@@ -220,6 +220,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 			return nil, err
 		}
 		glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
+		_ = cb.Close()
 
 		for _, t := range topicNames {
 			topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
@@ -229,6 +230,8 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 				return nil, err
 			}
 		}
+		_ = ca.Close()
+		ca = nil
 	} else {
 		glog.V(3).Infof("Kafka topic creation skipped; topics must already exist (e.g. for Kafka 4.0+ compatibility)")
 	}

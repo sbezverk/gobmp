@@ -61,9 +61,21 @@ func main() {
 	}
 
 	// Initializing publisher process
-	skipTopicCreation, _ := strconv.ParseBool(kafkaSkipTopicCreation)
-	useTLS, _ := strconv.ParseBool(kafkaTLS)
-	tlsSkipVerify, _ := strconv.ParseBool(kafkaTLSSkipVerify)
+	skipTopicCreation, err := strconv.ParseBool(kafkaSkipTopicCreation)
+	if err != nil {
+		glog.Errorf("failed to parse kafka-skip-topic-creation %q: %+v", kafkaSkipTopicCreation, err)
+		os.Exit(1)
+	}
+	useTLS, err := strconv.ParseBool(kafkaTLS)
+	if err != nil {
+		glog.Errorf("failed to parse kafka-tls %q: %+v", kafkaTLS, err)
+		os.Exit(1)
+	}
+	tlsSkipVerify, err := strconv.ParseBool(kafkaTLSSkipVerify)
+	if err != nil {
+		glog.Errorf("failed to parse kafka-tls-skip-verify %q: %+v", kafkaTLSSkipVerify, err)
+		os.Exit(1)
+	}
 	kConfig := &kafka.Config{
 		ServerAddress:        msgSrvAddr,
 		TopicRetentionTimeMs: topicRetnTimeMs,

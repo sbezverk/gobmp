@@ -12,13 +12,14 @@ type Config struct {
 	// unsupported; pre-create topics manually or with another tool.
 	SkipTopicCreation bool
 
-	// SASL (SCRAM) for SASL_SSL clusters.
-	// When SASLUser is non-empty, SASL is enabled. SASLMechanism must be "SCRAM-SHA-512" or "SCRAM-SHA-256".
+	// SASL (SCRAM) authentication. When SASLUser is non-empty, SASL is enabled.
+	// Use with TLS (SASL_SSL) or without (SASL_PLAINTEXT when UseTLS is false).
+	// SASLMechanism must be "SCRAM-SHA-512" or "SCRAM-SHA-256".
 	SASLUser      string
 	SASLPassword  string
 	SASLMechanism string // "SCRAM-SHA-512" or "SCRAM-SHA-256"
 
-	// TLS for SASL_SSL (encryption). When true, TLS is enabled for broker connections.
+	// TLS for broker connections. When true, use SASL_SSL (encryption); when false, use SASL_PLAINTEXT if SASL is enabled.
 	UseTLS         bool
 	TLSSkipVerify  bool   // skip server certificate verification (insecure)
 	TLSCAFilePath string // optional path to CA cert (PEM) for server verification

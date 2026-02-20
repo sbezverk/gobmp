@@ -116,30 +116,32 @@ Expected output:
 
 ### Option 2: Build from Source
 
-**Prerequisites:** Go 1.21 or later (dependencies use `maps`, `slices`, and `crypto/ecdh`)
+**Prerequisites:** Go 1.24 or later (see `go.mod`).
 
-**Manually install Go 1.24.0 (Linux):**
+**Manually install Go (Linux):**
+
+Download the latest Go 1.24+ tarball for your OS/arch from [https://go.dev/dl/](https://go.dev/dl/), then:
 
 ```bash
-# Download Go 1.24.0 for Linux (amd64; use linux-arm64 for ARM)
+# Set the Go version to install (e.g. 1.24.0 or newer 1.24.x)
+GO_VERSION=1.24.0
 cd /tmp
-wget https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
+wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
 
 # Remove any existing Go install under /usr/local
 sudo rm -rf /usr/local/go
 
 # Extract the archive into /usr/local
-sudo tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
 
 # Put Go on your PATH (add to ~/.bashrc or ~/.profile to make it permanent)
 export PATH=/usr/local/go/bin:$PATH
 
-# Confirm version
+# Confirm version (must be 1.24 or later)
 go version
-# go version go1.24.0 linux/amd64
 ```
 
-For other OS/arch, use the matching tarball from [https://go.dev/dl/](https://go.dev/dl/) (e.g. `go1.24.0.darwin-arm64.tar.gz` for macOS Apple Silicon).
+For other OS/arch, use the matching tarball from [https://go.dev/dl/](https://go.dev/dl/) (e.g. `go${GO_VERSION}.darwin-arm64.tar.gz` for macOS Apple Silicon).
 
 **Build goBMP:**
 
