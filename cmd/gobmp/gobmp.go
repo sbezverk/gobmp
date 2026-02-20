@@ -22,19 +22,26 @@ import (
 )
 
 var (
-	dstPort   int
-	srcPort   int
-	perfPort  int
-	kafkaSrv  string
-	kafkaTpRetnTimeMs string // Kafka topic retention time in ms
-	kafkaTopicPrefix string
-	natsSrv   string
-	intercept string
-	splitAF   string
-	dump      string
-	file      string
-	bmpRaw    string
-	adminID   string
+	dstPort                int
+	srcPort                int
+	perfPort               int
+	kafkaSrv               string
+	kafkaTpRetnTimeMs      string
+	kafkaTopicPrefix       string
+	kafkaSkipTopicCreation string
+	kafkaSASLUser          string
+	kafkaSASLPassword      string
+	kafkaSASLMechanism     string
+	kafkaTLS               string
+	kafkaTLSSkipVerify     string
+	kafkaTLSCAFile         string
+	natsSrv                string
+	intercept              string
+	splitAF                string
+	dump                   string
+	file                   string
+	bmpRaw                 string
+	adminID                string
 )
 
 func init() {
@@ -44,6 +51,13 @@ func init() {
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
 	flag.StringVar(&kafkaTpRetnTimeMs, "kafka-topic-retention-time-ms", "900000", "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
 	flag.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "Optional prefix prepended to all Kafka topic names (e.g. 'prod' -> 'prod.gobmp.parsed.peer')")
+	flag.StringVar(&kafkaSkipTopicCreation, "kafka-skip-topic-creation", "false", "When true, do not create topics via Kafka Admin API (use with Kafka 4.0+ or when topics are pre-created)")
+	flag.StringVar(&kafkaSASLUser, "kafka-sasl-username", "", "Kafka SASL username (enables SASL when set)")
+	flag.StringVar(&kafkaSASLPassword, "kafka-sasl-password", "", "Kafka SASL password (required if kafka-sasl-username is set)")
+	flag.StringVar(&kafkaSASLMechanism, "kafka-sasl-mechanism", "SCRAM-SHA-512", "SASL mechanism: SCRAM-SHA-512 or SCRAM-SHA-256")
+	flag.StringVar(&kafkaTLS, "kafka-tls", "true", "Use TLS for Kafka (default true when SASL is used; set false for SASL_PLAINTEXT)")
+	flag.StringVar(&kafkaTLSSkipVerify, "kafka-tls-skip-verify", "false", "Skip Kafka broker TLS cert and hostname verification (use if broker cert has no SANs; insecure)")
+	flag.StringVar(&kafkaTLSCAFile, "kafka-tls-ca", "", "Path to CA certificate (PEM) for Kafka broker TLS verification")
 	flag.StringVar(&natsSrv, "nats-server", "", "URL to access NATS server")
 	flag.StringVar(&intercept, "intercept", "false", "When intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
 	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" (default) ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
@@ -87,10 +101,32 @@ func main() {
 		}
 		glog.V(5).Infof("NATS publisher has been successfully initialized.")
 	default:
+		skipTopicCreation, err := strconv.ParseBool(kafkaSkipTopicCreation)
+		if err != nil {
+			glog.Errorf("failed to parse kafka-skip-topic-creation %q: %+v", kafkaSkipTopicCreation, err)
+			os.Exit(1)
+		}
+		useTLS, err := strconv.ParseBool(kafkaTLS)
+		if err != nil {
+			glog.Errorf("failed to parse kafka-tls %q: %+v", kafkaTLS, err)
+			os.Exit(1)
+		}
+		tlsSkipVerify, err := strconv.ParseBool(kafkaTLSSkipVerify)
+		if err != nil {
+			glog.Errorf("failed to parse kafka-tls-skip-verify %q: %+v", kafkaTLSSkipVerify, err)
+			os.Exit(1)
+		}
 		kConfig := &kafka.Config{
-			ServerAddress: kafkaSrv,
+			ServerAddress:       kafkaSrv,
 			TopicRetentionTimeMs: kafkaTpRetnTimeMs,
-			TopicPrefix: kafkaTopicPrefix,
+			TopicPrefix:          kafkaTopicPrefix,
+			SkipTopicCreation:   skipTopicCreation,
+			SASLUser:            kafkaSASLUser,
+			SASLPassword:        kafkaSASLPassword,
+			SASLMechanism:       kafkaSASLMechanism,
+			UseTLS:              useTLS,
+			TLSSkipVerify:       tlsSkipVerify,
+			TLSCAFilePath:       kafkaTLSCAFile,
 		}
 		publisher, err = kafka.NewKafkaPublisher(kConfig)
 		if err != nil {

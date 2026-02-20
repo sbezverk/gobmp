@@ -116,7 +116,34 @@ Expected output:
 
 ### Option 2: Build from Source
 
-**Prerequisites:** Go 1.19 or later
+**Prerequisites:** Go 1.24 or later (see `go.mod`).
+
+**Manually install Go (Linux):**
+
+Download the latest Go 1.24+ tarball for your OS/arch from [https://go.dev/dl/](https://go.dev/dl/), then:
+
+```bash
+# Set the Go version to install (e.g. 1.24.0 or newer 1.24.x)
+GO_VERSION=1.24.0
+cd /tmp
+wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
+
+# Remove any existing Go install under /usr/local
+sudo rm -rf /usr/local/go
+
+# Extract the archive into /usr/local
+sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
+
+# Put Go on your PATH (add to ~/.bashrc or ~/.profile to make it permanent)
+export PATH=/usr/local/go/bin:$PATH
+
+# Confirm version (must be 1.24 or later)
+go version
+```
+
+For other OS/arch, use the matching tarball from [https://go.dev/dl/](https://go.dev/dl/) (e.g. `go${GO_VERSION}.darwin-arm64.tar.gz` for macOS Apple Silicon).
+
+**Build goBMP:**
 
 ```bash
 git clone https://github.com/sbezverk/gobmp
@@ -242,6 +269,48 @@ Examples:
 **Default:** 900000 (15 minutes)
 
 Kafka topic retention time in milliseconds. Topics are created with this retention policy to manage storage for high-volume BGP data. Adjust based on your storage capacity and retention requirements.
+
+```
+--kafka-skip-topic-creation={true|false}
+```
+**Default:** false
+
+When set to `true`, goBMP does not create topics via the Kafka Admin API. Use this with **Apache Kafka 4.0+**, where the client library's CreateTopics API version can be rejected by the broker (`UnsupportedVersionException`). Pre-create the required topics (see [Kafka Topics](#kafka-topics)) using your broker's tools (e.g. `kafka-topics.sh`) or another admin client, then run goBMP with `--kafka-skip-topic-creation=true`.
+
+**SASL_SSL with SCRAM-SHA-512 (or SCRAM-SHA-256):**
+
+For clusters that use `security.protocol=SASL_SSL` and SCRAM authentication, set:
+
+```
+--kafka-sasl-username={username}
+--kafka-sasl-password={password}
+```
+
+TLS is enabled by default when using SASL. Optional flags:
+
+- `--kafka-sasl-mechanism=SCRAM-SHA-512|SCRAM-SHA-256` — SASL mechanism (default: SCRAM-SHA-512)
+- `--kafka-tls=false` — use SASL without TLS (SASL_PLAINTEXT; not recommended)
+- `--kafka-tls-skip-verify=true` — skip broker TLS certificate and hostname verification (insecure). Use this if you see `x509: certificate relies on legacy Common Name field, use SANs instead` (broker cert has no SANs).
+- `--kafka-tls-ca={path}` — path to CA certificate (PEM) for broker verification
+
+Example for SASL_SSL with SCRAM-SHA-512 (default mechanism):
+
+```bash
+./bin/gobmp --kafka-server=broker:9093 \
+  --kafka-sasl-username=myuser --kafka-sasl-password=mypass \
+  --kafka-skip-topic-creation=true
+```
+
+For SCRAM-SHA-256:
+
+```bash
+./bin/gobmp --kafka-server=broker:9093 \
+  --kafka-sasl-username=myuser --kafka-sasl-password=mypass \
+  --kafka-sasl-mechanism=SCRAM-SHA-256 \
+  --kafka-skip-topic-creation=true
+```
+
+If TLS fails with **`x509: certificate relies on legacy Common Name field, use SANs instead`**, the broker certificate has no Subject Alternative Names (SANs). Use `--kafka-tls-skip-verify=true` to skip hostname/certificate verification (insecure; prefer fixing the broker cert to include SANs).
 
 ```
 --nats-server={url}
@@ -389,6 +458,8 @@ When publishing to Kafka, goBMP creates the following topics (with `--split-af=t
 | `gobmp.parsed.flowspec_v4` | FlowSpec v4 rules |
 | `gobmp.parsed.flowspec_v6` | FlowSpec v6 rules |
 | `gobmp.bmp_raw` | RAW OpenBMP binary messages (when `--bmp-raw=true`) |
+
+**Kafka 4.0+:** If you see `UnsupportedVersionException: CreateTopics ... unsupported version 0`, use `--kafka-skip-topic-creation=true` and create the topics above manually before starting goBMP.
 
 ---
 
