@@ -87,11 +87,16 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	// Starting messages producer per client with dedicated work queue
 	go prod.Producer(producerQueue, prodStop)
 
+	// Extract speaker IP from the TCP connection for message types
+	// without a per-peer header (Initiation, Termination).
+	speakerIP, _, _ := net.SplitHostPort(client.RemoteAddr().String())
+
 	parserQueue := make(chan []byte)
 	parsStop := make(chan struct{})
 	// Starting parser per client with dedicated work queue
 	parserConfig := &parser.Config{
 		EnableRawMode: srv.bmpRaw,
+		SpeakerIP:     speakerIP,
 	}
 	p := parser.NewParser(parserQueue, producerQueue, parsStop, parserConfig)
 	go p.Start()
