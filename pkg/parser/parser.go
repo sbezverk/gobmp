@@ -10,6 +10,9 @@ import (
 type Config struct {
 	// EnableRawMode when true produces RAW BMP messages without parsing
 	EnableRawMode bool
+	// SpeakerIP is the BMP speaker's IP from the TCP connection.
+	// Passed through to bmp.Message for message types without a per-peer header.
+	SpeakerIP string
 }
 
 // parser holds parser state and configuration
@@ -145,6 +148,7 @@ func (p *parser) parsingWorker(b []byte) {
 		}
 		pos += (int(ch.MessageLength) - bmp.CommonHeaderLength)
 		if p.producerQueue != nil && bmpMsg.Payload != nil {
+			bmpMsg.SpeakerIP = p.config.SpeakerIP
 			p.producerQueue <- bmpMsg
 		}
 	}
@@ -177,6 +181,7 @@ func (p *parser) sendRawMessage(b []byte) {
 		p.producerQueue <- bmp.Message{
 			PeerHeader: peerHeader,
 			Payload:    rm,
+			SpeakerIP:  p.config.SpeakerIP,
 		}
 	}
 }
