@@ -89,7 +89,11 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 
 	// Extract speaker IP from the TCP connection for message types
 	// without a per-peer header (Initiation, Termination).
-	speakerIP, _, _ := net.SplitHostPort(client.RemoteAddr().String())
+	speakerIP, _, err := net.SplitHostPort(client.RemoteAddr().String())
+	if err != nil {
+		glog.Warningf("failed to parse remote address %q, using full address as speaker IP: %+v", client.RemoteAddr().String(), err)
+		speakerIP = client.RemoteAddr().String()
+	}
 
 	parserQueue := make(chan []byte)
 	parsStop := make(chan struct{})
