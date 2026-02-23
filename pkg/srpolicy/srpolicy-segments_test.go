@@ -1488,3 +1488,227 @@ func TestUnmarshalTypeESegment_InvalidLength(t *testing.T) {
 		})
 	}
 }
+
+// =============================================================================
+// Type H Tests (IPv6 Local/Remote adjacency + optional MPLS SID)
+// =============================================================================
+
+func TestUnmarshalTypeHSegment_Valid(t *testing.T) {
+	localIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	remoteIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+	tests := []struct {
+		name           string
+		input          []byte
+		wantLocalIPv6  []byte
+		wantRemoteIPv6 []byte
+		wantSID        *uint32
+	}{
+		{
+			name:           "34 bytes no SID",
+			input:          append(append([]byte{0x00, 0x00}, localIPv6...), remoteIPv6...),
+			wantLocalIPv6:  localIPv6,
+			wantRemoteIPv6: remoteIPv6,
+			wantSID:        nil,
+		},
+		{
+			name:           "38 bytes with SID",
+			input:          append(append(append([]byte{0x00, 0x00}, localIPv6...), remoteIPv6...), []byte{0x00, 0x01, 0x86, 0xa0}...),
+			wantLocalIPv6:  localIPv6,
+			wantRemoteIPv6: remoteIPv6,
+			wantSID:        ptrUint32(100000),
+		},
+		{
+			name:           "flags set",
+			input:          append(append([]byte{0xf0, 0x00}, localIPv6...), remoteIPv6...),
+			wantLocalIPv6:  localIPv6,
+			wantRemoteIPv6: remoteIPv6,
+			wantSID:        nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := UnmarshalTypeHSegment(tt.input)
+			if err != nil {
+				t.Fatalf("UnmarshalTypeHSegment() error = %v", err)
+			}
+			th, ok := result.(TypeHSegment)
+			if !ok {
+				t.Fatalf("result does not implement TypeHSegment")
+			}
+			localGot := th.GetLocalIPv6Address()
+			if len(localGot) != len(tt.wantLocalIPv6) {
+				t.Errorf("GetLocalIPv6Address() length = %d, want %d", len(localGot), len(tt.wantLocalIPv6))
+			} else {
+				for i := range tt.wantLocalIPv6 {
+					if localGot[i] != tt.wantLocalIPv6[i] {
+						t.Errorf("GetLocalIPv6Address() byte %d = %02x, want %02x", i, localGot[i], tt.wantLocalIPv6[i])
+					}
+				}
+			}
+			remoteGot := th.GetRemoteIPv6Address()
+			if len(remoteGot) != len(tt.wantRemoteIPv6) {
+				t.Errorf("GetRemoteIPv6Address() length = %d, want %d", len(remoteGot), len(tt.wantRemoteIPv6))
+			} else {
+				for i := range tt.wantRemoteIPv6 {
+					if remoteGot[i] != tt.wantRemoteIPv6[i] {
+						t.Errorf("GetRemoteIPv6Address() byte %d = %02x, want %02x", i, remoteGot[i], tt.wantRemoteIPv6[i])
+					}
+				}
+			}
+			sid, hasSID := th.GetSID()
+			if tt.wantSID == nil {
+				if hasSID {
+					t.Errorf("GetSID() ok = true, want false")
+				}
+			} else {
+				if !hasSID {
+					t.Errorf("GetSID() ok = false, want true")
+				} else if sid != *tt.wantSID {
+					t.Errorf("GetSID() = %d, want %d", sid, *tt.wantSID)
+				}
+			}
+		})
+	}
+}
+
+func TestUnmarshalTypeHSegment_InvalidLength(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{"0 bytes", []byte{}},
+		{"1 byte", []byte{0x00}},
+		{"33 bytes", make([]byte, 33)},
+		{"35 bytes", make([]byte, 35)},
+		{"36 bytes", make([]byte, 36)},
+		{"37 bytes", make([]byte, 37)},
+		{"39 bytes", make([]byte, 39)},
+		{"50 bytes", make([]byte, 50)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalTypeHSegment(tt.input); err == nil {
+				t.Errorf("UnmarshalTypeHSegment() with %s input length %d, expected error but got none", tt.name, len(tt.input))
+			}
+		})
+	}
+}
+
+func TestTypeHSegment_JSON(t *testing.T) {
+	localIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	remoteIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+	tests := []struct {
+		name string
+		seg  *typeHSegment
+	}{
+		{
+			name: "no SID all flags false",
+			seg: &typeHSegment{
+				flags:             &SegmentFlags{Vflag: false, Aflag: false, Sflag: false, Bflag: false},
+				localIPv6Address:  localIPv6,
+				remoteIPv6Address: remoteIPv6,
+			},
+		},
+		{
+			name: "with SID all flags true",
+			seg: &typeHSegment{
+				flags:             &SegmentFlags{Vflag: true, Aflag: true, Sflag: true, Bflag: true},
+				localIPv6Address:  localIPv6,
+				remoteIPv6Address: remoteIPv6,
+				sid:               ptrUint32(100000),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := json.Marshal(tt.seg)
+			if err != nil {
+				t.Fatalf("MarshalJSON() error = %v", err)
+			}
+			var result typeHSegment
+			if err := json.Unmarshal(data, &result); err != nil {
+				t.Fatalf("UnmarshalJSON() error = %v", err)
+			}
+			if len(result.localIPv6Address) != len(tt.seg.localIPv6Address) {
+				t.Errorf("localIPv6Address length = %d, want %d", len(result.localIPv6Address), len(tt.seg.localIPv6Address))
+			} else {
+				for i := range tt.seg.localIPv6Address {
+					if result.localIPv6Address[i] != tt.seg.localIPv6Address[i] {
+						t.Errorf("localIPv6Address byte %d = %02x, want %02x", i, result.localIPv6Address[i], tt.seg.localIPv6Address[i])
+					}
+				}
+			}
+			if len(result.remoteIPv6Address) != len(tt.seg.remoteIPv6Address) {
+				t.Errorf("remoteIPv6Address length = %d, want %d", len(result.remoteIPv6Address), len(tt.seg.remoteIPv6Address))
+			} else {
+				for i := range tt.seg.remoteIPv6Address {
+					if result.remoteIPv6Address[i] != tt.seg.remoteIPv6Address[i] {
+						t.Errorf("remoteIPv6Address byte %d = %02x, want %02x", i, result.remoteIPv6Address[i], tt.seg.remoteIPv6Address[i])
+					}
+				}
+			}
+			if result.flags.Vflag != tt.seg.flags.Vflag {
+				t.Errorf("Unmarshal() Vflag = %v, want %v", result.flags.Vflag, tt.seg.flags.Vflag)
+			}
+			if result.flags.Aflag != tt.seg.flags.Aflag {
+				t.Errorf("Unmarshal() Aflag = %v, want %v", result.flags.Aflag, tt.seg.flags.Aflag)
+			}
+			if result.flags.Sflag != tt.seg.flags.Sflag {
+				t.Errorf("Unmarshal() Sflag = %v, want %v", result.flags.Sflag, tt.seg.flags.Sflag)
+			}
+			if result.flags.Bflag != tt.seg.flags.Bflag {
+				t.Errorf("Unmarshal() Bflag = %v, want %v", result.flags.Bflag, tt.seg.flags.Bflag)
+			}
+			if tt.seg.sid == nil {
+				if result.sid != nil {
+					t.Errorf("sid = %v, want nil", result.sid)
+				}
+			} else {
+				if result.sid == nil || *result.sid != *tt.seg.sid {
+					t.Errorf("sid = %v, want %v", result.sid, tt.seg.sid)
+				}
+			}
+		})
+	}
+}
+
+func TestUnmarshalSegmentListSTLV_TypeH(t *testing.T) {
+	localIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	remoteIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+	tests := []struct {
+		name      string
+		stlvBytes []byte
+		wantCount int
+	}{
+		{
+			name:      "single TypeH STLV no SID",
+			stlvBytes: append(append([]byte{byte(TypeH), 34}, []byte{0x00, 0x00}...), append(localIPv6, remoteIPv6...)...),
+			wantCount: 1,
+		},
+		{
+			name:      "single TypeH STLV with SID",
+			stlvBytes: append(append([]byte{byte(TypeH), 38}, []byte{0x00, 0x00}...), append(append(localIPv6, remoteIPv6...), []byte{0x00, 0x01, 0x86, 0xa0}...)...),
+			wantCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := UnmarshalSegmentListSTLV(tt.stlvBytes)
+			if err != nil {
+				t.Fatalf("UnmarshalSegmentListSTLV() error = %v", err)
+			}
+			if len(result.Segment) != tt.wantCount {
+				t.Errorf("Segment count = %d, want %d", len(result.Segment), tt.wantCount)
+			}
+			if tt.wantCount > 0 {
+				if result.Segment[0].GetType() != TypeH {
+					t.Errorf("GetType() = %v, want TypeH", result.Segment[0].GetType())
+				}
+			}
+		})
+	}
+}
