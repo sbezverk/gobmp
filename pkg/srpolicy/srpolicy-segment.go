@@ -278,6 +278,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 		case int(TypeH):
 			glog.Infof("Segment of type H not implemented")
 		case int(TypeI):
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type I Segment STLV: missing length byte")
+			}
 			l := b[p]
 			p++
 			if l != 22 && l != 38 {
