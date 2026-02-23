@@ -123,7 +123,11 @@ func (sl *SegmentList) UnmarshalJSON(b []byte) error {
 				}
 				seg = t
 			case TypeF:
-				fallthrough
+				t := &typeFSegment{}
+				if err := t.unmarshalJSONObj(s); err != nil {
+					return err
+				}
+				seg = t
 			case TypeG:
 				fallthrough
 			case TypeH:
@@ -250,7 +254,20 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeF):
-			glog.Infof("Segment of type F not implemented")
+			l := b[p]
+			p++
+			if l != 10 && l != 14 {
+				return nil, fmt.Errorf("invalid length of Type F Segment STLV: got %d, expected 10 or 14", l)
+			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type F Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
+			}
+			s, err := UnmarshalTypeFSegment(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			sl.Segment = append(sl.Segment, s)
+			p += int(l)
 		case int(TypeG):
 			glog.Infof("Segment of type G not implemented")
 		case int(TypeH):
@@ -877,6 +894,137 @@ func UnmarshalTypeESegment(b []byte) (Segment, error) {
 	// IPv4 address is 4 bytes
 	s.ipv4Address = make([]byte, 4)
 	copy(s.ipv4Address, b[p:p+4])
+	p += 4
+	// Optional SID (4 bytes) if length is 14
+	if len(b) == 14 {
+		sid := binary.BigEndian.Uint32(b[p : p+4])
+		s.sid = &sid
+	}
+
+	return s, nil
+}
+
+// TypeFSegment defines methods to access Type F specific elements (IPv4 Local/Remote adjacency + optional SID)
+type TypeFSegment interface {
+	GetLocalIPv4Address() []byte
+	GetRemoteIPv4Address() []byte
+	GetSID() (uint32, bool) // SID and whether it's present
+}
+
+type typeFSegment struct {
+	flags             *SegmentFlags
+	localIPv4Address  []byte  // 4 bytes
+	remoteIPv4Address []byte  // 4 bytes
+	sid               *uint32 // Optional SR-MPLS SID
+}
+
+var _ Segment = &typeFSegment{}
+var _ TypeFSegment = &typeFSegment{}
+
+func (tf *typeFSegment) GetFlags() *SegmentFlags {
+	return tf.flags
+}
+
+func (tf *typeFSegment) GetType() SegmentType {
+	return TypeF
+}
+
+// GetLocalIPv4Address returns a 4-byte copy of the local IPv4 address safe for modification
+func (tf *typeFSegment) GetLocalIPv4Address() []byte {
+	return append([]byte(nil), tf.localIPv4Address...)
+}
+
+// GetRemoteIPv4Address returns a 4-byte copy of the remote IPv4 address safe for modification
+func (tf *typeFSegment) GetRemoteIPv4Address() []byte {
+	return append([]byte(nil), tf.remoteIPv4Address...)
+}
+
+// GetSID returns the optional SR-MPLS SID and whether it is present
+func (tf *typeFSegment) GetSID() (uint32, bool) {
+	if tf.sid != nil {
+		return *tf.sid, true
+	}
+	return 0, false
+}
+
+func (tf *typeFSegment) MarshalJSON() ([]byte, error) {
+	v := struct {
+		SegmentType       SegmentType   `json:"segment_type,omitempty"`
+		Flags             *SegmentFlags `json:"flags,omitempty"`
+		LocalIPv4Address  []byte        `json:"local_ipv4_address,omitempty"`
+		RemoteIPv4Address []byte        `json:"remote_ipv4_address,omitempty"`
+		SID               *uint32       `json:"sid,omitempty"`
+	}{
+		SegmentType:       TypeF,
+		Flags:             tf.flags,
+		LocalIPv4Address:  tf.localIPv4Address,
+		RemoteIPv4Address: tf.remoteIPv4Address,
+		SID:               tf.sid,
+	}
+	return json.Marshal(v)
+}
+
+func (tf *typeFSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) error {
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &tf.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["local_ipv4_address"]; ok {
+		if err := json.Unmarshal(b, &tf.localIPv4Address); err != nil {
+			return err
+		}
+		if len(tf.localIPv4Address) != 4 {
+			return fmt.Errorf("invalid local IPv4 address length: got %d bytes, want 4", len(tf.localIPv4Address))
+		}
+	}
+	if b, ok := objmap["remote_ipv4_address"]; ok {
+		if err := json.Unmarshal(b, &tf.remoteIPv4Address); err != nil {
+			return err
+		}
+		if len(tf.remoteIPv4Address) != 4 {
+			return fmt.Errorf("invalid remote IPv4 address length: got %d bytes, want 4", len(tf.remoteIPv4Address))
+		}
+	}
+	if b, ok := objmap["sid"]; ok {
+		var sid uint32
+		if err := json.Unmarshal(b, &sid); err != nil {
+			return err
+		}
+		tf.sid = &sid
+	}
+	return nil
+}
+
+func (tf *typeFSegment) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	return tf.unmarshalJSONObj(objmap)
+}
+
+// UnmarshalTypeFSegment instantiates an instance of Type F Segment sub tlv (IPv4 Local/Remote adjacency + optional SID)
+func UnmarshalTypeFSegment(b []byte) (Segment, error) {
+	if glog.V(5) {
+		glog.Infof("SR Policy Type F Segment STLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 10 && len(b) != 14 {
+		return nil, fmt.Errorf("invalid length of Type F Segment STLV: got %d, expected 10 or 14", len(b))
+	}
+	s := &typeFSegment{}
+	p := 0
+	s.flags = NewSegmentFlags(b[p])
+	p++
+	// Skip reserved byte per RFC 9831
+	p++
+	// Local IPv4 address is 4 bytes
+	s.localIPv4Address = make([]byte, 4)
+	copy(s.localIPv4Address, b[p:p+4])
+	p += 4
+	// Remote IPv4 address is 4 bytes
+	s.remoteIPv4Address = make([]byte, 4)
+	copy(s.remoteIPv4Address, b[p:p+4])
 	p += 4
 	// Optional SID (4 bytes) if length is 14
 	if len(b) == 14 {
