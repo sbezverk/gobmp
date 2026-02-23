@@ -167,6 +167,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			if sl.Weight != nil {
 				return nil, fmt.Errorf("Segment List Sub TLV can carry a single instance of Weight")
 			}
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Weight STLV: missing length byte")
+			}
 			l := b[p]
 			p++
 			if l != 6 {
@@ -179,6 +182,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Weight = w
 			p += int(l)
 		case int(TypeA):
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type A Segment STLV: missing length byte")
+			}
 			l := b[p]
 			p++
 			if l != 6 {
@@ -194,6 +200,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeB):
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type B Segment STLV: missing length byte")
+			}
 			l := b[p]
 			p++
 			if l != 18 {
@@ -209,6 +218,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeC):
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type C Segment STLV: missing length byte")
+			}
 			l := b[p]
 			p++
 			if l != 6 && l != 10 {
@@ -224,6 +236,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeD):
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type D Segment STLV: missing length byte")
+			}
 			l := b[p]
 			p++
 			if l != 18 && l != 22 {
@@ -239,6 +254,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeE):
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type E Segment STLV: missing length byte")
+			}
 			l := b[p]
 			p++
 			if l != 10 && l != 14 {
