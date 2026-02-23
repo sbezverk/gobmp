@@ -1578,7 +1578,7 @@ func TestUnmarshalTypeFSegment_Valid(t *testing.T) {
 
 			localIPv4 := typeFSeg.GetLocalIPv4Address()
 			if len(localIPv4) != 4 {
-				t.Errorf("Local IPv4 length = %d, want 4", len(localIPv4))
+				t.Fatalf("Local IPv4 length = %d, want 4", len(localIPv4))
 			}
 			for i, b := range tt.wantLocalIPv4 {
 				if localIPv4[i] != b {
@@ -1588,7 +1588,7 @@ func TestUnmarshalTypeFSegment_Valid(t *testing.T) {
 
 			remoteIPv4 := typeFSeg.GetRemoteIPv4Address()
 			if len(remoteIPv4) != 4 {
-				t.Errorf("Remote IPv4 length = %d, want 4", len(remoteIPv4))
+				t.Fatalf("Remote IPv4 length = %d, want 4", len(remoteIPv4))
 			}
 			for i, b := range tt.wantRemoteIPv4 {
 				if remoteIPv4[i] != b {
@@ -1740,5 +1740,92 @@ func TestUnmarshalSegmentListSTLV_TypeF(t *testing.T) {
 				t.Errorf("Segment[0] type = %v, want %v", sl.Segment[0].GetType(), TypeF)
 			}
 		})
+	}
+}
+
+// TestSegmentList_JSON_TypeF tests SegmentList JSON marshal/unmarshal with a Type F segment.
+// This ensures SegmentList.UnmarshalJSON properly dispatches to typeFSegment.unmarshalJSONObj.
+func TestSegmentList_JSON_TypeF(t *testing.T) {
+	localIPv4 := []byte{10, 0, 0, 1}
+	remoteIPv4 := []byte{172, 16, 0, 1}
+	sidVal := uint32(2000)
+
+	sl := &SegmentList{
+		Weight: &Weight{Flags: 0, Weight: 100},
+		Segment: []Segment{
+			&typeFSegment{
+				flags:             NewSegmentFlags(0x80), // V-flag set
+				localIPv4Address:  localIPv4,
+				remoteIPv4Address: remoteIPv4,
+				sid:               &sidVal,
+			},
+		},
+	}
+
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var result SegmentList
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	if result.Weight == nil {
+		t.Fatal("Unmarshal() Weight is nil")
+	}
+	if result.Weight.Weight != 100 {
+		t.Errorf("Unmarshal() Weight = %d, want 100", result.Weight.Weight)
+	}
+
+	if len(result.Segment) != 1 {
+		t.Fatalf("Unmarshal() segment count = %d, want 1", len(result.Segment))
+	}
+
+	seg := result.Segment[0]
+	if seg.GetType() != TypeF {
+		t.Errorf("Unmarshal() segment type = %v, want TypeF", seg.GetType())
+	}
+
+	typeFSeg, ok := seg.(TypeFSegment)
+	if !ok {
+		t.Fatal("Unmarshal() segment does not implement TypeFSegment")
+	}
+
+	gotLocal := typeFSeg.GetLocalIPv4Address()
+	if len(gotLocal) != 4 {
+		t.Fatalf("GetLocalIPv4Address() length = %d, want 4", len(gotLocal))
+	}
+	for i, b := range localIPv4 {
+		if gotLocal[i] != b {
+			t.Errorf("LocalIPv4[%d] = %d, want %d", i, gotLocal[i], b)
+		}
+	}
+
+	gotRemote := typeFSeg.GetRemoteIPv4Address()
+	if len(gotRemote) != 4 {
+		t.Fatalf("GetRemoteIPv4Address() length = %d, want 4", len(gotRemote))
+	}
+	for i, b := range remoteIPv4 {
+		if gotRemote[i] != b {
+			t.Errorf("RemoteIPv4[%d] = %d, want %d", i, gotRemote[i], b)
+		}
+	}
+
+	gotSID, hasSID := typeFSeg.GetSID()
+	if !hasSID {
+		t.Fatal("GetSID() hasSID = false, want true")
+	}
+	if gotSID != sidVal {
+		t.Errorf("GetSID() = %d, want %d", gotSID, sidVal)
+	}
+
+	flags := seg.GetFlags()
+	if flags == nil {
+		t.Fatal("Unmarshal() flags is nil")
+	}
+	if !flags.Vflag {
+		t.Error("Unmarshal() V-flag not preserved")
 	}
 }

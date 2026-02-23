@@ -254,6 +254,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeF):
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type F Segment STLV: missing length byte")
+			}
 			l := b[p]
 			p++
 			if l != 10 && l != 14 {
