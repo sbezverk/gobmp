@@ -147,9 +147,13 @@ func (sl *SegmentList) UnmarshalJSON(b []byte) error {
 				}
 				seg = t
 			case TypeJ:
-				fallthrough
-			case TypeK:
 				return fmt.Errorf("unsupported type of segment sub tlv %d", segType)
+			case TypeK:
+				t := &typeKSegment{}
+				if err := t.unmarshalJSONObj(s); err != nil {
+					return err
+				}
+				seg = t
 			default:
 				return fmt.Errorf("unknown type of segment sub tlv %d", segType)
 
@@ -361,7 +365,23 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 		case int(TypeJ):
 			glog.Infof("Segment of type J not implemented")
 		case int(TypeK):
-			glog.Infof("Segment of type K not implemented")
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type K Segment STLV: missing length byte")
+			}
+			l := b[p]
+			p++
+			if l != 34 && l != 50 && l != 58 {
+				return nil, fmt.Errorf("invalid length of Type K Segment STLV: got %d, expected 34, 50, or 58", l)
+			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type K Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
+			}
+			s, err := UnmarshalTypeKSegment(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			sl.Segment = append(sl.Segment, s)
+			p += int(l)
 		default:
 			return nil, fmt.Errorf("unknown type of segment sub tlv %d", t)
 		}
@@ -1541,6 +1561,181 @@ func UnmarshalTypeHSegment(b []byte) (Segment, error) {
 	if len(b) == 38 {
 		sid := binary.BigEndian.Uint32(b[p : p+4])
 		s.sid = &sid
+	}
+
+	return s, nil
+}
+
+// TypeKSegment defines methods to access Type K specific elements (IPv6 Local/Remote adjacency + optional SRv6 SID + optional SRv6 Endpoint Behavior)
+type TypeKSegment interface {
+	GetSRAlgorithm() byte
+	GetLocalIPv6Address() []byte
+	GetRemoteIPv6Address() []byte
+	GetSRv6SID() ([]byte, bool)
+	GetSRv6EndpointBehavior() ([]byte, bool)
+}
+
+type typeKSegment struct {
+	flags                *SegmentFlags
+	srAlgorithm          byte
+	localIPv6Address     []byte
+	remoteIPv6Address    []byte
+	srv6SID              []byte
+	srv6EndpointBehavior []byte
+}
+
+var _ Segment = &typeKSegment{}
+var _ TypeKSegment = &typeKSegment{}
+
+// GetFlags returns the segment flags.
+func (tk *typeKSegment) GetFlags() *SegmentFlags {
+	return tk.flags
+}
+
+// GetType returns the segment type identifier.
+func (tk *typeKSegment) GetType() SegmentType {
+	return TypeK
+}
+
+// GetSRAlgorithm returns the SR algorithm byte.
+func (tk *typeKSegment) GetSRAlgorithm() byte {
+	return tk.srAlgorithm
+}
+
+// GetLocalIPv6Address returns a 16-byte copy of the local IPv6 address safe for modification.
+func (tk *typeKSegment) GetLocalIPv6Address() []byte {
+	return append([]byte(nil), tk.localIPv6Address...)
+}
+
+// GetRemoteIPv6Address returns a 16-byte copy of the remote IPv6 address safe for modification.
+func (tk *typeKSegment) GetRemoteIPv6Address() []byte {
+	return append([]byte(nil), tk.remoteIPv6Address...)
+}
+
+// GetSRv6SID returns a 16-byte copy of the optional SRv6 SID and whether it is present.
+func (tk *typeKSegment) GetSRv6SID() ([]byte, bool) {
+	if tk.srv6SID != nil {
+		return append([]byte(nil), tk.srv6SID...), true
+	}
+	return nil, false
+}
+
+// GetSRv6EndpointBehavior returns an 8-byte copy of the optional SRv6 Endpoint Behavior and SID Structure and whether it is present.
+func (tk *typeKSegment) GetSRv6EndpointBehavior() ([]byte, bool) {
+	if tk.srv6EndpointBehavior != nil {
+		return append([]byte(nil), tk.srv6EndpointBehavior...), true
+	}
+	return nil, false
+}
+
+func (tk *typeKSegment) MarshalJSON() ([]byte, error) {
+	v := struct {
+		SegmentType          SegmentType   `json:"segment_type,omitempty"`
+		Flags                *SegmentFlags `json:"flags,omitempty"`
+		SRAlgorithm          byte          `json:"sr_algorithm,omitempty"`
+		LocalIPv6Address     []byte        `json:"local_ipv6_address,omitempty"`
+		RemoteIPv6Address    []byte        `json:"remote_ipv6_address,omitempty"`
+		SRv6SID              []byte        `json:"srv6_sid,omitempty"`
+		SRv6EndpointBehavior []byte        `json:"srv6_endpoint_behavior,omitempty"`
+	}{
+		SegmentType:          TypeK,
+		Flags:                tk.flags,
+		SRAlgorithm:          tk.srAlgorithm,
+		LocalIPv6Address:     tk.localIPv6Address,
+		RemoteIPv6Address:    tk.remoteIPv6Address,
+		SRv6SID:              tk.srv6SID,
+		SRv6EndpointBehavior: tk.srv6EndpointBehavior,
+	}
+	return json.Marshal(v)
+}
+
+func (tk *typeKSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) error {
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &tk.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["sr_algorithm"]; ok {
+		if err := json.Unmarshal(b, &tk.srAlgorithm); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["local_ipv6_address"]; ok {
+		if err := json.Unmarshal(b, &tk.localIPv6Address); err != nil {
+			return err
+		}
+		if len(tk.localIPv6Address) != 16 {
+			return fmt.Errorf("local_ipv6_address must be exactly 16 bytes, got %d", len(tk.localIPv6Address))
+		}
+	}
+	if b, ok := objmap["remote_ipv6_address"]; ok {
+		if err := json.Unmarshal(b, &tk.remoteIPv6Address); err != nil {
+			return err
+		}
+		if len(tk.remoteIPv6Address) != 16 {
+			return fmt.Errorf("remote_ipv6_address must be exactly 16 bytes, got %d", len(tk.remoteIPv6Address))
+		}
+	}
+	if b, ok := objmap["srv6_sid"]; ok {
+		if err := json.Unmarshal(b, &tk.srv6SID); err != nil {
+			return err
+		}
+		if len(tk.srv6SID) != 16 {
+			return fmt.Errorf("srv6_sid must be exactly 16 bytes, got %d", len(tk.srv6SID))
+		}
+	}
+	if b, ok := objmap["srv6_endpoint_behavior"]; ok {
+		if err := json.Unmarshal(b, &tk.srv6EndpointBehavior); err != nil {
+			return err
+		}
+		if len(tk.srv6EndpointBehavior) != 8 {
+			return fmt.Errorf("srv6_endpoint_behavior must be exactly 8 bytes, got %d", len(tk.srv6EndpointBehavior))
+		}
+	}
+	return nil
+}
+
+func (tk *typeKSegment) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	return tk.unmarshalJSONObj(objmap)
+}
+
+// UnmarshalTypeKSegment instantiates an instance of Type K Segment sub tlv (IPv6 Local/Remote adjacency + optional SRv6 SID + optional SRv6 Endpoint Behavior)
+func UnmarshalTypeKSegment(b []byte) (Segment, error) {
+	if glog.V(5) {
+		glog.Infof("SR Policy Type K Segment STLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 34 && len(b) != 50 && len(b) != 58 {
+		return nil, fmt.Errorf("invalid length of Type K Segment STLV: got %d, expected 34, 50, or 58", len(b))
+	}
+	s := &typeKSegment{}
+	p := 0
+	s.flags = NewSegmentFlags(b[p])
+	p++
+	// SR Algorithm is 1 byte
+	s.srAlgorithm = b[p]
+	p++
+	// Local IPv6 address is 16 bytes
+	s.localIPv6Address = make([]byte, 16)
+	copy(s.localIPv6Address, b[p:p+16])
+	p += 16
+	// Remote IPv6 address is 16 bytes
+	s.remoteIPv6Address = make([]byte, 16)
+	copy(s.remoteIPv6Address, b[p:p+16])
+	p += 16
+	// Optional SRv6 SID (16 bytes) if length is 50 or 58
+	if len(b) == 50 || len(b) == 58 {
+		s.srv6SID = make([]byte, 16)
+		copy(s.srv6SID, b[p:p+16])
+		p += 16
+	}
+	// Optional SRv6 Endpoint Behavior and SID Structure (8 bytes) if length is 58
+	if len(b) == 58 {
+		s.srv6EndpointBehavior = make([]byte, 8)
+		copy(s.srv6EndpointBehavior, b[p:p+8])
 	}
 
 	return s, nil
