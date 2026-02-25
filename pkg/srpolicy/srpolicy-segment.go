@@ -1558,7 +1558,7 @@ func UnmarshalTypeISegment(b []byte) (Segment, error) {
 
 	return s, nil
 }
-// TypeJSegment defines methods to access Type J specific elements (IPv6 link-local adjacency with interface IDs + optional SRv6 SID)
+// TypeJSegment defines methods to access Type J specific elements (IPv6 link-local adjacency with interface IDs + SR Algorithm + optional SRv6 SID)
 type TypeJSegment interface {
 	GetSRAlgorithm() byte
 	GetLocalInterfaceID() uint32
@@ -1703,7 +1703,7 @@ func (tj *typeJSegment) UnmarshalJSON(b []byte) error {
 	return tj.unmarshalJSONObj(objmap)
 }
 
-// UnmarshalTypeJSegment instantiates an instance of Type J Segment sub tlv (IPv6 link-local adjacency with interface IDs + optional SRv6 SID)
+// UnmarshalTypeJSegment instantiates an instance of Type J Segment sub tlv (IPv6 link-local adjacency with interface IDs + SR Algorithm + optional SRv6 SID)
 func UnmarshalTypeJSegment(b []byte) (Segment, error) {
 	if glog.V(5) {
 		glog.Infof("SR Policy Type J Segment STLV Raw: %s", tools.MessageHex(b))
