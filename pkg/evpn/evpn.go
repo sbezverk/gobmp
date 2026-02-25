@@ -152,6 +152,11 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 			if err != nil {
 				return nil, err
 			}
+		case 10:
+			n.RouteTypeSpec, err = UnmarshalEVPNSPMSI(b[p : p+l])
+			if err != nil {
+				return nil, err
+			}
 		case 11:
 			n.RouteTypeSpec, err = UnmarshalEVPNLeafAD(b[p : p+l])
 			if err != nil {
