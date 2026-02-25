@@ -2024,6 +2024,40 @@ func TestTypeGSegment_JSON(t *testing.T) {
 				t.Errorf("Bflag = %v, want %v", result.flags.Bflag, tt.seg.flags.Bflag)
 			}
 
+			if result.localInterfaceID != tt.seg.localInterfaceID {
+				t.Errorf("localInterfaceID = %d, want %d", result.localInterfaceID, tt.seg.localInterfaceID)
+			}
+			if len(result.localIPv6Address) != len(tt.seg.localIPv6Address) {
+				t.Fatalf("localIPv6Address length = %d, want %d", len(result.localIPv6Address), len(tt.seg.localIPv6Address))
+			}
+			for i := range tt.seg.localIPv6Address {
+				if result.localIPv6Address[i] != tt.seg.localIPv6Address[i] {
+					t.Errorf("localIPv6Address[%d] = %d, want %d", i, result.localIPv6Address[i], tt.seg.localIPv6Address[i])
+				}
+			}
+			if result.remoteInterfaceID != tt.seg.remoteInterfaceID {
+				t.Errorf("remoteInterfaceID = %d, want %d", result.remoteInterfaceID, tt.seg.remoteInterfaceID)
+			}
+			if len(result.remoteIPv6Address) != len(tt.seg.remoteIPv6Address) {
+				t.Fatalf("remoteIPv6Address length = %d, want %d", len(result.remoteIPv6Address), len(tt.seg.remoteIPv6Address))
+			}
+			for i := range tt.seg.remoteIPv6Address {
+				if result.remoteIPv6Address[i] != tt.seg.remoteIPv6Address[i] {
+					t.Errorf("remoteIPv6Address[%d] = %d, want %d", i, result.remoteIPv6Address[i], tt.seg.remoteIPv6Address[i])
+				}
+			}
+			if tt.seg.sid == nil {
+				if result.sid != nil {
+					t.Errorf("sid = %d, want nil", *result.sid)
+				}
+			} else {
+				if result.sid == nil {
+					t.Error("sid = nil, want non-nil")
+				} else if *result.sid != *tt.seg.sid {
+					t.Errorf("sid = %d, want %d", *result.sid, *tt.seg.sid)
+				}
+			}
+
 			jsonBytes2, err := json.Marshal(&result)
 			if err != nil {
 				t.Fatalf("Marshal() after Unmarshal() error = %v", err)
@@ -2039,9 +2073,13 @@ func TestUnmarshalSegmentListSTLV_TypeG(t *testing.T) {
 	localIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
 	remoteIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
 	tests := []struct {
-		name             string
-		input            []byte
-		wantSegmentCount int
+		name              string
+		input             []byte
+		wantLocalIfaceID  uint32
+		wantLocalIPv6     []byte
+		wantRemoteIfaceID uint32
+		wantRemoteIPv6    []byte
+		wantSID           *uint32
 	}{
 		{
 			name: "single without SID",
@@ -2050,7 +2088,11 @@ func TestUnmarshalSegmentListSTLV_TypeG(t *testing.T) {
 				0x00, 0x00, // Flags + Reserved
 				0x00, 0x00, 0x00, 0x01, // Local Interface ID
 			}, append(localIPv6, append([]byte{0x00, 0x00, 0x00, 0x02}, remoteIPv6...)...)...),
-			wantSegmentCount: 1,
+			wantLocalIfaceID:  1,
+			wantLocalIPv6:     localIPv6,
+			wantRemoteIfaceID: 2,
+			wantRemoteIPv6:    remoteIPv6,
+			wantSID:           nil,
 		},
 		{
 			name: "single with SID",
@@ -2059,7 +2101,11 @@ func TestUnmarshalSegmentListSTLV_TypeG(t *testing.T) {
 				0x80, 0x00, // Flags (V flag) + Reserved
 				0x00, 0x00, 0x00, 0x01,
 			}, append(localIPv6, append([]byte{0x00, 0x00, 0x00, 0x02}, append(remoteIPv6, 0x00, 0x00, 0x07, 0xD0)...)...)...),
-			wantSegmentCount: 1,
+			wantLocalIfaceID:  1,
+			wantLocalIPv6:     localIPv6,
+			wantRemoteIfaceID: 2,
+			wantRemoteIPv6:    remoteIPv6,
+			wantSID:           ptrUint32(2000),
 		},
 	}
 
@@ -2069,11 +2115,50 @@ func TestUnmarshalSegmentListSTLV_TypeG(t *testing.T) {
 			if err != nil {
 				t.Fatalf("UnmarshalSegmentListSTLV() error = %v", err)
 			}
-			if len(sl.Segment) != tt.wantSegmentCount {
-				t.Errorf("Segment count = %d, want %d", len(sl.Segment), tt.wantSegmentCount)
+			if len(sl.Segment) != 1 {
+				t.Fatalf("Segment count = %d, want 1", len(sl.Segment))
 			}
-			if len(sl.Segment) > 0 && sl.Segment[0].GetType() != TypeG {
-				t.Errorf("Segment[0] type = %v, want %v", sl.Segment[0].GetType(), TypeG)
+
+			typeGSeg, ok := sl.Segment[0].(TypeGSegment)
+			if !ok {
+				t.Fatal("Segment is not TypeGSegment")
+			}
+
+			if typeGSeg.GetLocalInterfaceID() != tt.wantLocalIfaceID {
+				t.Errorf("LocalInterfaceID = %d, want %d", typeGSeg.GetLocalInterfaceID(), tt.wantLocalIfaceID)
+			}
+			localIPv6Got := typeGSeg.GetLocalIPv6Address()
+			if len(localIPv6Got) != len(tt.wantLocalIPv6) {
+				t.Fatalf("localIPv6Address length = %d, want %d", len(localIPv6Got), len(tt.wantLocalIPv6))
+			}
+			for i, b := range tt.wantLocalIPv6 {
+				if localIPv6Got[i] != b {
+					t.Errorf("localIPv6Address[%d] = %d, want %d", i, localIPv6Got[i], b)
+				}
+			}
+			if typeGSeg.GetRemoteInterfaceID() != tt.wantRemoteIfaceID {
+				t.Errorf("RemoteInterfaceID = %d, want %d", typeGSeg.GetRemoteInterfaceID(), tt.wantRemoteIfaceID)
+			}
+			remoteIPv6Got := typeGSeg.GetRemoteIPv6Address()
+			if len(remoteIPv6Got) != len(tt.wantRemoteIPv6) {
+				t.Fatalf("remoteIPv6Address length = %d, want %d", len(remoteIPv6Got), len(tt.wantRemoteIPv6))
+			}
+			for i, b := range tt.wantRemoteIPv6 {
+				if remoteIPv6Got[i] != b {
+					t.Errorf("remoteIPv6Address[%d] = %d, want %d", i, remoteIPv6Got[i], b)
+				}
+			}
+			sid, hasSID := typeGSeg.GetSID()
+			if tt.wantSID == nil {
+				if hasSID {
+					t.Error("Expected no SID, but got one")
+				}
+			} else {
+				if !hasSID {
+					t.Error("Expected SID, but got none")
+				} else if sid != *tt.wantSID {
+					t.Errorf("SID = %d, want %d", sid, *tt.wantSID)
+				}
 			}
 		})
 	}
