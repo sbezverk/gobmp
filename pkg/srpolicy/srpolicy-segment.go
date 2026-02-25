@@ -1565,8 +1565,7 @@ func UnmarshalTypeHSegment(b []byte) (Segment, error) {
 
 	return s, nil
 }
-
-// TypeKSegment defines methods to access Type K specific elements (IPv6 Local/Remote adjacency + optional SRv6 SID + optional SRv6 Endpoint Behavior)
+// TypeKSegment defines methods to access Type K specific elements (IPv6 Local/Remote adjacency + SR Algorithm + optional SRv6 SID + optional SRv6 Endpoint Behavior)
 type TypeKSegment interface {
 	GetSRAlgorithm() byte
 	GetLocalIPv6Address() []byte
@@ -1703,7 +1702,7 @@ func (tk *typeKSegment) UnmarshalJSON(b []byte) error {
 	return tk.unmarshalJSONObj(objmap)
 }
 
-// UnmarshalTypeKSegment instantiates an instance of Type K Segment sub tlv (IPv6 Local/Remote adjacency + optional SRv6 SID + optional SRv6 Endpoint Behavior)
+// UnmarshalTypeKSegment instantiates an instance of Type K Segment sub tlv (IPv6 Local/Remote adjacency + SR Algorithm + optional SRv6 SID + optional SRv6 Endpoint Behavior)
 func UnmarshalTypeKSegment(b []byte) (Segment, error) {
 	if glog.V(5) {
 		glog.Infof("SR Policy Type K Segment STLV Raw: %s", tools.MessageHex(b))
