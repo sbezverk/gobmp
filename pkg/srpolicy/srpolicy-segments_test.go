@@ -1490,9 +1490,345 @@ func TestUnmarshalTypeESegment_InvalidLength(t *testing.T) {
 }
 
 // ============================================================================
-// Type G Segment Tests (Direct Unmarshal)
+// Type F Segment Tests (Direct Unmarshal)
 // ============================================================================
 
+func TestUnmarshalTypeFSegment_Valid(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          []byte
+		wantLocalIPv4  []byte
+		wantRemoteIPv4 []byte
+		wantSID        *uint32
+	}{
+		{
+			name: "without SID (10 bytes)",
+			input: []byte{
+				0x00, 0x00, // Flags + Reserved
+				192, 168, 1, 1, // Local IPv4
+				10, 0, 0, 1, // Remote IPv4
+			},
+			wantLocalIPv4:  []byte{192, 168, 1, 1},
+			wantRemoteIPv4: []byte{10, 0, 0, 1},
+			wantSID:        nil,
+		},
+		{
+			name: "with SID (14 bytes)",
+			input: []byte{
+				0x80, 0x00, // Flags (V flag set) + Reserved
+				10, 0, 0, 1,   // Local IPv4
+				172, 16, 0, 1, // Remote IPv4
+				0x00, 0x00, 0x03, 0xE8, // SID: 1000
+			},
+			wantLocalIPv4:  []byte{10, 0, 0, 1},
+			wantRemoteIPv4: []byte{172, 16, 0, 1},
+			wantSID:        ptrUint32(1000),
+		},
+		{
+			name: "all zeros without SID",
+			input: []byte{
+				0x00, 0x00,
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+			},
+			wantLocalIPv4:  []byte{0, 0, 0, 0},
+			wantRemoteIPv4: []byte{0, 0, 0, 0},
+			wantSID:        nil,
+		},
+		{
+			name: "SID value zero (14 bytes)",
+			input: []byte{
+				0x80, 0x00,
+				1, 1, 1, 1,
+				2, 2, 2, 2,
+				0x00, 0x00, 0x00, 0x00,
+			},
+			wantLocalIPv4:  []byte{1, 1, 1, 1},
+			wantRemoteIPv4: []byte{2, 2, 2, 2},
+			wantSID:        ptrUint32(0),
+		},
+		{
+			name: "max SID value (14 bytes)",
+			input: []byte{
+				0x80, 0x00,
+				255, 255, 255, 255,
+				10, 0, 0, 1,
+				0xFF, 0xFF, 0xFF, 0xFF,
+			},
+			wantLocalIPv4:  []byte{255, 255, 255, 255},
+			wantRemoteIPv4: []byte{10, 0, 0, 1},
+			wantSID:        ptrUint32(0xFFFFFFFF),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			seg, err := UnmarshalTypeFSegment(tt.input)
+			if err != nil {
+				t.Fatalf("UnmarshalTypeFSegment() error = %v", err)
+			}
+			if seg.GetType() != TypeF {
+				t.Errorf("GetType() = %v, want %v", seg.GetType(), TypeF)
+			}
+
+			typeFSeg, ok := seg.(TypeFSegment)
+			if !ok {
+				t.Fatal("Segment does not implement TypeFSegment interface")
+			}
+
+			localIPv4 := typeFSeg.GetLocalIPv4Address()
+			if len(localIPv4) != 4 {
+				t.Fatalf("Local IPv4 length = %d, want 4", len(localIPv4))
+			}
+			for i, b := range tt.wantLocalIPv4 {
+				if localIPv4[i] != b {
+					t.Errorf("Local IPv4[%d] = %d, want %d", i, localIPv4[i], b)
+				}
+			}
+
+			remoteIPv4 := typeFSeg.GetRemoteIPv4Address()
+			if len(remoteIPv4) != 4 {
+				t.Fatalf("Remote IPv4 length = %d, want 4", len(remoteIPv4))
+			}
+			for i, b := range tt.wantRemoteIPv4 {
+				if remoteIPv4[i] != b {
+					t.Errorf("Remote IPv4[%d] = %d, want %d", i, remoteIPv4[i], b)
+				}
+			}
+
+			sid, hasSID := typeFSeg.GetSID()
+			if tt.wantSID == nil {
+				if hasSID {
+					t.Errorf("GetSID() hasSID = true, want false")
+				}
+			} else {
+				if !hasSID {
+					t.Errorf("GetSID() hasSID = false, want true")
+				}
+				if sid != *tt.wantSID {
+					t.Errorf("GetSID() sid = %d, want %d", sid, *tt.wantSID)
+				}
+			}
+		})
+	}
+}
+
+func TestUnmarshalTypeFSegment_InvalidLength(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{name: "empty", input: []byte{}},
+		{name: "1 byte", input: []byte{0x00}},
+		{name: "2 bytes", input: []byte{0x00, 0x01}},
+		{name: "9 bytes", input: make([]byte, 9)},
+		{name: "11 bytes", input: make([]byte, 11)},
+		{name: "12 bytes", input: make([]byte, 12)},
+		{name: "13 bytes", input: make([]byte, 13)},
+		{name: "15 bytes", input: make([]byte, 15)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalTypeFSegment(tt.input); err == nil {
+				t.Errorf("UnmarshalTypeFSegment() with length %d expected error, got nil", len(tt.input))
+			}
+		})
+	}
+}
+
+func TestTypeFSegment_JSON(t *testing.T) {
+	tests := []struct {
+		name string
+		seg  *typeFSegment
+	}{
+		{
+			name: "without SID",
+			seg: &typeFSegment{
+				flags:             NewSegmentFlags(0x00),
+				localIPv4Address:  []byte{192, 168, 1, 1},
+				remoteIPv4Address: []byte{10, 0, 0, 1},
+				sid:               nil,
+			},
+		},
+		{
+			name: "with SID and V flag",
+			seg: &typeFSegment{
+				flags:             NewSegmentFlags(0x80),
+				localIPv4Address:  []byte{10, 0, 0, 1},
+				remoteIPv4Address: []byte{172, 16, 0, 1},
+				sid:               ptrUint32(2000),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jsonBytes, err := json.Marshal(tt.seg)
+			if err != nil {
+				t.Fatalf("Marshal() error = %v", err)
+			}
+
+			var result typeFSegment
+			if err := json.Unmarshal(jsonBytes, &result); err != nil {
+				t.Fatalf("Unmarshal() error = %v", err)
+			}
+
+			if result.flags.Vflag != tt.seg.flags.Vflag {
+				t.Errorf("Vflag = %v, want %v", result.flags.Vflag, tt.seg.flags.Vflag)
+			}
+			if result.flags.Aflag != tt.seg.flags.Aflag {
+				t.Errorf("Aflag = %v, want %v", result.flags.Aflag, tt.seg.flags.Aflag)
+			}
+			if result.flags.Sflag != tt.seg.flags.Sflag {
+				t.Errorf("Sflag = %v, want %v", result.flags.Sflag, tt.seg.flags.Sflag)
+			}
+			if result.flags.Bflag != tt.seg.flags.Bflag {
+				t.Errorf("Bflag = %v, want %v", result.flags.Bflag, tt.seg.flags.Bflag)
+			}
+
+			jsonBytes2, err := json.Marshal(&result)
+			if err != nil {
+				t.Fatalf("Marshal() after Unmarshal() error = %v", err)
+			}
+			if string(jsonBytes) != string(jsonBytes2) {
+				t.Errorf("JSON round-trip failed.\nOriginal: %s\nAfter:    %s", jsonBytes, jsonBytes2)
+			}
+		})
+	}
+}
+
+func TestUnmarshalSegmentListSTLV_TypeF(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            []byte
+		wantSegmentCount int
+	}{
+		{
+			name: "single without SID",
+			input: []byte{
+				0x06, 0x0A, // Type F, length 10
+				0x00, 0x00, // Flags + Reserved
+				192, 168, 1, 1, // Local IPv4
+				10, 0, 0, 1, // Remote IPv4
+			},
+			wantSegmentCount: 1,
+		},
+		{
+			name: "single with SID",
+			input: []byte{
+				0x06, 0x0E, // Type F, length 14
+				0x80, 0x00, // Flags (V flag) + Reserved
+				10, 0, 0, 1,   // Local IPv4
+				172, 16, 0, 1, // Remote IPv4
+				0x00, 0x00, 0x07, 0xD0, // SID: 2000
+			},
+			wantSegmentCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sl, err := UnmarshalSegmentListSTLV(tt.input)
+			if err != nil {
+				t.Fatalf("UnmarshalSegmentListSTLV() error = %v", err)
+			}
+			if len(sl.Segment) != tt.wantSegmentCount {
+				t.Errorf("Segment count = %d, want %d", len(sl.Segment), tt.wantSegmentCount)
+			}
+			if len(sl.Segment) > 0 && sl.Segment[0].GetType() != TypeF {
+				t.Errorf("Segment[0] type = %v, want %v", sl.Segment[0].GetType(), TypeF)
+			}
+		})
+	}
+}
+
+// TestSegmentList_JSON_TypeF tests SegmentList JSON marshal/unmarshal with a Type F segment.
+// This ensures SegmentList.UnmarshalJSON properly dispatches to typeFSegment.unmarshalJSONObj.
+func TestSegmentList_JSON_TypeF(t *testing.T) {
+	localIPv4 := []byte{10, 0, 0, 1}
+	remoteIPv4 := []byte{172, 16, 0, 1}
+	sidVal := uint32(2000)
+
+	sl := &SegmentList{
+		Weight: &Weight{Flags: 0, Weight: 100},
+		Segment: []Segment{
+			&typeFSegment{
+				flags:             NewSegmentFlags(0x80), // V-flag set
+				localIPv4Address:  localIPv4,
+				remoteIPv4Address: remoteIPv4,
+				sid:               &sidVal,
+			},
+		},
+	}
+
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var result SegmentList
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	if result.Weight == nil {
+		t.Fatal("Unmarshal() Weight is nil")
+	}
+	if result.Weight.Weight != 100 {
+		t.Errorf("Unmarshal() Weight = %d, want 100", result.Weight.Weight)
+	}
+
+	if len(result.Segment) != 1 {
+		t.Fatalf("Unmarshal() segment count = %d, want 1", len(result.Segment))
+	}
+
+	seg := result.Segment[0]
+	if seg.GetType() != TypeF {
+		t.Errorf("Unmarshal() segment type = %v, want TypeF", seg.GetType())
+	}
+
+	typeFSeg, ok := seg.(TypeFSegment)
+	if !ok {
+		t.Fatal("Unmarshal() segment does not implement TypeFSegment")
+	}
+
+	gotLocal := typeFSeg.GetLocalIPv4Address()
+	if len(gotLocal) != 4 {
+		t.Fatalf("GetLocalIPv4Address() length = %d, want 4", len(gotLocal))
+	}
+	for i, b := range localIPv4 {
+		if gotLocal[i] != b {
+			t.Errorf("LocalIPv4[%d] = %d, want %d", i, gotLocal[i], b)
+		}
+	}
+
+	gotRemote := typeFSeg.GetRemoteIPv4Address()
+	if len(gotRemote) != 4 {
+		t.Fatalf("GetRemoteIPv4Address() length = %d, want 4", len(gotRemote))
+	}
+	for i, b := range remoteIPv4 {
+		if gotRemote[i] != b {
+			t.Errorf("RemoteIPv4[%d] = %d, want %d", i, gotRemote[i], b)
+		}
+	}
+
+	gotSID, hasSID := typeFSeg.GetSID()
+	if !hasSID {
+		t.Fatal("GetSID() hasSID = false, want true")
+	}
+	if gotSID != sidVal {
+		t.Errorf("GetSID() = %d, want %d", gotSID, sidVal)
+	}
+
+	flags := seg.GetFlags()
+	if flags == nil {
+		t.Fatal("Unmarshal() flags is nil")
+	}
+	if !flags.Vflag {
+		t.Error("Unmarshal() V-flag not preserved")
+	}
+}
 func TestUnmarshalTypeGSegment_Valid(t *testing.T) {
 	localIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
 	remoteIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
