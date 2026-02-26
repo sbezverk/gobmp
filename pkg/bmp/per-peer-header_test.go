@@ -2,7 +2,6 @@ package bmp
 
 import (
 	"encoding/binary"
-	"strings"
 	"testing"
 	"time"
 )
@@ -427,9 +426,6 @@ func TestPeerHeaderTimestampParsing(t *testing.T) {
 	ph := &PerPeerHeader{
 		PeerTimestamp: make([]byte, 8),
 	}
-	for i := 0; i < 1000; i++ {
-		tm := time.Now().UTC() // Use UTC since BMP timestamps are UTC-based
-
 	// Use a fixed timestamp with a known non-zero microsecond component to avoid flakiness.
 	fixedTime := time.Date(2024, 5, 6, 7, 8, 9, 123456000, time.UTC)
 
@@ -442,7 +438,7 @@ func TestPeerHeaderTimestampParsing(t *testing.T) {
 	// Build the expected value from the same sec/usec pair used to encode the timestamp.
 	expected := time.Unix(int64(sec), int64(usec)*1000).UTC().Format(time.RFC3339Nano)
 
-	if strings.Compare(ph.GetPeerTimestamp(), expected) != 0 {
+	if ph.GetPeerTimestamp() != expected {
 		t.Errorf("Timestamp mismatch: got %s, want %s", ph.GetPeerTimestamp(), expected)
 	}
 }
