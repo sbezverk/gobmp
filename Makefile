@@ -28,13 +28,13 @@ validator-mac:
 	$(MAKE) -C ./cmd/validator compile-validator-mac
 
 container: gobmp
-	docker buildx build --platform linux/amd64 -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile.gobmp .
+	docker buildx build --platform linux/amd64 --load -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile.gobmp .
 
 player-container: player
-	docker buildx build --platform linux/amd64 -t $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION) -f ./build/Dockerfile.player .
+	docker buildx build --platform linux/amd64 --load -t $(REGISTRY_NAME)/gobmp-player:$(IMAGE_VERSION) -f ./build/Dockerfile.player .
 
 validator-container: validator
-	docker buildx build --platform linux/amd64 -t $(REGISTRY_NAME)/gobmp-validator:$(IMAGE_VERSION) -f ./build/Dockerfile.validator .
+	docker buildx build --platform linux/amd64 --load -t $(REGISTRY_NAME)/gobmp-validator:$(IMAGE_VERSION) -f ./build/Dockerfile.validator .
 
 push: container
 	docker push $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION)
