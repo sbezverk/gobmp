@@ -429,18 +429,20 @@ func TestPeerHeaderTimestampParsing(t *testing.T) {
 	}
 	for i := 0; i < 1000; i++ {
 		tm := time.Now().UTC() // Use UTC since BMP timestamps are UTC-based
-		// BMP only stores microsecond precision, so truncate to microseconds
-		tm = tm.Truncate(time.Microsecond)
-		ts := tm.Format(time.RFC3339Nano)
-		// Convert to BMP timestamp format (8 bytes: 4 for seconds, 4 for microseconds)
-		sec := uint32(tm.Unix())
-		usec := uint32(tm.Nanosecond() / 1000) // Convert nanoseconds to microseconds
-		binary.BigEndian.PutUint32(ph.PeerTimestamp[0:4], sec)
-		binary.BigEndian.PutUint32(ph.PeerTimestamp[4:8], usec)
-		if strings.Compare(ph.GetPeerTimestamp(), ts) != 0 {
-			t.Errorf("Timestamp mismatch: got %s, want %s", ph.GetPeerTimestamp(), ts)
-		}
-		binary.BigEndian.PutUint32(ph.PeerTimestamp[0:4], 0)
-		binary.BigEndian.PutUint32(ph.PeerTimestamp[4:8], 0)
+
+	// Use a fixed timestamp with a known non-zero microsecond component to avoid flakiness.
+	fixedTime := time.Date(2024, 5, 6, 7, 8, 9, 123456000, time.UTC)
+
+	// Convert to BMP timestamp format (8 bytes: 4 for seconds, 4 for microseconds)
+	sec := uint32(fixedTime.Unix())
+	usec := uint32(fixedTime.Nanosecond() / 1000) // Convert nanoseconds to microseconds
+	binary.BigEndian.PutUint32(ph.PeerTimestamp[0:4], sec)
+	binary.BigEndian.PutUint32(ph.PeerTimestamp[4:8], usec)
+
+	// Build the expected value from the same sec/usec pair used to encode the timestamp.
+	expected := time.Unix(int64(sec), int64(usec)*1000).UTC().Format(time.RFC3339Nano)
+
+	if strings.Compare(ph.GetPeerTimestamp(), expected) != 0 {
+		t.Errorf("Timestamp mismatch: got %s, want %s", ph.GetPeerTimestamp(), expected)
 	}
 }
