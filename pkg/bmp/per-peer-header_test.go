@@ -423,22 +423,44 @@ func TestUnmarshalPerPeerHeader(t *testing.T) {
 }
 
 func TestPeerHeaderTimestampParsing(t *testing.T) {
-	ph := &PerPeerHeader{
-		PeerTimestamp: make([]byte, 8),
+	tests := []struct {
+		name string
+		sec  uint32
+		usec uint32
+	}{
+		{
+			name: "Epoch time (0 seconds, 0 microseconds)",
+			sec:  0,
+			usec: 0,
+		},
+		{
+			name: "Typical timestamp (1700000000 seconds, 500000 microseconds)",
+			sec:  1700000000,
+			usec: 500000,
+		},
+		{
+			name: "Maximum timestamp (4294967295 seconds, 999999 microseconds)",
+			sec:  4294967295,
+			usec: 999999,
+		},
 	}
-	// Use a fixed timestamp with a known non-zero microsecond component to avoid flakiness.
-	fixedTime := time.Date(2024, 5, 6, 7, 8, 9, 123456000, time.UTC)
 
-	// Convert to BMP timestamp format (8 bytes: 4 for seconds, 4 for microseconds)
-	sec := uint32(fixedTime.Unix())
-	usec := uint32(fixedTime.Nanosecond() / 1000) // Convert nanoseconds to microseconds
-	binary.BigEndian.PutUint32(ph.PeerTimestamp[0:4], sec)
-	binary.BigEndian.PutUint32(ph.PeerTimestamp[4:8], usec)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ph := &PerPeerHeader{
+				PeerTimestamp: make([]byte, 8),
+			}
 
-	// Build the expected value from the same sec/usec pair used to encode the timestamp.
-	expected := time.Unix(int64(sec), int64(usec)*1000).UTC().Format(time.RFC3339Nano)
+			// Encode the timestamp in BMP format (8 bytes: 4 for seconds, 4 for microseconds)
+			binary.BigEndian.PutUint32(ph.PeerTimestamp[0:4], tt.sec)
+			binary.BigEndian.PutUint32(ph.PeerTimestamp[4:8], tt.usec)
 
-	if ph.GetPeerTimestamp() != expected {
-		t.Errorf("Timestamp mismatch: got %s, want %s", ph.GetPeerTimestamp(), expected)
+			// Build the expected value from the same sec/usec pair used to encode the timestamp.
+			expected := time.Unix(int64(tt.sec), int64(tt.usec)*1000).UTC().Format(time.RFC3339Nano)
+
+			if ph.GetPeerTimestamp() != expected {
+				t.Errorf("Timestamp mismatch: got %s, want %s", ph.GetPeerTimestamp(), expected)
+			}
+		})
 	}
 }
