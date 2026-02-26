@@ -1,7 +1,10 @@
 package bmp
 
 import (
+	"encoding/binary"
+	"strings"
 	"testing"
+	"time"
 )
 
 // TestPerPeerHeaderFlags tests the interpretation of all flags per RFC 7854, RFC 8671, RFC 9069
@@ -417,5 +420,25 @@ func TestUnmarshalPerPeerHeader(t *testing.T) {
 
 	if trueCount != 1 {
 		t.Errorf("Expected exactly 1 RIB state to be true, got %d", trueCount)
+	}
+}
+
+func TestPeerHeaderTimestampParsing(t *testing.T) {
+	ph := &PerPeerHeader{
+		PeerTimestamp: make([]byte, 8),
+	}
+	for i := 0; i < 1000; i++ {
+		tm := time.Now().UTC() // Use UTC since BMP timestamps are UTC-based
+		ts := tm.Format(time.RFC3339Nano)
+		// Convert to BMP timestamp format (8 bytes: 4 for seconds, 4 for microseconds)
+		sec := uint32(tm.Unix())
+		usec := uint32(tm.Nanosecond() / 1000) // Convert nanoseconds to microseconds
+		binary.BigEndian.PutUint32(ph.PeerTimestamp[0:4], sec)
+		binary.BigEndian.PutUint32(ph.PeerTimestamp[4:8], usec)
+		if strings.Compare(ph.GetPeerTimestamp(), ts) != 0 {
+			t.Errorf("Timestamp mismatch: got %s, want %s", ph.GetPeerTimestamp(), ts)
+		}
+		binary.BigEndian.PutUint32(ph.PeerTimestamp[0:4], 0)
+		binary.BigEndian.PutUint32(ph.PeerTimestamp[4:8], 0)
 	}
 }
