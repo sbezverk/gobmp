@@ -429,6 +429,8 @@ func TestPeerHeaderTimestampParsing(t *testing.T) {
 	}
 	for i := 0; i < 1000; i++ {
 		tm := time.Now().UTC() // Use UTC since BMP timestamps are UTC-based
+		// BMP only stores microsecond precision, so truncate to microseconds
+		tm = tm.Truncate(time.Microsecond)
 		ts := tm.Format(time.RFC3339Nano)
 		// Convert to BMP timestamp format (8 bytes: 4 for seconds, 4 for microseconds)
 		sec := uint32(tm.Unix())
