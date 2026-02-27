@@ -1098,6 +1098,7 @@ func UnmarshalTypeFSegment(b []byte) (Segment, error) {
 
 	return s, nil
 }
+
 // TypeGSegment defines methods to access Type G specific elements (IPv6 link-local adjacency with interface IDs + optional SID)
 type TypeGSegment interface {
 	GetLocalInterfaceID() uint32
