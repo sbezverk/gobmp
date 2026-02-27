@@ -126,12 +126,10 @@ func parseL3VPNNLRI(b []byte, pathID bool, srv6Flag bool) (*base.MPNLRI, error) 
 		copy(up.Prefix, b[p:p+prefixBytes])
 		p += prefixBytes
 
-		// Store bit length
-		finalBits := prefixBits
-		if finalBits > 0 && finalBits <= 32 && (finalBits%8 != 0) {
-			finalBits = ((finalBits + 7) / 8) * 8 // round up to 8-bit boundary
-		}
-		up.Length = uint8(finalBits)
+		// Store the exact bit length of the IP prefix (not rounded).
+		// The overhead (label + RD) has already been subtracted via prefixBits.
+		// Rounding up would corrupt CIDR lengths like /30 → /32.
+		up.Length = uint8(prefixBits)
 
 		mpnlri.NLRI = append(mpnlri.NLRI, up)
 	}

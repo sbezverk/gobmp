@@ -311,6 +311,34 @@ func TestRFC4364_VPNv4_VariousPrefixLengths(t *testing.T) {
 			expectedLen:    8,
 			expectedPrefix: []byte{0x0a},
 		},
+		{
+			// /30 network (non-byte-aligned — previously incorrectly rounded to /32)
+			// 24 (label) + 64 (RD) + 30 (prefix) = 118 bits = 0x76
+			name: "VPNv4_Network_30",
+			input: []byte{
+				0x76,                               // Length: 118 bits (24 + 64 + 30)
+				0x05, 0xdc, 0x31,                   // Label 24003, BoS=1
+				0x00, 0x01,                         // RD Type 1 (IP:nn)
+				0x0a, 0xb8, 0x01, 0x0a, 0x00, 0x1e, // RD 10.184.1.10:30
+				0x0a, 0x01, 0x03, 0x00,             // Prefix 10.1.3.0/30
+			},
+			expectedLen:    30,
+			expectedPrefix: []byte{0x0a, 0x01, 0x03, 0x00},
+		},
+		{
+			// /28 network (non-byte-aligned — previously incorrectly rounded to /32)
+			// 24 (label) + 64 (RD) + 28 (prefix) = 116 bits = 0x74
+			name: "VPNv4_Network_28",
+			input: []byte{
+				0x74,                               // Length: 116 bits (24 + 64 + 28)
+				0x05, 0xdc, 0x31,                   // Label 24003, BoS=1
+				0x00, 0x00,                         // RD Type 0 (ASN:nn)
+				0x00, 0x64, 0x00, 0x00, 0x00, 0x01, // RD 100:1
+				0x0a, 0x01, 0x03, 0x10,             // Prefix 10.1.3.16/28
+			},
+			expectedLen:    28,
+			expectedPrefix: []byte{0x0a, 0x01, 0x03, 0x10},
+		},
 	}
 
 	for _, tt := range tests {
@@ -329,11 +357,11 @@ func TestRFC4364_VPNv4_VariousPrefixLengths(t *testing.T) {
 // TestRFC4364_VPNv4_MultipleNLRIs tests multiple VPNv4 NLRIs in single UPDATE
 func TestRFC4364_VPNv4_MultipleNLRIs(t *testing.T) {
 	// Two NLRIs in one message:
-	// 1. 172.16.7.0/24 with label 24019
+	// 1. 172.16.7.0/31 with label 24019  (0x77 = 119 bits = 24+64+31)
 	// 2. 100.100.7.0/24 with label 24019
 	input := []byte{
-		// First NLRI: 172.16.7.0/24
-		0x77,                               // Length: 119 bits -> rounds to /32
+		// First NLRI: 172.16.7.0/31
+		0x77,                               // Length: 119 bits (24 label + 64 RD + 31 prefix = /31)
 		0x05, 0xdd, 0x31,                   // Label 24019, BoS=1
 		0x00, 0x01,                         // RD Type 1
 		0x0a, 0x00, 0x00, 0x07, 0x00, 0x01, // IP 10.0.0.7:1
