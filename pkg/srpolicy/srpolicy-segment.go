@@ -1348,9 +1348,11 @@ func (th *typeHSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) erro
 		}
 	}
 	if b, ok := objmap["sid"]; ok {
-		if err := json.Unmarshal(b, &th.sid); err != nil {
+		var sid uint32
+		if err := json.Unmarshal(b, &sid); err != nil {
 			return err
 		}
+		th.sid = &sid
 	}
 	return nil
 }
