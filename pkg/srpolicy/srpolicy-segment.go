@@ -191,6 +191,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			if l != 6 {
 				return nil, fmt.Errorf("invalid length %d of raw data for Weight Sub TLV", l)
 			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Weight STLV: need %d bytes, have %d", l, len(b)-p)
+			}
 			w := &Weight{
 				Flags:  b[p],
 				Weight: binary.BigEndian.Uint32(b[p+2 : p+2+4]),
@@ -1135,6 +1138,7 @@ func UnmarshalTypeFSegment(b []byte) (Segment, error) {
 
 	return s, nil
 }
+
 // TypeGSegment defines methods to access Type G specific elements (IPv6 link-local adjacency with interface IDs + optional SID)
 type TypeGSegment interface {
 	GetLocalInterfaceID() uint32

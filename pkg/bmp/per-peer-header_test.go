@@ -1,7 +1,9 @@
 package bmp
 
 import (
+	"encoding/binary"
 	"testing"
+	"time"
 )
 
 // TestPerPeerHeaderFlags tests the interpretation of all flags per RFC 7854, RFC 8671, RFC 9069
@@ -417,5 +419,48 @@ func TestUnmarshalPerPeerHeader(t *testing.T) {
 
 	if trueCount != 1 {
 		t.Errorf("Expected exactly 1 RIB state to be true, got %d", trueCount)
+	}
+}
+
+func TestPeerHeaderTimestampParsing(t *testing.T) {
+	tests := []struct {
+		name string
+		sec  uint32
+		usec uint32
+	}{
+		{
+			name: "Epoch time (0 seconds, 0 microseconds)",
+			sec:  0,
+			usec: 0,
+		},
+		{
+			name: "Typical timestamp (1700000000 seconds, 500000 microseconds)",
+			sec:  1700000000,
+			usec: 500000,
+		},
+		{
+			name: "Maximum timestamp (4294967295 seconds, 999999 microseconds)",
+			sec:  4294967295,
+			usec: 999999,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ph := &PerPeerHeader{
+				PeerTimestamp: make([]byte, 8),
+			}
+
+			// Encode the timestamp in BMP format (8 bytes: 4 for seconds, 4 for microseconds)
+			binary.BigEndian.PutUint32(ph.PeerTimestamp[0:4], tt.sec)
+			binary.BigEndian.PutUint32(ph.PeerTimestamp[4:8], tt.usec)
+
+			// Build the expected value from the same sec/usec pair used to encode the timestamp.
+			expected := time.Unix(int64(tt.sec), int64(tt.usec)*1000).UTC().Format(time.RFC3339Nano)
+
+			if ph.GetPeerTimestamp() != expected {
+				t.Errorf("Timestamp mismatch: got %s, want %s", ph.GetPeerTimestamp(), expected)
+			}
+		})
 	}
 }
