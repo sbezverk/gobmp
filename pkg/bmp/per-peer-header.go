@@ -81,7 +81,8 @@ func peerType(b byte) (PeerType, error) {
 func (p *PerPeerHeader) GetPeerTimestamp() string {
 	t := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
 	ts := time.Second * time.Duration(binary.BigEndian.Uint32(p.PeerTimestamp[0:4]))
-	tms := time.Duration(int(binary.BigEndian.Uint32(p.PeerTimestamp[4:8])))
+	// RFC 7854 Section 4.2: Second 4 bytes are microseconds, not nanoseconds
+	tms := time.Microsecond * time.Duration(binary.BigEndian.Uint32(p.PeerTimestamp[4:8]))
 	t = t.Add(ts)
 	t = t.Add(tms)
 	return t.Format(time.RFC3339Nano)
