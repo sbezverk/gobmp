@@ -620,7 +620,7 @@ func TestRFC4364_SRv6_L3VPN(t *testing.T) {
 		0x00, 0x42, 0x00, // SRv6 SID indicator
 		0x00, 0x00, // RD Type 0
 		0x13, 0xce, 0x00, 0x00, 0xfe, 0x0a, // RD
-		0x18, 0x18, 0x18, 0x00, // Prefix 24.24.24.0/24
+		0x18, 0x18, 0x18, 0x00, // Prefix 24.24.24.0/30
 	}
 
 	got, err := UnmarshalL3VPNNLRI(input, false, true) // srv6 = true
@@ -629,6 +629,12 @@ func TestRFC4364_SRv6_L3VPN(t *testing.T) {
 	}
 	if len(got.NLRI) != 1 {
 		t.Errorf("Expected 1 NLRI, got %d", len(got.NLRI))
+	}
+	if got.NLRI[0].Length != 30 {
+		t.Errorf("Expected prefix length 30, got %d", got.NLRI[0].Length)
+	}
+	if got.NLRI[0].Prefix[0] != 0x18 || got.NLRI[0].Prefix[1] != 0x18 || got.NLRI[0].Prefix[2] != 0x18 {
+		t.Errorf("Expected prefix 24.24.24, got %d.%d.%d", got.NLRI[0].Prefix[0], got.NLRI[0].Prefix[1], got.NLRI[0].Prefix[2])
 	}
 	if got.NLRI[0].RD.Type != 0 {
 		t.Errorf("Expected RD Type 0, got %d", got.NLRI[0].RD.Type)
