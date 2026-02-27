@@ -48,12 +48,12 @@ func TestRFC4364_RouteDistinguisher_Type0(t *testing.T) {
 			// Prefix: 10.0.0.0/24
 			name: "RD_Type0_ASN577_Value64491_Prefix_10.0.0.0/24",
 			input: []byte{
-				0x70,                   // Length: 112 bits (24 label + 64 RD + 24 prefix)
-				0x05, 0xdc, 0x31,       // Label 24003, BoS=1
-				0x00, 0x00,             // RD Type 0
-				0x02, 0x41,             // ASN 577
+				0x70,             // Length: 112 bits (24 label + 64 RD + 24 prefix)
+				0x05, 0xdc, 0x31, // Label 24003, BoS=1
+				0x00, 0x00, // RD Type 0
+				0x02, 0x41, // ASN 577
 				0x00, 0x00, 0xfb, 0xeb, // Assigned Number 64491
-				0x0a, 0x00, 0x00,       // Prefix 10.0.0.0/24
+				0x0a, 0x00, 0x00, // Prefix 10.0.0.0/24
 			},
 			expected: &base.MPNLRI{
 				NLRI: []base.Route{
@@ -76,12 +76,12 @@ func TestRFC4364_RouteDistinguisher_Type0(t *testing.T) {
 			// Prefix: 192.168.1.0/24
 			name: "RD_Type0_ASN65000_Value100_Prefix_192.168.1.0/24",
 			input: []byte{
-				0x70,                   // Length: 112 bits
-				0x00, 0x10, 0x01,       // Label 1, BoS=1
-				0x00, 0x00,             // RD Type 0
-				0xfd, 0xe8,             // ASN 65000
+				0x70,             // Length: 112 bits
+				0x00, 0x10, 0x01, // Label 1, BoS=1
+				0x00, 0x00, // RD Type 0
+				0xfd, 0xe8, // ASN 65000
 				0x00, 0x00, 0x00, 0x64, // Assigned Number 100
-				0xc0, 0xa8, 0x01,       // Prefix 192.168.1.0/24
+				0xc0, 0xa8, 0x01, // Prefix 192.168.1.0/24
 			},
 			expected: &base.MPNLRI{
 				NLRI: []base.Route{
@@ -130,12 +130,12 @@ func TestRFC4364_RouteDistinguisher_Type1(t *testing.T) {
 			// Prefix: 172.16.7.0/24
 			name: "RD_Type1_IP_10.0.0.7_Value1_Prefix_172.16.7.0/24",
 			input: []byte{
-				0x70,                   // Length: 112 bits
-				0x05, 0xdd, 0x31,       // Label 24019, BoS=1
-				0x00, 0x01,             // RD Type 1
+				0x70,             // Length: 112 bits
+				0x05, 0xdd, 0x31, // Label 24019, BoS=1
+				0x00, 0x01, // RD Type 1
 				0x0a, 0x00, 0x00, 0x07, // IP 10.0.0.7
-				0x00, 0x01,             // Assigned Number 1
-				0xac, 0x10, 0x07,       // Prefix 172.16.7.0/24
+				0x00, 0x01, // Assigned Number 1
+				0xac, 0x10, 0x07, // Prefix 172.16.7.0/24
 			},
 			expected: &base.MPNLRI{
 				NLRI: []base.Route{
@@ -158,12 +158,12 @@ func TestRFC4364_RouteDistinguisher_Type1(t *testing.T) {
 			// Prefix: 10.10.10.0/24
 			name: "RD_Type1_IP_192.168.100.1_Value500_Prefix_10.10.10.0/24",
 			input: []byte{
-				0x70,                   // Length: 112 bits
-				0x00, 0x64, 0x01,       // Label 100, BoS=1
-				0x00, 0x01,             // RD Type 1
+				0x70,             // Length: 112 bits
+				0x00, 0x64, 0x01, // Label 100, BoS=1
+				0x00, 0x01, // RD Type 1
 				0xc0, 0xa8, 0x64, 0x01, // IP 192.168.100.1
-				0x01, 0xf4,             // Assigned Number 500
-				0x0a, 0x0a, 0x0a,       // Prefix 10.10.10.0/24
+				0x01, 0xf4, // Assigned Number 500
+				0x0a, 0x0a, 0x0a, // Prefix 10.10.10.0/24
 			},
 			expected: &base.MPNLRI{
 				NLRI: []base.Route{
@@ -209,12 +209,12 @@ func TestRFC4364_RouteDistinguisher_Type2(t *testing.T) {
 			// Prefix: 10.20.30.0/24
 			name: "RD_Type2_ASN65536_Value1_Prefix_10.20.30.0/24",
 			input: []byte{
-				0x70,                   // Length: 112 bits
-				0x00, 0xc8, 0x01,       // Label 200, BoS=1
-				0x00, 0x02,             // RD Type 2
+				0x70,             // Length: 112 bits
+				0x00, 0xc8, 0x01, // Label 200, BoS=1
+				0x00, 0x02, // RD Type 2
 				0x00, 0x01, 0x00, 0x00, // 4-byte ASN 65536
-				0x00, 0x01,             // Assigned Number 1
-				0x0a, 0x14, 0x1e,       // Prefix 10.20.30.0/24
+				0x00, 0x01, // Assigned Number 1
+				0x0a, 0x14, 0x1e, // Prefix 10.20.30.0/24
 			},
 			expected: &base.MPNLRI{
 				NLRI: []base.Route{
@@ -263,11 +263,11 @@ func TestRFC4364_VPNv4_VariousPrefixLengths(t *testing.T) {
 			// /32 host route
 			name: "VPNv4_Host_Route_32",
 			input: []byte{
-				0x78,                         // Length: 120 bits (24 + 64 + 32)
-				0x05, 0xdc, 0x31,             // Label 24003, BoS=1
-				0x00, 0x00,                   // RD Type 0
+				0x78,             // Length: 120 bits (24 + 64 + 32)
+				0x05, 0xdc, 0x31, // Label 24003, BoS=1
+				0x00, 0x00, // RD Type 0
 				0x02, 0x41, 0x00, 0x00, 0xfd, 0xeb,
-				0x03, 0x03, 0x03, 0x03,       // Prefix 3.3.3.3/32
+				0x03, 0x03, 0x03, 0x03, // Prefix 3.3.3.3/32
 			},
 			expectedLen:    32,
 			expectedPrefix: []byte{0x03, 0x03, 0x03, 0x03},
@@ -276,11 +276,11 @@ func TestRFC4364_VPNv4_VariousPrefixLengths(t *testing.T) {
 			// /24 network
 			name: "VPNv4_Network_24",
 			input: []byte{
-				0x70,                   // Length: 112 bits (24 + 64 + 24)
-				0x05, 0xdc, 0x61,       // Label 24006, BoS=1
+				0x70,             // Length: 112 bits (24 + 64 + 24)
+				0x05, 0xdc, 0x61, // Label 24006, BoS=1
 				0x00, 0x00,
 				0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
-				0x01, 0x01, 0x64,       // Prefix 1.1.100.0/24
+				0x01, 0x01, 0x64, // Prefix 1.1.100.0/24
 			},
 			expectedLen:    24,
 			expectedPrefix: []byte{0x01, 0x01, 0x64},
@@ -289,11 +289,11 @@ func TestRFC4364_VPNv4_VariousPrefixLengths(t *testing.T) {
 			// /16 network
 			name: "VPNv4_Network_16",
 			input: []byte{
-				0x68,                   // Length: 104 bits (24 + 64 + 16)
-				0x00, 0x10, 0x01,       // Label 1, BoS=1
+				0x68,             // Length: 104 bits (24 + 64 + 16)
+				0x00, 0x10, 0x01, // Label 1, BoS=1
 				0x00, 0x00,
 				0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-				0xac, 0x10,             // Prefix 172.16.0.0/16
+				0xac, 0x10, // Prefix 172.16.0.0/16
 			},
 			expectedLen:    16,
 			expectedPrefix: []byte{0xac, 0x10},
@@ -302,11 +302,11 @@ func TestRFC4364_VPNv4_VariousPrefixLengths(t *testing.T) {
 			// /8 network
 			name: "VPNv4_Network_8",
 			input: []byte{
-				0x60,                   // Length: 96 bits (24 + 64 + 8)
-				0x00, 0x20, 0x01,       // Label 2, BoS=1
+				0x60,             // Length: 96 bits (24 + 64 + 8)
+				0x00, 0x20, 0x01, // Label 2, BoS=1
 				0x00, 0x00,
 				0x00, 0x02, 0x00, 0x00, 0x00, 0x02,
-				0x0a,                   // Prefix 10.0.0.0/8
+				0x0a, // Prefix 10.0.0.0/8
 			},
 			expectedLen:    8,
 			expectedPrefix: []byte{0x0a},
@@ -316,11 +316,11 @@ func TestRFC4364_VPNv4_VariousPrefixLengths(t *testing.T) {
 			// 24 (label) + 64 (RD) + 30 (prefix) = 118 bits = 0x76
 			name: "VPNv4_Network_30",
 			input: []byte{
-				0x76,                               // Length: 118 bits (24 + 64 + 30)
-				0x05, 0xdc, 0x31,                   // Label 24003, BoS=1
-				0x00, 0x01,                         // RD Type 1 (IP:nn)
+				0x76,             // Length: 118 bits (24 + 64 + 30)
+				0x05, 0xdc, 0x31, // Label 24003, BoS=1
+				0x00, 0x01, // RD Type 1 (IP:nn)
 				0x0a, 0xb8, 0x01, 0x0a, 0x00, 0x1e, // RD 10.184.1.10:30
-				0x0a, 0x01, 0x03, 0x00,             // Prefix 10.1.3.0/30
+				0x0a, 0x01, 0x03, 0x00, // Prefix 10.1.3.0/30
 			},
 			expectedLen:    30,
 			expectedPrefix: []byte{0x0a, 0x01, 0x03, 0x00},
@@ -330,11 +330,11 @@ func TestRFC4364_VPNv4_VariousPrefixLengths(t *testing.T) {
 			// 24 (label) + 64 (RD) + 28 (prefix) = 116 bits = 0x74
 			name: "VPNv4_Network_28",
 			input: []byte{
-				0x74,                               // Length: 116 bits (24 + 64 + 28)
-				0x05, 0xdc, 0x31,                   // Label 24003, BoS=1
-				0x00, 0x00,                         // RD Type 0 (ASN:nn)
+				0x74,             // Length: 116 bits (24 + 64 + 28)
+				0x05, 0xdc, 0x31, // Label 24003, BoS=1
+				0x00, 0x00, // RD Type 0 (ASN:nn)
 				0x00, 0x64, 0x00, 0x00, 0x00, 0x01, // RD 100:1
-				0x0a, 0x01, 0x03, 0x10,             // Prefix 10.1.3.16/28
+				0x0a, 0x01, 0x03, 0x10, // Prefix 10.1.3.16/28
 			},
 			expectedLen:    28,
 			expectedPrefix: []byte{0x0a, 0x01, 0x03, 0x10},
@@ -361,17 +361,17 @@ func TestRFC4364_VPNv4_MultipleNLRIs(t *testing.T) {
 	// 2. 100.100.7.0/24 with label 24019
 	input := []byte{
 		// First NLRI: 172.16.7.0/31
-		0x77,                               // Length: 119 bits (24 label + 64 RD + 31 prefix = /31)
-		0x05, 0xdd, 0x31,                   // Label 24019, BoS=1
-		0x00, 0x01,                         // RD Type 1
+		0x77,             // Length: 119 bits (24 label + 64 RD + 31 prefix = /31)
+		0x05, 0xdd, 0x31, // Label 24019, BoS=1
+		0x00, 0x01, // RD Type 1
 		0x0a, 0x00, 0x00, 0x07, 0x00, 0x01, // IP 10.0.0.7:1
-		0xac, 0x10, 0x07, 0x00,             // Prefix 172.16.7.0
+		0xac, 0x10, 0x07, 0x00, // Prefix 172.16.7.0/31
 		// Second NLRI: 100.100.7.0/24
-		0x70,                               // Length: 112 bits
-		0x05, 0xdd, 0x31,                   // Label 24019, BoS=1
-		0x00, 0x01,                         // RD Type 1
+		0x70,             // Length: 112 bits
+		0x05, 0xdd, 0x31, // Label 24019, BoS=1
+		0x00, 0x01, // RD Type 1
 		0x0a, 0x00, 0x00, 0x07, 0x00, 0x01, // IP 10.0.0.7:1
-		0x64, 0x64, 0x07,                   // Prefix 100.100.7.0/24
+		0x64, 0x64, 0x07, // Prefix 100.100.7.0/24
 	}
 
 	got, err := UnmarshalL3VPNNLRI(input, false)
@@ -380,6 +380,18 @@ func TestRFC4364_VPNv4_MultipleNLRIs(t *testing.T) {
 	}
 	if len(got.NLRI) != 2 {
 		t.Errorf("Expected 2 NLRIs, got %d", len(got.NLRI))
+	}
+	if got.NLRI[0].Length != 31 {
+		t.Errorf("Expected first NLRI length 31, got %d", got.NLRI[0].Length)
+	}
+	if got.NLRI[0].Prefix[0] != 0xac || got.NLRI[0].Prefix[1] != 0x10 || got.NLRI[0].Prefix[2] != 0x07 {
+		t.Errorf("Expected first NLRI prefix 172.16.7.0, got %v", got.NLRI[0].Prefix)
+	}
+	if got.NLRI[1].Length != 24 {
+		t.Errorf("Expected second NLRI length 24, got %d", got.NLRI[1].Length)
+	}
+	if got.NLRI[1].Prefix[0] != 0x64 || got.NLRI[1].Prefix[1] != 0x64 || got.NLRI[1].Prefix[2] != 0x07 {
+		t.Errorf("Expected second NLRI prefix 100.100.7.0, got %v", got.NLRI[1].Prefix)
 	}
 }
 
@@ -399,11 +411,11 @@ func TestRFC4364_VPNv6_Prefixes(t *testing.T) {
 			// VPNv6 /64 prefix
 			name: "VPNv6_Prefix_64",
 			input: []byte{
-				0x98,                               // Length: 152 bits (24 + 64 + 64)
-				0x18, 0xa8, 0xf1,                   // Label 101007, BoS=1
-				0x00, 0x00,                         // RD Type 0
+				0x98,             // Length: 152 bits (24 + 64 + 64)
+				0x18, 0xa8, 0xf1, // Label 101007, BoS=1
+				0x00, 0x00, // RD Type 0
 				0x02, 0x2b, 0x00, 0x00, 0x02, 0x2b, // ASN 555:555
-				0x55, 0x55, 0x55, 0x55,             // Prefix 5555:5555:5555:5555::/64
+				0x55, 0x55, 0x55, 0x55, // Prefix 5555:5555:5555:5555::/64
 				0x55, 0x55, 0x55, 0x55,
 			},
 			expectedLen: 64,
@@ -413,9 +425,9 @@ func TestRFC4364_VPNv6_Prefixes(t *testing.T) {
 			// VPNv6 /128 host route
 			name: "VPNv6_Host_Route_128",
 			input: []byte{
-				0xd8,                               // Length: 216 bits (24 + 64 + 128)
-				0x18, 0xa8, 0xf1,                   // Label 101007, BoS=1
-				0x00, 0x00,                         // RD Type 0
+				0xd8,             // Length: 216 bits (24 + 64 + 128)
+				0x18, 0xa8, 0xf1, // Label 101007, BoS=1
+				0x00, 0x00, // RD Type 0
 				0x02, 0x2b, 0x00, 0x00, 0x02, 0x2b, // ASN 555:555
 				// Full /128 prefix
 				0x01, 0x72, 0x00, 0x31,
@@ -488,9 +500,9 @@ func TestRFC4364_WithPathID(t *testing.T) {
 			name: "PathID_1",
 			input: []byte{
 				0x00, 0x00, 0x00, 0x01, // Path ID = 1
-				0x78,                   // Length: 120 bits
-				0x05, 0xdc, 0x41,       // Label 24004, BoS=1
-				0x00, 0x00,             // RD Type 0
+				0x78,             // Length: 120 bits
+				0x05, 0xdc, 0x41, // Label 24004, BoS=1
+				0x00, 0x00, // RD Type 0
 				0x02, 0x41, 0x00, 0x00, 0xfd, 0x9a,
 				0x09, 0x16, 0x02, 0x16, // Prefix
 			},
@@ -501,8 +513,8 @@ func TestRFC4364_WithPathID(t *testing.T) {
 			name: "PathID_100",
 			input: []byte{
 				0x00, 0x00, 0x00, 0x64, // Path ID = 100
-				0x70,                   // Length: 112 bits
-				0x05, 0xdc, 0x51,       // Label 24005, BoS=1
+				0x70,             // Length: 112 bits
+				0x05, 0xdc, 0x51, // Label 24005, BoS=1
 				0x00, 0x00,
 				0x02, 0xbc, 0x00, 0x00, 0x02, 0xbc,
 				0x0a, 0x46, 0x46,
@@ -604,11 +616,11 @@ func TestRFC4364_MPLSLabels(t *testing.T) {
 func TestRFC4364_SRv6_L3VPN(t *testing.T) {
 	// SRv6 L3VPN uses a different label encoding
 	input := []byte{
-		0x76,                               // Length
-		0x00, 0x42, 0x00,                   // SRv6 SID indicator
-		0x00, 0x00,                         // RD Type 0
+		0x76,             // Length
+		0x00, 0x42, 0x00, // SRv6 SID indicator
+		0x00, 0x00, // RD Type 0
 		0x13, 0xce, 0x00, 0x00, 0xfe, 0x0a, // RD
-		0x18, 0x18, 0x18, 0x00,             // Prefix 24.24.24.0/24
+		0x18, 0x18, 0x18, 0x00, // Prefix 24.24.24.0/24
 	}
 
 	got, err := UnmarshalL3VPNNLRI(input, false, true) // srv6 = true
@@ -675,22 +687,22 @@ func TestRFC4364_Withdrawals(t *testing.T) {
 			// Withdrawal with compatibility marker 0x800000
 			name: "Withdrawal_Compat_Marker",
 			input: []byte{
-				0x70,                   // Length
-				0x80, 0x00, 0x00,       // Compatibility marker for withdrawal
-				0x00, 0x00,             // RD Type 0
+				0x70,             // Length
+				0x80, 0x00, 0x00, // Compatibility marker for withdrawal
+				0x00, 0x00, // RD Type 0
 				0x02, 0x41, 0x00, 0x00, 0xfd, 0xeb,
-				0x0a, 0x00, 0x00,       // Prefix
+				0x0a, 0x00, 0x00, // Prefix
 			},
 		},
 		{
 			// Withdrawal with zero label
 			name: "Withdrawal_Zero_Label",
 			input: []byte{
-				0x70,                   // Length
-				0x00, 0x00, 0x00,       // Zero label for withdrawal
-				0x00, 0x00,             // RD Type 0
+				0x70,             // Length
+				0x00, 0x00, 0x00, // Zero label for withdrawal
+				0x00, 0x00, // RD Type 0
 				0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
-				0xc0, 0xa8, 0x01,       // Prefix
+				0xc0, 0xa8, 0x01, // Prefix
 			},
 		},
 	}
@@ -719,11 +731,11 @@ func TestRFC4364_RealWorld_CiscoXR(t *testing.T) {
 	// VRF: CUSTOMER-A, RD: 65000:100, RT: 65000:100
 	// Prefix: 10.1.1.0/24, Label: 24001
 	input := []byte{
-		0x70,                               // 112 bits
-		0x05, 0xdc, 0x11,                   // Label 24001, BoS=1
-		0x00, 0x00,                         // RD Type 0
+		0x70,             // 112 bits
+		0x05, 0xdc, 0x11, // Label 24001, BoS=1
+		0x00, 0x00, // RD Type 0
 		0xfd, 0xe8, 0x00, 0x00, 0x00, 0x64, // RD 65000:100
-		0x0a, 0x01, 0x01,                   // Prefix 10.1.1.0/24
+		0x0a, 0x01, 0x01, // Prefix 10.1.1.0/24
 	}
 
 	got, err := UnmarshalL3VPNNLRI(input, false)
@@ -760,11 +772,11 @@ func TestRFC4364_RealWorld_JuniperMX(t *testing.T) {
 	// VRF: VPN-B, RD: 192.168.1.1:100
 	// Prefix: 172.16.0.0/16, Label: 299776
 	input := []byte{
-		0x68,                               // 104 bits (24 + 64 + 16)
-		0x04, 0x92, 0x01,                   // Label 299776, BoS=1
-		0x00, 0x01,                         // RD Type 1
+		0x68,             // 104 bits (24 + 64 + 16)
+		0x04, 0x92, 0x01, // Label 299776, BoS=1
+		0x00, 0x01, // RD Type 1
 		0xc0, 0xa8, 0x01, 0x01, 0x00, 0x64, // RD 192.168.1.1:100
-		0xac, 0x10,                         // Prefix 172.16.0.0/16
+		0xac, 0x10, // Prefix 172.16.0.0/16
 	}
 
 	got, err := UnmarshalL3VPNNLRI(input, false)
