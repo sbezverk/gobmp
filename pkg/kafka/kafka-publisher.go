@@ -314,7 +314,7 @@ func waitForControllerBrokerConnection(ca sarama.ClusterAdmin, config *sarama.Co
 				}
 			}
 		} else {
-			if err == sarama.ErrAlreadyConnected {
+			if errors.Is(err, sarama.ErrAlreadyConnected) {
 				return cb, nil
 			}
 		}

@@ -63,8 +63,10 @@ func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	var subsubtlvs map[string]json.RawMessage
-	if err := json.Unmarshal(objmap["sub_sub_tlvs"], &subsubtlvs); err != nil {
-		return nil
+	if sub, ok := objmap["sub_sub_tlvs"]; ok {
+		if err := json.Unmarshal(sub, &subsubtlvs); err != nil {
+			return err
+		}
 	}
 	for subsubtlvType, subsubtlvValue := range subsubtlvs {
 		t, err := strconv.Atoi(subsubtlvType)

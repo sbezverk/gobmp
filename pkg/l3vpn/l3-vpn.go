@@ -82,7 +82,7 @@ func parseL3VPNNLRI(b []byte, pathID bool, srv6Flag bool) (*base.MPNLRI, error) 
 				}
 				l, err := base.MakeLabel(b[p:p+3], srv6Flag)
 				if err != nil {
-					return nil, fmt.Errorf("failed to parse label at pos %d: %v", p, err)
+					return nil, fmt.Errorf("failed to parse label at pos %d: %w", p, err)
 				}
 				up.Label = append(up.Label, l)
 				p += 3
@@ -98,7 +98,7 @@ func parseL3VPNNLRI(b []byte, pathID bool, srv6Flag bool) (*base.MPNLRI, error) 
 		}
 		rd, err := base.MakeRD(b[p : p+8])
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse RD at pos %d: %v", p, err)
+			return nil, fmt.Errorf("failed to parse RD at pos %d: %w", p, err)
 		}
 		up.RD = rd
 		p += 8

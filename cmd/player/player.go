@@ -98,14 +98,14 @@ func loadMessages(f *os.File) ([]*filer.MsgOut, error) {
 		b, err := m.ReadBytes('\n')
 		if err != nil {
 			if err != io.EOF {
-				return nil, fmt.Errorf("fail to read messages file %s with error: %+v", file, err)
+				return nil, fmt.Errorf("fail to read messages file %s with error: %w", file, err)
 			}
 			done = true
 			continue
 		}
 		msg := &filer.MsgOut{}
 		if err := json.Unmarshal(b, msg); err != nil {
-			return nil, fmt.Errorf("fail to unmarshal message with error: %+v", err)
+			return nil, fmt.Errorf("fail to unmarshal message with error: %w", err)
 		}
 		msgs = append(msgs, msg)
 	}
