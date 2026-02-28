@@ -10,7 +10,7 @@ import (
 	"github.com/sbezverk/tools"
 )
 
-// UnmarshalL3VPNNLRI parses VPNv4/VPNv6 NLRI according to the caller-provided pathID flag
+// UnmarshalL3VPNNLRI parses VPNv4/VPNv6 NLRI according to the caller-provided pathID flag.
 // If parsing fails, it will try exactly once with !pathID. No recursion...
 func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, error) {
 	srv6Flag := false
@@ -125,13 +125,14 @@ func parseL3VPNNLRI(b []byte, pathID bool, srv6Flag bool) (*base.MPNLRI, error) 
 		up.Prefix = make([]byte, prefixBytes)
 		copy(up.Prefix, b[p:p+prefixBytes])
 		p += prefixBytes
-
-		// Store bit length
-		finalBits := prefixBits
-		if finalBits > 0 && finalBits <= 32 && (finalBits%8 != 0) {
-			finalBits = ((finalBits + 7) / 8) * 8 // round up to 8-bit boundary
+		if prefixBits%8 != 0 {
+			// Mask off unused bits in the last byte if prefix length is not a multiple of 8
+			up.Prefix[prefixBytes-1] &= 0xFF << (8 - (prefixBits % 8))
 		}
-		up.Length = uint8(finalBits)
+		// Store the exact bit length of the IP prefix (not rounded).
+		// The overhead (label + RD) has already been subtracted via prefixBits.
+		// Rounding up would corrupt CIDR lengths like /30 → /32.
+		up.Length = uint8(prefixBits)
 
 		mpnlri.NLRI = append(mpnlri.NLRI, up)
 	}
