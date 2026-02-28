@@ -45,16 +45,18 @@ func (p *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
 			Algorithm: p.Algorithm,
 			SID:       p.SID,
 		})
-	default:
+	case *UnknownProtoFlags:
 		return json.Marshal(struct {
 			Flags     *UnknownProtoFlags `json:"flags,omitempty"`
 			Algorithm uint8              `json:"algo"`
 			SID       uint32             `json:"prefix_sid"`
 		}{
-			Flags:     f.(*UnknownProtoFlags),
+			Flags:     f,
 			Algorithm: p.Algorithm,
 			SID:       p.SID,
 		})
+	default:
+		return nil, fmt.Errorf("unsupported PrefixSID flags type: %T", p.Flags)
 	}
 }
 

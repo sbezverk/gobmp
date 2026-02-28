@@ -45,16 +45,18 @@ func (a *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
 			Weight: a.Weight,
 			SID:    a.SID,
 		})
-	default:
+	case *UnknownProtoFlags:
 		return json.Marshal(struct {
 			Flags  *UnknownProtoFlags `json:"flags,omitempty"`
 			Weight uint8              `json:"weight"`
 			SID    uint32             `json:"sid,omitempty"`
 		}{
-			Flags:  f.(*UnknownProtoFlags),
+			Flags:  f,
 			Weight: a.Weight,
 			SID:    a.SID,
 		})
+	default:
+		return nil, fmt.Errorf("unsupported AdjacencySID flags type: %T", a.Flags)
 	}
 }
 
