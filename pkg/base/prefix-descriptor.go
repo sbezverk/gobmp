@@ -58,7 +58,7 @@ func (pd *PrefixDescriptor) GetPrefixIPReachability(ipv4 bool) *Route {
 // GetPrefixOSPFRouteType returns  OSPF Route type
 func (pd *PrefixDescriptor) GetPrefixOSPFRouteType() uint8 {
 	if tlv, ok := pd.PrefixTLV[264]; ok {
-		return uint8(tlv.Value[0])
+		return tlv.Value[0]
 	}
 	return 0
 }

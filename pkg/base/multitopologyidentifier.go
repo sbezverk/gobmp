@@ -22,7 +22,7 @@ func UnmarshalMultiTopologyIdentifierTLV(b []byte) ([]*MultiTopologyIdentifier, 
 	p := 0
 	// number of mt_id entries length / 2
 	mti := make([]*MultiTopologyIdentifier, len(b)/2)
-	for i := 0; i < int(len(b)/2); i++ {
+	for i := 0; i < len(b)/2; i++ {
 		m := &MultiTopologyIdentifier{}
 		d := binary.BigEndian.Uint16(b[p : p+2])
 		m.MTID = d & 0x0fff
