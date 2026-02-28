@@ -136,6 +136,12 @@ func UnmarshalAdjacencySIDTLV(b []byte, proto base.ProtoID) (*AdjacencySIDTLV, e
 			return nil, err
 		}
 		asid.Flags = f
+	case base.Direct, base.Static, base.BGP, base.RSVPTE, base.SR:
+		f, err := UnmarshalUnknownProtoFlags(b[p : p+1])
+		if err != nil {
+			return nil, err
+		}
+		asid.Flags = f
 	default:
 		f, err := UnmarshalUnknownProtoFlags(b[p : p+1])
 		if err != nil {

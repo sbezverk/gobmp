@@ -78,6 +78,8 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	case base.OSPFv3:
 		msg.OSPFRouteType = prfx.Prefix.GetPrefixOSPFRouteType()
 		msg.AreaID = prfx.LocalNode.GetOSPFAreaID()
+	case base.Direct, base.Static, base.BGP, base.RSVPTE, base.SR:
+		msg.AreaID = "0"
 	default:
 		msg.AreaID = "0"
 	}

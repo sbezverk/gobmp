@@ -90,6 +90,8 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.BGPRouterID = net.IP(link.LocalNode.GetBGPRouterID()).To4().String()
 		msg.BGPRemoteRouterID = net.IP(link.RemoteNode.GetBGPRouterID()).To4().String()
 		msg.MemberAS = link.LocalNode.GetConfedMemberASN()
+	case base.Direct, base.Static, base.RSVPTE, base.SR:
+		msg.AreaID = "0"
 	default:
 		msg.AreaID = "0"
 	}
