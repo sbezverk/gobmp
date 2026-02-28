@@ -394,7 +394,7 @@ func TestRFC4364_VPNv4_MultipleNLRIs(t *testing.T) {
 	if got.NLRI[1].Length != 24 {
 		t.Errorf("Expected second NLRI length 24, got %d", got.NLRI[1].Length)
 	}
-	if !bytes.Equal(got.NLRI[1].Prefix, []byte{0x64, 0x64, 0x07, 0x00}) {
+	if !bytes.Equal(got.NLRI[1].Prefix, []byte{0x64, 0x64, 0x07}) {
 		t.Errorf("Expected second NLRI prefix 100.100.7.0, got %v", got.NLRI[1].Prefix)
 	}
 }

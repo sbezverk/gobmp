@@ -10,7 +10,7 @@ import (
 	"github.com/sbezverk/tools"
 )
 
-// UnmarshalL3VPNNLRI parses VPNv4/VPNv6 NLRI according to the caller-provided pathID flag
+// UnmarshalL3VPNNLRI parses VPNv4/VPNv6 NLRI according to the caller-provided pathID flag.
 // If parsing fails, it will try exactly once with !pathID. No recursion...
 func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, error) {
 	srv6Flag := false
