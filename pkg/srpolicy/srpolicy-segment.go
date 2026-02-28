@@ -135,7 +135,11 @@ func (sl *SegmentList) UnmarshalJSON(b []byte) error {
 				}
 				seg = t
 			case TypeH:
-				fallthrough
+				t := &typeHSegment{}
+				if err := t.unmarshalJSONObj(s); err != nil {
+					return err
+				}
+				seg = t
 			case TypeI:
 				fallthrough
 			case TypeJ:
@@ -315,7 +319,23 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeH):
-			glog.Infof("Segment of type H not implemented")
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type H Segment STLV: missing length byte")
+			}
+			l := b[p]
+			p++
+			if l != 34 && l != 38 {
+				return nil, fmt.Errorf("invalid length of Type H Segment STLV: got %d, expected 34 or 38", l)
+			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type H Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
+			}
+			s, err := UnmarshalTypeHSegment(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			sl.Segment = append(sl.Segment, s)
+			p += int(l)
 		case int(TypeI):
 			glog.Infof("Segment of type I not implemented")
 		case int(TypeJ):
@@ -1237,6 +1257,138 @@ func UnmarshalTypeGSegment(b []byte) (Segment, error) {
 	p += 16
 	// Optional SID (4 bytes) if length is 46
 	if len(b) == 46 {
+		sid := binary.BigEndian.Uint32(b[p : p+4])
+		s.sid = &sid
+	}
+
+	return s, nil
+}
+// TypeHSegment defines methods to access Type H specific elements (IPv6 Local/Remote adjacency + optional MPLS SID)
+type TypeHSegment interface {
+	GetLocalIPv6Address() []byte
+	GetRemoteIPv6Address() []byte
+	GetSID() (uint32, bool)
+}
+
+type typeHSegment struct {
+	flags             *SegmentFlags
+	localIPv6Address  []byte
+	remoteIPv6Address []byte
+	sid               *uint32
+}
+
+var _ Segment = &typeHSegment{}
+var _ TypeHSegment = &typeHSegment{}
+
+// GetFlags returns the segment flags.
+func (th *typeHSegment) GetFlags() *SegmentFlags {
+	return th.flags
+}
+
+// GetType returns the segment type identifier.
+func (th *typeHSegment) GetType() SegmentType {
+	return TypeH
+}
+
+// GetLocalIPv6Address returns a 16-byte copy of the local IPv6 address safe for modification.
+func (th *typeHSegment) GetLocalIPv6Address() []byte {
+	return append([]byte(nil), th.localIPv6Address...)
+}
+
+// GetRemoteIPv6Address returns a 16-byte copy of the remote IPv6 address safe for modification.
+func (th *typeHSegment) GetRemoteIPv6Address() []byte {
+	return append([]byte(nil), th.remoteIPv6Address...)
+}
+
+// GetSID returns the optional MPLS SID value and whether it is present.
+func (th *typeHSegment) GetSID() (uint32, bool) {
+	if th.sid != nil {
+		return *th.sid, true
+	}
+	return 0, false
+}
+
+func (th *typeHSegment) MarshalJSON() ([]byte, error) {
+	v := struct {
+		SegmentType       SegmentType   `json:"segment_type,omitempty"`
+		Flags             *SegmentFlags `json:"flags,omitempty"`
+		LocalIPv6Address  []byte        `json:"local_ipv6_address,omitempty"`
+		RemoteIPv6Address []byte        `json:"remote_ipv6_address,omitempty"`
+		SID               *uint32       `json:"sid,omitempty"`
+	}{
+		SegmentType:       TypeH,
+		Flags:             th.flags,
+		LocalIPv6Address:  th.localIPv6Address,
+		RemoteIPv6Address: th.remoteIPv6Address,
+		SID:               th.sid,
+	}
+	return json.Marshal(v)
+}
+
+func (th *typeHSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) error {
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &th.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["local_ipv6_address"]; ok {
+		if err := json.Unmarshal(b, &th.localIPv6Address); err != nil {
+			return err
+		}
+		if len(th.localIPv6Address) != 16 {
+			return fmt.Errorf("local_ipv6_address must be exactly 16 bytes, got %d", len(th.localIPv6Address))
+		}
+	}
+	if b, ok := objmap["remote_ipv6_address"]; ok {
+		if err := json.Unmarshal(b, &th.remoteIPv6Address); err != nil {
+			return err
+		}
+		if len(th.remoteIPv6Address) != 16 {
+			return fmt.Errorf("remote_ipv6_address must be exactly 16 bytes, got %d", len(th.remoteIPv6Address))
+		}
+	}
+	if b, ok := objmap["sid"]; ok {
+		var sid uint32
+		if err := json.Unmarshal(b, &sid); err != nil {
+			return err
+		}
+		th.sid = &sid
+	}
+	return nil
+}
+
+func (th *typeHSegment) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	return th.unmarshalJSONObj(objmap)
+}
+
+// UnmarshalTypeHSegment instantiates an instance of Type H Segment sub tlv (IPv6 Local/Remote adjacency + optional MPLS SID)
+func UnmarshalTypeHSegment(b []byte) (Segment, error) {
+	if glog.V(5) {
+		glog.Infof("SR Policy Type H Segment STLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 34 && len(b) != 38 {
+		return nil, fmt.Errorf("invalid length of Type H Segment STLV: got %d, expected 34 or 38", len(b))
+	}
+	s := &typeHSegment{}
+	p := 0
+	s.flags = NewSegmentFlags(b[p])
+	p++
+	// Skip reserved byte per RFC 9831
+	p++
+	// Local IPv6 address is 16 bytes
+	s.localIPv6Address = make([]byte, 16)
+	copy(s.localIPv6Address, b[p:p+16])
+	p += 16
+	// Remote IPv6 address is 16 bytes
+	s.remoteIPv6Address = make([]byte, 16)
+	copy(s.remoteIPv6Address, b[p:p+16])
+	p += 16
+	// Optional MPLS SID (4 bytes) if length is 38
+	if len(b) == 38 {
 		sid := binary.BigEndian.Uint32(b[p : p+4])
 		s.sid = &sid
 	}
