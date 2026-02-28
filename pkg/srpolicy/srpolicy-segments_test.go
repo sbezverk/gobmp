@@ -2423,7 +2423,7 @@ func TestUnmarshalSegmentListSTLV_TypeH(t *testing.T) {
 func TestUnmarshalTypeISegment_Valid(t *testing.T) {
 	ipv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
 	srv6SID := []byte{0x20, 0x01, 0x0d, 0xb8, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
-	// 22 bytes = flags(1) + algo(1) + ipv6(16) + reserved(4)
+	// 22 bytes = flags(1) + algo(1) + ipv6(16) + SRv6 Endpoint Behavior(2) + Behavior Flags(1) + Reserved(1)
 	base22 := append(append([]byte{0x00, 0x01}, ipv6...), []byte{0x00, 0x00, 0x00, 0x00}...)
 	// 38 bytes = base22 + srv6SID(16)
 	base38 := append(append([]byte(nil), base22...), srv6SID...)
@@ -2604,7 +2604,7 @@ func TestTypeISegment_JSON(t *testing.T) {
 
 func TestUnmarshalSegmentListSTLV_TypeI(t *testing.T) {
 	ipv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
-	// Type I STLV: type(1) + length(1) + flags(1) + algo(1) + ipv6(16) + reserved(4) = 24 bytes total, length field = 22
+	// Type I STLV: type(1) + length(1) + flags(1) + algo(1) + ipv6(16) + SRv6 Endpoint Behavior(2) + Behavior Flags(1) + Reserved(1) = 24 bytes total, length field = 22
 	stlv22 := append([]byte{byte(TypeI), 22, 0x00, 0x01}, append(ipv6, []byte{0x00, 0x00, 0x00, 0x00}...)...)
 	tests := []struct {
 		name      string
