@@ -1412,6 +1412,7 @@ func UnmarshalTypeISegment(b []byte) (Segment, error) {
 
 	return s, nil
 }
+
 // TypeHSegment defines methods to access Type H specific elements (IPv6 Local/Remote adjacency + optional MPLS SID)
 type TypeHSegment interface {
 	GetLocalIPv6Address() []byte
