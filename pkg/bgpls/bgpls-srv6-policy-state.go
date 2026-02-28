@@ -220,7 +220,8 @@ func UnmarshalSRCandidatePathConstraints(b []byte) (*SRCandidatePathConstraints,
 	p += 2
 	s.Algo = b[p]
 	p++
-	// Skip reserved 1 byte
+	// Skip 3 reserved bytes (word 2 of fixed header: algo + 3 reserved)
+	p += 3
 	if p < len(b) {
 		var err error
 		s.SubTLV, err = UnmarshalSRCandidatePathConstraintsSubTLV(b[p:])
