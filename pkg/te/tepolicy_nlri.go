@@ -10,7 +10,7 @@ import (
 	"github.com/sbezverk/tools"
 )
 
-// NLRI defines TE Policy NLRI onject
+// NLRI defines TE Policy NLRI object.
 type NLRI struct {
 	ProtocolID  base.ProtoID
 	Identifier  []byte               `json:"domain_id,omitempty"`
@@ -19,7 +19,7 @@ type NLRI struct {
 	Policy      *PolicyDescriptor    `json:"te_policy_descriptor,omitempty"`
 }
 
-// UnmarshalTEPolicyNLRI builds SRv6SIDNLRI NLRI object
+// UnmarshalTEPolicyNLRI builds SRv6SIDNLRI NLRI object.
 func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 	if glog.V(6) {
 		glog.Infof("TE Policy NLRI Raw: %s", tools.MessageHex(b))

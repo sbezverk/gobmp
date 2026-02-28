@@ -73,7 +73,7 @@ func (s *store) manager() {
 	}
 }
 
-func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, done chan struct{}, workersErrChan chan error) {
+func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, workersErrChan chan error) {
 	for {
 		select {
 		case <-s.stopCh:
@@ -126,7 +126,7 @@ func Store(topics []*kafka.TopicDescriptor, f *os.File, stopCh chan struct{}, er
 		case bmp.UnicastPrefixMsg:
 			fallthrough
 		case bmp.UnicastPrefixV6Msg:
-			go s.storeUnicastWorker(topic, doneCh, workersErrChan)
+			go s.storeUnicastWorker(topic, workersErrChan)
 		}
 	}
 	total := len(topics)

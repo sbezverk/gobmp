@@ -33,7 +33,7 @@ func (p *pubwriter) Stop() {
 	p.output.Printf("gobmp is stopping...")
 }
 
-// NewDumper returns a new instance of standard out  dumper
+// NewDumper returns a new instance of standard out dumper.
 func NewDumper() (pub.Publisher, error) {
 	pw := pubwriter{
 		output: log.New(os.Stdout, "gobmp: ", log.Lmicroseconds),

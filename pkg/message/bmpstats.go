@@ -112,7 +112,7 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 			glog.Warningf("unprocessed stats type:%v", tlv.InformationType)
 		}
 	}
-	if err := p.marshalAndPublish(&m, bmp.StatsReportMsg, []byte(m.RouterHash), false); err != nil {
+	if err := p.marshalAndPublish(&m, bmp.StatsReportMsg, []byte(m.RouterHash)); err != nil {
 		glog.Errorf("failed to process peer Stats Report message with error: %+v", err)
 		return
 	}

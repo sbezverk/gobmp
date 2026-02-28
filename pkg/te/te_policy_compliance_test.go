@@ -30,13 +30,10 @@ func buildNodeDescriptor(descriptorType uint16, tlvs ...nodeTLV) []byte {
 }
 
 // buildTEPolicyNLRI builds a complete TE Policy NLRI byte slice.
-func buildTEPolicyNLRI(protoID byte, identifier []byte, nodeDesc []byte, policyDesc []byte) []byte {
+func buildTEPolicyNLRI(protoID byte, identifier []byte, nodeDesc []byte) []byte {
 	b := []byte{protoID}
 	b = append(b, identifier...)
 	b = append(b, nodeDesc...)
-	if policyDesc != nil {
-		b = append(b, policyDesc...)
-	}
 	return b
 }
 
@@ -68,7 +65,7 @@ func validNodeDesc() []byte {
 
 func TestTEPolicy_NLRI_SR_ProtocolID(t *testing.T) {
 	nd := validNodeDesc()
-	input := buildTEPolicyNLRI(0x09, identifier, nd, nil)
+	input := buildTEPolicyNLRI(0x09, identifier, nd)
 
 	nlri, err := UnmarshalTEPolicyNLRI(input)
 	if err != nil {
@@ -81,7 +78,7 @@ func TestTEPolicy_NLRI_SR_ProtocolID(t *testing.T) {
 
 func TestTEPolicy_NLRI_RSVPTE_ProtocolID(t *testing.T) {
 	nd := validNodeDesc()
-	input := buildTEPolicyNLRI(0x08, identifier, nd, nil)
+	input := buildTEPolicyNLRI(0x08, identifier, nd)
 
 	nlri, err := UnmarshalTEPolicyNLRI(input)
 	if err != nil {
@@ -96,7 +93,7 @@ func TestTEPolicy_NLRI_InvalidProtocolID(t *testing.T) {
 	nd := validNodeDesc()
 	tests := []byte{0x00, 0x01, 0x07, 0x0A, 0xFF}
 	for _, pid := range tests {
-		input := buildTEPolicyNLRI(pid, identifier, nd, nil)
+		input := buildTEPolicyNLRI(pid, identifier, nd)
 		_, err := UnmarshalTEPolicyNLRI(input)
 		if err == nil {
 			t.Errorf("expected error for protocol ID %d", pid)
@@ -134,7 +131,7 @@ func TestTEPolicy_NLRI_TruncatedNodeDescriptor(t *testing.T) {
 func TestTEPolicy_NLRI_IdentifierCopied(t *testing.T) {
 	nd := validNodeDesc()
 	id := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
-	input := buildTEPolicyNLRI(0x09, id, nd, nil)
+	input := buildTEPolicyNLRI(0x09, id, nd)
 
 	nlri, err := UnmarshalTEPolicyNLRI(input)
 	if err != nil {
@@ -147,7 +144,7 @@ func TestTEPolicy_NLRI_IdentifierCopied(t *testing.T) {
 
 func TestTEPolicy_NLRI_HeadEndHash(t *testing.T) {
 	nd := validNodeDesc()
-	input := buildTEPolicyNLRI(0x09, identifier, nd, nil)
+	input := buildTEPolicyNLRI(0x09, identifier, nd)
 
 	nlri, err := UnmarshalTEPolicyNLRI(input)
 	if err != nil {

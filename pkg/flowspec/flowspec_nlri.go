@@ -10,20 +10,20 @@ import (
 	"github.com/sbezverk/tools"
 )
 
-// Spec defines an interface which all types of Flowspec rules must implement
+// Spec defines an interface which all types of Flowspec rules must implement.
 type Spec interface {
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON([]byte) error
 }
 
-// NLRI defines Flowspec NLRI structure
+// NLRI defines Flowspec NLRI structure.
 type NLRI struct {
 	Length   uint16
 	Spec     []Spec
 	SpecHash string
 }
 
-// GetSpecHash returns calculated MD5 for Flowspec NLRI's Spec
+// GetSpecHash returns calculated MD5 for Flowspec NLRI's Spec.
 func (fs *NLRI) GetSpecHash() string {
 	return fs.SpecHash
 }
@@ -90,10 +90,7 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 		case Type1:
 			fallthrough
 		case Type2:
-			spec, l, err = makePrefixSpec(b[p:])
-			if err != nil {
-				return nil, err
-			}
+			spec, l = makePrefixSpec(b[p:])
 		case Type3:
 			fallthrough
 		case Type4:
@@ -212,7 +209,7 @@ type PrefixSpec struct {
 	Prefix       []byte `json:"prefix"`
 }
 
-func makePrefixSpec(b []byte) (Spec, int, error) {
+func makePrefixSpec(b []byte) (Spec, int) {
 	s := &PrefixSpec{}
 	p := 0
 	s.SpecType = b[p]
@@ -227,7 +224,7 @@ func makePrefixSpec(b []byte) (Spec, int, error) {
 	copy(s.Prefix, b[p:p+l])
 	p += int(l)
 
-	return s, p, nil
+	return s, p
 }
 
 // UnmarshalJSON unmarshals a slice of bytes into a new FlowSPec PrefixSpec

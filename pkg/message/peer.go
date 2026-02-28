@@ -133,7 +133,7 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		delete(p.tableProperties, msg.PeerHeader.GetTableKey())
 		p.tableLock.Unlock()
 	}
-	if err := p.marshalAndPublish(&m, bmp.PeerStateChangeMsg, []byte(m.RouterHash), false); err != nil {
+	if err := p.marshalAndPublish(&m, bmp.PeerStateChangeMsg, []byte(m.RouterHash)); err != nil {
 		glog.Errorf("failed to process peer message with error: %+v", err)
 		return
 	}
