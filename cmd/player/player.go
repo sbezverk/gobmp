@@ -49,7 +49,7 @@ func run() int {
 		glog.Errorf("fail to open messages file %s with error: %+v", file, err)
 		return 1
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Initializing publisher process
 	kConfig := &kafka.Config{
