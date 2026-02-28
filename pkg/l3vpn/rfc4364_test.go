@@ -1,6 +1,7 @@
 package l3vpn
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -350,6 +351,9 @@ func TestRFC4364_VPNv4_VariousPrefixLengths(t *testing.T) {
 			if got.NLRI[0].Length != tt.expectedLen {
 				t.Errorf("Expected prefix length %d, got %d", tt.expectedLen, got.NLRI[0].Length)
 			}
+			if !bytes.Equal(got.NLRI[0].Prefix, tt.expectedPrefix) {
+				t.Errorf("Expected prefix %v, got %v", tt.expectedPrefix, got.NLRI[0].Prefix)
+			}
 		})
 	}
 }
@@ -384,13 +388,13 @@ func TestRFC4364_VPNv4_MultipleNLRIs(t *testing.T) {
 	if got.NLRI[0].Length != 31 {
 		t.Errorf("Expected first NLRI length 31, got %d", got.NLRI[0].Length)
 	}
-	if got.NLRI[0].Prefix[0] != 0xac || got.NLRI[0].Prefix[1] != 0x10 || got.NLRI[0].Prefix[2] != 0x07 {
+	if !bytes.Equal(got.NLRI[0].Prefix, []byte{0xac, 0x10, 0x07, 0x00}) {
 		t.Errorf("Expected first NLRI prefix 172.16.7.0, got %v", got.NLRI[0].Prefix)
 	}
 	if got.NLRI[1].Length != 24 {
 		t.Errorf("Expected second NLRI length 24, got %d", got.NLRI[1].Length)
 	}
-	if got.NLRI[1].Prefix[0] != 0x64 || got.NLRI[1].Prefix[1] != 0x64 || got.NLRI[1].Prefix[2] != 0x07 {
+	if !bytes.Equal(got.NLRI[1].Prefix, []byte{0x64, 0x64, 0x07, 0x00}) {
 		t.Errorf("Expected second NLRI prefix 100.100.7.0, got %v", got.NLRI[1].Prefix)
 	}
 }
@@ -633,8 +637,8 @@ func TestRFC4364_SRv6_L3VPN(t *testing.T) {
 	if got.NLRI[0].Length != 30 {
 		t.Errorf("Expected prefix length 30, got %d", got.NLRI[0].Length)
 	}
-	if got.NLRI[0].Prefix[0] != 0x18 || got.NLRI[0].Prefix[1] != 0x18 || got.NLRI[0].Prefix[2] != 0x18 {
-		t.Errorf("Expected prefix 24.24.24, got %d.%d.%d", got.NLRI[0].Prefix[0], got.NLRI[0].Prefix[1], got.NLRI[0].Prefix[2])
+	if got.NLRI[0].Prefix[0] != 0x18 || got.NLRI[0].Prefix[1] != 0x18 || got.NLRI[0].Prefix[2] != 0x18 || got.NLRI[0].Prefix[3] != 0x00 {
+		t.Errorf("Expected prefix 24.24.24.0, got %d.%d.%d.%d", got.NLRI[0].Prefix[0], got.NLRI[0].Prefix[1], got.NLRI[0].Prefix[2], got.NLRI[0].Prefix[3])
 	}
 	if got.NLRI[0].RD.Type != 0 {
 		t.Errorf("Expected RD Type 0, got %d", got.NLRI[0].RD.Type)
