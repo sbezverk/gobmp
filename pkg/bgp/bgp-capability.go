@@ -97,8 +97,7 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 		if !ok {
 			capData.Description = "Unknown capability " + strconv.Itoa(int(code))
 		}
-		switch code {
-		case 1:
+		if code == 1 {
 			// According RFC https://tools.ietf.org/html/rfc2858#section-7 Length will always be 4 bytes.
 			afi := binary.BigEndian.Uint16(capData.Value[:2])
 			safi := capData.Value[3]
