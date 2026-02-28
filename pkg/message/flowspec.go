@@ -120,7 +120,16 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 					return err
 				}
 				o.Spec = append(o.Spec, s)
-			case flowspec.Type3:
+			case flowspec.Type3,
+				flowspec.Type4,
+				flowspec.Type5,
+				flowspec.Type6,
+				flowspec.Type7,
+				flowspec.Type8,
+				flowspec.Type9,
+				flowspec.Type10,
+				flowspec.Type11,
+				flowspec.Type12:
 				s, err := makeGenericSpec(spec)
 				if err != nil {
 					return err
