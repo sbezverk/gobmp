@@ -34,6 +34,10 @@ func init() {
 func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
+	os.Exit(run())
+}
+
+func run() int {
 	var f *os.File
 	var err error
 	var b []byte
@@ -41,16 +45,16 @@ func main() {
 		// validator will receive messages from kafka and compare with messages stored in the message file\
 		if f, err = os.Open(msgFile); err != nil {
 			glog.Errorf("failed to open message file: %s with error: %+v", msgFile, err)
-			os.Exit(1)
+			return 1
 		}
 		if b, err = io.ReadAll(f); err != nil {
 			glog.Errorf("failed to read message file: %s with error: %+v", msgFile, err)
-			os.Exit(1)
+			return 1
 		}
 	} else {
 		if f, err = os.Create(msgFile); err != nil {
 			glog.Errorf("failed to create message file: %s with error: %+v", msgFile, err)
-			os.Exit(1)
+			return 1
 		}
 	}
 	// If this point is reached f cannot be nil
@@ -78,14 +82,14 @@ func main() {
 			})
 		default:
 			glog.Errorf("Unsupported or invalid test case %s", test)
-			os.Exit(1)
+			return 1
 		}
 	}
 	// starting kafka consumer
 	k, err := kafka.NewKafkaMConsumer(msgSrvAddr, topics)
 	if err != nil {
 		glog.Errorf("failed to initialize kafka consumer with error: %+v", err)
-		os.Exit(1)
+		return 1
 	}
 	k.Start()
 	// Starting Check and Store depending on the validator Flag
@@ -118,5 +122,5 @@ func main() {
 	}
 
 	k.Stop()
-	os.Exit(retCode)
+	return retCode
 }
