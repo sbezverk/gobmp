@@ -154,7 +154,7 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 			expect: &base.MPNLRI{
 				NLRI: []base.Route{
 					{
-						Length: 32,
+						Length: 30, // 0x76=118 bits, overhead=88 (24 label+64 RD), prefix=30
 						Label: []*base.Label{
 							{
 								Value: 16896,
@@ -206,7 +206,7 @@ func TestUnmarshalL3VPNNLRI(t *testing.T) {
 			expect: &base.MPNLRI{
 				NLRI: []base.Route{
 					{
-						Length: 32,
+						Length: 31, // 0x77=119 bits, overhead=88 (24 label+64 RD), prefix=31
 						Label: []*base.Label{
 							{
 								Value: 24019,
