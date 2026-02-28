@@ -58,7 +58,7 @@ func UnmarshalPeerUpMessage(b []byte, isIPv6 bool) (*PeerUpMessage, error) {
 		return nil, fmt.Errorf("invalid BGP Open message length %d", l1)
 	}
 	if p+int(l1)-16 > len(b) {
-		return nil, fmt.Errorf("Sent Open message length %d exceeds available buffer", l1)
+		return nil, fmt.Errorf("sent Open message length %d exceeds available buffer", l1)
 	}
 	pu.SentOpen, err = bgp.UnmarshalBGPOpenMessage(b[p : p+int(l1)-16])
 	if err != nil {
@@ -76,7 +76,7 @@ func UnmarshalPeerUpMessage(b []byte, isIPv6 bool) (*PeerUpMessage, error) {
 		return nil, fmt.Errorf("invalid BGP Open message length %d", l2)
 	}
 	if p+int(l2)-16 > len(b) {
-		return nil, fmt.Errorf("Received Open message length %d exceeds available buffer", l2)
+		return nil, fmt.Errorf("received Open message length %d exceeds available buffer", l2)
 	}
 	pu.ReceivedOpen, err = bgp.UnmarshalBGPOpenMessage(b[p : p+int(l2)-16])
 	if err != nil {
