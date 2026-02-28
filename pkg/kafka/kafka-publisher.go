@@ -1,6 +1,8 @@
 package kafka
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"log"
@@ -151,7 +153,9 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 
 func (p *publisher) Stop() {
 	close(p.stopCh)
-	_ = p.clusterAdmin.Close()
+	if p.clusterAdmin != nil {
+		_ = p.clusterAdmin.Close()
+	}
 }
 
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
@@ -168,36 +172,76 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	config.ClientID = "gobmp-producer" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
-	config.Admin.Retry.Max = 120
-	config.Admin.Retry.Backoff = time.Second
 	config.Metadata.Retry.Max = 300
 	config.Metadata.Retry.Backoff = time.Second * 10
 	config.Version = sarama.V3_0_0_0
 
-	kafkaSrvs := strings.Split(kConfig.ServerAddress, ",")
-	ca, err := sarama.NewClusterAdmin(kafkaSrvs, config)
-	if err != nil {
-		glog.Errorf("failed to create cluster admin: %+v", err)
-		return nil, err
-	}
-
-	cb, err := waitForControllerBrokerConnection(ca, config, brockerConnectTimeout)
-	if err != nil {
-		glog.Errorf("failed to open connection to the controller broker with error: %+v\n", err)
-		return nil, err
-	}
-	glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
-
-	for _, t := range topicNames {
-		topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
-		if err := ensureTopic(ca, topicCreateTimeout, topicName); err != nil {
-			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
-			return nil, err
+	// SASL SCRAM (SCRAM-SHA-512 or SCRAM-SHA-256)
+	if kConfig.SASLUser != "" {
+		config.Net.SASL.Enable = true
+		config.Net.SASL.User = kConfig.SASLUser
+		config.Net.SASL.Password = kConfig.SASLPassword
+		config.Net.SASL.Handshake = true
+		switch kConfig.SASLMechanism {
+		case "SCRAM-SHA-256":
+			config.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
+			config.Net.SASL.SCRAMClientGeneratorFunc = SCRAMClientGeneratorSHA256
+		case "SCRAM-SHA-512":
+			config.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
+			config.Net.SASL.SCRAMClientGeneratorFunc = SCRAMClientGeneratorSHA512
+		default:
+			return nil, fmt.Errorf("kafka SASL mechanism must be SCRAM-SHA-256 or SCRAM-SHA-512, got %q", kConfig.SASLMechanism)
 		}
 	}
+
+	// TLS (for SASL_SSL)
+	if kConfig.UseTLS {
+		config.Net.TLS.Enable = true
+		config.Net.TLS.Config = buildTLSConfig(kConfig.TLSSkipVerify, kConfig.TLSCAFilePath)
+	}
+
+	kafkaSrvs := strings.Split(kConfig.ServerAddress, ",")
+
+	var ca sarama.ClusterAdmin
+	if !kConfig.SkipTopicCreation {
+		config.Admin.Retry.Max = 120
+		config.Admin.Retry.Backoff = time.Second
+		var err error
+		ca, err = sarama.NewClusterAdmin(kafkaSrvs, config)
+		if err != nil {
+			glog.Errorf("failed to create cluster admin: %+v", err)
+			return nil, err
+		}
+
+		cb, err := waitForControllerBrokerConnection(ca, config, brockerConnectTimeout)
+		if err != nil {
+			glog.Errorf("failed to open connection to the controller broker with error: %+v\n", err)
+			_ = ca.Close()
+			return nil, err
+		}
+		glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
+		_ = cb.Close()
+
+		for _, t := range topicNames {
+			topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
+			if err := ensureTopic(ca, topicCreateTimeout, topicName); err != nil {
+				glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
+				_ = ca.Close()
+				return nil, err
+			}
+		}
+		_ = ca.Close()
+		ca = nil
+	} else {
+		glog.V(3).Infof("Kafka topic creation skipped; topics must already exist (e.g. for Kafka 4.0+ compatibility)")
+	}
+
 	producer, err := sarama.NewAsyncProducer(kafkaSrvs, config)
 	if err != nil {
 		glog.Errorf("New Kafka publisher failed to start new async producer with error: %+v", err)
+		if ca != nil {
+			_ = ca.Close()
+		}
 		return nil, err
 	}
 	glog.V(5).Infof("Initialized Kafka Async producer")
@@ -254,7 +298,37 @@ func validator(kConfig *Config) error {
 	if i < -1 {
 		return fmt.Errorf("kafka topic retention time can not be less than 0")
 	}
+	// SASL: if user is set, password and mechanism are required
+	if kConfig.SASLUser != "" {
+		if kConfig.SASLPassword == "" {
+			return fmt.Errorf("kafka SASL password is required when SASL user is set")
+		}
+		if kConfig.SASLMechanism != "SCRAM-SHA-256" && kConfig.SASLMechanism != "SCRAM-SHA-512" {
+			return fmt.Errorf("kafka SASL mechanism must be SCRAM-SHA-256 or SCRAM-SHA-512, got %q", kConfig.SASLMechanism)
+		}
+	}
 	return nil
+}
+
+// buildTLSConfig returns a tls.Config for Kafka broker connections.
+// If caPath is non-empty, it loads the CA PEM file for server verification.
+func buildTLSConfig(skipVerify bool, caPath string) *tls.Config {
+	t := &tls.Config{InsecureSkipVerify: skipVerify}
+	if caPath == "" {
+		return t
+	}
+	b, err := os.ReadFile(caPath)
+	if err != nil {
+		glog.Warningf("failed to read Kafka TLS CA file %s: %v; using default TLS", caPath, err)
+		return t
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(b) {
+		glog.Warningf("no valid CA certs in %s; using default TLS", caPath)
+		return t
+	}
+	t.RootCAs = pool
+	return t
 }
 
 func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string) error {

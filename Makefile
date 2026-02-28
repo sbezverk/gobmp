@@ -1,6 +1,12 @@
 REGISTRY_NAME?=docker.io/sbezverk
 IMAGE_VERSION?=test-235
 
+# Require Go 1.21+ (dependencies use stdlib maps/slices; go.mod specifies 1.24)
+GO_VERSION_OK := $(shell go version 2>/dev/null | grep -qE 'go1\.(2[1-9]|[3-9][0-9])' && echo yes)
+ifneq ($(GO_VERSION_OK),yes)
+$(error Go 1.21 or later is required (go.mod specifies 1.24). You have: $(shell go version 2>/dev/null || echo "go not found"). See README for install instructions.)
+endif
+
 .PHONY: all gobmp player container push clean test lint
 
 ifdef V

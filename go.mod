@@ -8,6 +8,7 @@ require (
 	github.com/golang/glog v1.2.5
 	github.com/nats-io/nats.go v1.48.0
 	github.com/sbezverk/tools v0.0.0-20230714051746-80037ac202cf
+	github.com/xdg-go/scram v1.1.2
 )
 
 require (
@@ -27,8 +28,11 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
+	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
+	github.com/xdg-go/stringprep v1.0.4 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 )
