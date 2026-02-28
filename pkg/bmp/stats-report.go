@@ -21,9 +21,13 @@ func UnmarshalBMPStatsReportMessage(b []byte) (*StatsReport, error) {
 	}
 	sr := StatsReport{}
 	p := 0
+	if len(b) < 4 {
+		return nil, fmt.Errorf("buffer too short for Stats Report: %d bytes", len(b))
+	}
 	count := binary.BigEndian.Uint32(b[p : p+4])
-	if count > uint32(len(b)) {
-		return nil, fmt.Errorf("invalid length of Stats Report %d", count)
+	// Each stat TLV requires at least 4 bytes (2 type + 2 length); validate count against remaining buffer
+	if count > uint32(len(b)-4)/4 {
+		return nil, fmt.Errorf("invalid Stats Report count %d exceeds available buffer", count)
 	}
 	sr.StatsCount = int32(count)
 	p += 4
