@@ -7,11 +7,11 @@ import (
 
 func TestUnmarshalIPReachabilityInformation(t *testing.T) {
 	tests := []struct {
-		name        string
-		input       []byte
-		wantBits    uint8
-		wantPrefix  []byte
-		wantErr     bool
+		name       string
+		input      []byte
+		wantBits   uint8
+		wantPrefix []byte
+		wantErr    bool
 	}{
 		{
 			name:       "ipv4 /24 prefix",

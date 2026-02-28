@@ -319,28 +319,28 @@ type LSLink struct {
 // MulticastPrefix defines a message format sent as a result of BMP Route Monitor message
 // which carries BGP Update with multicast NLRI information.
 type MulticastPrefix struct {
-	Key              string              `json:"_key,omitempty"`
-	ID               string              `json:"_id,omitempty"`
-	Rev              string              `json:"_rev,omitempty"`
-	Action           string              `json:"action,omitempty"`
-	Sequence         int                 `json:"sequence,omitempty"`
-	Hash             string              `json:"hash,omitempty"`
-	RouterHash       string              `json:"router_hash,omitempty"`
-	RouterIP         string              `json:"router_ip,omitempty"`
-	BaseAttributes   *bgp.BaseAttributes `json:"base_attrs,omitempty"`
-	PeerHash         string              `json:"peer_hash,omitempty"`
-	PeerIP           string              `json:"peer_ip,omitempty"`
-	PeerType         uint8               `json:"peer_type"`
-	PeerASN          uint32              `json:"peer_asn,omitempty"`
-	Timestamp        string              `json:"timestamp,omitempty"`
-	Prefix           string              `json:"prefix,omitempty"`
-	PrefixLen        int32               `json:"prefix_len,omitempty"`
-	IsIPv4           bool                `json:"is_ipv4"`
-	OriginAS         uint32              `json:"origin_as,omitempty"`
-	Nexthop          string              `json:"nexthop,omitempty"`
-	IsNexthopIPv4    bool                `json:"is_nexthop_ipv4"`
-	PathID           int32               `json:"path_id,omitempty"`
-	IsEOR            bool                `json:"is_eor,omitempty"`
+	Key            string              `json:"_key,omitempty"`
+	ID             string              `json:"_id,omitempty"`
+	Rev            string              `json:"_rev,omitempty"`
+	Action         string              `json:"action,omitempty"`
+	Sequence       int                 `json:"sequence,omitempty"`
+	Hash           string              `json:"hash,omitempty"`
+	RouterHash     string              `json:"router_hash,omitempty"`
+	RouterIP       string              `json:"router_ip,omitempty"`
+	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash       string              `json:"peer_hash,omitempty"`
+	PeerIP         string              `json:"peer_ip,omitempty"`
+	PeerType       uint8               `json:"peer_type"`
+	PeerASN        uint32              `json:"peer_asn,omitempty"`
+	Timestamp      string              `json:"timestamp,omitempty"`
+	Prefix         string              `json:"prefix,omitempty"`
+	PrefixLen      int32               `json:"prefix_len,omitempty"`
+	IsIPv4         bool                `json:"is_ipv4"`
+	OriginAS       uint32              `json:"origin_as,omitempty"`
+	Nexthop        string              `json:"nexthop,omitempty"`
+	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
+	PathID         int32               `json:"path_id,omitempty"`
+	IsEOR          bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -353,31 +353,31 @@ type MulticastPrefix struct {
 // MCASTVPNPrefix defines the structure of MCAST-VPN message (AFI 1/2, SAFI 5)
 // Supports all 7 route types as defined in RFC 6514
 type MCASTVPNPrefix struct {
-	Key              string              `json:"_key,omitempty"`
-	ID               string              `json:"_id,omitempty"`
-	Rev              string              `json:"_rev,omitempty"`
-	Action           string              `json:"action,omitempty"`
-	Sequence         int                 `json:"sequence,omitempty"`
-	Hash             string              `json:"hash,omitempty"`
-	RouterHash       string              `json:"router_hash,omitempty"`
-	RouterIP         string              `json:"router_ip,omitempty"`
-	BaseAttributes   *bgp.BaseAttributes `json:"base_attrs,omitempty"`
-	PeerHash         string              `json:"peer_hash,omitempty"`
-	PeerIP           string              `json:"peer_ip,omitempty"`
-	PeerType         uint8               `json:"peer_type"`
-	PeerASN          uint32              `json:"peer_asn,omitempty"`
-	Timestamp        string              `json:"timestamp,omitempty"`
-	RouteType        uint8               `json:"route_type"`
-	RD               string              `json:"rd,omitempty"`
-	OriginatorIP     string              `json:"originator_ip,omitempty"`
-	MulticastSource  string              `json:"multicast_source,omitempty"`
-	MulticastGroup   string              `json:"multicast_group,omitempty"`
-	SourceAS         uint32              `json:"source_as,omitempty"`
-	RouteKey         string              `json:"route_key,omitempty"`
-	Nexthop          string              `json:"nexthop,omitempty"`
-	IsIPv4           bool                `json:"is_ipv4"`
-	IsNexthopIPv4    bool                `json:"is_nexthop_ipv4"`
-	IsEOR            bool                `json:"is_eor,omitempty"`
+	Key             string              `json:"_key,omitempty"`
+	ID              string              `json:"_id,omitempty"`
+	Rev             string              `json:"_rev,omitempty"`
+	Action          string              `json:"action,omitempty"`
+	Sequence        int                 `json:"sequence,omitempty"`
+	Hash            string              `json:"hash,omitempty"`
+	RouterHash      string              `json:"router_hash,omitempty"`
+	RouterIP        string              `json:"router_ip,omitempty"`
+	BaseAttributes  *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash        string              `json:"peer_hash,omitempty"`
+	PeerIP          string              `json:"peer_ip,omitempty"`
+	PeerType        uint8               `json:"peer_type"`
+	PeerASN         uint32              `json:"peer_asn,omitempty"`
+	Timestamp       string              `json:"timestamp,omitempty"`
+	RouteType       uint8               `json:"route_type"`
+	RD              string              `json:"rd,omitempty"`
+	OriginatorIP    string              `json:"originator_ip,omitempty"`
+	MulticastSource string              `json:"multicast_source,omitempty"`
+	MulticastGroup  string              `json:"multicast_group,omitempty"`
+	SourceAS        uint32              `json:"source_as,omitempty"`
+	RouteKey        string              `json:"route_key,omitempty"`
+	Nexthop         string              `json:"nexthop,omitempty"`
+	IsIPv4          bool                `json:"is_ipv4"`
+	IsNexthopIPv4   bool                `json:"is_nexthop_ipv4"`
+	IsEOR           bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -393,25 +393,25 @@ type MVPNPrefix = MCASTVPNPrefix
 
 // RTCPrefix defines the structure of Route Target Constraint message (AFI 1/2, SAFI 132)
 type RTCPrefix struct {
-	Key              string              `json:"_key,omitempty"`
-	ID               string              `json:"_id,omitempty"`
-	Rev              string              `json:"_rev,omitempty"`
-	Action           string              `json:"action,omitempty"`
-	Sequence         int                 `json:"sequence,omitempty"`
-	Hash             string              `json:"hash,omitempty"`
-	RouterHash       string              `json:"router_hash,omitempty"`
-	RouterIP         string              `json:"router_ip,omitempty"`
-	BaseAttributes   *bgp.BaseAttributes `json:"base_attrs,omitempty"`
-	PeerHash         string              `json:"peer_hash,omitempty"`
-	PeerIP           string              `json:"peer_ip,omitempty"`
-	PeerType         uint8               `json:"peer_type"`
-	PeerASN          uint32              `json:"peer_asn,omitempty"`
-	Timestamp        string              `json:"timestamp,omitempty"`
-	Length           uint8               `json:"length,omitempty"`
-	OriginAS         uint32              `json:"origin_as,omitempty"`
-	RouteTarget      string              `json:"route_target,omitempty"`
-	IsIPv4           bool                `json:"is_ipv4"`
-	IsEOR            bool                `json:"is_eor,omitempty"`
+	Key            string              `json:"_key,omitempty"`
+	ID             string              `json:"_id,omitempty"`
+	Rev            string              `json:"_rev,omitempty"`
+	Action         string              `json:"action,omitempty"`
+	Sequence       int                 `json:"sequence,omitempty"`
+	Hash           string              `json:"hash,omitempty"`
+	RouterHash     string              `json:"router_hash,omitempty"`
+	RouterIP       string              `json:"router_ip,omitempty"`
+	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash       string              `json:"peer_hash,omitempty"`
+	PeerIP         string              `json:"peer_ip,omitempty"`
+	PeerType       uint8               `json:"peer_type"`
+	PeerASN        uint32              `json:"peer_asn,omitempty"`
+	Timestamp      string              `json:"timestamp,omitempty"`
+	Length         uint8               `json:"length,omitempty"`
+	OriginAS       uint32              `json:"origin_as,omitempty"`
+	RouteTarget    string              `json:"route_target,omitempty"`
+	IsIPv4         bool                `json:"is_ipv4"`
+	IsEOR          bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`

@@ -11,39 +11,39 @@ import (
 // This test ensures RFC 8671 compliance for distinguishing Adj-RIB-In from Adj-RIB-Out.
 func TestRIBFlagPropagation(t *testing.T) {
 	tests := []struct {
-		name                 string
-		flagsByte            byte
-		expectIsAdjRIBInPost bool
+		name                  string
+		flagsByte             byte
+		expectIsAdjRIBInPost  bool
 		expectIsAdjRIBOutPost bool
-		expectIsAdjRIBOut    bool
+		expectIsAdjRIBOut     bool
 	}{
 		{
-			name:                 "Adj-RIB-In Pre-Policy (O=0, L=0)",
-			flagsByte:            0x00,
-			expectIsAdjRIBInPost: false,
+			name:                  "Adj-RIB-In Pre-Policy (O=0, L=0)",
+			flagsByte:             0x00,
+			expectIsAdjRIBInPost:  false,
 			expectIsAdjRIBOutPost: false,
-			expectIsAdjRIBOut:    false,
+			expectIsAdjRIBOut:     false,
 		},
 		{
-			name:                 "Adj-RIB-In Post-Policy (O=0, L=1)",
-			flagsByte:            0x40,
-			expectIsAdjRIBInPost: true,
+			name:                  "Adj-RIB-In Post-Policy (O=0, L=1)",
+			flagsByte:             0x40,
+			expectIsAdjRIBInPost:  true,
 			expectIsAdjRIBOutPost: false,
-			expectIsAdjRIBOut:    false,
+			expectIsAdjRIBOut:     false,
 		},
 		{
-			name:                 "Adj-RIB-Out Pre-Policy (O=1, L=0)",
-			flagsByte:            0x10,
-			expectIsAdjRIBInPost: false,
+			name:                  "Adj-RIB-Out Pre-Policy (O=1, L=0)",
+			flagsByte:             0x10,
+			expectIsAdjRIBInPost:  false,
 			expectIsAdjRIBOutPost: false,
-			expectIsAdjRIBOut:    true,
+			expectIsAdjRIBOut:     true,
 		},
 		{
-			name:                 "Adj-RIB-Out Post-Policy (O=1, L=1)",
-			flagsByte:            0x50,
-			expectIsAdjRIBInPost: false,
+			name:                  "Adj-RIB-Out Post-Policy (O=1, L=1)",
+			flagsByte:             0x50,
+			expectIsAdjRIBInPost:  false,
 			expectIsAdjRIBOutPost: true,
-			expectIsAdjRIBOut:    true,
+			expectIsAdjRIBOut:     true,
 		},
 	}
 
@@ -366,11 +366,11 @@ func TestRFC8671Compliance(t *testing.T) {
 				byte(bmp.PeerType0),
 				tt.flagsByte,
 			}
-			flagsData = append(flagsData, make([]byte, 8)...)  // Peer Distinguisher
-			flagsData = append(flagsData, make([]byte, 16)...) // Peer Address
+			flagsData = append(flagsData, make([]byte, 8)...)     // Peer Distinguisher
+			flagsData = append(flagsData, make([]byte, 16)...)    // Peer Address
 			flagsData = append(flagsData, 0x00, 0x00, 0xFD, 0xE8) // Peer AS
-			flagsData = append(flagsData, make([]byte, 4)...)  // Peer BGP ID
-			flagsData = append(flagsData, make([]byte, 8)...)  // Timestamp
+			flagsData = append(flagsData, make([]byte, 4)...)     // Peer BGP ID
+			flagsData = append(flagsData, make([]byte, 8)...)     // Timestamp
 
 			pph, err := bmp.UnmarshalPerPeerHeader(flagsData)
 			if err != nil {
@@ -417,21 +417,21 @@ func TestRFC8671Compliance(t *testing.T) {
 // and that the F flag properly distinguishes filtered vs non-filtered routes.
 func TestLocRIBFlagPropagation(t *testing.T) {
 	tests := []struct {
-		name                 string
-		flagsByte            byte
-		expectIsLocRIB       bool
+		name                   string
+		flagsByte              byte
+		expectIsLocRIB         bool
 		expectIsLocRIBFiltered bool
 	}{
 		{
-			name:                 "Loc-RIB (PeerType 3, F=0)",
-			flagsByte:            0x00,
-			expectIsLocRIB:       true,
+			name:                   "Loc-RIB (PeerType 3, F=0)",
+			flagsByte:              0x00,
+			expectIsLocRIB:         true,
 			expectIsLocRIBFiltered: false,
 		},
 		{
-			name:                 "Loc-RIB-Filtered (PeerType 3, F=1)",
-			flagsByte:            0x80,
-			expectIsLocRIB:       true,
+			name:                   "Loc-RIB-Filtered (PeerType 3, F=1)",
+			flagsByte:              0x80,
+			expectIsLocRIB:         true,
 			expectIsLocRIBFiltered: true,
 		},
 	}
@@ -443,11 +443,11 @@ func TestLocRIBFlagPropagation(t *testing.T) {
 				byte(bmp.PeerType3), // PeerType 3 for Loc-RIB
 				tt.flagsByte,        // F flag: 0x80 = filtered, 0x00 = non-filtered
 			}
-			flagsData = append(flagsData, make([]byte, 8)...)  // Peer Distinguisher (RD)
-			flagsData = append(flagsData, make([]byte, 16)...) // Peer Address
+			flagsData = append(flagsData, make([]byte, 8)...)     // Peer Distinguisher (RD)
+			flagsData = append(flagsData, make([]byte, 16)...)    // Peer Address
 			flagsData = append(flagsData, 0x00, 0x00, 0xFD, 0xE8) // Peer AS = 65000
-			flagsData = append(flagsData, make([]byte, 4)...)  // Peer BGP ID
-			flagsData = append(flagsData, make([]byte, 8)...)  // Timestamp
+			flagsData = append(flagsData, make([]byte, 4)...)     // Peer BGP ID
+			flagsData = append(flagsData, make([]byte, 8)...)     // Timestamp
 
 			pph, err := bmp.UnmarshalPerPeerHeader(flagsData)
 			if err != nil {

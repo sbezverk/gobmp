@@ -69,7 +69,7 @@ func (nd *NodeDescriptor) GetIGPRouterID() string {
 	return s
 }
 
-//GetBGPRouterID returns BGP Router ID found in Node Descriptor sub tlv
+// GetBGPRouterID returns BGP Router ID found in Node Descriptor sub tlv
 func (nd *NodeDescriptor) GetBGPRouterID() []byte {
 	if tlv, ok := nd.SubTLV[516]; ok {
 		return tlv.Value

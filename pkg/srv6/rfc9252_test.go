@@ -104,11 +104,11 @@ func TestRFC9252_InformationSubTLV(t *testing.T) {
 			name: "End.DT6 behavior with SID structure",
 			// Reserved(1) + SID(16) + Flags(1) + Endpoint Behavior(2) + SubSubTLV
 			input: []byte{
-				0x00,                                                                                                       // Reserved
-				0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,           // SID: 2001:0:5:4::
-				0x00,                                                                                                       // Flags
-				0x00, 0x13,                                                                                                 // Endpoint Behavior: 19 (End.DT6)
-				0x00, 0x01, 0x00, 0x06, 0x28, 0x18, 0x10, 0x00, 0x10, 0x40,                                               // SubSubTLV type 1
+				0x00,                                                                                           // Reserved
+				0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SID: 2001:0:5:4::
+				0x00,       // Flags
+				0x00, 0x13, // Endpoint Behavior: 19 (End.DT6)
+				0x00, 0x01, 0x00, 0x06, 0x28, 0x18, 0x10, 0x00, 0x10, 0x40, // SubSubTLV type 1
 			},
 			expected: &InformationSubTLV{
 				SID:              net.IP([]byte{0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}).To16().String(),
@@ -131,10 +131,10 @@ func TestRFC9252_InformationSubTLV(t *testing.T) {
 		{
 			name: "Minimal - no sub-sub-TLVs",
 			input: []byte{
-				0x00,                                                                                             // Reserved
+				0x00,                                                                                           // Reserved
 				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // SID: 2001:db8::1
-				0x00,                                                                                             // Flags
-				0x00, 0x06,                                                                                       // Endpoint Behavior: 6 (End.X)
+				0x00,       // Flags
+				0x00, 0x06, // Endpoint Behavior: 6 (End.X)
 			},
 			expected: &InformationSubTLV{
 				SID:              "2001:db8::1",
@@ -145,10 +145,10 @@ func TestRFC9252_InformationSubTLV(t *testing.T) {
 		{
 			name: "End.DT4 behavior",
 			input: []byte{
-				0x00,                                                                                             // Reserved
+				0x00,                                                                                           // Reserved
 				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SID: 2001:db8:1::
-				0x00,                                                                                             // Flags
-				0x00, 0x14,                                                                                       // Endpoint Behavior: 20 (End.DT4)
+				0x00,       // Flags
+				0x00, 0x14, // Endpoint Behavior: 20 (End.DT4)
 			},
 			expected: &InformationSubTLV{
 				SID:              "2001:db8:1::",
@@ -159,10 +159,10 @@ func TestRFC9252_InformationSubTLV(t *testing.T) {
 		{
 			name: "End.DT46 behavior with flags set",
 			input: []byte{
-				0x00,                                                                                             // Reserved
+				0x00,                                                                                           // Reserved
 				0xfc, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SID: fc00:0:1::
-				0x03,                                                                                             // Flags: bits set
-				0x00, 0x15,                                                                                       // Endpoint Behavior: 21 (End.DT46)
+				0x03,       // Flags: bits set
+				0x00, 0x15, // Endpoint Behavior: 21 (End.DT46)
 			},
 			expected: &InformationSubTLV{
 				SID:              "fc00:0:1::",
@@ -210,13 +210,13 @@ func TestRFC9252_L3Service(t *testing.T) {
 		{
 			name: "L3 Service with End.DT6 SID",
 			input: []byte{
-				0x00,                                                                                             // Reserved
-				0x01, 0x00, 0x1e,                                                                                 // SubTLV type 1, length 30
-				0x00,                                                                                             // Reserved
+				0x00,             // Reserved
+				0x01, 0x00, 0x1e, // SubTLV type 1, length 30
+				0x00,                                                                                           // Reserved
 				0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SID
-				0x00,                                                                                             // Flags
-				0x00, 0x13,                                                                                       // Endpoint Behavior: 19
-				0x00, 0x01, 0x00, 0x06, 0x28, 0x18, 0x10, 0x00, 0x10, 0x40,                                     // SubSubTLV
+				0x00,       // Flags
+				0x00, 0x13, // Endpoint Behavior: 19
+				0x00, 0x01, 0x00, 0x06, 0x28, 0x18, 0x10, 0x00, 0x10, 0x40, // SubSubTLV
 			},
 			expect: &L3Service{
 				SubTLVs: map[uint8][]SvcSubTLV{
@@ -268,19 +268,19 @@ func TestRFC9252_L3ServiceSubTLV(t *testing.T) {
 		{
 			name: "Single Information SubTLV",
 			input: []byte{
-				0x01, 0x00, 0x14,                                                                                 // Type 1, Length 20
-				0x00,                                                                                             // Reserved
+				0x01, 0x00, 0x14, // Type 1, Length 20
+				0x00,                                                                                           // Reserved
 				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // SID
-				0x00,                                                                                             // Flags
-				0x00, 0x06,                                                                                       // Endpoint Behavior: 6
+				0x00,       // Flags
+				0x00, 0x06, // Endpoint Behavior: 6
 			},
 			expectCount: 1,
 		},
 		{
 			name: "Unknown SubTLV type stored as raw bytes",
 			input: []byte{
-				0x02, 0x00, 0x04,             // Type 2 (unknown), Length 4
-				0xaa, 0xbb, 0xcc, 0xdd,       // Raw value
+				0x02, 0x00, 0x04, // Type 2 (unknown), Length 4
+				0xaa, 0xbb, 0xcc, 0xdd, // Raw value
 			},
 			expectCount: 1,
 		},
@@ -313,18 +313,18 @@ func TestRFC9252_L3ServiceSubSubTLV(t *testing.T) {
 		{
 			name: "SID Structure Sub-Sub-TLV",
 			input: []byte{
-				0x00,                                        // Initial byte (skipped per implementation)
-				0x01, 0x00, 0x06,                            // Type 1, Length 6
-				0x28, 0x18, 0x10, 0x00, 0x10, 0x40,         // SID structure data
+				0x00,             // Initial byte (skipped per implementation)
+				0x01, 0x00, 0x06, // Type 1, Length 6
+				0x28, 0x18, 0x10, 0x00, 0x10, 0x40, // SID structure data
 			},
 			expectCount: 1,
 		},
 		{
 			name: "Unknown Sub-Sub-TLV type",
 			input: []byte{
-				0x00,                                        // Skipped
-				0x02, 0x00, 0x03,                            // Type 2 (unknown), Length 3
-				0xaa, 0xbb, 0xcc,                            // Raw value
+				0x00,             // Skipped
+				0x02, 0x00, 0x03, // Type 2 (unknown), Length 3
+				0xaa, 0xbb, 0xcc, // Raw value
 			},
 			expectCount: 1,
 		},
@@ -504,13 +504,13 @@ func TestRFC9252_EndXSIDTLV(t *testing.T) {
 		{
 			name: "End.X SID with SID Structure sub-TLV",
 			input: []byte{
-				0x00, 0x06,                                                                                       // Endpoint Behavior: 6
-				0x00,                                                                                             // Flags: all clear
-				0x80,                                                                                             // Algorithm: 128
-				0x00,                                                                                             // Weight
-				0x00,                                                                                             // Reserved
+				0x00, 0x06, // Endpoint Behavior: 6
+				0x00,                                                                                           // Flags: all clear
+				0x80,                                                                                           // Algorithm: 128
+				0x00,                                                                                           // Weight
+				0x00,                                                                                           // Reserved
 				0x20, 0x01, 0x04, 0x20, 0xFF, 0xFF, 0x10, 0x77, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SID
-				0x04, 0xE4, 0x00, 0x04, 0x28, 0x18, 0x10, 0x00,                                                 // SID Structure SubTLV (type 1252)
+				0x04, 0xE4, 0x00, 0x04, 0x28, 0x18, 0x10, 0x00, // SID Structure SubTLV (type 1252)
 			},
 			expected: &EndXSIDTLV{
 				EndpointBehavior: 6,
@@ -534,11 +534,11 @@ func TestRFC9252_EndXSIDTLV(t *testing.T) {
 		{
 			name: "End.X SID with B flag set",
 			input: []byte{
-				0x00, 0x05,                                                                                       // Endpoint Behavior: 5
-				0x80,                                                                                             // Flags: B=true
-				0x00,                                                                                             // Algorithm: 0
-				0x0a,                                                                                             // Weight: 10
-				0x00,                                                                                             // Reserved
+				0x00, 0x05, // Endpoint Behavior: 5
+				0x80,                                                                                           // Flags: B=true
+				0x00,                                                                                           // Algorithm: 0
+				0x0a,                                                                                           // Weight: 10
+				0x00,                                                                                           // Reserved
 				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // SID
 			},
 			expected: &EndXSIDTLV{
@@ -556,11 +556,11 @@ func TestRFC9252_EndXSIDTLV(t *testing.T) {
 		{
 			name: "End.X SID with S and P flags",
 			input: []byte{
-				0x00, 0x06,                                                                                       // Endpoint Behavior: 6
-				0x60,                                                                                             // Flags: S=true, P=true
-				0x40,                                                                                             // Algorithm: 64
-				0x00,                                                                                             // Weight: 0
-				0x00,                                                                                             // Reserved
+				0x00, 0x06, // Endpoint Behavior: 6
+				0x60,                                                                                           // Flags: S=true, P=true
+				0x40,                                                                                           // Algorithm: 64
+				0x00,                                                                                           // Weight: 0
+				0x00,                                                                                           // Reserved
 				0xfc, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SID
 			},
 			expected: &EndXSIDTLV{
@@ -724,9 +724,9 @@ func TestRFC9252_LocatorTLV(t *testing.T) {
 		{
 			name: "Basic locator with D flag clear",
 			input: []byte{
-				0x00,                   // Flags: D=false
-				0x00,                   // Algorithm: 0
-				0x00, 0x00,             // Reserved
+				0x00,       // Flags: D=false
+				0x00,       // Algorithm: 0
+				0x00, 0x00, // Reserved
 				0x00, 0x00, 0x00, 0x0a, // Metric: 10
 			},
 			expected: &LocatorTLV{
@@ -738,9 +738,9 @@ func TestRFC9252_LocatorTLV(t *testing.T) {
 		{
 			name: "Locator with D flag set",
 			input: []byte{
-				0x80,                   // Flags: D=true
-				0x80,                   // Algorithm: 128
-				0x00, 0x00,             // Reserved
+				0x80,       // Flags: D=true
+				0x80,       // Algorithm: 128
+				0x00, 0x00, // Reserved
 				0x00, 0x00, 0x00, 0x64, // Metric: 100
 			},
 			expected: &LocatorTLV{
@@ -752,9 +752,9 @@ func TestRFC9252_LocatorTLV(t *testing.T) {
 		{
 			name: "Locator with max metric",
 			input: []byte{
-				0x00,                   // Flags
-				0xff,                   // Algorithm: 255
-				0x00, 0x00,             // Reserved
+				0x00,       // Flags
+				0xff,       // Algorithm: 255
+				0x00, 0x00, // Reserved
 				0xff, 0xff, 0xff, 0xff, // Metric: max
 			},
 			expected: &LocatorTLV{
@@ -988,8 +988,8 @@ func TestRFC9252_SubTLV(t *testing.T) {
 		{
 			name: "SID Structure SubTLV (type 1252)",
 			input: []byte{
-				0x04, 0xe4,             // Type: 1252
-				0x00, 0x04,             // Length: 4
+				0x04, 0xe4, // Type: 1252
+				0x00, 0x04, // Length: 4
 				0x28, 0x18, 0x10, 0x00, // SID structure data
 			},
 			expectedType: 1252,
@@ -997,9 +997,9 @@ func TestRFC9252_SubTLV(t *testing.T) {
 		{
 			name: "Unknown SubTLV type",
 			input: []byte{
-				0x04, 0xe5,             // Type: 1253 (unknown)
-				0x00, 0x02,             // Length: 2
-				0xaa, 0xbb,             // Raw value
+				0x04, 0xe5, // Type: 1253 (unknown)
+				0x00, 0x02, // Length: 2
+				0xaa, 0xbb, // Raw value
 			},
 			expectedType: 1253,
 		},
@@ -1038,12 +1038,12 @@ func TestRFC9252_SubTLV_TooShort(t *testing.T) {
 // TestRFC9252_AllSubTLV validates unmarshaling multiple SubTLVs in sequence.
 func TestRFC9252_AllSubTLV(t *testing.T) {
 	input := []byte{
-		0x04, 0xe4,             // Type 1252
-		0x00, 0x04,             // Length 4
+		0x04, 0xe4, // Type 1252
+		0x00, 0x04, // Length 4
 		0x28, 0x18, 0x10, 0x00, // SID Structure
-		0x04, 0xe5,             // Type 1253 (unknown)
-		0x00, 0x02,             // Length 2
-		0xaa, 0xbb,             // Raw value
+		0x04, 0xe5, // Type 1253 (unknown)
+		0x00, 0x02, // Length 2
+		0xaa, 0xbb, // Raw value
 	}
 	result, err := UnmarshalAllSRv6SubTLV(input)
 	if err != nil {
@@ -1071,11 +1071,11 @@ func TestRFC9252_SIDDescriptor(t *testing.T) {
 		{
 			name: "SID and MTID",
 			input: []byte{
-				0x01, 0x07,                                                                                       // Type 263 (MTID)
-				0x00, 0x02,                                                                                       // Length 2
-				0x00, 0x02,                                                                                       // MTID value
-				0x02, 0x06,                                                                                       // Type 518 (SID)
-				0x00, 0x10,                                                                                       // Length 16
+				0x01, 0x07, // Type 263 (MTID)
+				0x00, 0x02, // Length 2
+				0x00, 0x02, // MTID value
+				0x02, 0x06, // Type 518 (SID)
+				0x00, 0x10, // Length 16
 				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // SID
 			},
 			expected: &SIDDescriptor{
@@ -1109,9 +1109,9 @@ func TestRFC9252_SIDDescriptor(t *testing.T) {
 // TestRFC9252_SIDDescriptor_InvalidType validates error for unknown descriptor types.
 func TestRFC9252_SIDDescriptor_InvalidType(t *testing.T) {
 	input := []byte{
-		0xff, 0xff,       // Unknown type
-		0x00, 0x02,       // Length 2
-		0x00, 0x00,       // Value
+		0xff, 0xff, // Unknown type
+		0x00, 0x02, // Length 2
+		0x00, 0x00, // Value
 	}
 	_, err := UnmarshalSRv6SIDDescriptor(input)
 	if err == nil {

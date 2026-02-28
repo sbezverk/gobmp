@@ -18,12 +18,12 @@ import (
 )
 
 var (
-	msgSrvAddr      string
-	topicRetnTimeMs string
+	msgSrvAddr       string
+	topicRetnTimeMs  string
 	kafkaTopicPrefix string
-	file            string
-	delay           int
-	iterations      int
+	file             string
+	delay            int
+	iterations       int
 )
 
 func init() {

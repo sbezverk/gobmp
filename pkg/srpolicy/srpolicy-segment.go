@@ -728,7 +728,7 @@ type TypeDSegment interface {
 type typeDSegment struct {
 	flags       *SegmentFlags
 	srAlgorithm byte
-	ipv6Address []byte // 16 bytes
+	ipv6Address []byte  // 16 bytes
 	sid         *uint32 // Optional SR-MPLS SID
 }
 
@@ -849,10 +849,10 @@ type TypeESegment interface {
 }
 
 type typeESegment struct {
-	flags             *SegmentFlags
-	localInterfaceID  uint32
-	ipv4Address       []byte  // 4 bytes
-	sid               *uint32 // Optional SR-MPLS SID
+	flags            *SegmentFlags
+	localInterfaceID uint32
+	ipv4Address      []byte  // 4 bytes
+	sid              *uint32 // Optional SR-MPLS SID
 }
 
 var _ Segment = &typeESegment{}
@@ -1263,6 +1263,7 @@ func UnmarshalTypeGSegment(b []byte) (Segment, error) {
 
 	return s, nil
 }
+
 // TypeHSegment defines methods to access Type H specific elements (IPv6 Local/Remote adjacency + optional MPLS SID)
 type TypeHSegment interface {
 	GetLocalIPv6Address() []byte

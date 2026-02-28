@@ -124,7 +124,8 @@ func UnmarshalSRCapability(b []byte, proto base.ProtoID) (*Capability, error) {
 	return &cap, nil
 }
 
-//  0 1 2 3 4 5 6 7
+//	0 1 2 3 4 5 6 7
+//
 // +-+-+-+-+-+-+-+-+
 // |I|V|           |
 // +-+-+-+-+-+-+-+-+
@@ -146,7 +147,7 @@ func UnmarshalISISCapFlags(b []byte) (*ISISCapFlags, error) {
 	return nf, nil
 }
 
-//GetCapabilityFlagByte returns a byte represenation for ISIS flags
+// GetCapabilityFlagByte returns a byte representation for ISIS flags
 func (f *ISISCapFlags) GetCapabilityFlagByte() byte {
 	b := byte(0)
 	if f.IFlag {
@@ -159,7 +160,7 @@ func (f *ISISCapFlags) GetCapabilityFlagByte() byte {
 	return b
 }
 
-//GetCapabilityFlagByte returns a byte represenation for OSPF flags
+// GetCapabilityFlagByte returns a byte representation for OSPF flags
 func (f *UnknownProtoFlags) GetCapabilityFlagByte() byte {
 	return f.Flags
 }

@@ -240,11 +240,11 @@ func TestGetTableName(t *testing.T) {
 	p := NewProducer(mockPub, false).(*producer)
 
 	tests := []struct {
-		name      string
-		bgpID     string
-		rd        string
-		tlvs      []bmp.InformationalTLV
-		expected  string
+		name     string
+		bgpID    string
+		rd       string
+		tlvs     []bmp.InformationalTLV
+		expected string
 	}{
 		{
 			name:  "Single table name TLV",

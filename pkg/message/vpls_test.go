@@ -338,14 +338,14 @@ func (m *mockMPNLRI) IsNextHopIPv6() bool {
 }
 
 // Implement other required MPNLRI methods (not used in vpls tests)
-func (m *mockMPNLRI) GetNLRILU() (*base.MPNLRI, error)         { return nil, nil }
-func (m *mockMPNLRI) GetNLRIUnicast() (*base.MPNLRI, error)    { return nil, nil }
-func (m *mockMPNLRI) GetNLRIEVPN() (*evpn.Route, error)        { return nil, nil }
-func (m *mockMPNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)      { return nil, nil }
-func (m *mockMPNLRI) GetNLRI71() (*ls.NLRI71, error)           { return nil, nil }
-func (m *mockMPNLRI) GetNLRI73() (*srpolicy.NLRI73, error)     { return nil, nil }
-func (m *mockMPNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) { return nil, nil }
+func (m *mockMPNLRI) GetNLRILU() (*base.MPNLRI, error)          { return nil, nil }
+func (m *mockMPNLRI) GetNLRIUnicast() (*base.MPNLRI, error)     { return nil, nil }
+func (m *mockMPNLRI) GetNLRIEVPN() (*evpn.Route, error)         { return nil, nil }
+func (m *mockMPNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)       { return nil, nil }
+func (m *mockMPNLRI) GetNLRI71() (*ls.NLRI71, error)            { return nil, nil }
+func (m *mockMPNLRI) GetNLRI73() (*srpolicy.NLRI73, error)      { return nil, nil }
+func (m *mockMPNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error)  { return nil, nil }
 func (m *mockMPNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) { return nil, nil }
 func (m *mockMPNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)     { return nil, nil }
 func (m *mockMPNLRI) GetNLRIRTC() (*rtc.Route, error)           { return nil, nil }
-func (m *mockMPNLRI) GetNLRIMulticast() (*base.MPNLRI, error)  { return nil, nil }
+func (m *mockMPNLRI) GetNLRIMulticast() (*base.MPNLRI, error)   { return nil, nil }

@@ -87,24 +87,24 @@ func (p *producer) produceRawMessage(msg bmp.Message) {
 	w.buf.Grow(int(headerLen) + len(rm.Msg))
 
 	// Write all fields in big-endian byte order
-	w.write(uint32(0x4F424D50))         // Offset 0: Magic Number "OBMP"
-	w.write(uint8(1))                   // Offset 4: Version Major
-	w.write(uint8(7))                   // Offset 5: Version Minor
-	w.write(headerLen)                  // Offset 6: Header Length
-	w.write(uint32(len(rm.Msg)))        // Offset 8: BMP Message Length
-	w.write(calculateFlags(routerIsIPv6)) // Offset 12: Flags
-	w.write(uint8(12))                  // Offset 13: Message Type (BMP_RAW)
-	w.write(timestampSec)               // Offset 14: Timestamp Seconds
-	w.write(timestampUsec)              // Offset 18: Timestamp Microseconds
-	w.writeBytes(collectorHash[:])      // Offset 22: Collector Hash (16 bytes)
+	w.write(uint32(0x4F424D50))              // Offset 0: Magic Number "OBMP"
+	w.write(uint8(1))                        // Offset 4: Version Major
+	w.write(uint8(7))                        // Offset 5: Version Minor
+	w.write(headerLen)                       // Offset 6: Header Length
+	w.write(uint32(len(rm.Msg)))             // Offset 8: BMP Message Length
+	w.write(calculateFlags(routerIsIPv6))    // Offset 12: Flags
+	w.write(uint8(12))                       // Offset 13: Message Type (BMP_RAW)
+	w.write(timestampSec)                    // Offset 14: Timestamp Seconds
+	w.write(timestampUsec)                   // Offset 18: Timestamp Microseconds
+	w.writeBytes(collectorHash[:])           // Offset 22: Collector Hash (16 bytes)
 	w.write(uint16(len(p.collectorAdminID))) // Offset 38: Collector Admin ID Len
-	w.writeString(p.collectorAdminID)   // Offset 40: Collector Admin ID
-	w.writeBytes(routerHash[:])         // Offset 40+N: Router Hash (16 bytes)
-	w.writeBytes(routerIPBytes[:])      // Offset 56+N: Router IP (16 bytes)
-	w.write(uint16(len(routerGroup)))   // Offset 72+N: Router Group Length
-	w.writeString(routerGroup)          // Offset 74+N: Router Group
-	w.write(uint32(1))                  // Offset 74+N+M: Row Count (always 1)
-	w.writeBytes(rm.Msg)                // Append raw BMP message
+	w.writeString(p.collectorAdminID)        // Offset 40: Collector Admin ID
+	w.writeBytes(routerHash[:])              // Offset 40+N: Router Hash (16 bytes)
+	w.writeBytes(routerIPBytes[:])           // Offset 56+N: Router IP (16 bytes)
+	w.write(uint16(len(routerGroup)))        // Offset 72+N: Router Group Length
+	w.writeString(routerGroup)               // Offset 74+N: Router Group
+	w.write(uint32(1))                       // Offset 74+N+M: Row Count (always 1)
+	w.writeBytes(rm.Msg)                     // Append raw BMP message
 
 	// Check for any errors during header construction
 	if w.err != nil {
@@ -170,5 +170,5 @@ func calculateFlags(isIPv6 bool) uint8 {
 // getCurrentTimestamp returns (seconds, microseconds) from current time
 func getCurrentTimestamp() (uint32, uint32) {
 	now := time.Now()
-	return uint32(now.Unix()), uint32(now.UnixNano()/1000 % 1000000)
+	return uint32(now.Unix()), uint32(now.UnixNano() / 1000 % 1000000)
 }

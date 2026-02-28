@@ -47,7 +47,7 @@ func MakeLabel(b []byte, srv6 ...bool) (*Label, error) {
 		return &l, nil
 	}
 	l.Value >>= 4
-	// Move Exp bits to the beggining of the byte and leave only 3 bits, mask the rest.
+	// Move Exp bits to the beginning of the byte and leave only 3 bits, mask the rest.
 	l.Exp = uint8(b[2]&0x0E) >> 1
 	l.BoS = b[2]&0x01 == 1
 

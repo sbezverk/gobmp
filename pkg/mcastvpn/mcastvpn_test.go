@@ -95,9 +95,9 @@ func TestUnmarshalMCASTVPNNLRI(t *testing.T) {
 				0x03,                                           // Route Type 3
 				0x16,                                           // Length 22 (8+1+4+1+4+4)
 				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64, // RD (8 bytes)
-				0x20,             // Multicast Source Length (32 bits)
+				0x20,                   // Multicast Source Length (32 bits)
 				0xc0, 0xa8, 0x01, 0x01, // Multicast Source 192.168.1.1 (4 bytes)
-				0x20,             // Multicast Group Length (32 bits)
+				0x20,                   // Multicast Group Length (32 bits)
 				0xe0, 0x00, 0x00, 0x01, // Multicast Group 224.0.0.1 (4 bytes)
 				0x0a, 0x00, 0x00, 0x01, // Originating Router 10.0.0.1 (4 bytes)
 			},
@@ -167,13 +167,13 @@ func TestUnmarshalMCASTVPNNLRI(t *testing.T) {
 		{
 			name: "Type 4 - Leaf A-D",
 			input: []byte{
-				0x04,                   // Route Type 4
-				0x1a,                   // Length 26 (route key 22 + orig IP 4)
+				0x04, // Route Type 4
+				0x1a, // Length 26 (route key 22 + orig IP 4)
 				// Route Key: Type 3 data without route type/length
 				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64, // RD
-				0x20,             // Source Length
+				0x20,                   // Source Length
 				0xc0, 0xa8, 0x01, 0x01, // Source
-				0x20,             // Group Length
+				0x20,                   // Group Length
 				0xe0, 0x00, 0x00, 0x01, // Group
 				0x0a, 0x00, 0x00, 0x01, // Originator (part of route key)
 				0x0a, 0x00, 0x00, 0x02, // Originating Router IP for Type 4
@@ -203,9 +203,9 @@ func TestUnmarshalMCASTVPNNLRI(t *testing.T) {
 				0x05,                                           // Route Type 5
 				0x12,                                           // Length 18 (8+1+4+1+4)
 				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64, // RD
-				0x20,             // Multicast Source Length
+				0x20,                   // Multicast Source Length
 				0xc0, 0xa8, 0x01, 0x01, // Multicast Source
-				0x20,             // Multicast Group Length
+				0x20,                   // Multicast Group Length
 				0xe0, 0x00, 0x00, 0x01, // Multicast Group
 			},
 			expect: &Route{
@@ -232,9 +232,9 @@ func TestUnmarshalMCASTVPNNLRI(t *testing.T) {
 				0x16,                                           // Length 22 (8+4+1+4+1+4)
 				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64, // RD
 				0x00, 0x00, 0xfd, 0xe8, // Source AS 65000
-				0x20,             // Multicast Source Length (C-RP)
+				0x20,                   // Multicast Source Length (C-RP)
 				0x00, 0x00, 0x00, 0x00, // Multicast Source (*, wildcard)
-				0x20,             // Multicast Group Length
+				0x20,                   // Multicast Group Length
 				0xe0, 0x00, 0x00, 0x01, // Multicast Group
 			},
 			expect: &Route{
@@ -262,9 +262,9 @@ func TestUnmarshalMCASTVPNNLRI(t *testing.T) {
 				0x16,                                           // Length 22 (8+4+1+4+1+4)
 				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64, // RD
 				0x00, 0x00, 0xfd, 0xe8, // Source AS 65000
-				0x20,             // Multicast Source Length (C-S)
+				0x20,                   // Multicast Source Length (C-S)
 				0xc0, 0xa8, 0x01, 0x01, // Multicast Source
-				0x20,             // Multicast Group Length
+				0x20,                   // Multicast Group Length
 				0xe0, 0x00, 0x00, 0x01, // Multicast Group
 			},
 			expect: &Route{
@@ -366,7 +366,7 @@ func TestUnmarshalMCASTVPNNLRI(t *testing.T) {
 			input: []byte{
 				0x03, 0x13, // Length 19 (8+1+3+1+4+2, non-standard but valid)
 				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
-				0x18,       // 24 bits
+				0x18,             // 24 bits
 				0xc0, 0xa8, 0x01, // 3 bytes for /24
 				0x20,
 				0xe0, 0x00, 0x00, 0x01,

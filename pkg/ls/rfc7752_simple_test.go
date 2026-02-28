@@ -229,8 +229,8 @@ func TestUnmarshalLSNLRI71_RFC7752_ErrorCases(t *testing.T) {
 		{
 			name: "Unknown NLRI type (stored as raw)",
 			input: []byte{
-				0x00, 0xFF,       // Type: 255 (unknown)
-				0x00, 0x04,       // Length: 4
+				0x00, 0xFF, // Type: 255 (unknown)
+				0x00, 0x04, // Length: 4
 				0x00, 0x00, 0x00, 0x00, // Data
 			},
 			wantErr: false, // Should handle gracefully

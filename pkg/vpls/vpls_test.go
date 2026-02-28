@@ -581,20 +581,20 @@ func TestLayer2InfoExtComm_String_AllFlags(t *testing.T) {
 		{
 			name: "No flags set",
 			ec: &Layer2InfoExtComm{
-				EncapType:   4,
-				ControlWord: false,
+				EncapType:    4,
+				ControlWord:  false,
 				SequencedDel: false,
-				MTU:         1500,
+				MTU:          1500,
 			},
 			want: []string{"Ethernet", "1500"},
 		},
 		{
 			name: "Only S flag",
 			ec: &Layer2InfoExtComm{
-				EncapType:   5,
-				ControlWord: false,
+				EncapType:    5,
+				ControlWord:  false,
 				SequencedDel: true,
-				MTU:         1500,
+				MTU:          1500,
 			},
 			want: []string{"VLAN", "S", "1500"},
 		},

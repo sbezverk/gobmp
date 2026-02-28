@@ -91,7 +91,7 @@ func (mp *MPReachNLRI) GetNextHop() string {
 	return "invalid next hop address length: " + strconv.Itoa(int(mp.NextHopAddressLength))
 }
 
-// GetNLRI71 check for presense of NLRI 71 in the NLRI 14 NLRI data and if exists, instantiate NLRI71 object
+// GetNLRI71 check for presence of NLRI 71 in the NLRI 14 NLRI data and if exists, instantiate NLRI71 object
 func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 	if mp.SubAddressFamilyID == 71 {
 		nlri71, err := ls.UnmarshalLSNLRI71(mp.NLRI)
@@ -104,7 +104,7 @@ func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRI73 check for presense of NLRI 73 in the NLRI 14 NLRI data and if exists, instantiate NLRI73 object
+// GetNLRI73 check for presence of NLRI 73 in the NLRI 14 NLRI data and if exists, instantiate NLRI73 object
 func (mp *MPReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
 	if mp.SubAddressFamilyID == 73 {
 		nlri73, err := srpolicy.UnmarshalLSNLRI73(mp.NLRI)
@@ -117,7 +117,7 @@ func (mp *MPReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRIL3VPN check for presense of NLRI L3VPN AFI 1 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
+// GetNLRIL3VPN check for presence of NLRI L3VPN AFI 1 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
 func (mp *MPReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 128 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
@@ -131,7 +131,7 @@ func (mp *MPReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRIEVPN check for presense of NLRI EVPN AFI 25 and SAFI 70 in the NLRI 14 NLRI data and if exists, instantiate EVPN object
+// GetNLRIEVPN check for presence of NLRI EVPN AFI 25 and SAFI 70 in the NLRI 14 NLRI data and if exists, instantiate EVPN object
 func (mp *MPReachNLRI) GetNLRIEVPN() (*evpn.Route, error) {
 	if mp.AddressFamilyID == 25 && mp.SubAddressFamilyID == 70 {
 		route, err := evpn.UnmarshalEVPNNLRI(mp.NLRI)
@@ -144,7 +144,7 @@ func (mp *MPReachNLRI) GetNLRIEVPN() (*evpn.Route, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRIVPLS check for presense of NLRI VPLS AFI 25 and SAFI 65 in the NLRI 14 NLRI data and if exists, instantiate VPLS object
+// GetNLRIVPLS check for presence of NLRI VPLS AFI 25 and SAFI 65 in the NLRI 14 NLRI data and if exists, instantiate VPLS object
 func (mp *MPReachNLRI) GetNLRIVPLS() (*vpls.Route, error) {
 	if mp.AddressFamilyID == 25 && mp.SubAddressFamilyID == 65 {
 		route, err := vpls.UnmarshalVPLSNLRI(mp.NLRI)
@@ -157,7 +157,7 @@ func (mp *MPReachNLRI) GetNLRIVPLS() (*vpls.Route, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRIUnicast check for presense of NLRI EVPN AFI 1 or 2  and SAFI 1 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
+// GetNLRIUnicast check for presence of NLRI EVPN AFI 1 or 2  and SAFI 1 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
 func (mp *MPReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 1 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
@@ -171,7 +171,7 @@ func (mp *MPReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRIMulticast check for presense of NLRI Multicast AFI 1 or 2 and SAFI 2 in the NLRI 14 NLRI data and if exists, instantiate Multicast object
+// GetNLRIMulticast check for presence of NLRI Multicast AFI 1 or 2 and SAFI 2 in the NLRI 14 NLRI data and if exists, instantiate Multicast object
 func (mp *MPReachNLRI) GetNLRIMulticast() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 2 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
@@ -185,7 +185,7 @@ func (mp *MPReachNLRI) GetNLRIMulticast() (*base.MPNLRI, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRILU check for presense of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
+// GetNLRILU check for presence of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
 func (mp *MPReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 4 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
@@ -199,7 +199,7 @@ func (mp *MPReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetFlowspecNLRI checks for presense of NLRI 133 IPv4 Flowspec in the NLRI 14 NLRI data and if exists, instantiate NLRI object
+// GetFlowspecNLRI checks for presence of NLRI 133 IPv4 Flowspec in the NLRI 14 NLRI data and if exists, instantiate NLRI object
 func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	if mp.SubAddressFamilyID == 133 {
 		return flowspec.UnmarshalFlowspecNLRI(mp.NLRI)

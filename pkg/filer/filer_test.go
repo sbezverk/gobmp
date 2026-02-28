@@ -10,11 +10,11 @@ import (
 // TestMsgOutJSONEncoding verifies that MsgOut with json.RawMessage produces valid JSON
 func TestMsgOutJSONEncoding(t *testing.T) {
 	tests := []struct {
-		name     string
-		msgType  int
-		msgHash  string
-		msgData  []byte
-		wantErr  bool
+		name    string
+		msgType int
+		msgHash string
+		msgData []byte
+		wantErr bool
 	}{
 		{
 			name:    "simple unicast route",

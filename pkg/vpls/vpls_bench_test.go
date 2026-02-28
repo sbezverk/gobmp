@@ -111,9 +111,9 @@ func BenchmarkParseRouteTarget(b *testing.B) {
 func BenchmarkParseRouteTarget_IPv4(b *testing.B) {
 	// Sample Route Target (Type 0x0102 - IPv4 Address Specific)
 	rt := []byte{
-		0x01, 0x02,     // Type: IPv4 Address Specific
-		10, 0, 0, 1,    // IPv4: 10.0.0.1
-		0x00, 0x64,     // Assigned: 100
+		0x01, 0x02, // Type: IPv4 Address Specific
+		10, 0, 0, 1, // IPv4: 10.0.0.1
+		0x00, 0x64, // Assigned: 100
 	}
 
 	b.ResetTimer()
@@ -129,9 +129,9 @@ func BenchmarkParseRouteTarget_IPv4(b *testing.B) {
 func BenchmarkParseRouteTarget_AS4(b *testing.B) {
 	// Sample Route Target (Type 0x0202 - 4-octet AS Specific)
 	rt := []byte{
-		0x02, 0x02,                 // Type: 4-octet AS Specific
-		0x00, 0x01, 0x00, 0x00,     // AS: 65536
-		0x00, 0xc8,                 // Assigned: 200
+		0x02, 0x02, // Type: 4-octet AS Specific
+		0x00, 0x01, 0x00, 0x00, // AS: 65536
+		0x00, 0xc8, // Assigned: 200
 	}
 
 	b.ResetTimer()

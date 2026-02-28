@@ -463,14 +463,14 @@ func TestTEPolicy_CandidatePath_IPv4_BGPSRPolicy(t *testing.T) {
 	// Actually: proto(1) + flags+reserved(2) + endpoint(4) + color(4) + asn(4) + origAddr(4) + disc(4) = 23
 	// But valid lengths are 24, 36, 48. Let's build 24-byte (IPv4 endpoint, IPv4 originator, FlagE=0, FlagO=0)
 	b := make([]byte, 24)
-	b[0] = byte(BGPSRPolicy)              // Protocol Origin
-	b[1] = 0x00                            // Flags: E=0, O=0
-	b[2] = 0x00                            // Reserved
-	copy(b[3:7], []byte{10, 0, 0, 1})     // Endpoint IPv4
-	binary.BigEndian.PutUint32(b[7:11], 100)  // Color
+	b[0] = byte(BGPSRPolicy)                    // Protocol Origin
+	b[1] = 0x00                                 // Flags: E=0, O=0
+	b[2] = 0x00                                 // Reserved
+	copy(b[3:7], []byte{10, 0, 0, 1})           // Endpoint IPv4
+	binary.BigEndian.PutUint32(b[7:11], 100)    // Color
 	binary.BigEndian.PutUint32(b[11:15], 65000) // Originator ASN
-	copy(b[15:19], []byte{192, 168, 1, 1}) // Originator Addr IPv4
-	binary.BigEndian.PutUint32(b[19:23], 42)  // Discriminator
+	copy(b[15:19], []byte{192, 168, 1, 1})      // Originator Addr IPv4
+	binary.BigEndian.PutUint32(b[19:23], 42)    // Discriminator
 	// b[23] = 0 (padding for 24-byte length)
 
 	got, err := UnmarshalPolicyCandidatePathDescriptor(b)
@@ -519,10 +519,10 @@ func TestTEPolicy_CandidatePath_IPv6Endpoint(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 	}
 	copy(b[3:19], ep)
-	binary.BigEndian.PutUint32(b[19:23], 200) // Color
+	binary.BigEndian.PutUint32(b[19:23], 200)   // Color
 	binary.BigEndian.PutUint32(b[23:27], 65000) // ASN
-	copy(b[27:31], []byte{10, 0, 0, 1}) // Orig Addr IPv4
-	binary.BigEndian.PutUint32(b[31:35], 99) // Discriminator
+	copy(b[27:31], []byte{10, 0, 0, 1})         // Orig Addr IPv4
+	binary.BigEndian.PutUint32(b[31:35], 99)    // Discriminator
 
 	got, err := UnmarshalPolicyCandidatePathDescriptor(b)
 	if err != nil {
@@ -546,8 +546,8 @@ func TestTEPolicy_CandidatePath_IPv6Originator(t *testing.T) {
 	b[0] = byte(PCEP)
 	b[1] = 0x40 // FlagE=0, FlagO=1
 	b[2] = 0x00
-	copy(b[3:7], []byte{10, 0, 0, 1}) // Endpoint IPv4
-	binary.BigEndian.PutUint32(b[7:11], 300) // Color
+	copy(b[3:7], []byte{10, 0, 0, 1})           // Endpoint IPv4
+	binary.BigEndian.PutUint32(b[7:11], 300)    // Color
 	binary.BigEndian.PutUint32(b[11:15], 65001) // ASN
 	origAddr := []byte{
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
@@ -691,9 +691,9 @@ func TestTEPolicy_LocalMPLSCrossConnect_WithFECSubTLV(t *testing.T) {
 	// FEC Sub-TLV (type 557): flags(1) + mask(1) + prefix(3) = 5 bytes
 	// /24 = 24/8 = 3 bytes for prefix. Validation: p+int(pl) must == len(b) -> 2+3 = 5
 	fecValue := []byte{
-		0x80,          // Flag4=1 (IPv4)
-		0x18,          // Mask length 24
-		192, 168, 1,   // 3-byte prefix for /24
+		0x80,        // Flag4=1 (IPv4)
+		0x18,        // Mask length 24
+		192, 168, 1, // 3-byte prefix for /24
 	}
 	subTLV := buildPolicyTLV(MPLSCrossConnectFECType, fecValue)
 	b = append(b, subTLV...)
@@ -758,9 +758,9 @@ func TestTEPolicy_LocalMPLSCrossConnect_TruncatedSubTLV(t *testing.T) {
 func TestTEPolicy_FEC_IPv4(t *testing.T) {
 	// /24 = 3 bytes. Validation: p(2) + pl(3) must == len(b)(5)
 	b := []byte{
-		0x80,         // Flag4=1
-		24,           // Mask /24
-		192, 168, 1,  // 3-byte prefix
+		0x80,        // Flag4=1
+		24,          // Mask /24
+		192, 168, 1, // 3-byte prefix
 	}
 	got, err := UnmarshalLocalMPLSCrossConnectFEC(b)
 	if err != nil {
@@ -801,9 +801,9 @@ func TestTEPolicy_FEC_IPv6(t *testing.T) {
 func TestTEPolicy_FEC_NonByteAlignedMask(t *testing.T) {
 	// /25: (25+7)/8 = 4 bytes. p(2) + pl(4) = 6 = len(b)
 	b := []byte{
-		0x80,              // Flag4=1
-		25,                // Mask /25
-		192, 168, 1, 0,    // 4 bytes
+		0x80,           // Flag4=1
+		25,             // Mask /25
+		192, 168, 1, 0, // 4 bytes
 	}
 	got, err := UnmarshalLocalMPLSCrossConnectFEC(b)
 	if err != nil {

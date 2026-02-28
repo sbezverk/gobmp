@@ -357,16 +357,16 @@ func TestUnmarshalSegmentListSTLV_TypeB_Truncated(t *testing.T) {
 		{
 			name: "Partial payload (4 bytes instead of 18)",
 			input: []byte{
-				0x0D, // Type: Type B (13)
-				0x12, // Length: 18 bytes
+				0x0D,                   // Type: Type B (13)
+				0x12,                   // Length: 18 bytes
 				0x00, 0x00, 0x00, 0x00, // Only 4 bytes
 			},
 		},
 		{
 			name: "Almost complete (17 bytes instead of 18)",
 			input: []byte{
-				0x0D, // Type: Type B (13)
-				0x12, // Length: 18 bytes
+				0x0D,       // Type: Type B (13)
+				0x12,       // Length: 18 bytes
 				0x00, 0x00, // Flags, Reserved
 				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Missing last byte
@@ -389,17 +389,17 @@ func TestUnmarshalSegmentListSTLV_MultipleTypeB(t *testing.T) {
 	// Two Type B segments in SegmentList
 	input := []byte{
 		// First Type B segment
-		0x0D,       // Type: Type B (13)
-		0x12,       // Length: 18 bytes
-		0x80,       // Flags (V-flag set)
-		0x00,       // Reserved
+		0x0D,                                           // Type: Type B (13)
+		0x12,                                           // Length: 18 bytes
+		0x80,                                           // Flags (V-flag set)
+		0x00,                                           // Reserved
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, // SRv6 SID: 2001:db8::1
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 		// Second Type B segment
-		0x0D,       // Type: Type B (13)
-		0x12,       // Length: 18 bytes
-		0x00,       // Flags (none set)
-		0x00,       // Reserved
+		0x0D,                                           // Type: Type B (13)
+		0x12,                                           // Length: 18 bytes
+		0x00,                                           // Flags (none set)
+		0x00,                                           // Reserved
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, // SRv6 SID: 2001:db8::2
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
 	}
@@ -495,17 +495,17 @@ func TestSegmentList_JSON_MultipleTypeB(t *testing.T) {
 
 func TestUnmarshalTypeCSegment_Valid(t *testing.T) {
 	tests := []struct {
-		name        string
-		input       []byte
-		wantIPv4    []byte
-		wantAlgo    byte
-		wantSID     *uint32
+		name     string
+		input    []byte
+		wantIPv4 []byte
+		wantAlgo byte
+		wantSID  *uint32
 	}{
 		{
 			name: "Without SID (6 bytes)",
 			input: []byte{
-				0x00, // Flags
-				0x00, // SR Algorithm
+				0x00,           // Flags
+				0x00,           // SR Algorithm
 				192, 168, 1, 1, // IPv4: 192.168.1.1
 			},
 			wantIPv4: []byte{192, 168, 1, 1},
@@ -515,8 +515,8 @@ func TestUnmarshalTypeCSegment_Valid(t *testing.T) {
 		{
 			name: "With SID (10 bytes)",
 			input: []byte{
-				0x80, // Flags (V flag set)
-				0x01, // SR Algorithm
+				0x80,        // Flags (V flag set)
+				0x01,        // SR Algorithm
 				10, 0, 0, 1, // IPv4: 10.0.0.1
 				0x00, 0x00, 0x03, 0xE8, // SID: 1000
 			},
@@ -537,8 +537,8 @@ func TestUnmarshalTypeCSegment_Valid(t *testing.T) {
 		{
 			name: "With SID = 0 (edge case)",
 			input: []byte{
-				0x00, // Flags
-				0x00, // SR Algorithm
+				0x00,           // Flags
+				0x00,           // SR Algorithm
 				192, 168, 1, 1, // IPv4: 192.168.1.1
 				0x00, 0x00, 0x00, 0x00, // SID: 0
 			},
@@ -549,8 +549,8 @@ func TestUnmarshalTypeCSegment_Valid(t *testing.T) {
 		{
 			name: "With SID = 0xFFFFFFFF (max uint32)",
 			input: []byte{
-				0x00, // Flags
-				0x00, // SR Algorithm
+				0x00,        // Flags
+				0x00,        // SR Algorithm
 				10, 0, 0, 1, // IPv4: 10.0.0.1
 				0xFF, 0xFF, 0xFF, 0xFF, // SID: 4294967295
 			},
@@ -757,10 +757,10 @@ func TestUnmarshalSegmentListSTLV_TypeC(t *testing.T) {
 		{
 			name: "Type C without SID",
 			input: []byte{
-				0x03, // Type: Type C (3)
-				0x06, // Length: 6 bytes
-				0x00, // Flags
-				0x00, // SR Algorithm
+				0x03,           // Type: Type C (3)
+				0x06,           // Length: 6 bytes
+				0x00,           // Flags
+				0x00,           // SR Algorithm
 				192, 168, 1, 1, // IPv4
 			},
 			wantIPv4: []byte{192, 168, 1, 1},
@@ -770,10 +770,10 @@ func TestUnmarshalSegmentListSTLV_TypeC(t *testing.T) {
 		{
 			name: "Type C with SID",
 			input: []byte{
-				0x03, // Type: Type C (3)
-				0x0A, // Length: 10 bytes
-				0x80, // Flags (V flag)
-				0x01, // SR Algorithm
+				0x03,        // Type: Type C (3)
+				0x0A,        // Length: 10 bytes
+				0x80,        // Flags (V flag)
+				0x01,        // SR Algorithm
 				10, 0, 0, 1, // IPv4
 				0x00, 0x00, 0x03, 0xE8, // SID: 1000
 			},
@@ -844,11 +844,11 @@ func ptrUint32(v uint32) *uint32 {
 
 func TestUnmarshalTypeDSegment_Valid(t *testing.T) {
 	tests := []struct {
-		name        string
-		input       []byte
-		wantIPv6    []byte
-		wantAlgo    byte
-		wantSID     *uint32
+		name     string
+		input    []byte
+		wantIPv6 []byte
+		wantAlgo byte
+		wantSID  *uint32
 	}{
 		{
 			name: "Without SID (18 bytes)",
@@ -1290,10 +1290,10 @@ func TestUnmarshalSegmentListSTLV_TypeE(t *testing.T) {
 		{
 			name: "Type E without SID",
 			input: []byte{
-				0x05, // Type: Type E (5)
-				0x0A, // Length: 10 bytes
-				0x00, // Flags
-				0x00, // Reserved
+				0x05,                   // Type: Type E (5)
+				0x0A,                   // Length: 10 bytes
+				0x00,                   // Flags
+				0x00,                   // Reserved
 				0x00, 0x00, 0x00, 0x01, // Interface ID: 1
 				192, 168, 1, 1, // IPv4: 192.168.1.1
 			},
@@ -1304,10 +1304,10 @@ func TestUnmarshalSegmentListSTLV_TypeE(t *testing.T) {
 		{
 			name: "Type E with SID",
 			input: []byte{
-				0x05, // Type: Type E (5)
-				0x0E, // Length: 14 bytes
-				0x80, // Flags (V flag)
-				0x00, // Reserved
+				0x05,                   // Type: Type E (5)
+				0x0E,                   // Length: 14 bytes
+				0x80,                   // Flags (V flag)
+				0x00,                   // Reserved
 				0x00, 0x00, 0x00, 0x0A, // Interface ID: 10
 				10, 0, 0, 1, // IPv4: 10.0.0.1
 				0x00, 0x00, 0x03, 0xE8, // SID: 1000
@@ -1374,18 +1374,18 @@ func TestUnmarshalSegmentListSTLV_TypeE(t *testing.T) {
 
 func TestUnmarshalTypeESegment_Valid(t *testing.T) {
 	tests := []struct {
-		name      string
-		input     []byte
-		wantSID   bool
+		name    string
+		input   []byte
+		wantSID bool
 	}{
 		{
-			name:    "IPv4 and InterfaceID only (10 bytes)",
+			name: "IPv4 and InterfaceID only (10 bytes)",
 			// Flags + Reserved + 4 bytes Interface ID + 4 bytes IPv4
 			input:   []byte{0, 0, 0, 0, 0, 1, 192, 0, 2, 1},
 			wantSID: false,
 		},
 		{
-			name:    "IPv4, InterfaceID and SID (14 bytes)",
+			name: "IPv4, InterfaceID and SID (14 bytes)",
 			// Flags + Reserved + 4 bytes Interface ID + 4 bytes IPv4 + 4 bytes SID
 			input:   []byte{0, 0, 0, 0, 0, 2, 192, 0, 2, 2, 0, 0, 0, 42},
 			wantSID: true,
@@ -1516,7 +1516,7 @@ func TestUnmarshalTypeFSegment_Valid(t *testing.T) {
 			name: "with SID (14 bytes)",
 			input: []byte{
 				0x80, 0x00, // Flags (V flag set) + Reserved
-				10, 0, 0, 1,   // Local IPv4
+				10, 0, 0, 1, // Local IPv4
 				172, 16, 0, 1, // Remote IPv4
 				0x00, 0x00, 0x03, 0xE8, // SID: 1000
 			},
@@ -1719,7 +1719,7 @@ func TestUnmarshalSegmentListSTLV_TypeF(t *testing.T) {
 			input: []byte{
 				0x06, 0x0E, // Type F, length 14
 				0x80, 0x00, // Flags (V flag) + Reserved
-				10, 0, 0, 1,   // Local IPv4
+				10, 0, 0, 1, // Local IPv4
 				172, 16, 0, 1, // Remote IPv4
 				0x00, 0x00, 0x07, 0xD0, // SID: 2000
 			},
