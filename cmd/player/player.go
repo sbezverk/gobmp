@@ -38,7 +38,9 @@ func init() {
 func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
-	os.Exit(run())
+	code := run()
+	glog.Flush()
+	os.Exit(code)
 }
 
 func run() int {
