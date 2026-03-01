@@ -6,13 +6,13 @@ import (
 	"github.com/sbezverk/tools"
 )
 
-// Config holds parser configuration options
+// Config holds parser configuration options.
 type Config struct {
 	// EnableRawMode when true produces RAW BMP messages without parsing
 	EnableRawMode bool
 }
 
-// parser holds parser state and configuration
+// parser holds parser state and configuration.
 type parser struct {
 	queue         chan []byte
 	producerQueue chan bmp.Message
@@ -20,8 +20,8 @@ type parser struct {
 	config        *Config
 }
 
-// NewParser creates a new parser instance with the given configuration
-// If config is nil, default configuration is used (raw mode disabled)
+// NewParser creates a new parser instance with the given configuration.
+// If config is nil, default configuration is used (raw mode disabled).
 func NewParser(queue chan []byte, producerQueue chan bmp.Message, stop chan struct{}, config *Config) *parser {
 	if config == nil {
 		config = &Config{EnableRawMode: false}

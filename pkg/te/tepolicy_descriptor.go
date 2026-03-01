@@ -10,12 +10,12 @@ import (
 )
 
 // PolicyDescriptor defines the TE Policy Descriptors TLVs which are used
-// to describe the TE Policy being advertised by using BGP-LS TE Policy NLRI type
+// to describe the TE Policy being advertised by using BGP-LS TE Policy NLRI type.
 type PolicyDescriptor struct {
 	TLV map[uint16]*base.TLV
 }
 
-// UnmarshalPolicyDescriptor builds PolicyDescriptor object with a list of TLVs
+// UnmarshalPolicyDescriptor builds PolicyDescriptor object with a list of TLVs.
 func UnmarshalPolicyDescriptor(b []byte) (*PolicyDescriptor, error) {
 	if glog.V(6) {
 		glog.Infof("TE Policy Descriptor Raw: %s", tools.MessageHex(b))
@@ -58,7 +58,7 @@ func (p *PolicyDescriptor) Exists(tlvType uint16) bool {
 	return ok
 }
 
-// GetAllTLVIDs returns a slice of uint16 with all TLV ids found in an instance of PolicyDescriptor object
+// GetAllTLVIDs returns a slice of uint16 with all TLV ids found in an instance of PolicyDescriptor object.
 func (p *PolicyDescriptor) GetAllTLVIDs() []uint16 {
 	ids := make([]uint16, len(p.TLV))
 	i := 0

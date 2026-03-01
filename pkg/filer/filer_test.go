@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// TestMsgOutJSONEncoding verifies that MsgOut with json.RawMessage produces valid JSON
+// TestMsgOutJSONEncoding verifies that MsgOut with json.RawMessage produces valid JSON.
 func TestMsgOutJSONEncoding(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -94,7 +94,7 @@ func TestMsgOutJSONEncoding(t *testing.T) {
 	}
 }
 
-// TestPublishMessageValidJSON tests end-to-end file writing and JSON validity
+// TestPublishMessageValidJSON tests end-to-end file writing and JSON validity.
 func TestPublishMessageValidJSON(t *testing.T) {
 	// Create temp file
 	tmpDir := t.TempDir()

@@ -7,14 +7,14 @@ import (
 	"github.com/sbezverk/tools"
 )
 
-// Label defines a structure of a single label
+// Label defines a structure of a single label.
 type Label struct {
 	Value uint32
 	Exp   uint8 // 3 bits
 	BoS   bool  // 1 bit
 }
 
-// String returns a string representation of the label information
+// String returns a string representation of the label information.
 func (l *Label) String() string {
 	return fmt.Sprintf("Label: %d Exp: %02x BoS: %t", l.Value, l.Exp, l.BoS)
 }

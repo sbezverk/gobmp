@@ -18,7 +18,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/pub"
 )
 
-// Define constants for each topic name
+// Define constants for each topic name.
 const (
 	PeerTopic              = "gobmp.parsed.peer"
 	UnicastMessageTopic    = "gobmp.parsed.unicast_prefix"
@@ -46,7 +46,7 @@ const (
 var (
 	brockerConnectTimeout = 120 * time.Second
 	topicCreateTimeout    = 1 * time.Second
-	// goBMP topic's retention timer is 15 minutes
+	// goBMP topic's retention timer is 15 minutes.
 	topicRetention = "900000"
 )
 

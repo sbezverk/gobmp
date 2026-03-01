@@ -12,7 +12,7 @@ type IPReachabilityInformation struct {
 	Prefix       []byte
 }
 
-// UnmarshalIPReachabilityInformation builds IP Reachability Information TLV object
+// UnmarshalIPReachabilityInformation builds IP Reachability Information TLV object.
 func UnmarshalIPReachabilityInformation(b []byte) (*IPReachabilityInformation, error) {
 	if glog.V(6) {
 		glog.Infof("IPReachabilityInformationTLV Raw: %s", tools.MessageHex(b))

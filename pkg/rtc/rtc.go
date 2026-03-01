@@ -26,19 +26,19 @@ import (
 	"fmt"
 )
 
-// Route defines a collection of RTC NLRI objects
+// Route defines a collection of RTC NLRI objects.
 type Route struct {
 	NLRI []*NLRI
 }
 
-// NLRI represents a single Route Target Constraint NLRI per RFC 4684
+// NLRI represents a single Route Target Constraint NLRI per RFC 4684.
 type NLRI struct {
 	Length      uint8  // Length in bits (0-96)
 	OriginAS    uint32 // Autonomous System of NLRI originator
 	RouteTarget []byte // 8-byte Extended Community (Type 0x00/0x01/0x02, SubType 0x02)
 }
 
-// UnmarshalRTCNLRI parses RTC NLRI from wire format per RFC 4684 Section 4
+// UnmarshalRTCNLRI parses RTC NLRI from wire format per RFC 4684 Section 4.
 func UnmarshalRTCNLRI(b []byte) (*Route, error) {
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")

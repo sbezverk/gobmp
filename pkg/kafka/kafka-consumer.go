@@ -11,7 +11,7 @@ import (
 	"github.com/sbezverk/tools"
 )
 
-// Srv defines required method of a processor server
+// Srv defines required method of a processor server.
 type Srv interface {
 	Start()
 	Stop()
@@ -30,7 +30,7 @@ type kafka struct {
 	master sarama.Consumer
 }
 
-// NewKafkaMessenger returns an instance of a kafka consumer acting as a messenger server
+// NewKafkaMessenger returns an instance of a kafka consumer acting as a messenger server.
 func NewKafkaMConsumer(kafkaSrv string, topics []*TopicDescriptor) (Srv, error) {
 	glog.Infof("NewKafkaConsumer")
 

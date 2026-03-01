@@ -83,7 +83,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		msgs = append(msgs, msg...)
 		// Loop through and publish all collected messages
 		for _, m := range msgs {
-			if err := p.marshalAndPublish(&m, t, []byte(m.RouterHash), false); err != nil {
+			if err := p.marshalAndPublish(&m, t, []byte(m.RouterHash)); err != nil {
 				glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)
 				return
 			}
@@ -91,16 +91,13 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	}
 }
 
-func (p *producer) marshalAndPublish(msg interface{}, msgType int, hash []byte, debug bool) error {
+func (p *producer) marshalAndPublish(msg interface{}, msgType int, hash []byte) error {
 	j, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal a message of type %d with error: %w", msgType, err)
 	}
 	if err := p.publisher.PublishMessage(msgType, hash, j); err != nil {
 		return fmt.Errorf("failed to push a message of type %d to kafka with error: %w", msgType, err)
-	}
-	if debug {
-		glog.Infof("message of type: %+v json: %s", msgType, string(j))
 	}
 	return nil
 }

@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	// TunnelIDType defines Tunnel ID TLV type
+	// TunnelIDType defines Tunnel ID TLV type.
 	TunnelIDType = 550
 	// LSPIDType defines LSP ID TLV type
 	LSPIDType = 551
