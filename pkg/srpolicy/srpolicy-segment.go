@@ -141,7 +141,11 @@ func (sl *SegmentList) UnmarshalJSON(b []byte) error {
 				}
 				seg = t
 			case TypeI:
-				fallthrough
+				t := &typeISegment{}
+				if err := t.unmarshalJSONObj(s); err != nil {
+					return err
+				}
+				seg = t
 			case TypeJ:
 				fallthrough
 			case TypeK:
@@ -337,7 +341,23 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeI):
-			glog.Infof("Segment of type I not implemented")
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type I Segment STLV: missing length byte")
+			}
+			l := b[p]
+			p++
+			if l != 22 && l != 38 {
+				return nil, fmt.Errorf("invalid length of Type I Segment STLV: got %d, expected 22 or 38", l)
+			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type I Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
+			}
+			s, err := UnmarshalTypeISegment(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			sl.Segment = append(sl.Segment, s)
+			p += int(l)
 		case int(TypeJ):
 			glog.Infof("Segment of type J not implemented")
 		case int(TypeK):
@@ -1263,6 +1283,136 @@ func UnmarshalTypeGSegment(b []byte) (Segment, error) {
 
 	return s, nil
 }
+// TypeISegment defines methods to access Type I specific elements (IPv6 node address + SR Algorithm + optional SRv6 SID)
+type TypeISegment interface {
+	GetSRAlgorithm() byte
+	GetIPv6NodeAddress() []byte
+	GetSRv6SID() ([]byte, bool)
+}
+
+type typeISegment struct {
+	flags           *SegmentFlags
+	srAlgorithm     byte
+	ipv6NodeAddress []byte
+	srv6SID         []byte
+}
+
+var _ Segment = &typeISegment{}
+var _ TypeISegment = &typeISegment{}
+
+// GetFlags returns the segment flags.
+func (ti *typeISegment) GetFlags() *SegmentFlags {
+	return ti.flags
+}
+
+// GetType returns the segment type identifier.
+func (ti *typeISegment) GetType() SegmentType {
+	return TypeI
+}
+
+// GetSRAlgorithm returns the SR algorithm byte.
+func (ti *typeISegment) GetSRAlgorithm() byte {
+	return ti.srAlgorithm
+}
+
+// GetIPv6NodeAddress returns a 16-byte copy of the IPv6 node address safe for modification.
+func (ti *typeISegment) GetIPv6NodeAddress() []byte {
+	return append([]byte(nil), ti.ipv6NodeAddress...)
+}
+
+// GetSRv6SID returns a 16-byte copy of the optional SRv6 SID and whether it is present.
+func (ti *typeISegment) GetSRv6SID() ([]byte, bool) {
+	if ti.srv6SID != nil {
+		return append([]byte(nil), ti.srv6SID...), true
+	}
+	return nil, false
+}
+
+func (ti *typeISegment) MarshalJSON() ([]byte, error) {
+	v := struct {
+		SegmentType     SegmentType   `json:"segment_type,omitempty"`
+		Flags           *SegmentFlags `json:"flags,omitempty"`
+		SRAlgorithm     byte          `json:"sr_algorithm,omitempty"`
+		IPv6NodeAddress []byte        `json:"ipv6_node_address,omitempty"`
+		SRv6SID         []byte        `json:"srv6_sid,omitempty"`
+	}{
+		SegmentType:     TypeI,
+		Flags:           ti.flags,
+		SRAlgorithm:     ti.srAlgorithm,
+		IPv6NodeAddress: ti.ipv6NodeAddress,
+		SRv6SID:         ti.srv6SID,
+	}
+	return json.Marshal(v)
+}
+
+func (ti *typeISegment) unmarshalJSONObj(objmap map[string]json.RawMessage) error {
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &ti.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["sr_algorithm"]; ok {
+		if err := json.Unmarshal(b, &ti.srAlgorithm); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["ipv6_node_address"]; ok {
+		if err := json.Unmarshal(b, &ti.ipv6NodeAddress); err != nil {
+			return err
+		}
+		if len(ti.ipv6NodeAddress) != 16 {
+			return fmt.Errorf("ipv6_node_address must be exactly 16 bytes, got %d", len(ti.ipv6NodeAddress))
+		}
+	}
+	if b, ok := objmap["srv6_sid"]; ok {
+		if err := json.Unmarshal(b, &ti.srv6SID); err != nil {
+			return err
+		}
+		if len(ti.srv6SID) != 16 {
+			return fmt.Errorf("srv6_sid must be exactly 16 bytes, got %d", len(ti.srv6SID))
+		}
+	}
+	return nil
+}
+
+func (ti *typeISegment) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	return ti.unmarshalJSONObj(objmap)
+}
+
+// UnmarshalTypeISegment instantiates an instance of Type I Segment sub tlv (IPv6 node address + SR Algorithm + optional SRv6 SID)
+func UnmarshalTypeISegment(b []byte) (Segment, error) {
+	if glog.V(5) {
+		glog.Infof("SR Policy Type I Segment STLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 22 && len(b) != 38 {
+		return nil, fmt.Errorf("invalid length of Type I Segment STLV: got %d, expected 22 or 38", len(b))
+	}
+	s := &typeISegment{}
+	p := 0
+	s.flags = NewSegmentFlags(b[p])
+	p++
+	// SR Algorithm is 1 byte
+	s.srAlgorithm = b[p]
+	p++
+	// IPv6 node address is 16 bytes
+	s.ipv6NodeAddress = make([]byte, 16)
+	copy(s.ipv6NodeAddress, b[p:p+16])
+	p += 16
+	// Skip SRv6 Endpoint Behavior (2 bytes) + Behavior Flags (1 byte) + Reserved (1 byte) per RFC 9831
+	p += 4
+	// Optional SRv6 SID (16 bytes) if length is 38
+	if len(b) == 38 {
+		s.srv6SID = make([]byte, 16)
+		copy(s.srv6SID, b[p:p+16])
+	}
+
+	return s, nil
+}
+
 // TypeHSegment defines methods to access Type H specific elements (IPv6 Local/Remote adjacency + optional MPLS SID)
 type TypeHSegment interface {
 	GetLocalIPv6Address() []byte
