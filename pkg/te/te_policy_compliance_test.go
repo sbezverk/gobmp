@@ -29,7 +29,7 @@ func buildNodeDescriptor(descriptorType uint16, tlvs ...nodeTLV) []byte {
 	return append(header, body...)
 }
 
-// buildTEPolicyNLRI builds a complete TE Policy NLRI byte slice.
+// buildTEPolicyNLRI builds a TE Policy NLRI byte slice with header, identifier, and node descriptor.
 func buildTEPolicyNLRI(protoID byte, identifier []byte, nodeDesc []byte) []byte {
 	b := []byte{protoID}
 	b = append(b, identifier...)

@@ -90,7 +90,10 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 		case Type1:
 			fallthrough
 		case Type2:
-			spec, l = makePrefixSpec(b[p:])
+			spec, l, err = makePrefixSpec(b[p:])
+			if err != nil {
+				return nil, err
+			}
 		case Type3:
 			fallthrough
 		case Type4:
@@ -209,7 +212,10 @@ type PrefixSpec struct {
 	Prefix       []byte `json:"prefix"`
 }
 
-func makePrefixSpec(b []byte) (Spec, int) {
+func makePrefixSpec(b []byte) (Spec, int, error) {
+	if len(b) < 2 {
+		return nil, 0, fmt.Errorf("insufficient data for prefix spec: need at least 2 bytes, got %d", len(b))
+	}
 	s := &PrefixSpec{}
 	p := 0
 	s.SpecType = b[p]
@@ -220,11 +226,14 @@ func makePrefixSpec(b []byte) (Spec, int) {
 		l++
 	}
 	p++
+	if p+l > len(b) {
+		return nil, 0, fmt.Errorf("insufficient data for prefix spec: need %d bytes, got %d", p+l, len(b))
+	}
 	s.Prefix = make([]byte, l)
 	copy(s.Prefix, b[p:p+l])
 	p += int(l)
 
-	return s, p
+	return s, p, nil
 }
 
 // UnmarshalJSON unmarshals a slice of bytes into a new FlowSPec PrefixSpec

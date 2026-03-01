@@ -118,7 +118,6 @@ func Store(topics []*kafka.TopicDescriptor, f *os.File, stopCh chan struct{}, er
 	defer close(s.stopCh)
 
 	workersErrChan := make(chan error)
-	doneCh := make(chan struct{})
 	for _, topic := range topics {
 		switch topic.TopicType {
 		case bmp.UnicastPrefixV4Msg:
@@ -129,19 +128,11 @@ func Store(topics []*kafka.TopicDescriptor, f *os.File, stopCh chan struct{}, er
 			go s.storeUnicastWorker(topic, workersErrChan)
 		}
 	}
-	total := len(topics)
-	done := 0
 	select {
 	case <-stopCh:
 		return
 	case err := <-workersErrChan:
 		errCh <- err
 		return
-	case <-doneCh:
-		done++
-		if done >= total {
-			errCh <- nil
-			return
-		}
 	}
 }
