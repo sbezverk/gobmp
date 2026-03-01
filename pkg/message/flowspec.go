@@ -120,7 +120,16 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 					return err
 				}
 				o.Spec = append(o.Spec, s)
-			case flowspec.Type3:
+			case flowspec.Type3,
+				flowspec.Type4,
+				flowspec.Type5,
+				flowspec.Type6,
+				flowspec.Type7,
+				flowspec.Type8,
+				flowspec.Type9,
+				flowspec.Type10,
+				flowspec.Type11,
+				flowspec.Type12:
 				s, err := makeGenericSpec(spec)
 				if err != nil {
 					return err
@@ -158,7 +167,11 @@ func makeGenericSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 	if p, ok := spec["type"]; ok {
 		s.SpecType = uint8(p.(float64))
 	}
-	if s.OpVal, err = makeOpValPair(spec["op_val_pairs"].([]interface{})); err != nil {
+	pairs, ok := spec["op_val_pairs"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("missing or invalid op_val_pairs field")
+	}
+	if s.OpVal, err = makeOpValPair(pairs); err != nil {
 		return nil, err
 	}
 
