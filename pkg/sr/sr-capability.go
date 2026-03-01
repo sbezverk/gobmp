@@ -22,9 +22,8 @@ type Capability struct {
 }
 
 func (c *Capability) MarshalJSON() ([]byte, error) {
-	switch c.Flags.(type) {
+	switch f := c.Flags.(type) {
 	case *ISISCapFlags:
-		f := c.Flags.(*ISISCapFlags)
 		return json.Marshal(struct {
 			Flags  *ISISCapFlags      `json:"flags,omitempty"`
 			SubTLV []CapabilitySubTLV `json:"sr_capability_subtlv,omitempty"`
@@ -33,7 +32,6 @@ func (c *Capability) MarshalJSON() ([]byte, error) {
 			SubTLV: c.SubTLV,
 		})
 	case *UnknownProtoFlags:
-		f := c.Flags.(*UnknownProtoFlags)
 		return json.Marshal(struct {
 			Flags  *UnknownProtoFlags `json:"flags,omitempty"`
 			SubTLV []CapabilitySubTLV `json:"sr_capability_subtlv,omitempty"`

@@ -24,9 +24,16 @@ type PrefixSIDTLV struct {
 }
 
 func (p *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
-	switch p.Flags.(type) {
+	switch f := p.Flags.(type) {
+	case nil:
+		return json.Marshal(struct {
+			Algorithm uint8  `json:"algo"`
+			SID       uint32 `json:"prefix_sid"`
+		}{
+			Algorithm: p.Algorithm,
+			SID:       p.SID,
+		})
 	case *ISISFlags:
-		f := p.Flags.(*ISISFlags)
 		return json.Marshal(struct {
 			Flags     *ISISFlags `json:"flags,omitempty"`
 			Algorithm uint8      `json:"algo"`
@@ -37,7 +44,6 @@ func (p *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
 			SID:       p.SID,
 		})
 	case *OSPFFlags:
-		f := p.Flags.(*OSPFFlags)
 		return json.Marshal(struct {
 			Flags     *OSPFFlags `json:"flags,omitempty"`
 			Algorithm uint8      `json:"algo"`
@@ -47,8 +53,7 @@ func (p *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
 			Algorithm: p.Algorithm,
 			SID:       p.SID,
 		})
-	default:
-		f := p.Flags.(*UnknownProtoFlags)
+	case *UnknownProtoFlags:
 		return json.Marshal(struct {
 			Flags     *UnknownProtoFlags `json:"flags,omitempty"`
 			Algorithm uint8              `json:"algo"`
@@ -58,6 +63,8 @@ func (p *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
 			Algorithm: p.Algorithm,
 			SID:       p.SID,
 		})
+	default:
+		return nil, fmt.Errorf("unsupported PrefixSID flags type: %T", p.Flags)
 	}
 }
 

@@ -24,9 +24,16 @@ type AdjacencySIDTLV struct {
 }
 
 func (a *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
-	switch a.Flags.(type) {
+	switch f := a.Flags.(type) {
+	case nil:
+		return json.Marshal(struct {
+			Weight uint8  `json:"weight"`
+			SID    uint32 `json:"sid,omitempty"`
+		}{
+			Weight: a.Weight,
+			SID:    a.SID,
+		})
 	case *AdjISISFlags:
-		f := a.Flags.(*AdjISISFlags)
 		return json.Marshal(struct {
 			Flags  *AdjISISFlags `json:"flags,omitempty"`
 			Weight uint8         `json:"weight"`
@@ -37,7 +44,6 @@ func (a *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
 			SID:    a.SID,
 		})
 	case *AdjOSPFFlags:
-		f := a.Flags.(*AdjOSPFFlags)
 		return json.Marshal(struct {
 			Flags  *AdjOSPFFlags `json:"flags,omitempty"`
 			Weight uint8         `json:"weight"`
@@ -47,8 +53,7 @@ func (a *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
 			Weight: a.Weight,
 			SID:    a.SID,
 		})
-	default:
-		f := a.Flags.(*UnknownProtoFlags)
+	case *UnknownProtoFlags:
 		return json.Marshal(struct {
 			Flags  *UnknownProtoFlags `json:"flags,omitempty"`
 			Weight uint8              `json:"weight"`
@@ -58,6 +63,8 @@ func (a *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
 			Weight: a.Weight,
 			SID:    a.SID,
 		})
+	default:
+		return nil, fmt.Errorf("unsupported AdjacencySID flags type: %T", a.Flags)
 	}
 }
 
