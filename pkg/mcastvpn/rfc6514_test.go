@@ -41,7 +41,8 @@ func makeRDType2(admin uint32, assigned uint16) []byte {
 func TestRFC6514_Type1_IPv4(t *testing.T) {
 	rd := makeRD(100, 100)
 	origIP := []byte{10, 0, 0, 1}
-	input := append(rd, origIP...)
+	input := rd[:len(rd):len(rd)]
+	input = append(input, origIP...)
 
 	got, err := UnmarshalType1(input)
 	if err != nil {
@@ -61,7 +62,8 @@ func TestRFC6514_Type1_IPv6(t *testing.T) {
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 	}
-	input := append(rd, origIP...)
+	input := rd[:len(rd):len(rd)]
+	input = append(input, origIP...)
 
 	got, err := UnmarshalType1(input)
 	if err != nil {
@@ -83,7 +85,8 @@ func TestRFC6514_Type1_AllRDTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			input := append(tt.rd, []byte{10, 0, 0, 1}...)
+			input := tt.rd[:len(tt.rd):len(tt.rd)]
+			input = append(input, []byte{10, 0, 0, 1}...)
 			got, err := UnmarshalType1(input)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -130,7 +133,8 @@ func TestRFC6514_Type1_InvalidOriginatorIPLength(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rd := makeRD(100, 100)
-			input := append(rd, make([]byte, tt.ipLen)...)
+			input := rd[:len(rd):len(rd)]
+			input = append(input, make([]byte, tt.ipLen)...)
 			_, err := UnmarshalType1(input)
 			if err == nil {
 				t.Fatal("expected error")
@@ -145,7 +149,8 @@ func TestRFC6514_Type1_InvalidOriginatorIPLength(t *testing.T) {
 func TestRFC6514_Type1_InvalidRDType(t *testing.T) {
 	rd := make([]byte, 8)
 	binary.BigEndian.PutUint16(rd[0:2], 5) // Invalid RD type
-	input := append(rd, []byte{10, 0, 0, 1}...)
+	input := rd[:len(rd):len(rd)]
+	input = append(input, []byte{10, 0, 0, 1}...)
 
 	_, err := UnmarshalType1(input)
 	if err == nil {
@@ -155,7 +160,8 @@ func TestRFC6514_Type1_InvalidRDType(t *testing.T) {
 
 func TestRFC6514_Type1_InterfaceMethods(t *testing.T) {
 	rd := makeRD(100, 100)
-	input := append(rd, []byte{10, 0, 0, 1}...)
+	input := rd[:len(rd):len(rd)]
+	input = append(input, []byte{10, 0, 0, 1}...)
 
 	got, err := UnmarshalType1(input)
 	if err != nil {
@@ -188,7 +194,8 @@ func TestRFC6514_Type2_Valid(t *testing.T) {
 	rd := makeRD(100, 100)
 	as := make([]byte, 4)
 	binary.BigEndian.PutUint32(as, 65000)
-	input := append(rd, as...)
+	input := rd[:len(rd):len(rd)]
+	input = append(input, as...)
 
 	got, err := UnmarshalType2(input)
 	if err != nil {
@@ -203,7 +210,8 @@ func TestRFC6514_Type2_LargeAS(t *testing.T) {
 	rd := makeRD(100, 100)
 	as := make([]byte, 4)
 	binary.BigEndian.PutUint32(as, 4200000000) // 4-byte ASN
-	input := append(rd, as...)
+	input := rd[:len(rd):len(rd)]
+	input = append(input, as...)
 
 	got, err := UnmarshalType2(input)
 	if err != nil {
@@ -237,7 +245,8 @@ func TestRFC6514_Type2_InterfaceMethods(t *testing.T) {
 	rd := makeRD(100, 100)
 	as := make([]byte, 4)
 	binary.BigEndian.PutUint32(as, 65000)
-	input := append(rd, as...)
+	input := rd[:len(rd):len(rd)]
+	input = append(input, as...)
 
 	got, err := UnmarshalType2(input)
 	if err != nil {
@@ -466,7 +475,8 @@ func TestRFC6514_Type4_IPv4RouteKey(t *testing.T) {
 	routeKey = append(routeKey, 10, 0, 0, 1)
 
 	origIP := []byte{10, 0, 0, 2}
-	input := append(routeKey, origIP...)
+	input := routeKey[:len(routeKey):len(routeKey)]
+	input = append(input, origIP...)
 
 	got, err := UnmarshalType4(input)
 	if err != nil {
@@ -509,7 +519,8 @@ func TestRFC6514_Type4_InterfaceMethods(t *testing.T) {
 	routeKey = append(routeKey, 32)
 	routeKey = append(routeKey, 224, 0, 0, 1)
 	routeKey = append(routeKey, 10, 0, 0, 1)
-	input := append(routeKey, 10, 0, 0, 2)
+	input := routeKey[:len(routeKey):len(routeKey)]
+	input = append(input, 10, 0, 0, 2)
 
 	got, err := UnmarshalType4(input)
 	if err != nil {
@@ -766,7 +777,8 @@ func TestRFC6514_Type6_MissingGroupLengthByte(t *testing.T) {
 	// RD(8) + AS(4) + src_len(1) + src(0) = 13 bytes -> fails minimum 14
 	rd := makeRD(100, 100)
 	as := make([]byte, 4)
-	input := append(rd, as...)
+	input := rd[:len(rd):len(rd)]
+	input = append(input, as...)
 	input = append(input, 0) // src_len = 0, no group length byte
 
 	_, err := UnmarshalType6(input)
@@ -938,14 +950,16 @@ func TestRFC6514_Dispatcher_AllRouteTypes(t *testing.T) {
 	rd := makeRD(100, 100)
 
 	// Build Type 1 NLRI
-	t1data := append(rd, 10, 0, 0, 1)
+	t1data := rd[:len(rd):len(rd)]
+	t1data = append(t1data, 10, 0, 0, 1)
 	t1nlri := []byte{0x01, byte(len(t1data))}
 	t1nlri = append(t1nlri, t1data...)
 
 	// Build Type 2 NLRI
 	as := make([]byte, 4)
 	binary.BigEndian.PutUint32(as, 65000)
-	t2data := append(rd, as...)
+	t2data := rd[:len(rd):len(rd)]
+	t2data = append(t2data, as...)
 	t2nlri := []byte{0x02, byte(len(t2data))}
 	t2nlri = append(t2nlri, t2data...)
 
@@ -1036,7 +1050,8 @@ func TestRFC6514_NLRIAccessors(t *testing.T) {
 	rd := makeRD(100, 100)
 
 	// Type 1 NLRI
-	t1data := append(rd, 10, 0, 0, 1)
+	t1data := rd[:len(rd):len(rd)]
+	t1data = append(t1data, 10, 0, 0, 1)
 	t1nlri := []byte{0x01, byte(len(t1data))}
 	t1nlri = append(t1nlri, t1data...)
 
@@ -1161,7 +1176,8 @@ func TestRFC6514_Type2_AllRDTypes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			as := make([]byte, 4)
 			binary.BigEndian.PutUint32(as, 65000)
-			input := append(tt.rd, as...)
+			input := tt.rd[:len(tt.rd):len(tt.rd)]
+			input = append(input, as...)
 
 			got, err := UnmarshalType2(input)
 			if err != nil {
@@ -1264,7 +1280,8 @@ func TestRFC6514_Type7_InvalidRD(t *testing.T) {
 
 func TestRFC6514_Type2_ZeroAS(t *testing.T) {
 	rd := makeRD(100, 100)
-	input := append(rd, 0, 0, 0, 0) // AS = 0
+	input := rd[:len(rd):len(rd)]
+	input = append(input, 0, 0, 0, 0) // AS = 0
 
 	got, err := UnmarshalType2(input)
 	if err != nil {
@@ -1277,7 +1294,8 @@ func TestRFC6514_Type2_ZeroAS(t *testing.T) {
 
 func TestRFC6514_Type2_MaxAS(t *testing.T) {
 	rd := makeRD(100, 100)
-	input := append(rd, 0xFF, 0xFF, 0xFF, 0xFF) // AS = max uint32
+	input := rd[:len(rd):len(rd)]
+	input = append(input, 0xFF, 0xFF, 0xFF, 0xFF) // AS = max uint32
 
 	got, err := UnmarshalType2(input)
 	if err != nil {
@@ -1311,7 +1329,8 @@ func TestRFC6514_Type6_ZeroAS(t *testing.T) {
 func TestRFC6514_Type1_DataIsolation(t *testing.T) {
 	rd := makeRD(100, 100)
 	origIP := []byte{10, 0, 0, 1}
-	input := append(rd, origIP...)
+	input := rd[:len(rd):len(rd)]
+	input = append(input, origIP...)
 
 	got, err := UnmarshalType1(input)
 	if err != nil {
@@ -1395,7 +1414,8 @@ func TestRFC6514_InterfaceCompliance(t *testing.T) {
 		{"Type6", func() (RouteTypeSpec, error) {
 			as := make([]byte, 4)
 			binary.BigEndian.PutUint32(as, 65000)
-			data := append(rd, as...)
+			data := rd[:len(rd):len(rd)]
+			data = append(data, as...)
 			data = append(data, 32)
 			data = append(data, 192, 168, 1, 1)
 			data = append(data, 32)
@@ -1405,7 +1425,8 @@ func TestRFC6514_InterfaceCompliance(t *testing.T) {
 		{"Type7", func() (RouteTypeSpec, error) {
 			as := make([]byte, 4)
 			binary.BigEndian.PutUint32(as, 65000)
-			data := append(rd, as...)
+			data := rd[:len(rd):len(rd)]
+			data = append(data, as...)
 			data = append(data, 32)
 			data = append(data, 192, 168, 1, 1)
 			data = append(data, 32)
@@ -1445,7 +1466,8 @@ func TestRFC6514_Type6_ZeroLengthWildcard(t *testing.T) {
 	// Both source and group lengths are 0 (wildcard/any-source case)
 	rd := makeRD(100, 100)
 	as := make([]byte, 4)
-	input := append(rd, as...)
+	input := rd[:len(rd):len(rd)]
+	input = append(input, as...)
 	input = append(input, 0, 0) // source-len=0, group-len=0
 
 	got, err := UnmarshalType6(input)
@@ -1489,7 +1511,8 @@ func TestRFC6514_MultiNLRI_AllSevenTypes(t *testing.T) {
 	t4key = append(t4key, 32, 192, 168, 1, 1)
 	t4key = append(t4key, 32, 224, 0, 0, 1)
 	t4key = append(t4key, 10, 0, 0, 1)
-	t4data := append(t4key, 10, 0, 0, 2)
+	t4data := t4key[:len(t4key):len(t4key)]
+	t4data = append(t4data, 10, 0, 0, 2)
 	t4 := buildNLRI(4, t4data)
 
 	// Type 5: RD + src + grp
@@ -1499,13 +1522,15 @@ func TestRFC6514_MultiNLRI_AllSevenTypes(t *testing.T) {
 	t5 := buildNLRI(5, t5data)
 
 	// Type 6: RD + AS + src + grp
-	t6data := append(rd, as...)
+	t6data := rd[:len(rd):len(rd)]
+	t6data = append(t6data, as...)
 	t6data = append(t6data, 32, 192, 168, 1, 1)
 	t6data = append(t6data, 32, 224, 0, 0, 1)
 	t6 := buildNLRI(6, t6data)
 
 	// Type 7: RD + AS + src + grp
-	t7data := append(rd, as...)
+	t7data := rd[:len(rd):len(rd)]
+	t7data = append(t7data, as...)
 	t7data = append(t7data, 32, 192, 168, 1, 1)
 	t7data = append(t7data, 32, 224, 0, 0, 1)
 	t7 := buildNLRI(7, t7data)
@@ -1538,15 +1563,18 @@ func TestRFC6514_Dispatcher_ErrorInMiddleNLRI(t *testing.T) {
 	rd := makeRD(100, 100)
 
 	// Valid Type 1
-	t1data := append(rd, 10, 0, 0, 1)
+	t1data := rd[:len(rd):len(rd)]
+	t1data = append(t1data, 10, 0, 0, 1)
 	t1 := append([]byte{0x01, byte(len(t1data))}, t1data...)
 
 	// Invalid Type 1 (bad originator IP length: 3 bytes)
 	badRD := makeRD(100, 100)
-	badData := append(badRD, 10, 0, 1) // 3-byte IP
+	badData := badRD[:len(badRD):len(badRD)]
+	badData = append(badData, 10, 0, 1) // 3-byte IP
 	bad := append([]byte{0x01, byte(len(badData))}, badData...)
 
-	input := append(t1, bad...)
+	input := t1[:len(t1):len(t1)]
+	input = append(input, bad...)
 	_, err := UnmarshalMCASTVPNNLRI(input)
 	if err == nil {
 		t.Fatal("expected error when second NLRI fails to parse")

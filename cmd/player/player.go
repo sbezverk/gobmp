@@ -38,13 +38,20 @@ func init() {
 func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
+	code := run()
+	glog.Flush()
+	os.Exit(code)
+}
+
+func run() int {
 	glog.Infof("kafka server url: %s", msgSrvAddr)
 	// Open messages file
 	f, err := os.Open(file)
 	if err != nil {
 		glog.Errorf("fail to open messages file %s with error: %+v", file, err)
-		os.Exit(1)
+		return 1
 	}
+	defer func() { _ = f.Close() }()
 
 	// Initializing publisher process
 	kConfig := &kafka.Config{
@@ -55,7 +62,7 @@ func main() {
 	publisher, err := kafka.NewKafkaPublisher(kConfig)
 	if err != nil {
 		glog.Errorf("fail to initialize Kafka publisher with error: %+v", err)
-		os.Exit(1)
+		return 1
 	}
 	glog.V(5).Infof("Kafka publisher has been successfully initialized.")
 	defer publisher.Stop()
@@ -63,7 +70,7 @@ func main() {
 	msgs, err := loadMessages(f)
 	if err != nil {
 		glog.Errorf("Failed to load messages with error: %+v", err)
-		os.Exit(1)
+		return 1
 	}
 	records := 0
 	var wg sync.WaitGroup
@@ -85,9 +92,7 @@ func main() {
 		glog.Infof("%3f seconds took to process %d records", time.Since(start).Seconds(), records)
 		records = 0
 	}
-	_ = f.Close()
-
-	os.Exit(0)
+	return 0
 }
 
 func loadMessages(f *os.File) ([]*filer.MsgOut, error) {
