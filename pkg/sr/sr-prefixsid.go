@@ -25,6 +25,14 @@ type PrefixSIDTLV struct {
 
 func (p *PrefixSIDTLV) MarshalJSON() ([]byte, error) {
 	switch f := p.Flags.(type) {
+	case nil:
+		return json.Marshal(struct {
+			Algorithm uint8  `json:"algo"`
+			SID       uint32 `json:"prefix_sid"`
+		}{
+			Algorithm: p.Algorithm,
+			SID:       p.SID,
+		})
 	case *ISISFlags:
 		return json.Marshal(struct {
 			Flags     *ISISFlags `json:"flags,omitempty"`

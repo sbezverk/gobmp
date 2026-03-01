@@ -25,6 +25,14 @@ type AdjacencySIDTLV struct {
 
 func (a *AdjacencySIDTLV) MarshalJSON() ([]byte, error) {
 	switch f := a.Flags.(type) {
+	case nil:
+		return json.Marshal(struct {
+			Weight uint8  `json:"weight"`
+			SID    uint32 `json:"sid,omitempty"`
+		}{
+			Weight: a.Weight,
+			SID:    a.SID,
+		})
 	case *AdjISISFlags:
 		return json.Marshal(struct {
 			Flags  *AdjISISFlags `json:"flags,omitempty"`
