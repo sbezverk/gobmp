@@ -7,7 +7,7 @@ import (
 	"github.com/sbezverk/tools"
 )
 
-// MultiTopologyIdentifier defines Multi Topology Identifier whcih is alias of uint16
+// MultiTopologyIdentifier defines Multi Topology Identifier which is alias of uint16
 type MultiTopologyIdentifier struct {
 	OFlag bool   `json:"o_flag"`
 	AFlag bool   `json:"a_flag"`

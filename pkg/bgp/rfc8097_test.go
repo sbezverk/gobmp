@@ -212,10 +212,11 @@ func TestRFC8097_Type43_ReservedBytesIgnored(t *testing.T) {
 // through makeExtCommunity and String().
 //
 // Wire format (RFC 8097 Section 3):
-//   Byte 0: Type (0x43 = Non-Transitive Opaque)
-//   Byte 1: Sub-Type (0x00 = Origin Validation State)
-//   Bytes 2-6: Reserved (must be zero)
-//   Byte 7: Validation State (0=valid, 1=not-found, 2=invalid)
+//
+//	Byte 0: Type (0x43 = Non-Transitive Opaque)
+//	Byte 1: Sub-Type (0x00 = Origin Validation State)
+//	Bytes 2-6: Reserved (must be zero)
+//	Byte 7: Validation State (0=valid, 1=not-found, 2=invalid)
 //
 // makeExtCommunity for type 0x43 (& 0x3f == 3) reads SubType from b[1],
 // then advances p by 3 (skipping bytes 2-3), so Value = b[4:] padded to 6 bytes.

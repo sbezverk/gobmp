@@ -25,14 +25,14 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 		if r, err := base.UnmarshalRoutes(update.NLRI, pathID); err == nil {
 			routes = r
 		} else {
-			return nil, fmt.Errorf("failed to unmarshal routes from NLRI with error: %+v", err)
+			return nil, fmt.Errorf("failed to unmarshal routes from NLRI with error: %w", err)
 		}
 	case 1:
 		operation = "del"
 		if r, err := base.UnmarshalRoutes(update.WithdrawnRoutes, pathID); err == nil {
 			routes = r
 		} else {
-			return nil, fmt.Errorf("failed to unmarshal routes from NLRI with error: %+v", err)
+			return nil, fmt.Errorf("failed to unmarshal routes from NLRI with error: %w", err)
 		}
 	default:
 		return nil, fmt.Errorf("unknown operation %d", op)

@@ -9,7 +9,8 @@ import (
 )
 
 // TLV defines a structure of sub tlv used to encode the
-//   information about the SR Policy Candidate Path.
+//
+//	information about the SR Policy Candidate Path.
 type TLV struct {
 	Preference *Preference `json:"preference_subtlv,omitempty"`
 	// BindingSID sub-TLV is used to signal the binding SID related

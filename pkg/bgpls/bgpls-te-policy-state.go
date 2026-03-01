@@ -16,7 +16,7 @@ const (
 	Local ObjectOriginType = 3
 )
 
-// MPLSTEPolicyStateAddressFamilyType defines a type for MPLS Address familes
+// MPLSTEPolicyStateAddressFamilyType defines a type for MPLS Address families
 type MPLSTEPolicyStateAddressFamilyType uint8
 
 const (

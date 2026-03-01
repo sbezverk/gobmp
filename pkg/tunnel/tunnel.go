@@ -14,9 +14,9 @@ type TunnelEncapsulation struct {
 
 // Tunnel represents a single tunnel TLV within the Tunnel Encapsulation attribute
 type Tunnel struct {
-	Type    uint16   `json:"type"`              // Tunnel type code
-	TypeStr string   `json:"type_name"`         // Human-readable type name
-	Length  uint16   `json:"length"`            // Length of Value field
+	Type    uint16   `json:"type"`      // Tunnel type code
+	TypeStr string   `json:"type_name"` // Human-readable type name
+	Length  uint16   `json:"length"`    // Length of Value field
 	SubTLVs []SubTLV `json:"sub_tlvs"`
 }
 

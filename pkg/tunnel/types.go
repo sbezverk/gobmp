@@ -3,25 +3,25 @@ package tunnel
 // Tunnel Type codes per IANA BGP Tunnel Encapsulation Types Registry
 // https://www.iana.org/assignments/bgp-tunnel-encapsulation/
 const (
-	TypeL2TPv3      uint16 = 1  // L2TPv3 over IP
-	TypeGRE         uint16 = 2  // GRE
-	TypeVXLAN       uint16 = 8  // VXLAN Encapsulation
-	TypeNVGRE       uint16 = 9  // NVGRE Encapsulation
-	TypeMPLSinGRE   uint16 = 11 // MPLS in GRE
-	TypeSRPolicy    uint16 = 13 // SR Policy
-	TypeSRv6        uint16 = 15 // Segment Routing with IPv6 Data Plane
+	TypeL2TPv3    uint16 = 1  // L2TPv3 over IP
+	TypeGRE       uint16 = 2  // GRE
+	TypeVXLAN     uint16 = 8  // VXLAN Encapsulation
+	TypeNVGRE     uint16 = 9  // NVGRE Encapsulation
+	TypeMPLSinGRE uint16 = 11 // MPLS in GRE
+	TypeSRPolicy  uint16 = 13 // SR Policy
+	TypeSRv6      uint16 = 15 // Segment Routing with IPv6 Data Plane
 )
 
 // Sub-TLV Type codes per IANA BGP Tunnel Encapsulation Attribute Sub-TLVs Registry
 const (
-	SubTLVEncapsulation      uint8 = 1  // Encapsulation
-	SubTLVProtocolType       uint8 = 2  // Protocol Type
-	SubTLVColor              uint8 = 3  // Color
-	SubTLVEgressEndpoint     uint8 = 4  // Tunnel Egress Endpoint
-	SubTLVUDPDestPort        uint8 = 6  // UDP Destination Port
-	SubTLVEmbeddedLabel      uint8 = 9  // Embedded Label Handling
-	SubTLVPreference         uint8 = 12 // Preference
-	SubTLVBindingSID         uint8 = 13 // Binding SID
+	SubTLVEncapsulation  uint8 = 1  // Encapsulation
+	SubTLVProtocolType   uint8 = 2  // Protocol Type
+	SubTLVColor          uint8 = 3  // Color
+	SubTLVEgressEndpoint uint8 = 4  // Tunnel Egress Endpoint
+	SubTLVUDPDestPort    uint8 = 6  // UDP Destination Port
+	SubTLVEmbeddedLabel  uint8 = 9  // Embedded Label Handling
+	SubTLVPreference     uint8 = 12 // Preference
+	SubTLVBindingSID     uint8 = 13 // Binding SID
 )
 
 // TunnelTypeNames maps tunnel type codes to human-readable names

@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	msgSrvAddr    string
-	msgFile       string
-	validatorFlag bool
-	testCase      string
-	timeout       int
+	msgSrvAddr       string
+	msgFile          string
+	validatorFlag    bool
+	testCase         string
+	timeout          int
 	kafkaTopicPrefix string
 )
 

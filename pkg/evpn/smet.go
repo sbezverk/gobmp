@@ -9,15 +9,15 @@ import (
 // SMET defines EVPN Type 6 - Selective Multicast Ethernet Tag Route
 // RFC 9251 Section 9.1
 type SMET struct {
-	RD                 *base.RD
-	EthTag             []byte // 4 bytes
-	McastSrcLen        uint8  // Length in bits: 0, 32, or 128
-	McastSrcAddr       []byte // 0, 4, or 16 bytes based on McastSrcLen
-	McastGrpLen        uint8  // Length in bits: 32 or 128
-	McastGrpAddr       []byte // 4 or 16 bytes based on McastGrpLen
-	OriginatorRtrLen   uint8  // Length in bits: 32 or 128
-	OriginatorRtrAddr  []byte // 4 or 16 bytes based on OriginatorRtrLen
-	Flags              uint8  // Flags byte
+	RD                *base.RD
+	EthTag            []byte // 4 bytes
+	McastSrcLen       uint8  // Length in bits: 0, 32, or 128
+	McastSrcAddr      []byte // 0, 4, or 16 bytes based on McastSrcLen
+	McastGrpLen       uint8  // Length in bits: 32 or 128
+	McastGrpAddr      []byte // 4 or 16 bytes based on McastGrpLen
+	OriginatorRtrLen  uint8  // Length in bits: 32 or 128
+	OriginatorRtrAddr []byte // 4 or 16 bytes based on OriginatorRtrLen
+	Flags             uint8  // Flags byte
 }
 
 // GetRouteTypeSpec returns the route type spec object

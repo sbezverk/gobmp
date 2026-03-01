@@ -140,8 +140,8 @@ func TestRFC8277_LabeledUnicastIPv4(t *testing.T) {
 			name: "IPv4 /32 with PathID",
 			input: []byte{
 				0x00, 0x00, 0x00, 0x01, // PathID=1
-				0x38,                   // Length=56=24+32
-				0x00, 0x00, 0x31,       // Label: Value=3, BoS=true
+				0x38,             // Length=56=24+32
+				0x00, 0x00, 0x31, // Label: Value=3, BoS=true
 				0x0a, 0x00, 0x00, 0x01, // Prefix: 10.0.0.1
 			},
 			pathID: true,
@@ -575,13 +575,13 @@ func TestRFC8277_MultipleRoutes(t *testing.T) {
 			input: []byte{
 				// Route 1
 				0x00, 0x00, 0x00, 0x01, // PathID=1
-				0x38,                   // Length=56=24+32
-				0x00, 0x00, 0x31,       // Label
+				0x38,             // Length=56=24+32
+				0x00, 0x00, 0x31, // Label
 				0x0a, 0x00, 0x00, 0x01, // 10.0.0.1/32
 				// Route 2
 				0x00, 0x00, 0x00, 0x02, // PathID=2
-				0x38,                   // Length=56
-				0x00, 0x00, 0x31,       // Label
+				0x38,             // Length=56
+				0x00, 0x00, 0x31, // Label
 				0x0a, 0x00, 0x00, 0x02, // 10.0.0.2/32
 			},
 			pathID: true,

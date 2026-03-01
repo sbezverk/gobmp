@@ -9,32 +9,32 @@ import (
 // RFC 9256 Section 2.1
 func TestRFC9256_NLRIv4(t *testing.T) {
 	tests := []struct {
-		name          string
-		input         []byte
-		wantDist      uint32
-		wantColor     uint32
-		wantEndpoint  string
-		wantErr       bool
+		name         string
+		input        []byte
+		wantDist     uint32
+		wantColor    uint32
+		wantEndpoint string
+		wantErr      bool
 	}{
 		{
-			name:  "Valid - SR Policy v4 (Dist=2, Color=99, Endpoint=10.0.0.13)",
-			input: []byte{0x60, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x63, 0x0A, 0x00, 0x00, 0x0D},
+			name:         "Valid - SR Policy v4 (Dist=2, Color=99, Endpoint=10.0.0.13)",
+			input:        []byte{0x60, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x63, 0x0A, 0x00, 0x00, 0x0D},
 			wantDist:     2,
 			wantColor:    99,
 			wantEndpoint: "10.0.0.13",
 			wantErr:      false,
 		},
 		{
-			name:  "Valid - SR Policy v4 (Dist=1, Color=100, Endpoint=192.168.1.1)",
-			input: []byte{0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x64, 0xC0, 0xA8, 0x01, 0x01},
+			name:         "Valid - SR Policy v4 (Dist=1, Color=100, Endpoint=192.168.1.1)",
+			input:        []byte{0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x64, 0xC0, 0xA8, 0x01, 0x01},
 			wantDist:     1,
 			wantColor:    100,
 			wantEndpoint: "192.168.1.1",
 			wantErr:      false,
 		},
 		{
-			name:  "Valid - SR Policy v4 (Dist=0, Color=200, Endpoint=203.0.113.1)",
-			input: []byte{0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC8, 0xCB, 0x00, 0x71, 0x01},
+			name:         "Valid - SR Policy v4 (Dist=0, Color=200, Endpoint=203.0.113.1)",
+			input:        []byte{0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC8, 0xCB, 0x00, 0x71, 0x01},
 			wantDist:     0,
 			wantColor:    200,
 			wantEndpoint: "203.0.113.1",
@@ -80,12 +80,12 @@ func TestRFC9256_NLRIv4(t *testing.T) {
 // RFC 9256 Section 2.1
 func TestRFC9256_NLRIv6(t *testing.T) {
 	tests := []struct {
-		name          string
-		input         []byte
-		wantDist      uint32
-		wantColor     uint32
-		wantEndpoint  string
-		wantErr       bool
+		name         string
+		input        []byte
+		wantDist     uint32
+		wantColor    uint32
+		wantEndpoint string
+		wantErr      bool
 	}{
 		{
 			name: "Valid - SR Policy v6 (Dist=6, Color=6, Endpoint=2001:420:ffff:1013::1)",
@@ -358,10 +358,10 @@ func TestRFC9256_LengthValues(t *testing.T) {
 		{
 			name: "Valid - IPv4 Length = 12",
 			input: []byte{
-				0x60, // Length: 12 (0x60 >> 4 = 6 prefix bits, 0x60 & 0x0F = 0)
+				0x60,                   // Length: 12 (0x60 >> 4 = 6 prefix bits, 0x60 & 0x0F = 0)
 				0x00, 0x00, 0x00, 0x01, // Distinguisher
 				0x00, 0x00, 0x00, 0x64, // Color
-				10, 0, 0, 1,            // Endpoint
+				10, 0, 0, 1, // Endpoint
 			},
 			wantLength: 12,
 			wantErr:    false,
@@ -369,7 +369,7 @@ func TestRFC9256_LengthValues(t *testing.T) {
 		{
 			name: "Valid - IPv6 Length = 24",
 			input: []byte{
-				0xC0, // Length: 24 (0xC0 >> 4 = 12 prefix bits, 0xC0 & 0x0F = 0)
+				0xC0,                   // Length: 24 (0xC0 >> 4 = 12 prefix bits, 0xC0 & 0x0F = 0)
 				0x00, 0x00, 0x00, 0x01, // Distinguisher
 				0x00, 0x00, 0x00, 0x64, // Color
 				0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, // IPv6 Endpoint
@@ -440,7 +440,6 @@ func TestRFC9256_ErrorCases(t *testing.T) {
 		})
 	}
 }
-
 
 // TestRFC9256_RealWorldScenarios validates common real-world SR Policy scenarios
 func TestRFC9256_RealWorldScenarios(t *testing.T) {
@@ -533,18 +532,18 @@ func TestRFC9256_RealWorldScenarios(t *testing.T) {
 func TestRFC9256_TLVPreference(t *testing.T) {
 	// Import would be: "github.com/sbezverk/gobmp/pkg/srpolicy/testdata"
 	// For now, using inline data
-	
+
 	tests := []struct {
-		name       string
-		tlvData    []byte
-		wantPref   uint32
-		wantErr    bool
+		name     string
+		tlvData  []byte
+		wantPref uint32
+		wantErr  bool
 	}{
 		{
 			name: "Preference = 100 (low)",
 			tlvData: []byte{
-				0x7B,                   // Type: 123
-				0x00, 0x04,             // Length: 4
+				0x7B,       // Type: 123
+				0x00, 0x04, // Length: 4
 				0x00, 0x00, 0x00, 0x64, // Value: 100
 			},
 			wantPref: 100,
@@ -553,8 +552,8 @@ func TestRFC9256_TLVPreference(t *testing.T) {
 		{
 			name: "Preference = 200 (medium)",
 			tlvData: []byte{
-				0x7B,                   // Type: 123
-				0x00, 0x04,             // Length: 4
+				0x7B,       // Type: 123
+				0x00, 0x04, // Length: 4
 				0x00, 0x00, 0x00, 0xC8, // Value: 200
 			},
 			wantPref: 200,
@@ -563,8 +562,8 @@ func TestRFC9256_TLVPreference(t *testing.T) {
 		{
 			name: "Preference = 4294967295 (max)",
 			tlvData: []byte{
-				0x7B,                   // Type: 123
-				0x00, 0x04,             // Length: 4
+				0x7B,       // Type: 123
+				0x00, 0x04, // Length: 4
 				0xFF, 0xFF, 0xFF, 0xFF, // Value: max uint32
 			},
 			wantPref: 4294967295,
@@ -579,12 +578,12 @@ func TestRFC9256_TLVPreference(t *testing.T) {
 			if len(tt.tlvData) < 7 {
 				t.Errorf("TLV data too short: got %d bytes", len(tt.tlvData))
 			}
-			
+
 			// Verify TLV type
 			if tt.tlvData[0] != 0x7B {
 				t.Errorf("Wrong TLV type: got 0x%02X, want 0x7B", tt.tlvData[0])
 			}
-			
+
 			t.Logf("✅ Synthetic TLV Preference data is well-formed: %s", tt.name)
 		})
 	}
@@ -602,11 +601,11 @@ func TestRFC9256_TLVSegmentList(t *testing.T) {
 		{
 			name: "Segment List Type A - MPLS Label",
 			segListData: []byte{
-				0x7F,                   // Type: 127
-				0x00, 0x0C,             // Length: 12 bytes
+				0x7F,       // Type: 127
+				0x00, 0x0C, // Length: 12 bytes
 				0x00, 0x00, 0x00, 0x0A, // Weight: 10
-				0x01,                   // Segment Type A (MPLS Label)
-				0x00, 0x04,             // Segment Length: 4
+				0x01,       // Segment Type A (MPLS Label)
+				0x00, 0x04, // Segment Length: 4
 				0x00, 0x01, 0x86, 0xA0, // Label: 100000
 			},
 			wantWeight:  10,
@@ -616,11 +615,11 @@ func TestRFC9256_TLVSegmentList(t *testing.T) {
 		{
 			name: "Segment List Type C - IPv4 Node Address",
 			segListData: []byte{
-				0x7F,                   // Type: 127
-				0x00, 0x10,             // Length: 16 bytes
+				0x7F,       // Type: 127
+				0x00, 0x10, // Length: 16 bytes
 				0x00, 0x00, 0x00, 0x14, // Weight: 20
-				0x03,                   // Segment Type C (IPv4 Node)
-				0x00, 0x08,             // Length: 8
+				0x03,       // Segment Type C (IPv4 Node)
+				0x00, 0x08, // Length: 8
 				0xC0, 0x00, 0x02, 0x01, // IPv4: 192.0.2.1
 				0x00, 0x03, 0x0D, 0x40, // SID: 200000
 			},
@@ -631,20 +630,20 @@ func TestRFC9256_TLVSegmentList(t *testing.T) {
 		{
 			name: "Segment List with 3 Segments (Multi-Segment)",
 			segListData: []byte{
-				0x7F,                   // Type: 127
-				0x00, 0x24,             // Length: 36 bytes
+				0x7F,       // Type: 127
+				0x00, 0x24, // Length: 36 bytes
 				0x00, 0x00, 0x00, 0x32, // Weight: 50
 				// Segment 1
-				0x01,                   // Type A
-				0x00, 0x04,             // Length: 4
+				0x01,       // Type A
+				0x00, 0x04, // Length: 4
 				0x00, 0x01, 0x86, 0xA0, // Label: 100000
 				// Segment 2
-				0x01,                   // Type A
-				0x00, 0x04,             // Length: 4
+				0x01,       // Type A
+				0x00, 0x04, // Length: 4
 				0x00, 0x03, 0x0D, 0x40, // Label: 200000
 				// Segment 3
-				0x03,                   // Type C
-				0x00, 0x08,             // Length: 8
+				0x03,       // Type C
+				0x00, 0x08, // Length: 8
 				0xC0, 0x00, 0x02, 0x0A, // IPv4: 192.0.2.10
 				0x00, 0x04, 0x93, 0xE0, // SID: 300000
 			},
@@ -660,12 +659,12 @@ func TestRFC9256_TLVSegmentList(t *testing.T) {
 			if tt.segListData[0] != 0x7F {
 				t.Errorf("Wrong TLV type: got 0x%02X, want 0x7F", tt.segListData[0])
 			}
-			
+
 			// Verify minimum length
 			if len(tt.segListData) < 7 {
 				t.Errorf("Segment List data too short: got %d bytes", len(tt.segListData))
 			}
-			
+
 			t.Logf("✅ Synthetic Segment List data is well-formed: %s", tt.name)
 		})
 	}
@@ -682,10 +681,10 @@ func TestRFC9256_TLVBindingSID(t *testing.T) {
 		{
 			name: "BSID IPv4 - Label 100000",
 			bsidData: []byte{
-				0x80,                   // Type: 128
-				0x00, 0x08,             // Length: 8 bytes
-				0x00,                   // Flags
-				0x00, 0x00, 0x00,       // Reserved
+				0x80,       // Type: 128
+				0x00, 0x08, // Length: 8 bytes
+				0x00,             // Flags
+				0x00, 0x00, 0x00, // Reserved
 				0x00, 0x01, 0x86, 0xA0, // SID: 100000
 			},
 			bsidType: "IPv4",
@@ -696,7 +695,7 @@ func TestRFC9256_TLVBindingSID(t *testing.T) {
 			bsidData: []byte{
 				0x80,       // Type: 128
 				0x00, 0x14, // Length: 20 bytes
-				0x00,       // Flags
+				0x00,             // Flags
 				0x00, 0x00, 0x00, // Reserved
 				// SRv6 SID: 2001:db8:1::1
 				0x20, 0x01, 0x0D, 0xB8, 0x00, 0x01, 0x00, 0x00,
@@ -713,7 +712,7 @@ func TestRFC9256_TLVBindingSID(t *testing.T) {
 			if tt.bsidData[0] != 0x80 {
 				t.Errorf("Wrong TLV type: got 0x%02X, want 0x80", tt.bsidData[0])
 			}
-			
+
 			t.Logf("✅ Synthetic BSID data is well-formed: %s (%s)", tt.name, tt.bsidType)
 		})
 	}
@@ -731,19 +730,19 @@ func TestRFC9256_ComplexPolicyStructures(t *testing.T) {
 			name: "Complete Policy with 3 Segment Lists (ECMP)",
 			policyData: []byte{
 				// Preference TLV
-				0x7B,                   // Type: 123
-				0x00, 0x04,             // Length: 4
+				0x7B,       // Type: 123
+				0x00, 0x04, // Length: 4
 				0x00, 0x00, 0x00, 0x64, // Value: 100
 				// Priority TLV
 				0x7C,       // Type: 124
 				0x00, 0x01, // Length: 1
-				0x0A,       // Value: 10
+				0x0A, // Value: 10
 				// Segment List 1 (Weight 30)
-				0x7F,                   // Type: 127
-				0x00, 0x0C,             // Length: 12
+				0x7F,       // Type: 127
+				0x00, 0x0C, // Length: 12
 				0x00, 0x00, 0x00, 0x1E, // Weight: 30
-				0x01,                   // Segment Type A
-				0x00, 0x04,             // Length: 4
+				0x01,       // Segment Type A
+				0x00, 0x04, // Length: 4
 				0x00, 0x01, 0x86, 0xA0, // Label: 100000
 			},
 			description: "Multi-path policy with Preference + Priority + Segment Lists",
@@ -753,21 +752,21 @@ func TestRFC9256_ComplexPolicyStructures(t *testing.T) {
 			name: "Policy with Binding SID",
 			policyData: []byte{
 				// Preference
-				0x7B,                   // Type: 123
-				0x00, 0x04,             // Length: 4
+				0x7B,       // Type: 123
+				0x00, 0x04, // Length: 4
 				0x00, 0x00, 0x00, 0xC8, // Value: 200
 				// Segment List
-				0x7F,                   // Type: 127
-				0x00, 0x0C,             // Length: 12
+				0x7F,       // Type: 127
+				0x00, 0x0C, // Length: 12
 				0x00, 0x00, 0x00, 0x0A, // Weight: 10
-				0x01,                   // Segment Type A
-				0x00, 0x04,             // Length: 4
+				0x01,       // Segment Type A
+				0x00, 0x04, // Length: 4
 				0x00, 0x01, 0x86, 0xA0, // Label: 100000
 				// Binding SID
-				0x80,                   // Type: 128
-				0x00, 0x08,             // Length: 8
-				0x00,                   // Flags
-				0x00, 0x00, 0x00,       // Reserved
+				0x80,       // Type: 128
+				0x00, 0x08, // Length: 8
+				0x00,             // Flags
+				0x00, 0x00, 0x00, // Reserved
 				0x00, 0x05, 0xDC, 0x00, // SID: 384000
 			},
 			description: "Policy with BSID for traffic steering",
@@ -781,7 +780,7 @@ func TestRFC9256_ComplexPolicyStructures(t *testing.T) {
 			if len(tt.policyData) < 10 {
 				t.Errorf("Policy data too short: got %d bytes", len(tt.policyData))
 			}
-			
+
 			t.Logf("✅ Complex policy structure is well-formed: %s", tt.description)
 			t.Logf("   Total size: %d bytes", len(tt.policyData))
 		})

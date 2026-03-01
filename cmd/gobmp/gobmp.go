@@ -22,19 +22,19 @@ import (
 )
 
 var (
-	dstPort   int
-	srcPort   int
-	perfPort  int
-	kafkaSrv  string
+	dstPort           int
+	srcPort           int
+	perfPort          int
+	kafkaSrv          string
 	kafkaTpRetnTimeMs string // Kafka topic retention time in ms
-	kafkaTopicPrefix string
-	natsSrv   string
-	intercept string
-	splitAF   string
-	dump      string
-	file      string
-	bmpRaw    string
-	adminID   string
+	kafkaTopicPrefix  string
+	natsSrv           string
+	intercept         string
+	splitAF           string
+	dump              string
+	file              string
+	bmpRaw            string
+	adminID           string
 )
 
 func init() {
@@ -88,9 +88,9 @@ func main() {
 		glog.V(5).Infof("NATS publisher has been successfully initialized.")
 	default:
 		kConfig := &kafka.Config{
-			ServerAddress: kafkaSrv,
+			ServerAddress:        kafkaSrv,
 			TopicRetentionTimeMs: kafkaTpRetnTimeMs,
-			TopicPrefix: kafkaTopicPrefix,
+			TopicPrefix:          kafkaTopicPrefix,
 		}
 		publisher, err = kafka.NewKafkaPublisher(kConfig)
 		if err != nil {

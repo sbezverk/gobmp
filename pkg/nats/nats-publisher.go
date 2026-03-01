@@ -1,6 +1,7 @@
 package nats
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -127,8 +128,8 @@ func (p *publisher) createStreams() error {
 
 	// Try to create the stream, ignore if it already exists
 	_, err := p.js.AddStream(streamConfig)
-	if err != nil && err != nats.ErrStreamNameAlreadyInUse {
-		return fmt.Errorf("failed to create stream: %v", err)
+	if err != nil && !errors.Is(err, nats.ErrStreamNameAlreadyInUse) {
+		return fmt.Errorf("failed to create stream: %w", err)
 	}
 
 	return nil

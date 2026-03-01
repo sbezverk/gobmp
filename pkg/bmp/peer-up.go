@@ -2,6 +2,7 @@ package bmp
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 
 	"github.com/golang/glog"
@@ -49,8 +50,17 @@ func UnmarshalPeerUpMessage(b []byte, isIPv6 bool) (*PeerUpMessage, error) {
 	p += 2
 	// Skip first marker 16 bytes
 	p += 16
-	l1 := int16(binary.BigEndian.Uint16(b[p : p+2]))
-	pu.SentOpen, err = bgp.UnmarshalBGPOpenMessage(b[p : p+int(l1-16)])
+	if p+2 > len(b) {
+		return nil, fmt.Errorf("buffer too short to read Sent Open message length")
+	}
+	l1 := binary.BigEndian.Uint16(b[p : p+2])
+	if l1 < 16 {
+		return nil, fmt.Errorf("invalid BGP Open message length %d", l1)
+	}
+	if p+int(l1)-16 > len(b) {
+		return nil, fmt.Errorf("sent Open message length %d exceeds available buffer", l1)
+	}
+	pu.SentOpen, err = bgp.UnmarshalBGPOpenMessage(b[p : p+int(l1)-16])
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +68,17 @@ func UnmarshalPeerUpMessage(b []byte, isIPv6 bool) (*PeerUpMessage, error) {
 	p += int(l1) - 16
 	// Skip second marker
 	p += 16
-	l2 := int16(binary.BigEndian.Uint16(b[p : p+2]))
-	pu.ReceivedOpen, err = bgp.UnmarshalBGPOpenMessage(b[p : p+int(l2-16)])
+	if p+2 > len(b) {
+		return nil, fmt.Errorf("buffer too short to read Received Open message length")
+	}
+	l2 := binary.BigEndian.Uint16(b[p : p+2])
+	if l2 < 16 {
+		return nil, fmt.Errorf("invalid BGP Open message length %d", l2)
+	}
+	if p+int(l2)-16 > len(b) {
+		return nil, fmt.Errorf("received Open message length %d exceeds available buffer", l2)
+	}
+	pu.ReceivedOpen, err = bgp.UnmarshalBGPOpenMessage(b[p : p+int(l2)-16])
 	if err != nil {
 		return nil, err
 	}

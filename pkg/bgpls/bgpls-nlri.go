@@ -409,7 +409,7 @@ func (ls *NLRI) GetIGPMetric() uint32 {
 			continue
 		}
 		m := make([]byte, 4)
-		// 1095 TLV has varaible length
+		// 1095 TLV has variable length
 		// 1, 2 or 3 bytes, depending on the length copying the actual value into the right position.
 		copy(m[4-tlv.Length:], tlv.Value)
 		return binary.BigEndian.Uint32(m)
@@ -482,11 +482,11 @@ func (ls *NLRI) GetUnreservedLinkBandwidthKbps() []uint64 {
 		if tlv.Type != 1091 {
 			continue
 		}
-                tlvLen := len(tlv.Value)
-                if tlvLen != 32 {
-                        glog.Errorf("BGP-LS TLV 1091 invalid length: %d, returning default\n", tlvLen)
-                        return unResrved
-                }
+		tlvLen := len(tlv.Value)
+		if tlvLen != 32 {
+			glog.Errorf("BGP-LS TLV 1091 invalid length: %d, returning default\n", tlvLen)
+			return unResrved
+		}
 		for i, p := 0, 0; p < tlvLen; i, p = i+1, p+4 {
 			unResrved[i] = uint64(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value[p:p+4])) * 8 / 1000)
 		}
@@ -650,7 +650,8 @@ func (ls *NLRI) GetUnidirLinkDelay() uint32 {
 }
 
 // GetUnidirLinkDelayMinMax returns minimum and maximum delay values between two
-//   directly connected IGP link-state neighbors of MUnidirectional Link Delay
+//
+//	directly connected IGP link-state neighbors of MUnidirectional Link Delay
 func (ls *NLRI) GetUnidirLinkDelayMinMax() []uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1115 {

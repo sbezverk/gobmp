@@ -278,11 +278,11 @@ func TestRFC6514_Type2_InterfaceMethods(t *testing.T) {
 func TestRFC6514_Type3_IPv4(t *testing.T) {
 	rd := makeRD(100, 100)
 	input := rd
-	input = append(input, 32)                         // Source length (32 bits)
-	input = append(input, 192, 168, 1, 1)             // Source 192.168.1.1
-	input = append(input, 32)                         // Group length (32 bits)
-	input = append(input, 224, 0, 0, 1)               // Group 224.0.0.1
-	input = append(input, 10, 0, 0, 1)                // Originator 10.0.0.1
+	input = append(input, 32)             // Source length (32 bits)
+	input = append(input, 192, 168, 1, 1) // Source 192.168.1.1
+	input = append(input, 32)             // Group length (32 bits)
+	input = append(input, 224, 0, 0, 1)   // Group 224.0.0.1
+	input = append(input, 10, 0, 0, 1)    // Originator 10.0.0.1
 
 	got, err := UnmarshalType3(input)
 	if err != nil {
@@ -321,9 +321,9 @@ func TestRFC6514_Type3_IPv6(t *testing.T) {
 	}
 
 	input := rd
-	input = append(input, 128)    // Source length (128 bits)
+	input = append(input, 128) // Source length (128 bits)
 	input = append(input, src...)
-	input = append(input, 128)    // Group length (128 bits)
+	input = append(input, 128) // Group length (128 bits)
 	input = append(input, grp...)
 	input = append(input, orig...)
 
@@ -349,9 +349,9 @@ func TestRFC6514_Type3_ZeroLengthSourceGroup(t *testing.T) {
 	// Wildcard source (*, 0 length) and wildcard group (*, 0 length)
 	rd := makeRD(100, 100)
 	input := rd
-	input = append(input, 0)                          // Source length 0
-	input = append(input, 0)                          // Group length 0
-	input = append(input, 10, 0, 0, 1)                // Originator
+	input = append(input, 0)           // Source length 0
+	input = append(input, 0)           // Group length 0
+	input = append(input, 10, 0, 0, 1) // Originator
 
 	got, err := UnmarshalType3(input)
 	if err != nil {
@@ -378,7 +378,7 @@ func TestRFC6514_Type3_TooShort(t *testing.T) {
 func TestRFC6514_Type3_TruncatedSource(t *testing.T) {
 	rd := makeRD(100, 100)
 	input := rd
-	input = append(input, 32) // Source length 32 bits = 4 bytes
+	input = append(input, 32)       // Source length 32 bits = 4 bytes
 	input = append(input, 192, 168) // Only 2 bytes
 
 	_, err := UnmarshalType3(input)
@@ -392,7 +392,7 @@ func TestRFC6514_Type3_TruncatedGroup(t *testing.T) {
 	input := rd
 	input = append(input, 32)
 	input = append(input, 192, 168, 1, 1)
-	input = append(input, 32) // Group length 32 bits
+	input = append(input, 32)     // Group length 32 bits
 	input = append(input, 224, 0) // Only 2 bytes
 
 	_, err := UnmarshalType3(input)
@@ -646,8 +646,8 @@ func TestRFC6514_Type5_TrailingBytes(t *testing.T) {
 func TestRFC6514_Type5_TruncatedSource(t *testing.T) {
 	rd := makeRD(100, 100)
 	input := rd
-	input = append(input, 32)     // 32 bits = 4 bytes needed
-	input = append(input, 192)    // Only 1 byte
+	input = append(input, 32)  // 32 bits = 4 bytes needed
+	input = append(input, 192) // Only 1 byte
 
 	_, err := UnmarshalType5(input)
 	if err == nil {
@@ -697,7 +697,7 @@ func TestRFC6514_Type6_IPv4(t *testing.T) {
 	input := rd
 	input = append(input, as...)
 	input = append(input, 32)
-	input = append(input, 0, 0, 0, 0)    // C-RP wildcard
+	input = append(input, 0, 0, 0, 0) // C-RP wildcard
 	input = append(input, 32)
 	input = append(input, 224, 0, 0, 1)
 
@@ -1121,11 +1121,11 @@ func TestRFC6514_Type3_NonByteAlignedPrefixLength(t *testing.T) {
 	// Source with /24 prefix (24 bits = 3 bytes)
 	rd := makeRD(100, 100)
 	input := rd
-	input = append(input, 24)             // 24-bit source
-	input = append(input, 192, 168, 1)    // 3 bytes
-	input = append(input, 32)             // 32-bit group
+	input = append(input, 24)          // 24-bit source
+	input = append(input, 192, 168, 1) // 3 bytes
+	input = append(input, 32)          // 32-bit group
 	input = append(input, 224, 0, 0, 1)
-	input = append(input, 10, 0, 0, 1)    // Originator IPv4
+	input = append(input, 10, 0, 0, 1) // Originator IPv4
 
 	got, err := UnmarshalType3(input)
 	if err != nil {

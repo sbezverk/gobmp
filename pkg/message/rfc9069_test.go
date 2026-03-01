@@ -19,11 +19,11 @@ import (
 // whose value MUST be equal to the value of the VRF name
 func TestRFC9069_TableNameForLocRIBPeers(t *testing.T) {
 	tests := []struct {
-		name         string
-		peerType     bmp.PeerType
-		tableName    string
-		expectSet    bool
-		description  string
+		name        string
+		peerType    bmp.PeerType
+		tableName   string
+		expectSet   bool
+		description string
 	}{
 		{
 			name:        "LocRIB peer with VRF name",
@@ -164,9 +164,9 @@ func TestRFC9069_PeerTypeDetection(t *testing.T) {
 // Per RFC 9069 Section 4.3: Informational TLV Type 3 carries VRF/Table name
 func TestRFC9069_InformationalTLVType3(t *testing.T) {
 	tests := []struct {
-		name      string
-		tlvs      []bmp.InformationalTLV
-		expected  string
+		name     string
+		tlvs     []bmp.InformationalTLV
+		expected string
 	}{
 		{
 			name: "Single Table Name TLV",

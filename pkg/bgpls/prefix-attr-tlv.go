@@ -15,7 +15,7 @@ import (
 // https://datatracker.ietf.org/doc/html/draft-ietf-idr-bgp-ls-segment-routing-ext-17#section-2.3
 type PrefixAttrTLVs struct {
 	LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
-	Range          *RangeTLV          `json:"range,omitempty"`          // RFC 9085 Section 2.3.5
+	Range          *RangeTLV          `json:"range,omitempty"` // RFC 9085 Section 2.3.5
 	Flags          PrefixAttrFlags    `json:"flags,omitempty"`
 	SourceRouterID string             `json:"source_router_id,omitempty"` // RFC 9085 Section 2.3.4 - TLV 1174 (OSPF) or TLV 1171 (generic)
 }
@@ -218,7 +218,7 @@ type ISISFlags struct {
 	NFlag bool `json:"n_flag"`
 }
 
-//GetPrefixAttrFlagsByte returns a byte represenation for ISIS flags
+// GetPrefixAttrFlagsByte returns a byte representation for ISIS flags
 func (f *ISISFlags) GetPrefixAttrFlagsByte() byte {
 	b := byte(0)
 	if f.XFlag {
@@ -241,7 +241,7 @@ type OSPFFlags struct {
 	NFlag bool `json:"n_flag"`
 }
 
-//GetPrefixAttrFlagsByte returns a byte represenation for OSPF flags
+// GetPrefixAttrFlagsByte returns a byte representation for OSPF flags
 func (f *OSPFFlags) GetPrefixAttrFlagsByte() byte {
 	b := byte(0)
 
@@ -255,7 +255,8 @@ func (f *OSPFFlags) GetPrefixAttrFlagsByte() byte {
 	return b
 }
 
-//   0  1  2  3  4  5  6  7
+//	0  1  2  3  4  5  6  7
+//
 // +--+--+--+--+--+--+--+--+
 // |  |  | N|DN| P| x|LA|NU|
 // +--+--+--+--+--+--+--+--+
@@ -268,7 +269,7 @@ type OSPFv3Flags struct {
 	NUFlag bool `json:"nu_flag"`
 }
 
-//GetPrefixAttrFlagsByte returns a byte represenation for OSPF flags
+// GetPrefixAttrFlagsByte returns a byte representation for OSPF flags
 func (f *OSPFv3Flags) GetPrefixAttrFlagsByte() byte {
 	b := byte(0)
 
@@ -296,7 +297,7 @@ type UnknownProtoFlags struct {
 	Flags byte `json:"flags"`
 }
 
-//GetPrefixAttrFlagsByte returns a byte represenation for Unknown protocol flags
+// GetPrefixAttrFlagsByte returns a byte representation for Unknown protocol flags
 func (f *UnknownProtoFlags) GetPrefixAttrFlagsByte() byte {
 	return f.Flags
 }

@@ -22,3 +22,5 @@ test-output.txt
 rfc-test-output.txt
 
 # Dependency directories (remove the comment below to include it)
+pkg/bmp/CLAUDE.md
+pkg/message/CLAUDE.md

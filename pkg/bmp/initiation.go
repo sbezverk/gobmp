@@ -23,7 +23,7 @@ func UnmarshalInitiationMessage(b []byte) (*InitiationMessage, error) {
 	}
 	for i := 0; i < len(b); {
 		// Extracting TLV type 2 bytes
-		t := int16(binary.BigEndian.Uint16(b[i : i+2]))
+		t := binary.BigEndian.Uint16(b[i : i+2])
 		switch t {
 		case 0:
 		case 1:
@@ -32,14 +32,14 @@ func UnmarshalInitiationMessage(b []byte) (*InitiationMessage, error) {
 			return nil, fmt.Errorf("invalid tlv type, expected between 0 and 2 found %d", t)
 		}
 		// Extracting TLV length
-		l := int16(binary.BigEndian.Uint16(b[i+2 : i+4]))
-		if l > int16(len(b)-(i+4)) {
+		l := binary.BigEndian.Uint16(b[i+2 : i+4])
+		if int(l) > len(b)-(i+4) {
 			return nil, fmt.Errorf("invalid tlv length %d", l)
 		}
 		v := b[i+4 : i+4+int(l)]
 		im.TLV = append(im.TLV, InformationalTLV{
-			InformationType:   t,
-			InformationLength: l,
+			InformationType:   int16(t),
+			InformationLength: int16(l),
 			Information:       v,
 		})
 		i += 4 + int(l)

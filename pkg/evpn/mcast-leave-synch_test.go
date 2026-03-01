@@ -50,7 +50,7 @@ func TestUnmarshalEVPNMcastLeave_Valid(t *testing.T) {
 				// Flags (1 byte)
 				0,
 			},
-			wantRD:  "0:0",
+			wantRD: "0:0",
 			wantESI: func() *ESI {
 				esi, _ := MakeESI([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 				return esi

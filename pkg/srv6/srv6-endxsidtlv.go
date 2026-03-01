@@ -16,7 +16,9 @@ const (
 )
 
 // EndXSIDFlags defines a structure of SRv6 End X SID's Flags
-//  0 1 2 3 4 5 6 7
+//
+//	0 1 2 3 4 5 6 7
+//
 // +-+-+-+-+-+-+-+-+
 // |B|S|P| Reserved|
 // +-+-+-+-+-+-+-+-+

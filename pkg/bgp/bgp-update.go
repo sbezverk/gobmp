@@ -49,7 +49,7 @@ func (up *Update) GetBaseAttrHash() string {
 	return s
 }
 
-// GetNLRI29 check for presense of NLRI 29 in the update and if exists, instantiate NLRI29 object
+// GetNLRI29 check for presence of NLRI 29 in the update and if exists, instantiate NLRI29 object
 func (up *Update) GetNLRI29() (*bgpls.NLRI, error) {
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType == 29 {
@@ -63,7 +63,7 @@ func (up *Update) GetNLRI29() (*bgpls.NLRI, error) {
 	return nil, NewAttributeNotFoundError(29, "BGP-LS")
 }
 
-// GetAttrPrefixSID check for presense of BGP Attribute Prefix SID (40) and instantiates it
+// GetAttrPrefixSID check for presence of BGP Attribute Prefix SID (40) and instantiates it
 func (up *Update) GetAttrPrefixSID() (*prefixsid.PSid, error) {
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType == 40 {
@@ -77,7 +77,7 @@ func (up *Update) GetAttrPrefixSID() (*prefixsid.PSid, error) {
 	return nil, NewAttributeNotFoundError(40, "Prefix SID")
 }
 
-// HasPrefixSID check for presense of BGP Attribute Prefix SID (40) and returns true is found
+// HasPrefixSID check for presence of BGP Attribute Prefix SID (40) and returns true is found
 func (up *Update) HasPrefixSID() bool {
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType == 40 {

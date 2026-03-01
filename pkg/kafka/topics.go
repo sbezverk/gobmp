@@ -16,4 +16,3 @@ func WithTopicPrefix(prefix, topic string) string {
 	}
 	return p + "." + topic
 }
-
