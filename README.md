@@ -44,7 +44,7 @@ goBMP is a production-ready implementation of the BGP Monitoring Protocol ([RFC 
 ## Features
 
 - ✅ **Comprehensive BGP Support:** IPv4/IPv6 Unicast, Labeled Unicast, L3VPN, EVPN, BGP-LS, SR Policy, FlowSpec
-- ✅ **Segment Routing:** Full SRv6 support with BGP-LS extensions (Flex Algo, Application-Specific attributes)
+- ✅ **Segment Routing:** SR Policy segment types A–K (RFC 9256/9831), full SRv6 support with BGP-LS extensions (Flex Algo, Application-Specific attributes)
 - ✅ **Multiple Publishers:** Kafka, NATS, file-based storage, console output
 - ✅ **OpenBMP Compatibility:** RAW mode publishes binary messages compatible with OpenBMP consumers
 - ✅ **Intercept Mode:** Transparent proxy mode for inserting into existing BMP pipelines
@@ -83,11 +83,13 @@ goBMP is a production-ready implementation of the BGP Monitoring Protocol ([RFC 
 ### Advanced Features
 
 goBMP implements numerous protocol extensions including:
+- **SR Policy Segments:** All 11 segment types (A–K) per RFC 9256 and RFC 9831 — MPLS label, SRv6 SID, IPv4/IPv6 adjacency and node variants
 - **SRv6 Support:** BGP-LS extensions for SRv6 SIDs, Endpoint Behaviors, SID Structure TLVs
 - **Flex Algorithm:** IGP Flexible Algorithm support in BGP-LS
 - **Application-Specific Attributes:** Extended community and attribute parsing
 - **BMP Statistics:** Full RFC 7854 and RFC 8671 statistics message support
 - **FlowSpec:** Traffic filtering and DDoS mitigation rule distribution
+- **EVPN Route Types 1–11:** All EVPN route types per RFC 7432, RFC 8365, RFC 9251, and RFC 9572
 
 📋 **Complete RFC/Draft Support:** See [BMP.md](https://github.com/sbezverk/gobmp/blob/master/BMP.md) for detailed protocol compliance information.
 
@@ -116,7 +118,7 @@ Expected output:
 
 ### Option 2: Build from Source
 
-**Prerequisites:** Go 1.19 or later
+**Prerequisites:** Go 1.24 or later
 
 ```bash
 git clone https://github.com/sbezverk/gobmp
@@ -417,7 +419,7 @@ go tool pprof http://localhost:56767/debug/pprof/heap
 Contributions are welcome! goBMP is actively developed with ongoing work to expand protocol support and RFC compliance.
 
 **Areas for contribution:**
-- Additional BGP AFI/SAFI support (VPLS, Multicast, etc.)
+- Additional BGP AFI/SAFI support
 - Enhanced RFC compliance
 - Performance optimizations
 - Documentation improvements
