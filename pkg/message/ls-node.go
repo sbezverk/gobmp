@@ -59,6 +59,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 		fallthrough
 	case base.OSPFv3:
 		msg.AreaID = node.GetNodeOSPFAreaID()
+	case base.ISISL1, base.ISISL2, base.Direct, base.Static, base.BGP, base.RSVPTE, base.SR:
 	}
 
 	lsnode, err := update.GetNLRI29()
@@ -73,6 +74,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 			fallthrough
 		case base.ISISL2:
 			msg.AreaID = lsnode.GetISISAreaID()
+		case base.OSPFv2, base.Direct, base.Static, base.OSPFv3, base.BGP, base.RSVPTE, base.SR:
 		}
 		if isIPv6 {
 			msg.RouterID = lsnode.GetLocalIPv6RouterID()

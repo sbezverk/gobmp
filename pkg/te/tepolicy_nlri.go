@@ -34,8 +34,9 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 	}
 	te.ProtocolID = base.ProtoID(b[p])
 	switch te.ProtocolID {
-	case base.RSVPTE:
-	case base.SR:
+	case base.RSVPTE, base.SR:
+	case base.ISISL1, base.ISISL2, base.OSPFv2, base.Direct, base.Static, base.OSPFv3, base.BGP:
+		return nil, fmt.Errorf("unrecognized protocol ID %d in TE Policy NLRI", te.ProtocolID)
 	default:
 		return nil, fmt.Errorf("unrecognized protocol ID %d in TE Policy NLRI", te.ProtocolID)
 	}

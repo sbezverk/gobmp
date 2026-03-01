@@ -135,23 +135,23 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 // ProtocolIDString returns string with protocol deacription based on the id
 func ProtocolIDString(id ProtoID) string {
 	switch id {
-	case 1:
+	case ISISL1:
 		return "IS-IS Level 1"
-	case 2:
+	case ISISL2:
 		return "IS-IS Level 2"
-	case 3:
+	case OSPFv2:
 		return "OSPFv2"
-	case 4:
+	case Direct:
 		return "Direct"
-	case 5:
+	case Static:
 		return "Static configuration"
-	case 6:
+	case OSPFv3:
 		return "OSPFv3"
-	case 7:
+	case BGP:
 		return "BGP"
-	case 8:
+	case RSVPTE:
 		return "RSVP-TE"
-	case 9:
+	case SR:
 		return "Segment Routing"
 	default:
 		return "Unknown"

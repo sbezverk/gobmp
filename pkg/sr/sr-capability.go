@@ -105,6 +105,12 @@ func UnmarshalSRCapability(b []byte, proto base.ProtoID) (*Capability, error) {
 			return nil, err
 		}
 		cap.Flags = f
+	case base.OSPFv2, base.Direct, base.Static, base.OSPFv3, base.BGP, base.RSVPTE, base.SR:
+		f, err := UnmarshalUnknownProtoFlags(b[p : p+1])
+		if err != nil {
+			return nil, err
+		}
+		cap.Flags = f
 	default:
 		f, err := UnmarshalUnknownProtoFlags(b[p : p+1])
 		if err != nil {

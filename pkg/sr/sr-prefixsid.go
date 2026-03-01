@@ -136,6 +136,12 @@ func UnmarshalPrefixSIDTLV(b []byte, proto base.ProtoID) (*PrefixSIDTLV, error) 
 			return nil, err
 		}
 		psid.Flags = f
+	case base.Direct, base.Static, base.BGP, base.RSVPTE, base.SR:
+		f, err := UnmarshalUnknownProtoFlags(b[p : p+1])
+		if err != nil {
+			return nil, err
+		}
+		psid.Flags = f
 	default:
 		f, err := UnmarshalUnknownProtoFlags(b[p : p+1])
 		if err != nil {
