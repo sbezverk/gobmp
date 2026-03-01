@@ -4,6 +4,106 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-03-01
+
+#### Added
+
+- SR Policy Type I segment support (IPv6 node address with SRv6 endpoint behavior) per RFC 9831 Section 2.4.9
+- SR Policy Type J segment support (IPv6 link-local adjacency with SRv6 SID) per RFC 9831 Section 2.4.10
+- SR Policy Type K segment support (IPv6 Local/Remote adjacency with SRv6 SID) per RFC 9831 Section 2.4.11
+- BGP-LS SR Policy TLV types 1201–1205 wired to NLRI Get methods for structured segment list access
+
+#### Fixed
+
+- Error wrapping and silent suppression of non-nil errors across BMP parsing pipeline
+- Append aliasing in MCAST-VPN test helpers causing slice corruption
+- `os.Exit` in cmd binaries bypassing deferred cleanup including glog buffer flush
+- Exhaustive `ProtoID` switch cases across 8 packages to eliminate unreachable default branches
+- Exhaustive `SpecType` switch in FlowSpec `UnmarshalJSON` for complete type coverage
+- `typeSwitchVar` and `singleCaseSwitch` gocritic findings in SR and BGP packages
+- Unnecessary type conversions in `pkg/base` Label and Prefix Descriptor types
+- Missing godot periods on exported comments throughout codebase
+- Unsafe type assertions in FlowSpec JSON unmarshaling replaced with comma-ok checks
+- Dead `done` channel removed from validator store
+- Bounds validation restored in `makePrefixSpec` after unparam linter regression
+
+### 2026-02-28
+
+#### Added
+
+- SR Policy Type H segment support (IPv6 Local/Remote adjacency) per RFC 9831 Section 2.4.8
+
+#### Fixed
+
+- BMP Stats Report TLV count validation against actual buffer size to prevent silent truncation
+- Bounds checks in BMP Peer Up message parser to prevent panic on truncated messages
+
+### 2026-02-27
+
+#### Added
+
+- SR Policy Type G segment support (IPv6 link-local adjacency) per RFC 9831 Section 2.4.7
+
+#### Fixed
+
+- Timestamp decoding in BMP messages
+
+### 2026-02-25
+
+#### Added
+
+- SR Policy Type F segment support (IPv4 Local/Remote adjacency) per RFC 9256 Section 2.4.6
+- RFC 9012 Tunnel Encapsulation Attribute parsing
+- EVPN Type 7 Multicast Membership Report Synch route support per RFC 9251 Section 9.2
+- EVPN Type 10 S-PMSI A-D route support per RFC 9572 Section 3.2
+
+### 2026-02-23
+
+#### Added
+
+- EVPN Type 8 Multicast Leave Synch route parsing per RFC 9251 Section 9.3
+- EVPN Type 11 Leaf A-D route parsing per RFC 9572 Section 3.3
+- SR Policy Type E segment support per RFC 9256 Section 2.4.5
+
+#### Fixed
+
+- L3VPN CIDR rounding that corrupted prefix lengths (e.g. /30 → /32)
+
+### 2026-02-18
+
+#### Added
+
+- SR Policy Type C segment support (IPv4 node address + index) per RFC 9256 Section 2.4.3
+- EVPN Type 6 Selective Multicast Ethernet Tag (SMET) route parsing per RFC 9251 Section 9.1
+
+### 2026-02-08
+
+#### Added
+
+- EVPN Type 9 Per-Region I-PMSI A-D route support per RFC 9572 Section 3.1
+
+### 2026-02-03
+
+#### Added
+
+- SR Policy Type B segment support (SRv6 SID only) per RFC 9831 Section 2.4.2
+
+### 2026-01-16
+
+#### Added
+
+- L2VPN EVPN support (AFI 25, SAFI 70) per RFC 7432 and RFC 8365
+  - All 11 EVPN route types (Types 1–5 per RFC 7432, Types 6–11 per RFC 9251/9572)
+  - MAC/IP Advertisement, Inclusive Multicast, Ethernet Segment, IP Prefix routes
+  - 14 test functions covering all route types
+
+### 2026-01-08
+
+#### Added
+
+- Route Target Constraint support for IPv4 (AFI 1, SAFI 132) per RFC 4684
+- Route Target Constraint support for IPv6 (AFI 2, SAFI 132) per RFC 4684
+
 ### 2025-12-16
 
 #### Added
