@@ -764,6 +764,66 @@ func (ls *NLRI) GetSRAdjacencySID(proto base.ProtoID) ([]*sr.AdjacencySIDTLV, er
 	return adjs, nil
 }
 
+// GetSRBindingSID returns the SR Binding SID TLV (type 1201)
+func (ls *NLRI) GetSRBindingSID() (*SRBindingSID, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != BindingSIDType {
+			continue
+		}
+		return UnmarshalSRBindingSID(tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+// GetSRCandidatePathState returns the SR Candidate Path State TLV (type 1202)
+func (ls *NLRI) GetSRCandidatePathState() (*SRCandidatePathState, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != SRCandidatePathStateType {
+			continue
+		}
+		return UnmarshalSRCandidatePathState(tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+// GetSRCandidatePathName returns the SR Candidate Path Name TLV (type 1203)
+func (ls *NLRI) GetSRCandidatePathName() (*SRCandidatePathName, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != SRCandidatePathNameType {
+			continue
+		}
+		return UnmarshalSRCandidatePathName(tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+// GetSRCandidatePathConstraints returns the SR Candidate Path Constraints TLV (type 1204)
+func (ls *NLRI) GetSRCandidatePathConstraints() (*SRCandidatePathConstraints, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != SRCandidatePathConstraintsType {
+			continue
+		}
+		return UnmarshalSRCandidatePathConstraints(tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+// GetSRSegmentList returns all SR Segment List TLVs (type 1205)
+func (ls *NLRI) GetSRSegmentList() ([]*SRSegmentList, error) {
+	lists := make([]*SRSegmentList, 0)
+	for _, tlv := range ls.LS {
+		if tlv.Type != SRSegmentListType {
+			continue
+		}
+		sl, err := UnmarshalSRSegmentList(tlv.Value)
+		if err != nil {
+			return nil, err
+		}
+		lists = append(lists, sl)
+	}
+	return lists, nil
+}
+
 // UnmarshalBGPLSNLRI builds Prefix NLRI object
 func UnmarshalBGPLSNLRI(b []byte) (*NLRI, error) {
 	if glog.V(6) {

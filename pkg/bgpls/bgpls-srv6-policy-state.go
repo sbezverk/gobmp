@@ -215,12 +215,13 @@ func UnmarshalSRCandidatePathConstraints(b []byte) (*SRCandidatePathConstraints,
 	s.FlagA = b[p]&0x10 == 0x10
 	s.FlagT = b[p]&0x08 == 0x08
 	p += 2
-	// Skip resreved 2 bytes
+	// Skip reserved 2 bytes
 	s.MTID = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	s.Algo = b[p]
 	p++
-	// Skip reserved 1 byte
+	// Skip 3 reserved bytes (word 2 of fixed header: algo + 3 reserved)
+	p += 3
 	if p < len(b) {
 		var err error
 		s.SubTLV, err = UnmarshalSRCandidatePathConstraintsSubTLV(b[p:])
@@ -246,6 +247,7 @@ func UnmarshalSRCandidatePathConstraintsSubTLV(b []byte) (map[uint16]SRCandidate
 		t := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		l := binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
 		if p+int(l) > len(b) {
 			return nil, fmt.Errorf("not enough bytes to decode SR Candidate Path Constraints Sub TLV")
 		}
@@ -629,6 +631,7 @@ func UnmarshalSRSegmentListSubTLV(b []byte) (map[uint16]SRSegmentListSubTLV, err
 		t := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		l := binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
 		if p+int(l) > len(b) {
 			return nil, fmt.Errorf("not enough bytes to decode SR Segment List Sub TLV")
 		}
@@ -867,6 +870,7 @@ func UnmarshalSRSegmentSubTLV(b []byte) (map[uint16]SRSegmentSubTLV, error) {
 		t := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		l := binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
 		if p+int(l) > len(b) {
 			return nil, fmt.Errorf("not enough bytes to decode SR Segment Sub TLV")
 		}
