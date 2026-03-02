@@ -850,6 +850,275 @@ func (d *SRType1Descriptor) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// SRType3Descriptor is the descriptor for SegmentType3 (SR-MPLS Prefix SID, IPv4 node address).
+type SRType3Descriptor struct {
+	IPv4NodeAddress []byte `json:"ipv4_node_address"`
+	Algorithm       uint8  `json:"algorithm"`
+}
+
+var _ SegmentDescriptor = &SRType3Descriptor{}
+
+// UnmarshalSRType3Descriptor instantiates an SRType3Descriptor from a 5-byte slice.
+func UnmarshalSRType3Descriptor(b []byte) (SegmentDescriptor, error) {
+	if len(b) != 5 {
+		return nil, fmt.Errorf("invalid length %d of SR Type3 Descriptor, want 5", len(b))
+	}
+	d := &SRType3Descriptor{
+		IPv4NodeAddress: append([]byte(nil), b[:4]...),
+		Algorithm:       b[4],
+	}
+	return d, nil
+}
+
+// Len returns the byte length of an SRType3Descriptor.
+func (d *SRType3Descriptor) Len() int { return 5 }
+
+// MarshalJSON serializes SRType3Descriptor.
+func (d *SRType3Descriptor) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		IPv4NodeAddress []byte `json:"ipv4_node_address"`
+		Algorithm       uint8  `json:"algorithm"`
+	}{IPv4NodeAddress: d.IPv4NodeAddress, Algorithm: d.Algorithm})
+}
+
+// UnmarshalJSON deserializes SRType3Descriptor.
+func (d *SRType3Descriptor) UnmarshalJSON(b []byte) error {
+	t := &SRType3Descriptor{}
+	if err := json.Unmarshal(b, t); err != nil {
+		return err
+	}
+	*d = *t
+	return nil
+}
+
+// SRType4Descriptor is the descriptor for SegmentType4 (SR-MPLS Prefix SID, IPv6 node address)
+// and SegmentType9 (SRv6 END SID, IPv6 node address). Both carry a 16-byte node address and
+// a 1-byte SR algorithm, for a total of 17 bytes.
+type SRType4Descriptor struct {
+	IPv6NodeAddress []byte `json:"ipv6_node_address"`
+	Algorithm       uint8  `json:"algorithm"`
+}
+
+var _ SegmentDescriptor = &SRType4Descriptor{}
+
+// UnmarshalSRType4Descriptor instantiates an SRType4Descriptor from a 17-byte slice.
+func UnmarshalSRType4Descriptor(b []byte) (SegmentDescriptor, error) {
+	if len(b) != 17 {
+		return nil, fmt.Errorf("invalid length %d of SR Type4 Descriptor, want 17", len(b))
+	}
+	d := &SRType4Descriptor{
+		IPv6NodeAddress: append([]byte(nil), b[:16]...),
+		Algorithm:       b[16],
+	}
+	return d, nil
+}
+
+// Len returns the byte length of an SRType4Descriptor.
+func (d *SRType4Descriptor) Len() int { return 17 }
+
+// MarshalJSON serializes SRType4Descriptor.
+func (d *SRType4Descriptor) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		IPv6NodeAddress []byte `json:"ipv6_node_address"`
+		Algorithm       uint8  `json:"algorithm"`
+	}{IPv6NodeAddress: d.IPv6NodeAddress, Algorithm: d.Algorithm})
+}
+
+// UnmarshalJSON deserializes SRType4Descriptor.
+func (d *SRType4Descriptor) UnmarshalJSON(b []byte) error {
+	t := &SRType4Descriptor{}
+	if err := json.Unmarshal(b, t); err != nil {
+		return err
+	}
+	*d = *t
+	return nil
+}
+
+// SRType5Descriptor is the descriptor for SegmentType5 (SR-MPLS Adjacency SID,
+// IPv4 local node address and local interface ID). Carries a 4-byte IPv4 node
+// address and a 4-byte interface ID, for a total of 8 bytes.
+type SRType5Descriptor struct {
+	LocalNodeIPv4    []byte `json:"local_node_ipv4"`
+	LocalInterfaceID uint32 `json:"local_interface_id"`
+}
+
+var _ SegmentDescriptor = &SRType5Descriptor{}
+
+// UnmarshalSRType5Descriptor instantiates an SRType5Descriptor from an 8-byte slice.
+func UnmarshalSRType5Descriptor(b []byte) (SegmentDescriptor, error) {
+	if len(b) != 8 {
+		return nil, fmt.Errorf("invalid length %d of SR Type5 Descriptor, want 8", len(b))
+	}
+	d := &SRType5Descriptor{
+		LocalNodeIPv4:    append([]byte(nil), b[:4]...),
+		LocalInterfaceID: binary.BigEndian.Uint32(b[4:8]),
+	}
+	return d, nil
+}
+
+// Len returns the byte length of an SRType5Descriptor.
+func (d *SRType5Descriptor) Len() int { return 8 }
+
+// MarshalJSON serializes SRType5Descriptor.
+func (d *SRType5Descriptor) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		LocalNodeIPv4    []byte `json:"local_node_ipv4"`
+		LocalInterfaceID uint32 `json:"local_interface_id"`
+	}{LocalNodeIPv4: d.LocalNodeIPv4, LocalInterfaceID: d.LocalInterfaceID})
+}
+
+// UnmarshalJSON deserializes SRType5Descriptor.
+func (d *SRType5Descriptor) UnmarshalJSON(b []byte) error {
+	t := &SRType5Descriptor{}
+	if err := json.Unmarshal(b, t); err != nil {
+		return err
+	}
+	*d = *t
+	return nil
+}
+
+// SRType6Descriptor is the descriptor for SegmentType6 (SR-MPLS Adjacency SID,
+// IPv4 local and remote interface addresses). Carries two 4-byte IPv4 addresses,
+// for a total of 8 bytes.
+type SRType6Descriptor struct {
+	LocalInterfaceIPv4  []byte `json:"local_interface_ipv4"`
+	RemoteInterfaceIPv4 []byte `json:"remote_interface_ipv4"`
+}
+
+var _ SegmentDescriptor = &SRType6Descriptor{}
+
+// UnmarshalSRType6Descriptor instantiates an SRType6Descriptor from an 8-byte slice.
+func UnmarshalSRType6Descriptor(b []byte) (SegmentDescriptor, error) {
+	if len(b) != 8 {
+		return nil, fmt.Errorf("invalid length %d of SR Type6 Descriptor, want 8", len(b))
+	}
+	d := &SRType6Descriptor{
+		LocalInterfaceIPv4:  append([]byte(nil), b[:4]...),
+		RemoteInterfaceIPv4: append([]byte(nil), b[4:8]...),
+	}
+	return d, nil
+}
+
+// Len returns the byte length of an SRType6Descriptor.
+func (d *SRType6Descriptor) Len() int { return 8 }
+
+// MarshalJSON serializes SRType6Descriptor.
+func (d *SRType6Descriptor) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		LocalInterfaceIPv4  []byte `json:"local_interface_ipv4"`
+		RemoteInterfaceIPv4 []byte `json:"remote_interface_ipv4"`
+	}{LocalInterfaceIPv4: d.LocalInterfaceIPv4, RemoteInterfaceIPv4: d.RemoteInterfaceIPv4})
+}
+
+// UnmarshalJSON deserializes SRType6Descriptor.
+func (d *SRType6Descriptor) UnmarshalJSON(b []byte) error {
+	t := &SRType6Descriptor{}
+	if err := json.Unmarshal(b, t); err != nil {
+		return err
+	}
+	*d = *t
+	return nil
+}
+
+// SRType7Descriptor is the descriptor for SegmentType7 (SR-MPLS Adjacency SID,
+// IPv6 local and remote node addresses with interface IDs) and SegmentType10
+// (SRv6 END.X SID, same topology encoding). Carries two 16-byte IPv6 node
+// addresses and two 4-byte interface IDs, for a total of 40 bytes.
+type SRType7Descriptor struct {
+	LocalNodeIPv6     []byte `json:"local_node_ipv6"`
+	LocalInterfaceID  uint32 `json:"local_interface_id"`
+	RemoteNodeIPv6    []byte `json:"remote_node_ipv6"`
+	RemoteInterfaceID uint32 `json:"remote_interface_id"`
+}
+
+var _ SegmentDescriptor = &SRType7Descriptor{}
+
+// UnmarshalSRType7Descriptor instantiates an SRType7Descriptor from a 40-byte slice.
+func UnmarshalSRType7Descriptor(b []byte) (SegmentDescriptor, error) {
+	if len(b) != 40 {
+		return nil, fmt.Errorf("invalid length %d of SR Type7 Descriptor, want 40", len(b))
+	}
+	d := &SRType7Descriptor{
+		LocalNodeIPv6:     append([]byte(nil), b[:16]...),
+		LocalInterfaceID:  binary.BigEndian.Uint32(b[16:20]),
+		RemoteNodeIPv6:    append([]byte(nil), b[20:36]...),
+		RemoteInterfaceID: binary.BigEndian.Uint32(b[36:40]),
+	}
+	return d, nil
+}
+
+// Len returns the byte length of an SRType7Descriptor.
+func (d *SRType7Descriptor) Len() int { return 40 }
+
+// MarshalJSON serializes SRType7Descriptor.
+func (d *SRType7Descriptor) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		LocalNodeIPv6     []byte `json:"local_node_ipv6"`
+		LocalInterfaceID  uint32 `json:"local_interface_id"`
+		RemoteNodeIPv6    []byte `json:"remote_node_ipv6"`
+		RemoteInterfaceID uint32 `json:"remote_interface_id"`
+	}{
+		LocalNodeIPv6:     d.LocalNodeIPv6,
+		LocalInterfaceID:  d.LocalInterfaceID,
+		RemoteNodeIPv6:    d.RemoteNodeIPv6,
+		RemoteInterfaceID: d.RemoteInterfaceID,
+	})
+}
+
+// UnmarshalJSON deserializes SRType7Descriptor.
+func (d *SRType7Descriptor) UnmarshalJSON(b []byte) error {
+	t := &SRType7Descriptor{}
+	if err := json.Unmarshal(b, t); err != nil {
+		return err
+	}
+	*d = *t
+	return nil
+}
+
+// SRType8Descriptor is the descriptor for SegmentType8 (SR-MPLS Adjacency SID,
+// IPv6 local and remote interface addresses) and SegmentType11 (SRv6 END.X SID,
+// same topology encoding). Carries two 16-byte IPv6 interface addresses, for a
+// total of 32 bytes.
+type SRType8Descriptor struct {
+	LocalInterfaceIPv6  []byte `json:"local_interface_ipv6"`
+	RemoteInterfaceIPv6 []byte `json:"remote_interface_ipv6"`
+}
+
+var _ SegmentDescriptor = &SRType8Descriptor{}
+
+// UnmarshalSRType8Descriptor instantiates an SRType8Descriptor from a 32-byte slice.
+func UnmarshalSRType8Descriptor(b []byte) (SegmentDescriptor, error) {
+	if len(b) != 32 {
+		return nil, fmt.Errorf("invalid length %d of SR Type8 Descriptor, want 32", len(b))
+	}
+	d := &SRType8Descriptor{
+		LocalInterfaceIPv6:  append([]byte(nil), b[:16]...),
+		RemoteInterfaceIPv6: append([]byte(nil), b[16:32]...),
+	}
+	return d, nil
+}
+
+// Len returns the byte length of an SRType8Descriptor.
+func (d *SRType8Descriptor) Len() int { return 32 }
+
+// MarshalJSON serializes SRType8Descriptor.
+func (d *SRType8Descriptor) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		LocalInterfaceIPv6  []byte `json:"local_interface_ipv6"`
+		RemoteInterfaceIPv6 []byte `json:"remote_interface_ipv6"`
+	}{LocalInterfaceIPv6: d.LocalInterfaceIPv6, RemoteInterfaceIPv6: d.RemoteInterfaceIPv6})
+}
+
+// UnmarshalJSON deserializes SRType8Descriptor.
+func (d *SRType8Descriptor) UnmarshalJSON(b []byte) error {
+	t := &SRType8Descriptor{}
+	if err := json.Unmarshal(b, t); err != nil {
+		return err
+	}
+	*d = *t
+	return nil
+}
+
 // SRSegmentSubTLV defines methods common SR Segment Sub TLVs
 type SRSegmentSubTLV interface {
 	MarshalJSON() ([]byte, error)
@@ -917,6 +1186,8 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 	t := SegmentType(b[p])
 	var err error
 	switch t {
+	case SegmentTypeInvalid:
+		return nil, fmt.Errorf("invalid segment type 0")
 	case SegmentType1:
 		s.Segment = SegmentType1
 		if s.FlagS {
@@ -933,24 +1204,24 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 				return nil, err
 			}
 		}
-	case SegmentType3:
-		fallthrough
-	case SegmentType4:
-		fallthrough
-	case SegmentType5:
-		fallthrough
-	case SegmentType6:
-		fallthrough
-	case SegmentType7:
-		fallthrough
-	case SegmentType8:
-		fallthrough
-	case SegmentType9:
-		fallthrough
-	case SegmentType10:
-		fallthrough
-	case SegmentType11:
-		return nil, fmt.Errorf("segment of type %d is not yet implemented", t)
+	case SegmentType3, SegmentType4, SegmentType5, SegmentType6, SegmentType7, SegmentType8:
+		// SR-MPLS types: optional 4-byte MPLS Label SID.
+		s.Segment = t
+		if s.FlagS {
+			s.SID, err = UnmarshalMPLSLabelSID(b[p+4 : p+4+4])
+			if err != nil {
+				return nil, err
+			}
+		}
+	case SegmentType9, SegmentType10, SegmentType11:
+		// SRv6 types: optional 16-byte IPv6 SID.
+		s.Segment = t
+		if s.FlagS {
+			s.SID, err = UnmarshalSRv6SID(b[p+4 : p+4+16])
+			if err != nil {
+				return nil, err
+			}
+		}
 	default:
 		return nil, fmt.Errorf("unknown segment type %d", t)
 	}
@@ -962,15 +1233,40 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 			return nil, fmt.Errorf("invalid condition, with Flag A set but no more bytes to decode")
 		}
 		switch t {
-		case SegmentType1:
-			fallthrough
-		case SegmentType2:
-			// Type 2 shares the same descriptor as Type 1
+		case SegmentType1, SegmentType2:
+			// Type 2 shares the same descriptor as Type 1.
 			if s.SegmentDescriptor, err = UnmarshalSRType1Descriptor(b[p:]); err != nil {
 				return nil, err
 			}
+		case SegmentType3:
+			if s.SegmentDescriptor, err = UnmarshalSRType3Descriptor(b[p:]); err != nil {
+				return nil, err
+			}
+		case SegmentType4, SegmentType9:
+			// Type 9 (SRv6 END SID) shares the same descriptor layout as Type 4.
+			if s.SegmentDescriptor, err = UnmarshalSRType4Descriptor(b[p:]); err != nil {
+				return nil, err
+			}
+		case SegmentType5:
+			if s.SegmentDescriptor, err = UnmarshalSRType5Descriptor(b[p:]); err != nil {
+				return nil, err
+			}
+		case SegmentType6:
+			if s.SegmentDescriptor, err = UnmarshalSRType6Descriptor(b[p:]); err != nil {
+				return nil, err
+			}
+		case SegmentType7, SegmentType10:
+			// Type 10 (SRv6 END.X SID) shares the same descriptor layout as Type 7.
+			if s.SegmentDescriptor, err = UnmarshalSRType7Descriptor(b[p:]); err != nil {
+				return nil, err
+			}
+		case SegmentType8, SegmentType11:
+			// Type 11 (SRv6 END.X SID) shares the same descriptor layout as Type 8.
+			if s.SegmentDescriptor, err = UnmarshalSRType8Descriptor(b[p:]); err != nil {
+				return nil, err
+			}
 		default:
-			return nil, fmt.Errorf("segment descriptor of type %d is not yet implemented", t)
+			return nil, fmt.Errorf("segment descriptor of type %d is not supported", t)
 		}
 		if s.SegmentDescriptor == nil {
 			return nil, fmt.Errorf("invalid condition, with Flag A set the descriptor cannot be nil")

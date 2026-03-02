@@ -1,6 +1,7 @@
 package bgpls
 
 import (
+	"encoding/binary"
 	"testing"
 )
 
@@ -222,5 +223,196 @@ func TestGetSRSegmentList_Empty(t *testing.T) {
 	}
 	if len(got) != 0 {
 		t.Errorf("GetSRSegmentList() returned %d lists, want 0", len(got))
+	}
+}
+
+// buildSegmentBytes constructs the 4-byte SR Segment header [type, reserved, flagHi, flagLo]
+// with optional SID bytes appended. FlagS (0x80 in flagHi) signals a SID is present.
+func buildSegmentBytes(segType SegmentType, flagHi byte, sid []byte) []byte {
+	b := []byte{byte(segType), 0x00, flagHi, 0x00}
+	return append(b, sid...)
+}
+
+// TestUnmarshalSRSegment_Type1_WithSID verifies SegmentType1 parses an MPLS Label SID.
+func TestUnmarshalSRSegment_Type1_WithSID(t *testing.T) {
+	label := uint32(100) << 12
+	sid := make([]byte, 4)
+	binary.BigEndian.PutUint32(sid, label)
+	b := buildSegmentBytes(SegmentType1, 0x80, sid)
+
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type1: %v", err)
+	}
+	s := seg.(*SRSegment)
+	if s.Segment != SegmentType1 {
+		t.Errorf("Segment = %d, want %d", s.Segment, SegmentType1)
+	}
+	if !s.FlagS {
+		t.Error("FlagS = false, want true")
+	}
+}
+
+// TestUnmarshalSRSegment_Type3_WithSID verifies SegmentType3 parses an MPLS Label SID.
+func TestUnmarshalSRSegment_Type3_WithSID(t *testing.T) {
+	label := uint32(200) << 12
+	sid := make([]byte, 4)
+	binary.BigEndian.PutUint32(sid, label)
+	b := buildSegmentBytes(SegmentType3, 0x80, sid)
+
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type3: %v", err)
+	}
+	s := seg.(*SRSegment)
+	if s.Segment != SegmentType3 {
+		t.Errorf("Segment = %d, want %d", s.Segment, SegmentType3)
+	}
+}
+
+// TestUnmarshalSRSegment_Type9_WithSID verifies SegmentType9 parses an SRv6 (IPv6) SID.
+func TestUnmarshalSRSegment_Type9_WithSID(t *testing.T) {
+	ipv6 := make([]byte, 16)
+	ipv6[15] = 0x01 // ::1
+	b := buildSegmentBytes(SegmentType9, 0x80, ipv6)
+
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type9: %v", err)
+	}
+	s := seg.(*SRSegment)
+	if s.Segment != SegmentType9 {
+		t.Errorf("Segment = %d, want %d", s.Segment, SegmentType9)
+	}
+}
+
+// TestUnmarshalSRSegment_InvalidType verifies type 0 (SegmentTypeInvalid) returns an error.
+func TestUnmarshalSRSegment_InvalidType(t *testing.T) {
+	b := buildSegmentBytes(SegmentTypeInvalid, 0x00, nil)
+	_, err := UnmarshalSRSegment(b)
+	if err == nil {
+		t.Error("expected error for SegmentTypeInvalid, got nil")
+	}
+}
+
+// TestUnmarshalSRType3Descriptor verifies parsing of a 5-byte Type3 descriptor.
+func TestUnmarshalSRType3Descriptor(t *testing.T) {
+	b := []byte{10, 0, 0, 1, 128} // IPv4 10.0.0.1, Algorithm 128
+	d, err := UnmarshalSRType3Descriptor(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRType3Descriptor: %v", err)
+	}
+	desc := d.(*SRType3Descriptor)
+	if desc.Algorithm != 128 {
+		t.Errorf("Algorithm = %d, want 128", desc.Algorithm)
+	}
+	if desc.Len() != 5 {
+		t.Errorf("Len() = %d, want 5", desc.Len())
+	}
+}
+
+// TestUnmarshalSRType4Descriptor verifies parsing of a 17-byte Type4 descriptor.
+func TestUnmarshalSRType4Descriptor(t *testing.T) {
+	b := make([]byte, 17)
+	b[16] = 64 // Algorithm 64
+	d, err := UnmarshalSRType4Descriptor(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRType4Descriptor: %v", err)
+	}
+	desc := d.(*SRType4Descriptor)
+	if desc.Algorithm != 64 {
+		t.Errorf("Algorithm = %d, want 64", desc.Algorithm)
+	}
+	if desc.Len() != 17 {
+		t.Errorf("Len() = %d, want 17", desc.Len())
+	}
+}
+
+// TestUnmarshalSRType5Descriptor verifies parsing of an 8-byte Type5 descriptor.
+func TestUnmarshalSRType5Descriptor(t *testing.T) {
+	b := make([]byte, 8)
+	b[0], b[1], b[2], b[3] = 192, 168, 1, 1
+	binary.BigEndian.PutUint32(b[4:], 42)
+	d, err := UnmarshalSRType5Descriptor(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRType5Descriptor: %v", err)
+	}
+	desc := d.(*SRType5Descriptor)
+	if desc.LocalInterfaceID != 42 {
+		t.Errorf("LocalInterfaceID = %d, want 42", desc.LocalInterfaceID)
+	}
+	if desc.Len() != 8 {
+		t.Errorf("Len() = %d, want 8", desc.Len())
+	}
+}
+
+// TestUnmarshalSRType6Descriptor verifies parsing of an 8-byte Type6 descriptor.
+func TestUnmarshalSRType6Descriptor(t *testing.T) {
+	b := []byte{10, 0, 0, 1, 10, 0, 0, 2}
+	d, err := UnmarshalSRType6Descriptor(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRType6Descriptor: %v", err)
+	}
+	desc := d.(*SRType6Descriptor)
+	if desc.LocalInterfaceIPv4[3] != 1 {
+		t.Errorf("LocalInterfaceIPv4[3] = %d, want 1", desc.LocalInterfaceIPv4[3])
+	}
+	if desc.RemoteInterfaceIPv4[3] != 2 {
+		t.Errorf("RemoteInterfaceIPv4[3] = %d, want 2", desc.RemoteInterfaceIPv4[3])
+	}
+	if desc.Len() != 8 {
+		t.Errorf("Len() = %d, want 8", desc.Len())
+	}
+}
+
+// TestUnmarshalSRType7Descriptor verifies parsing of a 40-byte Type7 descriptor.
+func TestUnmarshalSRType7Descriptor(t *testing.T) {
+	b := make([]byte, 40)
+	b[15] = 1
+	binary.BigEndian.PutUint32(b[16:20], 10)
+	b[35] = 2
+	binary.BigEndian.PutUint32(b[36:40], 20)
+	d, err := UnmarshalSRType7Descriptor(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRType7Descriptor: %v", err)
+	}
+	desc := d.(*SRType7Descriptor)
+	if desc.LocalInterfaceID != 10 {
+		t.Errorf("LocalInterfaceID = %d, want 10", desc.LocalInterfaceID)
+	}
+	if desc.RemoteInterfaceID != 20 {
+		t.Errorf("RemoteInterfaceID = %d, want 20", desc.RemoteInterfaceID)
+	}
+	if desc.Len() != 40 {
+		t.Errorf("Len() = %d, want 40", desc.Len())
+	}
+}
+
+// TestUnmarshalSRType8Descriptor verifies parsing of a 32-byte Type8 descriptor.
+func TestUnmarshalSRType8Descriptor(t *testing.T) {
+	b := make([]byte, 32)
+	b[15] = 3
+	b[31] = 4
+	d, err := UnmarshalSRType8Descriptor(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRType8Descriptor: %v", err)
+	}
+	desc := d.(*SRType8Descriptor)
+	if desc.LocalInterfaceIPv6[15] != 3 {
+		t.Errorf("LocalInterfaceIPv6[15] = %d, want 3", desc.LocalInterfaceIPv6[15])
+	}
+	if desc.RemoteInterfaceIPv6[15] != 4 {
+		t.Errorf("RemoteInterfaceIPv6[15] = %d, want 4", desc.RemoteInterfaceIPv6[15])
+	}
+	if desc.Len() != 32 {
+		t.Errorf("Len() = %d, want 32", desc.Len())
+	}
+}
+
+// TestUnmarshalSRType3Descriptor_BadLength verifies error on wrong-length input.
+func TestUnmarshalSRType3Descriptor_BadLength(t *testing.T) {
+	_, err := UnmarshalSRType3Descriptor([]byte{1, 2, 3})
+	if err == nil {
+		t.Error("expected error for short Type3 descriptor, got nil")
 	}
 }
