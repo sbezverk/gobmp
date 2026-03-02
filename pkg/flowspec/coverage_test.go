@@ -25,7 +25,7 @@ func TestUnmarshalFlowspecNLRI_LengthMismatch(t *testing.T) {
 // TestUnmarshalFlowspecNLRI_TruncatedPrefix covers the makePrefixSpec error path
 // within UnmarshalFlowspecNLRI when a prefix NLRI has insufficient bytes.
 func TestUnmarshalFlowspecNLRI_TruncatedPrefix(t *testing.T) {
-	// Length=3, Type1, PrefixLen=24 (needs 3 prefix bytes) but none follow.
+	// Length=3, Type1, PrefixLen=24 (needs 3 prefix bytes) but only 1 prefix byte (0x00) follows.
 	_, err := UnmarshalFlowspecNLRI([]byte{0x03, 0x01, 0x18, 0x00})
 	if err == nil {
 		t.Error("expected error for truncated prefix bytes, got nil")
