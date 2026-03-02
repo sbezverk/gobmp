@@ -286,6 +286,35 @@ func TestUnmarshalSRSegment_Type9_WithSID(t *testing.T) {
 	}
 }
 
+// TestUnmarshalSRSegment_Type1_NoSID verifies SegmentType1 without FlagS set does not panic.
+func TestUnmarshalSRSegment_Type1_NoSID(t *testing.T) {
+	b := buildSegmentBytes(SegmentType1, 0x00 /* FlagS clear */, nil)
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type1 no SID: %v", err)
+	}
+	s := seg.(*SRSegment)
+	if s.FlagS {
+		t.Error("FlagS = true, want false")
+	}
+	if s.SID != nil {
+		t.Error("SID should be nil when FlagS is clear")
+	}
+}
+
+// TestUnmarshalSRSegment_Type3_NoSID verifies SegmentType3 without FlagS set does not panic.
+func TestUnmarshalSRSegment_Type3_NoSID(t *testing.T) {
+	b := buildSegmentBytes(SegmentType3, 0x00, nil)
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type3 no SID: %v", err)
+	}
+	s := seg.(*SRSegment)
+	if s.Segment != SegmentType3 {
+		t.Errorf("Segment = %d, want %d", s.Segment, SegmentType3)
+	}
+}
+
 // TestUnmarshalSRSegment_InvalidType verifies type 0 (SegmentTypeInvalid) returns an error.
 func TestUnmarshalSRSegment_InvalidType(t *testing.T) {
 	b := buildSegmentBytes(SegmentTypeInvalid, 0x00, nil)

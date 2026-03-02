@@ -1225,8 +1225,13 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 	default:
 		return nil, fmt.Errorf("unknown segment type %d", t)
 	}
-	// Adjust pointer by 4 bytes (Segment Type, Reserved and 2 bytes of Flags) + length of SID
-	p += 4 + s.SID.Len()
+	// Adjust pointer by 4 bytes (Segment Type, Reserved and 2 bytes of Flags) + length of SID.
+	// SID is only present when FlagS is set; avoid nil dereference when it is absent.
+	sidLen := 0
+	if s.SID != nil {
+		sidLen = s.SID.Len()
+	}
+	p += 4 + sidLen
 	// Check if the descriptor flag is set, if true then process descriptor
 	if s.FlagA {
 		if p >= len(b) {
