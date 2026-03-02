@@ -438,10 +438,32 @@ func TestUnmarshalSRType8Descriptor(t *testing.T) {
 	}
 }
 
-// TestUnmarshalSRType3Descriptor_BadLength verifies error on wrong-length input.
+// TestUnmarshalSRType3Descriptor_BadLength verifies error on too-short input.
 func TestUnmarshalSRType3Descriptor_BadLength(t *testing.T) {
 	_, err := UnmarshalSRType3Descriptor([]byte{1, 2, 3})
 	if err == nil {
 		t.Error("expected error for short Type3 descriptor, got nil")
+	}
+}
+
+// TestUnmarshalSRSegment_TruncatedMPLSSID verifies error when FlagS is set but buffer
+// is too short to hold the 4-byte MPLS SID.
+func TestUnmarshalSRSegment_TruncatedMPLSSID(t *testing.T) {
+	// Header only (4 bytes) with FlagS set — MPLS SID requires 4 more bytes.
+	b := []byte{byte(SegmentType1), 0x00, 0x80, 0x00}
+	_, err := UnmarshalSRSegment(b)
+	if err == nil {
+		t.Error("expected error for truncated MPLS SID, got nil")
+	}
+}
+
+// TestUnmarshalSRSegment_TruncatedSRv6SID verifies error when FlagS is set but buffer
+// is too short to hold the 16-byte SRv6 SID.
+func TestUnmarshalSRSegment_TruncatedSRv6SID(t *testing.T) {
+	// Header (4 bytes) + 4 bytes — SRv6 SID requires 16 bytes, so 20 total.
+	b := append([]byte{byte(SegmentType9), 0x00, 0x80, 0x00}, make([]byte, 4)...)
+	_, err := UnmarshalSRSegment(b)
+	if err == nil {
+		t.Error("expected error for truncated SRv6 SID, got nil")
 	}
 }

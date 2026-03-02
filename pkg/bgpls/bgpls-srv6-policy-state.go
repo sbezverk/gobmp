@@ -815,8 +815,8 @@ func UnmarshalSRType1Descriptor(b []byte) (SegmentDescriptor, error) {
 	if glog.V(6) {
 		glog.Infof("SR Type1 Descriptor Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) != 1 {
-		return nil, fmt.Errorf("invalid length %d of SR Type1 Descriptor", len(b))
+	if len(b) < 1 {
+		return nil, fmt.Errorf("not enough bytes for SR Type1 Descriptor")
 	}
 	p := 0
 	s := &SRType1Descriptor{
@@ -860,8 +860,8 @@ var _ SegmentDescriptor = &SRType3Descriptor{}
 
 // UnmarshalSRType3Descriptor instantiates an SRType3Descriptor from a 5-byte slice.
 func UnmarshalSRType3Descriptor(b []byte) (SegmentDescriptor, error) {
-	if len(b) != 5 {
-		return nil, fmt.Errorf("invalid length %d of SR Type3 Descriptor, want 5", len(b))
+	if len(b) < 5 {
+		return nil, fmt.Errorf("not enough bytes for SR Type3 Descriptor: got %d, want at least 5", len(b))
 	}
 	d := &SRType3Descriptor{
 		IPv4NodeAddress: append([]byte(nil), b[:4]...),
@@ -903,8 +903,8 @@ var _ SegmentDescriptor = &SRType4Descriptor{}
 
 // UnmarshalSRType4Descriptor instantiates an SRType4Descriptor from a 17-byte slice.
 func UnmarshalSRType4Descriptor(b []byte) (SegmentDescriptor, error) {
-	if len(b) != 17 {
-		return nil, fmt.Errorf("invalid length %d of SR Type4 Descriptor, want 17", len(b))
+	if len(b) < 17 {
+		return nil, fmt.Errorf("not enough bytes for SR Type4 Descriptor: got %d, want at least 17", len(b))
 	}
 	d := &SRType4Descriptor{
 		IPv6NodeAddress: append([]byte(nil), b[:16]...),
@@ -946,8 +946,8 @@ var _ SegmentDescriptor = &SRType5Descriptor{}
 
 // UnmarshalSRType5Descriptor instantiates an SRType5Descriptor from an 8-byte slice.
 func UnmarshalSRType5Descriptor(b []byte) (SegmentDescriptor, error) {
-	if len(b) != 8 {
-		return nil, fmt.Errorf("invalid length %d of SR Type5 Descriptor, want 8", len(b))
+	if len(b) < 8 {
+		return nil, fmt.Errorf("not enough bytes for SR Type5 Descriptor: got %d, want at least 8", len(b))
 	}
 	d := &SRType5Descriptor{
 		LocalNodeIPv4:    append([]byte(nil), b[:4]...),
@@ -989,8 +989,8 @@ var _ SegmentDescriptor = &SRType6Descriptor{}
 
 // UnmarshalSRType6Descriptor instantiates an SRType6Descriptor from an 8-byte slice.
 func UnmarshalSRType6Descriptor(b []byte) (SegmentDescriptor, error) {
-	if len(b) != 8 {
-		return nil, fmt.Errorf("invalid length %d of SR Type6 Descriptor, want 8", len(b))
+	if len(b) < 8 {
+		return nil, fmt.Errorf("not enough bytes for SR Type6 Descriptor: got %d, want at least 8", len(b))
 	}
 	d := &SRType6Descriptor{
 		LocalInterfaceIPv4:  append([]byte(nil), b[:4]...),
@@ -1035,8 +1035,8 @@ var _ SegmentDescriptor = &SRType7Descriptor{}
 
 // UnmarshalSRType7Descriptor instantiates an SRType7Descriptor from a 40-byte slice.
 func UnmarshalSRType7Descriptor(b []byte) (SegmentDescriptor, error) {
-	if len(b) != 40 {
-		return nil, fmt.Errorf("invalid length %d of SR Type7 Descriptor, want 40", len(b))
+	if len(b) < 40 {
+		return nil, fmt.Errorf("not enough bytes for SR Type7 Descriptor: got %d, want at least 40", len(b))
 	}
 	d := &SRType7Descriptor{
 		LocalNodeIPv6:     append([]byte(nil), b[:16]...),
@@ -1088,8 +1088,8 @@ var _ SegmentDescriptor = &SRType8Descriptor{}
 
 // UnmarshalSRType8Descriptor instantiates an SRType8Descriptor from a 32-byte slice.
 func UnmarshalSRType8Descriptor(b []byte) (SegmentDescriptor, error) {
-	if len(b) != 32 {
-		return nil, fmt.Errorf("invalid length %d of SR Type8 Descriptor, want 32", len(b))
+	if len(b) < 32 {
+		return nil, fmt.Errorf("not enough bytes for SR Type8 Descriptor: got %d, want at least 32", len(b))
 	}
 	d := &SRType8Descriptor{
 		LocalInterfaceIPv6:  append([]byte(nil), b[:16]...),
@@ -1191,7 +1191,10 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 	case SegmentType1:
 		s.Segment = SegmentType1
 		if s.FlagS {
-			s.SID, err = UnmarshalMPLSLabelSID(b[p+4 : p+4+4])
+			if len(b) < p+8 {
+				return nil, fmt.Errorf("not enough bytes for MPLS SID in segment type 1")
+			}
+			s.SID, err = UnmarshalMPLSLabelSID(b[p+4 : p+8])
 			if err != nil {
 				return nil, err
 			}
@@ -1199,7 +1202,10 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 	case SegmentType2:
 		s.Segment = SegmentType2
 		if s.FlagS {
-			s.SID, err = UnmarshalSRv6SID(b[p+4 : p+4+16])
+			if len(b) < p+20 {
+				return nil, fmt.Errorf("not enough bytes for SRv6 SID in segment type 2")
+			}
+			s.SID, err = UnmarshalSRv6SID(b[p+4 : p+20])
 			if err != nil {
 				return nil, err
 			}
@@ -1208,7 +1214,10 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 		// SR-MPLS types: optional 4-byte MPLS Label SID.
 		s.Segment = t
 		if s.FlagS {
-			s.SID, err = UnmarshalMPLSLabelSID(b[p+4 : p+4+4])
+			if len(b) < p+8 {
+				return nil, fmt.Errorf("not enough bytes for MPLS SID in segment type %d", t)
+			}
+			s.SID, err = UnmarshalMPLSLabelSID(b[p+4 : p+8])
 			if err != nil {
 				return nil, err
 			}
@@ -1217,7 +1226,10 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 		// SRv6 types: optional 16-byte IPv6 SID.
 		s.Segment = t
 		if s.FlagS {
-			s.SID, err = UnmarshalSRv6SID(b[p+4 : p+4+16])
+			if len(b) < p+20 {
+				return nil, fmt.Errorf("not enough bytes for SRv6 SID in segment type %d", t)
+			}
+			s.SID, err = UnmarshalSRv6SID(b[p+4 : p+20])
 			if err != nil {
 				return nil, err
 			}
