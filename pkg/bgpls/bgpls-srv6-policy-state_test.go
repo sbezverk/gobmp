@@ -618,6 +618,290 @@ func TestUnmarshalSRType8Descriptor_BadLength(t *testing.T) {
 	}
 }
 
+// TestUnmarshalSRSegment_Type5_WithDescriptor verifies FlagA triggers Type5 descriptor parsing.
+func TestUnmarshalSRSegment_Type5_WithDescriptor(t *testing.T) {
+	label := uint32(100) << 12
+	sid := make([]byte, 4)
+	binary.BigEndian.PutUint32(sid, label)
+	// Type5 descriptor: local node IPv4 (4) + local interface ID (4) = 8 bytes.
+	desc := make([]byte, 8)
+	desc[0], desc[1], desc[2], desc[3] = 10, 1, 1, 1
+	binary.BigEndian.PutUint32(desc[4:], 7)
+	b := buildSegmentBytes(SegmentType5, 0x80|0x08, append(sid, desc...))
+
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type5 with descriptor: %v", err)
+	}
+	d, ok := seg.(*SRSegment).SegmentDescriptor.(*SRType5Descriptor)
+	if !ok {
+		t.Fatal("SegmentDescriptor is not *SRType5Descriptor")
+	}
+	if d.LocalInterfaceID != 7 {
+		t.Errorf("LocalInterfaceID = %d, want 7", d.LocalInterfaceID)
+	}
+}
+
+// TestUnmarshalSRSegment_Type6_WithDescriptor verifies FlagA triggers Type6 descriptor parsing.
+func TestUnmarshalSRSegment_Type6_WithDescriptor(t *testing.T) {
+	label := uint32(200) << 12
+	sid := make([]byte, 4)
+	binary.BigEndian.PutUint32(sid, label)
+	// Type6 descriptor: local IPv4 (4) + remote IPv4 (4) = 8 bytes.
+	desc := []byte{10, 0, 0, 1, 10, 0, 0, 2}
+	b := buildSegmentBytes(SegmentType6, 0x80|0x08, append(sid, desc...))
+
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type6 with descriptor: %v", err)
+	}
+	d, ok := seg.(*SRSegment).SegmentDescriptor.(*SRType6Descriptor)
+	if !ok {
+		t.Fatal("SegmentDescriptor is not *SRType6Descriptor")
+	}
+	if d.RemoteInterfaceIPv4[3] != 2 {
+		t.Errorf("RemoteInterfaceIPv4[3] = %d, want 2", d.RemoteInterfaceIPv4[3])
+	}
+}
+
+// TestUnmarshalSRSegment_Type7_WithDescriptor verifies FlagA triggers Type7 descriptor parsing.
+func TestUnmarshalSRSegment_Type7_WithDescriptor(t *testing.T) {
+	label := uint32(300) << 12
+	sid := make([]byte, 4)
+	binary.BigEndian.PutUint32(sid, label)
+	// Type7 descriptor: local IPv6 node (16) + local iface ID (4) + remote IPv6 node (16) + remote iface ID (4) = 40 bytes.
+	desc := make([]byte, 40)
+	desc[15] = 1
+	binary.BigEndian.PutUint32(desc[16:20], 11)
+	desc[35] = 2
+	binary.BigEndian.PutUint32(desc[36:40], 22)
+	b := buildSegmentBytes(SegmentType7, 0x80|0x08, append(sid, desc...))
+
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type7 with descriptor: %v", err)
+	}
+	d, ok := seg.(*SRSegment).SegmentDescriptor.(*SRType7Descriptor)
+	if !ok {
+		t.Fatal("SegmentDescriptor is not *SRType7Descriptor")
+	}
+	if d.LocalInterfaceID != 11 || d.RemoteInterfaceID != 22 {
+		t.Errorf("LocalInterfaceID = %d, RemoteInterfaceID = %d, want 11/22", d.LocalInterfaceID, d.RemoteInterfaceID)
+	}
+}
+
+// TestUnmarshalSRSegment_Type8_WithDescriptor verifies FlagA triggers Type8 descriptor parsing.
+func TestUnmarshalSRSegment_Type8_WithDescriptor(t *testing.T) {
+	label := uint32(400) << 12
+	sid := make([]byte, 4)
+	binary.BigEndian.PutUint32(sid, label)
+	// Type8 descriptor: local IPv6 interface (16) + remote IPv6 interface (16) = 32 bytes.
+	desc := make([]byte, 32)
+	desc[15] = 5
+	desc[31] = 6
+	b := buildSegmentBytes(SegmentType8, 0x80|0x08, append(sid, desc...))
+
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type8 with descriptor: %v", err)
+	}
+	d, ok := seg.(*SRSegment).SegmentDescriptor.(*SRType8Descriptor)
+	if !ok {
+		t.Fatal("SegmentDescriptor is not *SRType8Descriptor")
+	}
+	if d.LocalInterfaceIPv6[15] != 5 || d.RemoteInterfaceIPv6[15] != 6 {
+		t.Errorf("LocalInterfaceIPv6[15] = %d, RemoteInterfaceIPv6[15] = %d, want 5/6",
+			d.LocalInterfaceIPv6[15], d.RemoteInterfaceIPv6[15])
+	}
+}
+
+// TestUnmarshalMPLSLabelSID_BadLength verifies error on wrong-length input.
+func TestUnmarshalMPLSLabelSID_BadLength(t *testing.T) {
+	_, err := UnmarshalMPLSLabelSID([]byte{0x01, 0x02, 0x03})
+	if err == nil {
+		t.Error("expected error for 3-byte MPLS SID, got nil")
+	}
+}
+
+// TestUnmarshalSRv6SID_BadLength verifies error on wrong-length input.
+func TestUnmarshalSRv6SID_BadLength(t *testing.T) {
+	_, err := UnmarshalSRv6SID(make([]byte, 8))
+	if err == nil {
+		t.Error("expected error for 8-byte SRv6 SID, got nil")
+	}
+}
+
+// TestSRType3Descriptor_RoundTrip verifies MarshalJSON/UnmarshalJSON round-trip.
+func TestSRType3Descriptor_RoundTrip(t *testing.T) {
+	orig := &SRType3Descriptor{IPv4NodeAddress: []byte{192, 168, 1, 1}, Algorithm: 128}
+	b, err := orig.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	got := &SRType3Descriptor{}
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	if got.Algorithm != orig.Algorithm {
+		t.Errorf("Algorithm = %d, want %d", got.Algorithm, orig.Algorithm)
+	}
+	if got.IPv4NodeAddress[3] != orig.IPv4NodeAddress[3] {
+		t.Errorf("IPv4NodeAddress[3] = %d, want %d", got.IPv4NodeAddress[3], orig.IPv4NodeAddress[3])
+	}
+}
+
+// TestSRType4Descriptor_RoundTrip verifies MarshalJSON/UnmarshalJSON round-trip.
+func TestSRType4Descriptor_RoundTrip(t *testing.T) {
+	addr := make([]byte, 16)
+	addr[15] = 9
+	orig := &SRType4Descriptor{IPv6NodeAddress: addr, Algorithm: 64}
+	b, err := orig.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	got := &SRType4Descriptor{}
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	if got.Algorithm != 64 {
+		t.Errorf("Algorithm = %d, want 64", got.Algorithm)
+	}
+}
+
+// TestSRType5Descriptor_RoundTrip verifies MarshalJSON/UnmarshalJSON round-trip.
+func TestSRType5Descriptor_RoundTrip(t *testing.T) {
+	orig := &SRType5Descriptor{LocalNodeIPv4: []byte{10, 0, 0, 1}, LocalInterfaceID: 42}
+	b, err := orig.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	got := &SRType5Descriptor{}
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	if got.LocalInterfaceID != 42 {
+		t.Errorf("LocalInterfaceID = %d, want 42", got.LocalInterfaceID)
+	}
+}
+
+// TestSRType6Descriptor_RoundTrip verifies MarshalJSON/UnmarshalJSON round-trip.
+func TestSRType6Descriptor_RoundTrip(t *testing.T) {
+	orig := &SRType6Descriptor{
+		LocalInterfaceIPv4:  []byte{10, 0, 0, 1},
+		RemoteInterfaceIPv4: []byte{10, 0, 0, 2},
+	}
+	b, err := orig.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	got := &SRType6Descriptor{}
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	if got.RemoteInterfaceIPv4[3] != 2 {
+		t.Errorf("RemoteInterfaceIPv4[3] = %d, want 2", got.RemoteInterfaceIPv4[3])
+	}
+}
+
+// TestSRType7Descriptor_RoundTrip verifies MarshalJSON/UnmarshalJSON round-trip.
+func TestSRType7Descriptor_RoundTrip(t *testing.T) {
+	local := make([]byte, 16)
+	local[15] = 1
+	remote := make([]byte, 16)
+	remote[15] = 2
+	orig := &SRType7Descriptor{
+		LocalNodeIPv6: local, LocalInterfaceID: 10,
+		RemoteNodeIPv6: remote, RemoteInterfaceID: 20,
+	}
+	b, err := orig.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	got := &SRType7Descriptor{}
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	if got.LocalInterfaceID != 10 || got.RemoteInterfaceID != 20 {
+		t.Errorf("LocalInterfaceID = %d, RemoteInterfaceID = %d, want 10/20",
+			got.LocalInterfaceID, got.RemoteInterfaceID)
+	}
+}
+
+// TestSRType8Descriptor_RoundTrip verifies MarshalJSON/UnmarshalJSON round-trip.
+func TestSRType8Descriptor_RoundTrip(t *testing.T) {
+	local := make([]byte, 16)
+	local[15] = 3
+	remote := make([]byte, 16)
+	remote[15] = 4
+	orig := &SRType8Descriptor{LocalInterfaceIPv6: local, RemoteInterfaceIPv6: remote}
+	b, err := orig.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	got := &SRType8Descriptor{}
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	if got.LocalInterfaceIPv6[15] != 3 || got.RemoteInterfaceIPv6[15] != 4 {
+		t.Errorf("LocalInterfaceIPv6[15] = %d, RemoteInterfaceIPv6[15] = %d, want 3/4",
+			got.LocalInterfaceIPv6[15], got.RemoteInterfaceIPv6[15])
+	}
+}
+
+// TestUnmarshalSRSegmentListMetric verifies parsing of a 16-byte Segment List Metric sub-TLV.
+func TestUnmarshalSRSegmentListMetric(t *testing.T) {
+	b := make([]byte, 16)
+	b[0] = 1       // SRMetricMinUnidirLinkDelay
+	b[1] = 0x80    // FlagM set
+	binary.BigEndian.PutUint32(b[4:8], 100)   // Margin
+	binary.BigEndian.PutUint32(b[8:12], 200)  // Bound
+	binary.BigEndian.PutUint32(b[12:16], 300) // Value
+
+	stlv, err := UnmarshalSRSegmentListMetric(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegmentListMetric: %v", err)
+	}
+	m := stlv.(*SRSegmentListMetric)
+	if m.Metric != SRMetricMinUnidirLinkDelay {
+		t.Errorf("Metric = %d, want %d", m.Metric, SRMetricMinUnidirLinkDelay)
+	}
+	if !m.FlagM {
+		t.Error("FlagM = false, want true")
+	}
+	if m.Margin != 100 || m.Bound != 200 || m.Value != 300 {
+		t.Errorf("Margin/Bound/Value = %d/%d/%d, want 100/200/300", m.Margin, m.Bound, m.Value)
+	}
+}
+
+// TestUnmarshalSRSegmentListMetric_BadLength verifies error on wrong-length input.
+func TestUnmarshalSRSegmentListMetric_BadLength(t *testing.T) {
+	_, err := UnmarshalSRSegmentListMetric(make([]byte, 8))
+	if err == nil {
+		t.Error("expected error for 8-byte metric, got nil")
+	}
+}
+
+// TestUnmarshalSRSegmentSubTLV_Empty verifies an empty sub-TLV buffer returns error (too short).
+func TestUnmarshalSRSegmentSubTLV_Empty(t *testing.T) {
+	_, err := UnmarshalSRSegmentSubTLV([]byte{0x01})
+	if err == nil {
+		t.Error("expected error for too-short sub-TLV buffer, got nil")
+	}
+}
+
+// TestUnmarshalSRSegmentSubTLV_UnknownType verifies unknown sub-TLV types are skipped gracefully.
+func TestUnmarshalSRSegmentSubTLV_UnknownType(t *testing.T) {
+	// type=0xFFFF, length=0 — unknown type with zero payload.
+	b := []byte{0xFF, 0xFF, 0x00, 0x00}
+	m, err := UnmarshalSRSegmentSubTLV(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegmentSubTLV: %v", err)
+	}
+	if len(m) != 0 {
+		t.Errorf("map len = %d, want 0 for unknown type", len(m))
+	}
+}
+
 // TestUnmarshalSRSegment_TruncatedMPLSSID verifies error when FlagS is set but buffer
 // is too short to hold the 4-byte MPLS SID.
 func TestUnmarshalSRSegment_TruncatedMPLSSID(t *testing.T) {

@@ -839,14 +839,14 @@ func (d *SRType1Descriptor) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// UnmarshalJSON instantiates SRType1Descriptor object from  a slice of bytes
+// UnmarshalJSON instantiates SRType1Descriptor object from a slice of bytes
 func (d *SRType1Descriptor) UnmarshalJSON(b []byte) error {
-	t := &SRType1Descriptor{}
+	type alias SRType1Descriptor
+	t := &alias{}
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	*d = *t
-
+	*d = SRType1Descriptor(*t)
 	return nil
 }
 
@@ -883,11 +883,12 @@ func (d *SRType3Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType3Descriptor.
 func (d *SRType3Descriptor) UnmarshalJSON(b []byte) error {
-	t := &SRType3Descriptor{}
+	type alias SRType3Descriptor
+	t := &alias{}
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	*d = *t
+	*d = SRType3Descriptor(*t)
 	return nil
 }
 
@@ -926,11 +927,12 @@ func (d *SRType4Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType4Descriptor.
 func (d *SRType4Descriptor) UnmarshalJSON(b []byte) error {
-	t := &SRType4Descriptor{}
+	type alias SRType4Descriptor
+	t := &alias{}
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	*d = *t
+	*d = SRType4Descriptor(*t)
 	return nil
 }
 
@@ -969,11 +971,12 @@ func (d *SRType5Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType5Descriptor.
 func (d *SRType5Descriptor) UnmarshalJSON(b []byte) error {
-	t := &SRType5Descriptor{}
+	type alias SRType5Descriptor
+	t := &alias{}
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	*d = *t
+	*d = SRType5Descriptor(*t)
 	return nil
 }
 
@@ -1012,11 +1015,12 @@ func (d *SRType6Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType6Descriptor.
 func (d *SRType6Descriptor) UnmarshalJSON(b []byte) error {
-	t := &SRType6Descriptor{}
+	type alias SRType6Descriptor
+	t := &alias{}
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	*d = *t
+	*d = SRType6Descriptor(*t)
 	return nil
 }
 
@@ -1067,11 +1071,12 @@ func (d *SRType7Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType7Descriptor.
 func (d *SRType7Descriptor) UnmarshalJSON(b []byte) error {
-	t := &SRType7Descriptor{}
+	type alias SRType7Descriptor
+	t := &alias{}
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	*d = *t
+	*d = SRType7Descriptor(*t)
 	return nil
 }
 
@@ -1111,11 +1116,12 @@ func (d *SRType8Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType8Descriptor.
 func (d *SRType8Descriptor) UnmarshalJSON(b []byte) error {
-	t := &SRType8Descriptor{}
+	type alias SRType8Descriptor
+	t := &alias{}
 	if err := json.Unmarshal(b, t); err != nil {
 		return err
 	}
-	*d = *t
+	*d = SRType8Descriptor(*t)
 	return nil
 }
 
