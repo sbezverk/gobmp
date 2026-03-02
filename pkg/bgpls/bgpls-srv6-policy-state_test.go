@@ -446,6 +446,178 @@ func TestUnmarshalSRType3Descriptor_BadLength(t *testing.T) {
 	}
 }
 
+// TestUnmarshalSRSegment_Type2_WithSID verifies SegmentType2 parses an SRv6 SID.
+func TestUnmarshalSRSegment_Type2_WithSID(t *testing.T) {
+	ipv6 := make([]byte, 16)
+	ipv6[0] = 0x20 // 2000::
+	b := buildSegmentBytes(SegmentType2, 0x80, ipv6)
+
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type2: %v", err)
+	}
+	if seg.(*SRSegment).Segment != SegmentType2 {
+		t.Errorf("Segment = %d, want %d", seg.(*SRSegment).Segment, SegmentType2)
+	}
+}
+
+// TestUnmarshalSRSegment_MPLSTypes_WithSID verifies types 4-8 all parse an MPLS Label SID.
+func TestUnmarshalSRSegment_MPLSTypes_WithSID(t *testing.T) {
+	label := uint32(300) << 12
+	sid := make([]byte, 4)
+	binary.BigEndian.PutUint32(sid, label)
+
+	for _, segType := range []SegmentType{SegmentType4, SegmentType5, SegmentType6, SegmentType7, SegmentType8} {
+		b := buildSegmentBytes(segType, 0x80, sid)
+		seg, err := UnmarshalSRSegment(b)
+		if err != nil {
+			t.Fatalf("UnmarshalSRSegment type %d: %v", segType, err)
+		}
+		if seg.(*SRSegment).Segment != segType {
+			t.Errorf("type %d: Segment = %d, want %d", segType, seg.(*SRSegment).Segment, segType)
+		}
+	}
+}
+
+// TestUnmarshalSRSegment_SRv6Types_WithSID verifies types 10-11 parse an SRv6 SID.
+func TestUnmarshalSRSegment_SRv6Types_WithSID(t *testing.T) {
+	ipv6 := make([]byte, 16)
+	ipv6[15] = 0x02
+
+	for _, segType := range []SegmentType{SegmentType10, SegmentType11} {
+		b := buildSegmentBytes(segType, 0x80, ipv6)
+		seg, err := UnmarshalSRSegment(b)
+		if err != nil {
+			t.Fatalf("UnmarshalSRSegment type %d: %v", segType, err)
+		}
+		if seg.(*SRSegment).Segment != segType {
+			t.Errorf("type %d: Segment = %d, want %d", segType, seg.(*SRSegment).Segment, segType)
+		}
+	}
+}
+
+// TestUnmarshalSRSegment_UnknownType verifies an unknown segment type returns an error.
+func TestUnmarshalSRSegment_UnknownType(t *testing.T) {
+	b := buildSegmentBytes(SegmentType(99), 0x00, nil)
+	_, err := UnmarshalSRSegment(b)
+	if err == nil {
+		t.Error("expected error for unknown segment type 99, got nil")
+	}
+}
+
+// TestUnmarshalSRSegment_Type1_WithDescriptor verifies FlagA triggers Type1 descriptor parsing.
+func TestUnmarshalSRSegment_Type1_WithDescriptor(t *testing.T) {
+	// FlagA=0x08, FlagS clear — header (4) + Type1 descriptor (1 byte algorithm).
+	b := []byte{byte(SegmentType1), 0x00, 0x08, 0x00, 0x80} // algorithm = 128
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type1 with descriptor: %v", err)
+	}
+	s := seg.(*SRSegment)
+	if s.SegmentDescriptor == nil {
+		t.Fatal("SegmentDescriptor is nil, want non-nil")
+	}
+	if s.SegmentDescriptor.Len() != 1 {
+		t.Errorf("descriptor Len() = %d, want 1", s.SegmentDescriptor.Len())
+	}
+}
+
+// TestUnmarshalSRSegment_Type3_WithDescriptor verifies FlagA triggers Type3 descriptor parsing.
+func TestUnmarshalSRSegment_Type3_WithDescriptor(t *testing.T) {
+	// FlagS=0x80 + FlagA=0x08 — header(4) + MPLS SID(4) + Type3 descriptor(5).
+	label := uint32(100) << 12
+	sid := make([]byte, 4)
+	binary.BigEndian.PutUint32(sid, label)
+	desc := []byte{10, 0, 0, 1, 64} // IPv4 10.0.0.1, algo 64
+	b := buildSegmentBytes(SegmentType3, 0x80|0x08, append(sid, desc...))
+
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type3 with descriptor: %v", err)
+	}
+	s := seg.(*SRSegment)
+	if s.SegmentDescriptor == nil {
+		t.Fatal("SegmentDescriptor is nil, want non-nil")
+	}
+	d := s.SegmentDescriptor.(*SRType3Descriptor)
+	if d.Algorithm != 64 {
+		t.Errorf("Algorithm = %d, want 64", d.Algorithm)
+	}
+}
+
+// TestUnmarshalSRSegment_Type9_WithDescriptor verifies FlagA triggers Type4 descriptor parsing for Type9.
+func TestUnmarshalSRSegment_Type9_WithDescriptor(t *testing.T) {
+	// FlagS=0x80 + FlagA=0x08 — header(4) + SRv6 SID(16) + Type4 descriptor(17).
+	ipv6SID := make([]byte, 16)
+	ipv6SID[15] = 1
+	desc := make([]byte, 17) // IPv6 node + algo 0
+	desc[16] = 32            // algorithm 32
+	b := buildSegmentBytes(SegmentType9, 0x80|0x08, append(ipv6SID, desc...))
+
+	seg, err := UnmarshalSRSegment(b)
+	if err != nil {
+		t.Fatalf("UnmarshalSRSegment Type9 with descriptor: %v", err)
+	}
+	s := seg.(*SRSegment)
+	if s.SegmentDescriptor == nil {
+		t.Fatal("SegmentDescriptor is nil, want non-nil")
+	}
+	d := s.SegmentDescriptor.(*SRType4Descriptor)
+	if d.Algorithm != 32 {
+		t.Errorf("Algorithm = %d, want 32", d.Algorithm)
+	}
+}
+
+// TestUnmarshalSRSegment_FlagA_NoBytes verifies error when FlagA is set but no bytes remain.
+func TestUnmarshalSRSegment_FlagA_NoBytes(t *testing.T) {
+	// FlagA set but buffer is exactly 4 bytes (header only) — no descriptor bytes.
+	b := []byte{byte(SegmentType1), 0x00, 0x08, 0x00}
+	_, err := UnmarshalSRSegment(b)
+	if err == nil {
+		t.Error("expected error when FlagA set but no descriptor bytes, got nil")
+	}
+}
+
+// TestUnmarshalSRType4Descriptor_BadLength verifies error on too-short input.
+func TestUnmarshalSRType4Descriptor_BadLength(t *testing.T) {
+	_, err := UnmarshalSRType4Descriptor(make([]byte, 10))
+	if err == nil {
+		t.Error("expected error for short Type4 descriptor, got nil")
+	}
+}
+
+// TestUnmarshalSRType5Descriptor_BadLength verifies error on too-short input.
+func TestUnmarshalSRType5Descriptor_BadLength(t *testing.T) {
+	_, err := UnmarshalSRType5Descriptor(make([]byte, 4))
+	if err == nil {
+		t.Error("expected error for short Type5 descriptor, got nil")
+	}
+}
+
+// TestUnmarshalSRType6Descriptor_BadLength verifies error on too-short input.
+func TestUnmarshalSRType6Descriptor_BadLength(t *testing.T) {
+	_, err := UnmarshalSRType6Descriptor(make([]byte, 4))
+	if err == nil {
+		t.Error("expected error for short Type6 descriptor, got nil")
+	}
+}
+
+// TestUnmarshalSRType7Descriptor_BadLength verifies error on too-short input.
+func TestUnmarshalSRType7Descriptor_BadLength(t *testing.T) {
+	_, err := UnmarshalSRType7Descriptor(make([]byte, 20))
+	if err == nil {
+		t.Error("expected error for short Type7 descriptor, got nil")
+	}
+}
+
+// TestUnmarshalSRType8Descriptor_BadLength verifies error on too-short input.
+func TestUnmarshalSRType8Descriptor_BadLength(t *testing.T) {
+	_, err := UnmarshalSRType8Descriptor(make([]byte, 16))
+	if err == nil {
+		t.Error("expected error for short Type8 descriptor, got nil")
+	}
+}
+
 // TestUnmarshalSRSegment_TruncatedMPLSSID verifies error when FlagS is set but buffer
 // is too short to hold the 4-byte MPLS SID.
 func TestUnmarshalSRSegment_TruncatedMPLSSID(t *testing.T) {
