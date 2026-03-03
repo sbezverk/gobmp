@@ -68,11 +68,19 @@ func TestGetPrefixIPReachability(t *testing.T) {
 
 func TestUnmarshalBaseNLRI(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  []byte
-		expect []Route
-		pathID bool
+		name    string
+		input   []byte
+		expect  []Route
+		pathID  bool
+		wantErr bool
 	}{
+		{
+			name:    "empty input",
+			input:   []byte{},
+			pathID:  false,
+			expect:  nil,
+			wantErr: true,
+		},
 		{
 			name:   "Default prefix",
 			input:  []byte{0x0},
@@ -140,8 +148,14 @@ func TestUnmarshalBaseNLRI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := UnmarshalRoutes(tt.input, tt.pathID)
-			if err != nil {
+			if err != nil && !tt.wantErr {
 				t.Fatalf("test failed with error: %+v", err)
+			}
+			if err == nil && tt.wantErr {
+				t.Fatalf("test failed as expected error did not occur")
+			}
+			if err != nil {
+				return
 			}
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Fatalf("test failed as expected nlri %+v does not match actual nlri %+v", tt.expect, got)

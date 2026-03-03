@@ -31,12 +31,11 @@ func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 	}
 	routes := make([]Route, 0)
 	if len(b) == 0 {
-		return nil, nil
+		return nil, fmt.Errorf("not enough bytes to reconstruct routes")
 	}
 	var err error = nil
 	for p := 0; p < len(b); {
 		route := Route{}
-		route.Length = b[p]
 		// Check if there is Path ID in NLRI
 		if pathID {
 			if p+4 > len(b) {
@@ -49,9 +48,9 @@ func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 				err = fmt.Errorf("not enough bytes to reconstruct routes")
 				goto error_handle
 			}
-			// Updating length
-			route.Length = b[p]
 		}
+		// Updating length
+		route.Length = b[p]
 		l := route.Length / 8
 		if route.Length%8 != 0 {
 			l++

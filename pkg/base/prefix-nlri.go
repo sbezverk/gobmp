@@ -107,13 +107,25 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 	}
 	p := 0
 	pr.ProtocolID = ProtoID(b[p])
+	if p+1 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Prefix NLRI")
+	}
 	p++
+	if p+8 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Prefix NLRI")
+	}
 	pr.Identifier = make([]byte, 8)
 	copy(pr.Identifier, b[p:p+8])
 	p += 8
 
 	// Get Node Descriptor's length, skip Node Descriptor Type
+	if p+4 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Local Node Descriptor")
+	}
 	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
+	if p+int(ndl)+4 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Local Node Descriptor")
+	}
 	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)+4])
 	if err != nil {
 		return nil, err

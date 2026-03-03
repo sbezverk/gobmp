@@ -44,7 +44,7 @@ func (nd *NodeDescriptor) GetOSPFAreaID() string {
 	if tlv, ok := nd.SubTLV[514]; ok {
 		return strconv.Itoa(int(binary.BigEndian.Uint32(tlv.Value)))
 	}
-	return "err"
+	return "tlv not found"
 }
 
 // GetIGPRouterID returns a value of Node Descriptor sub TLV IGP Router ID
@@ -105,7 +105,7 @@ func UnmarshalNodeDescriptor(b []byte) (*NodeDescriptor, error) {
 	if int(l)+4 > len(b) {
 		return nil, fmt.Errorf("not enough bytes to Unmarshal Node Descriptor")
 	}
-	stlv, err := UnmarshalTLV(b[p:])
+	stlv, err := UnmarshalTLV(b[p : p+int(l)])
 	if err != nil {
 		return nil, err
 	}

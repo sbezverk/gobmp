@@ -40,7 +40,11 @@ func (rd *RD) String() string {
 	case 0:
 		s += fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(rd.Value[0:2]), binary.BigEndian.Uint32(rd.Value[2:]))
 	case 1:
-		s += fmt.Sprintf("%s:%d", net.IP(rd.Value[0:4]).To4().String(), binary.BigEndian.Uint16(rd.Value[4:]))
+		ip := net.IP(rd.Value[0:4]).To4()
+		if ip == nil {
+			ip = net.IP(rd.Value[0:4])
+		}
+		s += fmt.Sprintf("%s:%d", ip.String(), binary.BigEndian.Uint16(rd.Value[4:]))
 	case 2:
 		s += fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(rd.Value[0:4]), binary.BigEndian.Uint16(rd.Value[4:]))
 	}

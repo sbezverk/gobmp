@@ -7,11 +7,24 @@ import (
 
 func TestUnmarshalPrefixNLRI(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  []byte
-		expect *PrefixNLRI
-		ipv4   bool
+		name    string
+		input   []byte
+		expect  *PrefixNLRI
+		ipv4    bool
+		wantErr bool
 	}{
+		{
+			name:    "prefix nlri empty",
+			input:   []byte{},
+			expect:  nil,
+			wantErr: true,
+		},
+		{
+			name:    "prefix nlri malformed",
+			input:   []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			expect:  nil,
+			wantErr: true,
+		},
 		{
 			name:  "prefix nlri 1",
 			input: []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x1a, 0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0x13, 0xce, 0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x93, 0x01, 0x07, 0x00, 0x02, 0x00, 0x02, 0x01, 0x09, 0x00, 0x10, 0x78, 0x00, 0x90, 0x00, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
@@ -99,12 +112,18 @@ func TestUnmarshalPrefixNLRI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := UnmarshalPrefixNLRI(tt.input, tt.ipv4)
-			if err != nil {
+			if err != nil && !tt.wantErr {
 				t.Fatalf("test failed with error: %+v", err)
+			}
+			if err == nil && tt.wantErr {
+				t.Fatalf("test failed as expected error did not occur")
 			}
 			//			fmt.Printf("got: \n%+v\n expect:\n%+v\n", *got, *tt.expect)
 			//			fmt.Printf("got local: \n%+v\n expect local:\n%+v\n", *got.LocalNode, *tt.expect.LocalNode)
 			//			fmt.Printf("got prefix: \n%+v\n expect prefix:\n%+v\n", *got.Prefix, *tt.expect.Prefix)
+			if err != nil {
+				return
+			}
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Fatalf("test failed as expected nlri %+v does not match actual nlri %+v", tt.expect, got)
 			}
