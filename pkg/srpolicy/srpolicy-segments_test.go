@@ -2941,41 +2941,6 @@ func TestUnmarshalSegmentListSTLV_TypeJ_ErrorPaths(t *testing.T) {
 	}
 }
 
-func TestUnmarshalSegmentListSTLV_TypeK_ErrorPaths(t *testing.T) {
-	tests := []struct {
-		name      string
-		stlvBytes []byte
-	}{
-		{
-			name:      "TypeK truncated missing length byte",
-			stlvBytes: []byte{byte(TypeK)},
-		},
-		{
-			name:      "TypeK insufficient data",
-			stlvBytes: []byte{byte(TypeK), 20, 0x00, 0x01},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if _, err := UnmarshalSegmentListSTLV(tt.stlvBytes); err == nil {
-				t.Error("expected error, got nil")
-			}
-		})
-	}
-}
-
-func TestUnmarshalSegmentListSTLV_TypeK_Skip(t *testing.T) {
-	// TypeK with valid length should be skipped without error
-	payload := make([]byte, 34)
-	stlvBytes := append([]byte{byte(TypeK), 34}, payload...)
-	result, err := UnmarshalSegmentListSTLV(stlvBytes)
-	if err != nil {
-		t.Fatalf("expected TypeK skip, got error: %v", err)
-	}
-	if len(result.Segment) != 0 {
-		t.Errorf("expected 0 segments (TypeK skipped), got %d", len(result.Segment))
-	}
-}
 
 func TestTypeJSegment_GetFlagsAndType(t *testing.T) {
 	input := make([]byte, 42)
@@ -3078,5 +3043,423 @@ func TestUnmarshalSegmentListSTLV_UnknownType(t *testing.T) {
 	// An unknown segment type byte should return an error
 	if _, err := UnmarshalSegmentListSTLV([]byte{0xFF}); err == nil {
 		t.Error("expected error for unknown segment type, got nil")
+	}
+}
+
+// =============================================================================
+// Type K Tests (IPv6 Local/Remote adjacency + optional SRv6 SID + optional SRv6 Endpoint Behavior)
+// =============================================================================
+func TestUnmarshalTypeKSegment_Valid(t *testing.T) {
+	localIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	remoteIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+	srv6SID := []byte{0x20, 0x01, 0x0d, 0xb8, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	epBehavior := []byte{0x00, 0x01, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00}
+	// 34 bytes: flags(1)+algo(1)+localIPv6(16)+remoteIPv6(16)
+	base34 := append(append([]byte{0x00, 0x01}, localIPv6...), remoteIPv6...)
+	tests := []struct {
+		name            string
+		input           []byte
+		wantAlgo        byte
+		wantLocalIPv6   []byte
+		wantRemoteIPv6  []byte
+		wantSRv6SID     []byte
+		wantEPBehavior  []byte
+	}{
+		{
+			name:           "34 bytes no SID",
+			input:          base34,
+			wantAlgo:       0x01,
+			wantLocalIPv6:  localIPv6,
+			wantRemoteIPv6: remoteIPv6,
+		},
+		{
+			name:           "50 bytes with SRv6 SID",
+			input:          append(append([]byte(nil), base34...), srv6SID...),
+			wantAlgo:       0x01,
+			wantLocalIPv6:  localIPv6,
+			wantRemoteIPv6: remoteIPv6,
+			wantSRv6SID:    srv6SID,
+		},
+		{
+			name:            "58 bytes with SRv6 SID and endpoint behavior",
+			input:           append(append(append([]byte(nil), base34...), srv6SID...), epBehavior...),
+			wantAlgo:        0x01,
+			wantLocalIPv6:   localIPv6,
+			wantRemoteIPv6:  remoteIPv6,
+			wantSRv6SID:     srv6SID,
+			wantEPBehavior:  epBehavior,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := UnmarshalTypeKSegment(tt.input)
+			if err != nil {
+				t.Fatalf("UnmarshalTypeKSegment() error = %v", err)
+			}
+			tk, ok := result.(TypeKSegment)
+			if !ok {
+				t.Fatalf("result does not implement TypeKSegment")
+			}
+			if tk.GetSRAlgorithm() != tt.wantAlgo {
+				t.Errorf("GetSRAlgorithm() = %d, want %d", tk.GetSRAlgorithm(), tt.wantAlgo)
+			}
+			localGot := tk.GetLocalIPv6Address()
+			if len(localGot) != len(tt.wantLocalIPv6) {
+				t.Errorf("GetLocalIPv6Address() length = %d, want %d", len(localGot), len(tt.wantLocalIPv6))
+			} else {
+				for i := range tt.wantLocalIPv6 {
+					if localGot[i] != tt.wantLocalIPv6[i] {
+						t.Errorf("GetLocalIPv6Address() byte %d = %02x, want %02x", i, localGot[i], tt.wantLocalIPv6[i])
+					}
+				}
+			}
+			remoteGot := tk.GetRemoteIPv6Address()
+			if len(remoteGot) != len(tt.wantRemoteIPv6) {
+				t.Errorf("GetRemoteIPv6Address() length = %d, want %d", len(remoteGot), len(tt.wantRemoteIPv6))
+			} else {
+				for i := range tt.wantRemoteIPv6 {
+					if remoteGot[i] != tt.wantRemoteIPv6[i] {
+						t.Errorf("GetRemoteIPv6Address() byte %d = %02x, want %02x", i, remoteGot[i], tt.wantRemoteIPv6[i])
+					}
+				}
+			}
+			sid, hasSID := tk.GetSRv6SID()
+			if tt.wantSRv6SID == nil {
+				if hasSID {
+					t.Errorf("GetSRv6SID() ok = true, want false")
+				}
+			} else {
+				if !hasSID {
+					t.Errorf("GetSRv6SID() ok = false, want true")
+				} else if len(sid) != len(tt.wantSRv6SID) {
+					t.Errorf("GetSRv6SID() length = %d, want %d", len(sid), len(tt.wantSRv6SID))
+				} else {
+					for i := range tt.wantSRv6SID {
+						if sid[i] != tt.wantSRv6SID[i] {
+							t.Errorf("GetSRv6SID() byte %d = %02x, want %02x", i, sid[i], tt.wantSRv6SID[i])
+						}
+					}
+				}
+			}
+			ep, hasEP := tk.GetSRv6EndpointBehavior()
+			if tt.wantEPBehavior == nil {
+				if hasEP {
+					t.Errorf("GetSRv6EndpointBehavior() ok = true, want false")
+				}
+			} else {
+				if !hasEP {
+					t.Errorf("GetSRv6EndpointBehavior() ok = false, want true")
+				} else if len(ep) != len(tt.wantEPBehavior) {
+					t.Errorf("GetSRv6EndpointBehavior() length = %d, want %d", len(ep), len(tt.wantEPBehavior))
+				} else {
+					for i := range tt.wantEPBehavior {
+						if ep[i] != tt.wantEPBehavior[i] {
+							t.Errorf("GetSRv6EndpointBehavior() byte %d = %02x, want %02x", i, ep[i], tt.wantEPBehavior[i])
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestUnmarshalTypeKSegment_InvalidLength(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{"0 bytes", []byte{}},
+		{"1 byte", []byte{0x00}},
+		{"33 bytes", make([]byte, 33)},
+		{"35 bytes", make([]byte, 35)},
+		{"49 bytes", make([]byte, 49)},
+		{"51 bytes", make([]byte, 51)},
+		{"57 bytes", make([]byte, 57)},
+		{"59 bytes", make([]byte, 59)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalTypeKSegment(tt.input); err == nil {
+				t.Errorf("UnmarshalTypeKSegment() with %s input length %d, expected error but got none", tt.name, len(tt.input))
+			}
+		})
+	}
+}
+
+func TestTypeKSegment_JSON(t *testing.T) {
+	localIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	remoteIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+	srv6SID := []byte{0x20, 0x01, 0x0d, 0xb8, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	epBehavior := []byte{0x00, 0x01, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00}
+	tests := []struct {
+		name string
+		seg  *typeKSegment
+	}{
+		{
+			name: "no SID all flags false",
+			seg: &typeKSegment{
+				flags:             &SegmentFlags{Vflag: false, Aflag: false, Sflag: false, Bflag: false},
+				srAlgorithm:       0,
+				localIPv6Address:  localIPv6,
+				remoteIPv6Address: remoteIPv6,
+			},
+		},
+		{
+			name: "with SRv6 SID and endpoint behavior all flags true",
+			seg: &typeKSegment{
+				flags:                &SegmentFlags{Vflag: true, Aflag: true, Sflag: true, Bflag: true},
+				srAlgorithm:          1,
+				localIPv6Address:     localIPv6,
+				remoteIPv6Address:    remoteIPv6,
+				srv6SID:              srv6SID,
+				srv6EndpointBehavior: epBehavior,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := json.Marshal(tt.seg)
+			if err != nil {
+				t.Fatalf("MarshalJSON() error = %v", err)
+			}
+			var result typeKSegment
+			if err := json.Unmarshal(data, &result); err != nil {
+				t.Fatalf("UnmarshalJSON() error = %v", err)
+			}
+			if result.srAlgorithm != tt.seg.srAlgorithm {
+				t.Errorf("srAlgorithm = %d, want %d", result.srAlgorithm, tt.seg.srAlgorithm)
+			}
+			if len(result.localIPv6Address) != len(tt.seg.localIPv6Address) {
+				t.Errorf("localIPv6Address length = %d, want %d", len(result.localIPv6Address), len(tt.seg.localIPv6Address))
+			} else {
+				for i := range tt.seg.localIPv6Address {
+					if result.localIPv6Address[i] != tt.seg.localIPv6Address[i] {
+						t.Errorf("localIPv6Address byte %d = %02x, want %02x", i, result.localIPv6Address[i], tt.seg.localIPv6Address[i])
+					}
+				}
+			}
+			if len(result.remoteIPv6Address) != len(tt.seg.remoteIPv6Address) {
+				t.Errorf("remoteIPv6Address length = %d, want %d", len(result.remoteIPv6Address), len(tt.seg.remoteIPv6Address))
+			} else {
+				for i := range tt.seg.remoteIPv6Address {
+					if result.remoteIPv6Address[i] != tt.seg.remoteIPv6Address[i] {
+						t.Errorf("remoteIPv6Address byte %d = %02x, want %02x", i, result.remoteIPv6Address[i], tt.seg.remoteIPv6Address[i])
+					}
+				}
+			}
+			if result.flags.Vflag != tt.seg.flags.Vflag {
+				t.Errorf("Unmarshal() Vflag = %v, want %v", result.flags.Vflag, tt.seg.flags.Vflag)
+			}
+			if result.flags.Aflag != tt.seg.flags.Aflag {
+				t.Errorf("Unmarshal() Aflag = %v, want %v", result.flags.Aflag, tt.seg.flags.Aflag)
+			}
+			if result.flags.Sflag != tt.seg.flags.Sflag {
+				t.Errorf("Unmarshal() Sflag = %v, want %v", result.flags.Sflag, tt.seg.flags.Sflag)
+			}
+			if result.flags.Bflag != tt.seg.flags.Bflag {
+				t.Errorf("Unmarshal() Bflag = %v, want %v", result.flags.Bflag, tt.seg.flags.Bflag)
+			}
+			if tt.seg.srv6SID == nil {
+				if result.srv6SID != nil {
+					t.Errorf("srv6SID = %v, want nil", result.srv6SID)
+				}
+			} else if len(result.srv6SID) != len(tt.seg.srv6SID) {
+				t.Errorf("srv6SID length = %d, want %d", len(result.srv6SID), len(tt.seg.srv6SID))
+			} else {
+				for i := range tt.seg.srv6SID {
+					if result.srv6SID[i] != tt.seg.srv6SID[i] {
+						t.Errorf("srv6SID byte %d = %02x, want %02x", i, result.srv6SID[i], tt.seg.srv6SID[i])
+					}
+				}
+			}
+			if tt.seg.srv6EndpointBehavior == nil {
+				if result.srv6EndpointBehavior != nil {
+					t.Errorf("srv6EndpointBehavior = %v, want nil", result.srv6EndpointBehavior)
+				}
+			} else if len(result.srv6EndpointBehavior) != len(tt.seg.srv6EndpointBehavior) {
+				t.Errorf("srv6EndpointBehavior length = %d, want %d", len(result.srv6EndpointBehavior), len(tt.seg.srv6EndpointBehavior))
+			} else {
+				for i := range tt.seg.srv6EndpointBehavior {
+					if result.srv6EndpointBehavior[i] != tt.seg.srv6EndpointBehavior[i] {
+						t.Errorf("srv6EndpointBehavior byte %d = %02x, want %02x", i, result.srv6EndpointBehavior[i], tt.seg.srv6EndpointBehavior[i])
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestUnmarshalSegmentListSTLV_TypeK(t *testing.T) {
+	localIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	remoteIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+	srv6SID := []byte{0x20, 0x01, 0x0d, 0xb8, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	endpointBehavior := []byte{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	payload34 := append(append([]byte{0x00, 0x01}, localIPv6...), remoteIPv6...)
+	payload50 := append(append([]byte{}, payload34...), srv6SID...)
+	payload58 := append(append([]byte{}, payload50...), endpointBehavior...)
+	tests := []struct {
+		name      string
+		stlvBytes []byte
+		wantCount int
+	}{
+		{
+			name:      "single TypeK STLV no SID",
+			stlvBytes: append([]byte{byte(TypeK), 34}, payload34...),
+			wantCount: 1,
+		},
+		{
+			name:      "single TypeK STLV with SRv6 SID",
+			stlvBytes: append([]byte{byte(TypeK), 50}, payload50...),
+			wantCount: 1,
+		},
+		{
+			name:      "single TypeK STLV with SRv6 SID and endpoint behavior",
+			stlvBytes: append([]byte{byte(TypeK), 58}, payload58...),
+			wantCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := UnmarshalSegmentListSTLV(tt.stlvBytes)
+			if err != nil {
+				t.Fatalf("UnmarshalSegmentListSTLV() error = %v", err)
+			}
+			if len(result.Segment) != tt.wantCount {
+				t.Errorf("Segment count = %d, want %d", len(result.Segment), tt.wantCount)
+			}
+			if tt.wantCount > 0 && result.Segment[0].GetType() != TypeK {
+				t.Errorf("GetType() = %v, want TypeK", result.Segment[0].GetType())
+			}
+		})
+	}
+}
+
+func TestUnmarshalSegmentListSTLV_TypeK_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name      string
+		stlvBytes []byte
+	}{
+		{
+			name:      "TypeK truncated missing length byte",
+			stlvBytes: []byte{byte(TypeK)},
+		},
+		{
+			name:      "TypeK invalid length",
+			stlvBytes: []byte{byte(TypeK), 10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name:      "TypeK insufficient data",
+			stlvBytes: []byte{byte(TypeK), 34, 0x00, 0x01},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.stlvBytes); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestTypeKSegment_GetFlags(t *testing.T) {
+	seg := &typeKSegment{flags: &SegmentFlags{Vflag: true, Aflag: false, Sflag: true, Bflag: false}}
+	f := seg.GetFlags()
+	if f == nil {
+		t.Fatal("GetFlags() returned nil")
+	}
+	if !f.Vflag {
+		t.Error("Vflag = false, want true")
+	}
+	if f.Aflag {
+		t.Error("Aflag = true, want false")
+	}
+	if !f.Sflag {
+		t.Error("Sflag = false, want true")
+	}
+	if f.Bflag {
+		t.Error("Bflag = true, want false")
+	}
+}
+
+func TestTypeKSegment_UnmarshalJSON_InvalidJSON(t *testing.T) {
+	var seg typeKSegment
+	if err := seg.UnmarshalJSON([]byte(`{invalid`)); err == nil {
+		t.Error("expected error for invalid JSON, got nil")
+	}
+}
+
+func TestTypeKSegment_UnmarshalJSONObj_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name string
+		json string
+	}{
+		{"bad flags", `{"segment_type":16,"flags":"not_an_object"}`},
+		{"bad sr_algorithm", `{"segment_type":16,"sr_algorithm":"x"}`},
+		{"bad local_ipv6_address", `{"segment_type":16,"local_ipv6_address":"not_base64!!"}`},
+		{"bad remote_ipv6_address", `{"segment_type":16,"remote_ipv6_address":"not_base64!!"}`},
+		{"bad srv6_sid", `{"segment_type":16,"srv6_sid":"not_base64!!"}`},
+		{"bad srv6_endpoint_behavior", `{"segment_type":16,"srv6_endpoint_behavior":"not_base64!!"}`},
+		{"local_ipv6 wrong length", `{"segment_type":16,"local_ipv6_address":"AQID"}`},
+		{"remote_ipv6 wrong length", `{"segment_type":16,"remote_ipv6_address":"AQID"}`},
+		{"srv6_sid wrong length", `{"segment_type":16,"srv6_sid":"AQID"}`},
+		{"srv6_endpoint_behavior wrong length", `{"segment_type":16,"srv6_endpoint_behavior":"AQID"}`},
+		{"endpoint_behavior without srv6_sid", `{"segment_type":16,"srv6_endpoint_behavior":"AAAAAAAAAAA="}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var seg typeKSegment
+			if err := seg.UnmarshalJSON([]byte(tt.json)); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestUnmarshalSegmentListSTLV_TypeJ_Skip(t *testing.T) {
+	// TypeJ payload: flags(1) + srAlg(1) + localIfID(4) + localIPv6(16) + remoteIfID(4) + remoteIPv6(16) = 42 bytes
+	payload42 := make([]byte, 42)
+	payload42[0] = 0x00 // flags
+	payload42[1] = 0x00 // sr_algorithm
+
+	tests := []struct {
+		name      string
+		stlvBytes []byte
+		wantErr   bool
+	}{
+		{
+			name:      "TypeJ skip valid",
+			stlvBytes: append([]byte{byte(TypeJ), 42}, payload42...),
+			wantErr:   false,
+		},
+		{
+			name:      "TypeJ truncated no length byte",
+			stlvBytes: []byte{byte(TypeJ)},
+			wantErr:   true,
+		},
+		{
+			name:      "TypeJ invalid length",
+			stlvBytes: []byte{byte(TypeJ), 10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			wantErr:   true,
+		},
+		{
+			name:      "TypeJ insufficient data",
+			stlvBytes: append([]byte{byte(TypeJ), 42}, make([]byte, 10)...),
+			wantErr:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalSegmentListSTLV(tt.stlvBytes)
+			if tt.wantErr && err == nil {
+				t.Error("expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
 	}
 }

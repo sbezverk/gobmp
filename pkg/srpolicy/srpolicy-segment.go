@@ -1895,6 +1895,9 @@ func (tk *typeKSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) erro
 			return fmt.Errorf("srv6_endpoint_behavior must be exactly 8 bytes, got %d", len(tk.srv6EndpointBehavior))
 		}
 	}
+	if tk.srv6EndpointBehavior != nil && tk.srv6SID == nil {
+		return fmt.Errorf("srv6_endpoint_behavior requires srv6_sid to be present")
+	}
 	return nil
 }
 
