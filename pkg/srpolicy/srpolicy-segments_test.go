@@ -2696,15 +2696,23 @@ func TestUnmarshalTypeKSegment_Valid(t *testing.T) {
 				t.Errorf("GetSRAlgorithm() = %d, want %d", tk.GetSRAlgorithm(), tt.wantAlgo)
 			}
 			localGot := tk.GetLocalIPv6Address()
-			for i := range tt.wantLocalIPv6 {
-				if localGot[i] != tt.wantLocalIPv6[i] {
-					t.Errorf("GetLocalIPv6Address() byte %d = %02x, want %02x", i, localGot[i], tt.wantLocalIPv6[i])
+			if len(localGot) != len(tt.wantLocalIPv6) {
+				t.Errorf("GetLocalIPv6Address() length = %d, want %d", len(localGot), len(tt.wantLocalIPv6))
+			} else {
+				for i := range tt.wantLocalIPv6 {
+					if localGot[i] != tt.wantLocalIPv6[i] {
+						t.Errorf("GetLocalIPv6Address() byte %d = %02x, want %02x", i, localGot[i], tt.wantLocalIPv6[i])
+					}
 				}
 			}
 			remoteGot := tk.GetRemoteIPv6Address()
-			for i := range tt.wantRemoteIPv6 {
-				if remoteGot[i] != tt.wantRemoteIPv6[i] {
-					t.Errorf("GetRemoteIPv6Address() byte %d = %02x, want %02x", i, remoteGot[i], tt.wantRemoteIPv6[i])
+			if len(remoteGot) != len(tt.wantRemoteIPv6) {
+				t.Errorf("GetRemoteIPv6Address() length = %d, want %d", len(remoteGot), len(tt.wantRemoteIPv6))
+			} else {
+				for i := range tt.wantRemoteIPv6 {
+					if remoteGot[i] != tt.wantRemoteIPv6[i] {
+						t.Errorf("GetRemoteIPv6Address() byte %d = %02x, want %02x", i, remoteGot[i], tt.wantRemoteIPv6[i])
+					}
 				}
 			}
 			sid, hasSID := tk.GetSRv6SID()
@@ -2715,6 +2723,8 @@ func TestUnmarshalTypeKSegment_Valid(t *testing.T) {
 			} else {
 				if !hasSID {
 					t.Errorf("GetSRv6SID() ok = false, want true")
+				} else if len(sid) != len(tt.wantSRv6SID) {
+					t.Errorf("GetSRv6SID() length = %d, want %d", len(sid), len(tt.wantSRv6SID))
 				} else {
 					for i := range tt.wantSRv6SID {
 						if sid[i] != tt.wantSRv6SID[i] {
@@ -2731,6 +2741,8 @@ func TestUnmarshalTypeKSegment_Valid(t *testing.T) {
 			} else {
 				if !hasEP {
 					t.Errorf("GetSRv6EndpointBehavior() ok = false, want true")
+				} else if len(ep) != len(tt.wantEPBehavior) {
+					t.Errorf("GetSRv6EndpointBehavior() length = %d, want %d", len(ep), len(tt.wantEPBehavior))
 				} else {
 					for i := range tt.wantEPBehavior {
 						if ep[i] != tt.wantEPBehavior[i] {
@@ -2811,14 +2823,22 @@ func TestTypeKSegment_JSON(t *testing.T) {
 			if result.srAlgorithm != tt.seg.srAlgorithm {
 				t.Errorf("srAlgorithm = %d, want %d", result.srAlgorithm, tt.seg.srAlgorithm)
 			}
-			for i := range tt.seg.localIPv6Address {
-				if result.localIPv6Address[i] != tt.seg.localIPv6Address[i] {
-					t.Errorf("localIPv6Address byte %d = %02x, want %02x", i, result.localIPv6Address[i], tt.seg.localIPv6Address[i])
+			if len(result.localIPv6Address) != len(tt.seg.localIPv6Address) {
+				t.Errorf("localIPv6Address length = %d, want %d", len(result.localIPv6Address), len(tt.seg.localIPv6Address))
+			} else {
+				for i := range tt.seg.localIPv6Address {
+					if result.localIPv6Address[i] != tt.seg.localIPv6Address[i] {
+						t.Errorf("localIPv6Address byte %d = %02x, want %02x", i, result.localIPv6Address[i], tt.seg.localIPv6Address[i])
+					}
 				}
 			}
-			for i := range tt.seg.remoteIPv6Address {
-				if result.remoteIPv6Address[i] != tt.seg.remoteIPv6Address[i] {
-					t.Errorf("remoteIPv6Address byte %d = %02x, want %02x", i, result.remoteIPv6Address[i], tt.seg.remoteIPv6Address[i])
+			if len(result.remoteIPv6Address) != len(tt.seg.remoteIPv6Address) {
+				t.Errorf("remoteIPv6Address length = %d, want %d", len(result.remoteIPv6Address), len(tt.seg.remoteIPv6Address))
+			} else {
+				for i := range tt.seg.remoteIPv6Address {
+					if result.remoteIPv6Address[i] != tt.seg.remoteIPv6Address[i] {
+						t.Errorf("remoteIPv6Address byte %d = %02x, want %02x", i, result.remoteIPv6Address[i], tt.seg.remoteIPv6Address[i])
+					}
 				}
 			}
 			if result.flags.Vflag != tt.seg.flags.Vflag {
@@ -2837,6 +2857,8 @@ func TestTypeKSegment_JSON(t *testing.T) {
 				if result.srv6SID != nil {
 					t.Errorf("srv6SID = %v, want nil", result.srv6SID)
 				}
+			} else if len(result.srv6SID) != len(tt.seg.srv6SID) {
+				t.Errorf("srv6SID length = %d, want %d", len(result.srv6SID), len(tt.seg.srv6SID))
 			} else {
 				for i := range tt.seg.srv6SID {
 					if result.srv6SID[i] != tt.seg.srv6SID[i] {
@@ -2848,6 +2870,8 @@ func TestTypeKSegment_JSON(t *testing.T) {
 				if result.srv6EndpointBehavior != nil {
 					t.Errorf("srv6EndpointBehavior = %v, want nil", result.srv6EndpointBehavior)
 				}
+			} else if len(result.srv6EndpointBehavior) != len(tt.seg.srv6EndpointBehavior) {
+				t.Errorf("srv6EndpointBehavior length = %d, want %d", len(result.srv6EndpointBehavior), len(tt.seg.srv6EndpointBehavior))
 			} else {
 				for i := range tt.seg.srv6EndpointBehavior {
 					if result.srv6EndpointBehavior[i] != tt.seg.srv6EndpointBehavior[i] {
