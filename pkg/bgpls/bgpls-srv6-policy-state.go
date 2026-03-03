@@ -816,7 +816,7 @@ func UnmarshalSRType1Descriptor(b []byte) (SegmentDescriptor, error) {
 		glog.Infof("SR Type1 Descriptor Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 1 {
-		return nil, fmt.Errorf("not enough bytes for SR Type1 Descriptor")
+		return nil, fmt.Errorf("not enough bytes for SR Type1 Descriptor: got %d, want at least 1", len(b))
 	}
 	p := 0
 	s := &SRType1Descriptor{
@@ -1198,7 +1198,7 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 		s.Segment = SegmentType1
 		if s.FlagS {
 			if len(b) < p+8 {
-				return nil, fmt.Errorf("not enough bytes for MPLS SID in segment type 1")
+				return nil, fmt.Errorf("not enough bytes for MPLS SID in segment type 1: got %d, want at least %d", len(b), p+8)
 			}
 			s.SID, err = UnmarshalMPLSLabelSID(b[p+4 : p+8])
 			if err != nil {
@@ -1209,7 +1209,7 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 		s.Segment = SegmentType2
 		if s.FlagS {
 			if len(b) < p+20 {
-				return nil, fmt.Errorf("not enough bytes for SRv6 SID in segment type 2")
+				return nil, fmt.Errorf("not enough bytes for SRv6 SID in segment type 2: got %d, want at least %d", len(b), p+20)
 			}
 			s.SID, err = UnmarshalSRv6SID(b[p+4 : p+20])
 			if err != nil {
@@ -1221,7 +1221,7 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 		s.Segment = t
 		if s.FlagS {
 			if len(b) < p+8 {
-				return nil, fmt.Errorf("not enough bytes for MPLS SID in segment type %d", t)
+				return nil, fmt.Errorf("not enough bytes for MPLS SID in segment type %d: got %d, want at least %d", t, len(b), p+8)
 			}
 			s.SID, err = UnmarshalMPLSLabelSID(b[p+4 : p+8])
 			if err != nil {
@@ -1233,7 +1233,7 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 		s.Segment = t
 		if s.FlagS {
 			if len(b) < p+20 {
-				return nil, fmt.Errorf("not enough bytes for SRv6 SID in segment type %d", t)
+				return nil, fmt.Errorf("not enough bytes for SRv6 SID in segment type %d: got %d, want at least %d", t, len(b), p+20)
 			}
 			s.SID, err = UnmarshalSRv6SID(b[p+4 : p+20])
 			if err != nil {
