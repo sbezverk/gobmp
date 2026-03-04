@@ -12,7 +12,7 @@ import (
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type NodeNLRI struct {
 	ProtocolID ProtoID
-	Identifier [8]byte `json:"domain_id,omitempty"`
+	Identifier [8]byte
 	LocalNode  *NodeDescriptor
 }
 

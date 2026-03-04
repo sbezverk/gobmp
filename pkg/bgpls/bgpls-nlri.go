@@ -54,7 +54,7 @@ func (ls *NLRI) GetMTID() []*base.MultiTopologyIdentifier {
 	return nil
 }
 
-// GetNodeFlags reeturns Flag Bits TLV carries a bit mask describing node attributes.
+// GetNodeFlags returns Flag Bits TLV carries a bit mask describing node attributes.
 func (ls *NLRI) GetNodeFlags() (*NodeAttrFlags, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1024 {
