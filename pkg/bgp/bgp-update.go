@@ -110,9 +110,6 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	if glog.V(6) {
 		glog.Infof("BGPUpdate Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) == 0 {
-		return nil, fmt.Errorf("not enough bytes to unmarshal BGP Update: need at least 1 byte, have 0")
-	}
 	p := 0
 	u := Update{}
 	if p+2 > len(b) {

@@ -2,6 +2,7 @@ package bgp
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -312,7 +313,7 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 				return
 			}
 			if tt.wantErrMsg != "" {
-				if got := err.Error(); !containsString(got, tt.wantErrMsg) {
+				if got := err.Error(); !strings.Contains(got, tt.wantErrMsg) {
 					t.Errorf("error %q does not contain %q", got, tt.wantErrMsg)
 				}
 			}
@@ -336,19 +337,4 @@ func TestMPUnReachNLRI_GetNLRIUnicast_match(t *testing.T) {
 	if nlri == nil {
 		t.Fatal("GetNLRIUnicast() returned nil NLRI")
 	}
-}
-
-// containsString is a helper used below to avoid importing strings in test.
-func containsString(s, sub string) bool {
-	return len(s) >= len(sub) && (s == sub || len(sub) == 0 ||
-		findSubstring(s, sub))
-}
-
-func findSubstring(s, sub string) bool {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }
