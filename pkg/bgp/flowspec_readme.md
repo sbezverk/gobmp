@@ -313,7 +313,7 @@ All four variants are indistinguishable after this function. Downstream consumer
 
 ### 8.2 `UnmarshalFlowspecNLRI` — No AFI/SAFI Context
 
-**File:** `gobmp/pkg/flowspec/flowspec_nlri.go`
+**File:** `pkg/flowspec/flowspec_nlri.go`
 
 `UnmarshalFlowspecNLRI(b []byte)` has no way to know whether the bytes are IPv4, IPv6, VPN, or not. Consequences:
 
