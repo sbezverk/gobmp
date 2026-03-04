@@ -34,9 +34,6 @@ func unmarshalTLVs(b []byte, extendedParamLen bool) ([]InformationalTLV, Capabil
 		return tlvs, caps, nil
 	}
 	for p := 0; p < len(b); {
-		if p >= len(b) {
-			break
-		}
 		t := b[p]
 		p++
 
