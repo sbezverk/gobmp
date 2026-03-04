@@ -269,6 +269,9 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 
 // unmarshalAttrOrigin returns the value of Origin attribute
 func unmarshalAttrOrigin(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
 	switch b[0] {
 	case 0:
 		return "igp"
@@ -392,6 +395,9 @@ func unmarshalAttrAggregator(b []byte) []byte {
 // getCommunity returns a slice of communities
 func getCommunity(b []byte) []uint32 {
 	comm := make([]uint32, 0)
+	if len(b)%4 != 0 {
+		return comm
+	}
 	for p := 0; p < len(b); {
 		c := binary.BigEndian.Uint32(b[p : p+4])
 		p += 4
@@ -468,12 +474,21 @@ func unmarshalAttrLgCommunity(b []byte) []string {
 func unmarshalAttrAS4Path(b []byte) []uint32 {
 	path := make([]uint32, 0)
 	for p := 0; p < len(b); {
-		// Skipping type
+		// Segment type byte
+		if p+1 > len(b) {
+			break
+		}
 		p++
-		// Length of path segment in 4 bytes
-		l := b[p]
+		// Length of path segment in number of 4-byte ASes
+		if p+1 > len(b) {
+			break
+		}
+		l := int(b[p])
 		p++
-		for n := 0; n < int(l); n++ {
+		for n := 0; n < l; n++ {
+			if p+4 > len(b) {
+				return path
+			}
 			as := binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 			path = append(path, as)
