@@ -133,7 +133,7 @@ func TestUnmarshalBGPOpenMessage_ErrorCases(t *testing.T) {
 				b[12] = 100 // claim 100 bytes but buffer ends here
 				return b
 			},
-			wantErrMsg: "exceeds buffer",
+			wantErrMsg: "too short for Optional Parameters",
 		},
 		// ----------------------------------------------------------------
 		// RFC 9072 extended header
@@ -197,10 +197,10 @@ func TestUnmarshalBGPOpenMessage_RFC9072_Extended(t *testing.T) {
 	header := func() []byte {
 		return []byte{
 			0, 29, // Length (placeholder)
-			1,          // Type = 1 (OPEN)
-			4,          // Version = 4
-			0, 1,       // MyAS = 1
-			0, 90,      // HoldTime = 90
+			1,    // Type = 1 (OPEN)
+			4,    // Version = 4
+			0, 1, // MyAS = 1
+			0, 90, // HoldTime = 90
 			10, 0, 0, 1, // BGPID = 10.0.0.1
 			255, // OptParamLen = 255 → triggers RFC 9072 detection
 		}
@@ -210,7 +210,7 @@ func TestUnmarshalBGPOpenMessage_RFC9072_Extended(t *testing.T) {
 		// RFC 9072 framing: 0xFF sentinel + 2-byte extLen=0 → no TLVs.
 		b := header()
 		b = append(b,
-			0xFF,     // Non-Ext OP Type sentinel
+			0xFF,       // Non-Ext OP Type sentinel
 			0x00, 0x00, // Extended Opt. Parm. Length = 0
 		)
 		msg, err := UnmarshalBGPOpenMessage(b)
@@ -238,14 +238,14 @@ func TestUnmarshalBGPOpenMessage_RFC9072_Extended(t *testing.T) {
 		//   0x04               – Capability Data Length = 4
 		//   0x00, 0x00, 0x00, 0x01 – AS4 = 1
 		capTLV := []byte{
-			0x02, 0x00, 0x06,       // type=2, ext-len=6
+			0x02, 0x00, 0x06, // type=2, ext-len=6
 			0x41, 0x04, 0x00, 0x00, 0x00, 0x01, // cap 65, len 4, AS4=1
 		}
 		extLen := uint16(len(capTLV)) // = 9
 
 		b := header()
-		b = append(b, 0xFF)                            // sentinel
-		b = append(b, byte(extLen>>8), byte(extLen))   // 2-byte extLen
+		b = append(b, 0xFF)                          // sentinel
+		b = append(b, byte(extLen>>8), byte(extLen)) // 2-byte extLen
 		b = append(b, capTLV...)
 
 		msg, err := UnmarshalBGPOpenMessage(b)
