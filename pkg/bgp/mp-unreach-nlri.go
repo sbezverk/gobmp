@@ -199,7 +199,7 @@ func (mp *MPUnReachNLRI) GetNLRIRTC() (*rtc.Route, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
 }
 
-// UnmarshalMPUnReachNLRI builds MP Reach NLRI attributes
+// UnmarshalMPUnReachNLRI builds MP UnReach NLRI attributes
 func UnmarshalMPUnReachNLRI(b []byte, addPath map[int]bool) (MPNLRI, error) {
 	if glog.V(6) {
 		glog.Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
