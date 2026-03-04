@@ -29,9 +29,10 @@ func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 	if glog.V(6) {
 		glog.Infof("Routes Raw: %s Path ID flag: %t", tools.MessageHex(b), pathID)
 	}
+	// Handle EoR case.
 	routes := make([]Route, 0)
 	if len(b) == 0 {
-		return nil, fmt.Errorf("not enough bytes to reconstruct routes")
+		return nil, nil
 	}
 	var err error = nil
 	for p := 0; p < len(b); {

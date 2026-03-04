@@ -44,7 +44,7 @@ func (nd *NodeDescriptor) GetOSPFAreaID() string {
 	if tlv, ok := nd.SubTLV[514]; ok {
 		return strconv.Itoa(int(binary.BigEndian.Uint32(tlv.Value)))
 	}
-	return "tlv not found"
+	return ""
 }
 
 // GetIGPRouterID returns a value of Node Descriptor sub TLV IGP Router ID

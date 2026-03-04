@@ -75,11 +75,11 @@ func TestUnmarshalBaseNLRI(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "empty input",
+			name:    "EoR Case",
 			input:   []byte{},
 			pathID:  false,
 			expect:  nil,
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name:   "Default prefix",

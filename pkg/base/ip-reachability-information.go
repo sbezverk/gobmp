@@ -25,7 +25,7 @@ func UnmarshalIPReachabilityInformation(b []byte) (*IPReachabilityInformation, e
 	ipr := IPReachabilityInformation{
 		LengthInBits: b[0],
 	}
-	l := int(ipr.LengthInBits+7) / 8 // ceiling division
+	l := (int(ipr.LengthInBits) + 7) / 8 // ceiling division
 	if len(b)-1 < l {
 		return nil, fmt.Errorf("IPReachabilityInformation: need %d bytes for prefix, got %d", l, len(b)-1)
 	}

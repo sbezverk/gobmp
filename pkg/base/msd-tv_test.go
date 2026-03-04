@@ -16,7 +16,7 @@ func TestUnmarshalMSDTV(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "Odd inoput length",
+			name:    "Odd input length",
 			b:       []byte{0x01, 0x02, 0x03},
 			want:    nil,
 			wantErr: true,
