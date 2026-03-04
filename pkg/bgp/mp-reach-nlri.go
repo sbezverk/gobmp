@@ -270,24 +270,13 @@ func UnmarshalMPReachNLRI(b []byte, srv6 bool, addPath map[int]bool) (MPNLRI, er
 	mp.NextHopAddress = make([]byte, mp.NextHopAddressLength)
 	copy(mp.NextHopAddress, b[p:p+int(mp.NextHopAddressLength)])
 	p += int(mp.NextHopAddressLength)
-	// RFC 4760 §3: one-byte SNPA count field (almost always 0 in practice).
+	// RFC 4760 §3: Reserved field (1 octet) — MUST be set to 0 by sender, SHOULD be ignored by receiver.
+	// Note: RFC 4760 (which obsoletes RFC 2858) renamed the former "Number of SNPAs" field to Reserved
+	// and removed all SNPA-related handling from MP_REACH_NLRI (see RFC 4760 §10).
 	if p+1 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: missing SNPA count field at offset %d", p)
+		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: missing Reserved byte at offset %d", p)
 	}
-	snpaCount := int(b[p])
-	p++
-	for i := 0; i < snpaCount; i++ {
-		if p+1 > len(b) {
-			return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: missing SNPA length for entry %d", i)
-		}
-		// SNPA length is in semi-octets (half-bytes); round up to full bytes.
-		snpaBytes := (int(b[p]) + 1) / 2
-		p++
-		if p+snpaBytes > len(b) {
-			return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: SNPA entry %d needs %d bytes, have %d", i, snpaBytes, len(b)-p)
-		}
-		p += snpaBytes
-	}
+	p++ // skip Reserved byte (RFC 4760 §3)
 	mp.NLRI = make([]byte, len(b[p:]))
 	copy(mp.NLRI, b[p:])
 

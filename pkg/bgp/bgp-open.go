@@ -155,6 +155,9 @@ func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 				return nil, fmt.Errorf("RFC 9072 extended Optional Parameters length %d exceeds buffer of %d bytes", extLen, len(b)-optStart)
 			}
 		}
+		if !extendedParamLen && optEnd > len(b) {
+			return nil, fmt.Errorf("Optional Parameters length %d exceeds buffer of %d bytes", m.OptParamLen, len(b)-optStart)
+		}
 		if m.OptionalParameters, m.Capabilities, err = unmarshalTLVs(b[optStart:optEnd], extendedParamLen); err != nil {
 			return nil, err
 		}
