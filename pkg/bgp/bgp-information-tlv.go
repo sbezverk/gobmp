@@ -48,7 +48,7 @@ func unmarshalTLVs(b []byte, extendedParamLen bool) ([]InformationalTLV, Capabil
 		} else {
 			// RFC 4271: each Optional Parameter uses a 1-byte Length field.
 			if p >= len(b) {
-				return nil, nil, fmt.Errorf("truncated informational TLV length at offset %d", p)
+				return nil, nil, fmt.Errorf("truncated informational TLV length at offset %d: need 1 byte, have %d", p, len(b)-p)
 			}
 			l = int(b[p])
 			p++
