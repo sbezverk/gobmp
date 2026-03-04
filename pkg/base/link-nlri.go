@@ -125,9 +125,6 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	l := LinkNLRI{}
 	p := 0
 	l.ProtocolID = ProtoID(b[p])
-	if p+1 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to Unmarshal Link NLRI")
-	}
 	p++
 	// Skip 3 reserved bytes
 	//	p += 3

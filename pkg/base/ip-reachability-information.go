@@ -20,7 +20,7 @@ func UnmarshalIPReachabilityInformation(b []byte) (*IPReachabilityInformation, e
 		glog.Infof("IPReachabilityInformationTLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 1 {
-		return nil, fmt.Errorf("invalid IPReachabilityInformationTLV length")
+		return nil, fmt.Errorf("invalid IPReachabilityInformationTLV length, got %d, expected at least 1", len(b))
 	}
 	ipr := IPReachabilityInformation{
 		LengthInBits: b[0],

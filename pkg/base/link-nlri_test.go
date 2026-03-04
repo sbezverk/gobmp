@@ -100,6 +100,9 @@ func TestUnmarshalLinkNLRI(t *testing.T) {
 			if err == nil && tt.wantErr {
 				t.Fatalf("test failed as expected error did not occur")
 			}
+			if err != nil {
+				return
+			}
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Fatalf("test failed as expected nlri %+v does not match actual nlri %+v", tt.expect, got)
 			}

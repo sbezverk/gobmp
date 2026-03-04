@@ -107,9 +107,6 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 	}
 	p := 0
 	pr.ProtocolID = ProtoID(b[p])
-	if p+1 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to Unmarshal Prefix NLRI")
-	}
 	p++
 	if p+8 > len(b) {
 		return nil, fmt.Errorf("not enough bytes to Unmarshal Prefix NLRI")
