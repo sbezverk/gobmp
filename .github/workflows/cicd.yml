@@ -56,9 +56,8 @@ jobs:
         with:
           files: coverage.txt
           flags: unittests
-          fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Generate test summary
         if: always()
         run: |
