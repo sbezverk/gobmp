@@ -274,7 +274,7 @@ func UnmarshalMPReachNLRI(b []byte, srv6 bool, addPath map[int]bool) (MPNLRI, er
 	// Note: RFC 4760 (which obsoletes RFC 2858) renamed the former "Number of SNPAs" field to Reserved
 	// and removed all SNPA-related handling from MP_REACH_NLRI (see RFC 4760 §10).
 	if p+1 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: missing Reserved byte at offset %d", p)
+		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: need 1 byte for Reserved at offset %d, have %d", p, len(b)-p)
 	}
 	p++ // skip Reserved byte (RFC 4760 §3)
 	mp.NLRI = make([]byte, len(b[p:]))
