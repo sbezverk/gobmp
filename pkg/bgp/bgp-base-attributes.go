@@ -245,7 +245,8 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			var err error
 			baseAttr.BGPPrefixSID, err = UnmarshalBGPPrefixSID(b)
 			if err != nil {
-				return nil, fmt.Errorf("failed to unmarshal BGP Prefix-SID attribute with error: %+v", err)
+				baseAttr.BGPPrefixSID = nil
+				glog.Errorf("failed to unmarshal BGP Prefix-SID attribute with error: %+v", err)
 			}
 		case 41:
 			// BIER - RFC 9793
