@@ -204,9 +204,6 @@ func UnmarshalMPUnReachNLRI(b []byte, addPath map[int]bool) (MPNLRI, error) {
 	if glog.V(6) {
 		glog.Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
-	}
 	mp := MPUnReachNLRI{
 		addPath: addPath,
 	}
