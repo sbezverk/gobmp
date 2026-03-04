@@ -289,7 +289,7 @@ If offsets are equal, the IPv4 longest-prefix-match semantics apply. This offset
 
 ### 8.1 `NLRIMessageType` — All Four Variants Return Code 27
 
-**File:** `gobmp/pkg/bgp/mp-nlri.go`
+**File:** `pkg/bgp/mp-nlri.go`
 
 ```go
 case afi == 1 && safi == 133: return 27  // IPv4 Flowspec
