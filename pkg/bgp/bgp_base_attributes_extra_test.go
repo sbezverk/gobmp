@@ -1,6 +1,7 @@
 package bgp
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -192,6 +193,155 @@ func TestUnmarshalBGPBaseAttributes_PathAttrErrors(t *testing.T) {
 			_, err := UnmarshalBGPBaseAttributes(tt.input)
 			if err == nil {
 				t.Fatal("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalAttrASPath exercises all four RFC 4271 / RFC 5065 segment types,
+// multi-segment paths, AS2 vs AS4 detection, and error cases.
+func TestUnmarshalAttrASPath(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []byte
+		wantAS  []uint32
+		wantErr string // substring; empty means success expected
+	}{
+		// ---------------------------------------------------------------
+		// Happy path – empty
+		// ---------------------------------------------------------------
+		{
+			name:   "empty buffer",
+			input:  []byte{},
+			wantAS: []uint32{},
+		},
+		// ---------------------------------------------------------------
+		// AS_SEQUENCE (0x02) — 2-byte ASNs
+		// ---------------------------------------------------------------
+		{
+			name:   "AS_SEQUENCE (0x02) single AS2",
+			input:  []byte{0x02, 0x01, 0x00, 0x01},
+			wantAS: []uint32{1},
+		},
+		{
+			name:   "AS_SEQUENCE (0x02) two AS2",
+			input:  []byte{0x02, 0x02, 0x00, 0x0A, 0x00, 0x0B},
+			wantAS: []uint32{10, 11},
+		},
+		// ---------------------------------------------------------------
+		// AS_SEQUENCE (0x02) — 4-byte ASNs
+		// ---------------------------------------------------------------
+		{
+			name:   "AS_SEQUENCE (0x02) single AS4",
+			input:  []byte{0x02, 0x01, 0x00, 0x00, 0x00, 0x01},
+			wantAS: []uint32{1},
+		},
+		// ---------------------------------------------------------------
+		// AS_SET (0x01) — 2-byte ASNs
+		// ---------------------------------------------------------------
+		{
+			name:   "AS_SET (0x01) two AS2",
+			input:  []byte{0x01, 0x02, 0x00, 0x01, 0x00, 0x02},
+			wantAS: []uint32{1, 2},
+		},
+		// ---------------------------------------------------------------
+		// AS_CONFED_SEQUENCE (0x03) — 2-byte ASNs (RFC 5065)
+		// ---------------------------------------------------------------
+		{
+			name:   "AS_CONFED_SEQUENCE (0x03) single AS2",
+			input:  []byte{0x03, 0x01, 0x00, 0x05},
+			wantAS: []uint32{5},
+		},
+		{
+			name:   "AS_CONFED_SEQUENCE (0x03) two AS2",
+			input:  []byte{0x03, 0x02, 0x00, 0x05, 0x00, 0x06},
+			wantAS: []uint32{5, 6},
+		},
+		// ---------------------------------------------------------------
+		// AS_CONFED_SEQUENCE (0x03) — 4-byte ASNs
+		// ---------------------------------------------------------------
+		{
+			name:   "AS_CONFED_SEQUENCE (0x03) single AS4",
+			input:  []byte{0x03, 0x01, 0x00, 0x00, 0x00, 0x05},
+			wantAS: []uint32{5},
+		},
+		// ---------------------------------------------------------------
+		// AS_CONFED_SET (0x04) — 2-byte ASNs (RFC 5065)
+		// ---------------------------------------------------------------
+		{
+			name:   "AS_CONFED_SET (0x04) two AS2",
+			input:  []byte{0x04, 0x02, 0x00, 0x03, 0x00, 0x04},
+			wantAS: []uint32{3, 4},
+		},
+		// ---------------------------------------------------------------
+		// AS_CONFED_SET (0x04) — 4-byte ASNs
+		// ---------------------------------------------------------------
+		{
+			name:   "AS_CONFED_SET (0x04) two AS4",
+			input:  []byte{0x04, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04},
+			wantAS: []uint32{3, 4},
+		},
+		// ---------------------------------------------------------------
+		// Multi-segment — 2-byte: AS_SEQUENCE + AS_CONFED_SEQUENCE
+		// ---------------------------------------------------------------
+		{
+			name: "multi-segment AS_SEQUENCE + AS_CONFED_SEQUENCE AS2",
+			input: []byte{
+				0x02, 0x01, 0x00, 0x0A, // AS_SEQUENCE [10]
+				0x03, 0x01, 0x00, 0x0B, // AS_CONFED_SEQUENCE [11]
+			},
+			wantAS: []uint32{10, 11},
+		},
+		// ---------------------------------------------------------------
+		// Multi-segment — 4-byte: AS_SEQUENCE + AS_CONFED_SET
+		// ---------------------------------------------------------------
+		{
+			name: "multi-segment AS_SEQUENCE + AS_CONFED_SET AS4",
+			input: []byte{
+				0x02, 0x01, 0x00, 0x00, 0x00, 0x0A, // AS_SEQUENCE [10]
+				0x04, 0x01, 0x00, 0x00, 0x00, 0x0B, // AS_CONFED_SET [11]
+			},
+			wantAS: []uint32{10, 11},
+		},
+		// ---------------------------------------------------------------
+		// Error cases
+		// ---------------------------------------------------------------
+		{
+			// Single type byte only — not even length byte present
+			name:    "truncated – only type byte",
+			input:   []byte{0x02},
+			wantErr: "invalid AS_PATH",
+		},
+		{
+			// Segment claims 3 AS2s but only 2 bytes remain
+			name:    "truncated – declared count exceeds remaining bytes",
+			input:   []byte{0x02, 0x03, 0x00, 0x01, 0x00, 0x02},
+			wantErr: "invalid AS_PATH",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := unmarshalAttrASPath(tt.input)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(got) != len(tt.wantAS) {
+				t.Fatalf("got %v (len %d), want %v (len %d)", got, len(got), tt.wantAS, len(tt.wantAS))
+			}
+			for i, as := range tt.wantAS {
+				if got[i] != as {
+					t.Errorf("AS[%d] = %d, want %d", i, got[i], as)
+				}
 			}
 		})
 	}

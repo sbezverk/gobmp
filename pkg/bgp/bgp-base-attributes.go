@@ -332,44 +332,41 @@ func unmarshalAttrASPath(b []byte) ([]uint32, error) {
 }
 
 func isASPath4(b []byte) (bool, error) {
-	p := 0
-	// Skipping type
-	if p >= len(b) {
-		return false, fmt.Errorf("invalid AS_PATH attribute, not enough bytes %d to read path segment type", len(b)-p)
+	if len(b) == 0 {
+		return false, fmt.Errorf("invalid AS_PATH attribute: empty buffer")
 	}
-	p++
-	// Length of path segment in 2 or 4 bytes depending if AS2 or AS4 is used.
-	if p >= len(b) {
-		return false, fmt.Errorf("invalid AS_PATH attribute, not enough bytes %d to read path segment length", len(b)-p)
+	// validSegmentType returns true for the four defined AS_PATH segment types:
+	//   0x01 AS_SET, 0x02 AS_SEQUENCE, 0x03 AS_CONFED_SEQUENCE, 0x04 AS_CONFED_SET
+	validSegmentType := func(t byte) bool {
+		return t == 0x01 || t == 0x02 || t == 0x03 || t == 0x04
 	}
-	l := int(b[p])
-	p++
-	// Check if next segment can be found with AS4
-	if l*4 == len(b[p:]) {
-		// Found last AS4 segment, confirmed AS4
+	// triesWidth walks the full buffer consuming segments of asSize bytes per ASN.
+	// Returns true only when all bytes are consumed and every segment type is valid.
+	triesWidth := func(asSize int) bool {
+		for p := 0; p < len(b); {
+			if p+2 > len(b) {
+				return false
+			}
+			if !validSegmentType(b[p]) {
+				return false
+			}
+			l := int(b[p+1])
+			p += 2
+			if p+l*asSize > len(b) {
+				return false
+			}
+			p += l * asSize
+		}
+		return true
+	}
+	switch {
+	case triesWidth(4):
 		return true, nil
-	}
-	// Check if next segment can be found with AS4
-	if l*2 == len(b[p:]) {
-		// Found last AS2 segment, confirmed AS2
+	case triesWidth(2):
 		return false, nil
+	default:
+		return false, fmt.Errorf("invalid AS_PATH attribute: buffer does not parse as either AS2 or AS4 segments")
 	}
-	// Check if next segment can be found with AS4
-	if p+l*4 < len(b) {
-		if b[p+l*4] == 0x1 || b[p+l*4] == 0x2 {
-			// Found next AS4 segment, confirmed AS4
-			return true, nil
-		}
-	}
-	// Check if next segment can be found with AS2
-	if p+l*2 < len(b) {
-		if b[p+l*2] == 0x1 || b[p+l*2] == 0x2 {
-			// Found next AS2 segment, confirmed AS2
-			return false, nil
-		}
-	}
-	// Should never reach here
-	return false, fmt.Errorf("invalid AS_PATH attribute, unable to determine AS path type")
 }
 
 // unmarshalAttrNextHop returns the value of Next Hop attribute
