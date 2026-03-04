@@ -2880,7 +2880,7 @@ func TestUnmarshalSegmentListSTLV_TypeJ(t *testing.T) {
 	remoteIfaceID := []byte{0x00, 0x00, 0x00, 0x02}
 	srv6SID := []byte{0x20, 0x01, 0x0d, 0xb8, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
 	payload42 := append(append(append(append([]byte{0x00, 0x01}, localIfaceID...), localIPv6...), remoteIfaceID...), remoteIPv6...)
-	payload58 := append(append(payload42, srv6SID...), []byte{}...)
+	payload58 := append(append([]byte{}, payload42...), srv6SID...)
 	tests := []struct {
 		name      string
 		stlvBytes []byte
