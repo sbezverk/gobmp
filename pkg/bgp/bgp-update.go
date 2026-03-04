@@ -28,7 +28,7 @@ type Update struct {
 	BaseAttributes           *BaseAttributes
 }
 
-// GetAllAttributeID return a slixe of int with all attributes found in BGP Update
+// GetAllAttributeID returns a slice of uint8 with all attribute type codes found in BGP Update
 func (up *Update) GetAllAttributeID() []uint8 {
 	attrs := make([]uint8, 0)
 	for _, attr := range up.PathAttributes {
@@ -112,19 +112,27 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	}
 	p := 0
 	u := Update{}
+	if p+2 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Withdrawn Routes Length: need 2 bytes, have %d", len(b)-p)
+	}
 	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
+	if p+int(u.WithdrawnRoutesLength) > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Withdrawn Routes: need %d bytes, have %d", u.WithdrawnRoutesLength, len(b)-p)
+	}
 	u.WithdrawnRoutes = make([]byte, u.WithdrawnRoutesLength)
 	copy(u.WithdrawnRoutes, b[p:p+int(u.WithdrawnRoutesLength)])
 	p += int(u.WithdrawnRoutesLength)
+	if p+2 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Total Path Attribute Length: need 2 bytes, have %d", len(b)-p)
+	}
 	u.TotalPathAttributeLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	attrs, err := UnmarshalBGPPathAttributes(b[p : p+int(u.TotalPathAttributeLength)])
-	if err != nil {
-		return nil, err
+	if p+int(u.TotalPathAttributeLength) > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Path Attributes: need %d bytes, have %d", u.TotalPathAttributeLength, len(b)-p)
 	}
-	// Building BGP's update Base attributes struct which is common to all messages
-	baseAttrs, err := UnmarshalBGPBaseAttributes(b[p : p+int(u.TotalPathAttributeLength)])
+	// Single pass: parse path attributes and populate base attributes simultaneously
+	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b[p : p+int(u.TotalPathAttributeLength)])
 	if err != nil {
 		return nil, err
 	}

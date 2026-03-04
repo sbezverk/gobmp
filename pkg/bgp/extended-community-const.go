@@ -18,8 +18,9 @@ const (
 	ECPCiscoVPNDistinguisher = "cvd="
 	// ECPRouteTargetRecord extended community prefix for Route-Target Record	[draft-ietf-bess-service-chaining]
 	ECPRouteTargetRecord = "rtr="
-	// ECPVirtualNetworkID extended community prefix for for Virtual-Network Identifier Extended Community	[Manju_Ramesh]
-	ECPVirtualNetworkID = "vni="
+	// ECPVirtualNetworkID extended community prefix for Transitive Virtual-Network Identifier Extended Community [Manju_Ramesh]
+	// Uses "t-vni=" prefix to distinguish from the non-transitive variant (ECPVNIID, type 0x40) which keeps "vni=".
+	ECPVirtualNetworkID = "t-vni="
 
 	// ECPVRFRouteImport extended community prefix for VRF Route Import	[RFC6514]
 	ECPVRFRouteImport = "vri="
@@ -106,7 +107,8 @@ const (
 
 	//ECPLinkBandwidth extended community prefix for Link Bandwidth Extended Community	[draft-ietf-idr-link-bandwidth-00]
 	ECPLinkBandwidth = "link-bw="
-	// ECPVNIID extended community prefix for Virtual-Network Identifier Extended Community	[draft-drao-bgp-l3vpn-virtual-network-overlays]
+	// ECPVNIID extended community prefix for Non-Transitive Virtual-Network Identifier Extended Community [draft-drao-bgp-l3vpn-virtual-network-overlays]
+	// Keeps "vni=" as the canonical prefix; the transitive variant (ECPVirtualNetworkID, Transitive Two-Octet AS-Specific subtype 0x80) uses "t-vni=".
 	ECPVNIID = "vni="
 
 	// ECPFlowspec extended community prefix for Flowspec extended community

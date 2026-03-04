@@ -34,11 +34,9 @@ func TestUnmarshaBaseAttributes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected to succeed but failed with error: %+v", err)
 			}
-			if err == nil {
-				if !reflect.DeepEqual(got, tt.expect) {
-					t.Logf("differences: %+v\n", deep.Equal(got, tt.expect))
-					t.Errorf("Expected base attributes %+v does not match to actual base attributes %+v", tt.expect, got)
-				}
+			if !reflect.DeepEqual(got, tt.expect) {
+				t.Logf("differences: %+v\n", deep.Equal(got, tt.expect))
+				t.Errorf("Expected base attributes %+v does not match to actual base attributes %+v", tt.expect, got)
 			}
 		})
 	}
@@ -97,7 +95,10 @@ func TestUnmarshalASPath(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		r := unmarshalAttrASPath(tt.input)
+		r, err := unmarshalAttrASPath(tt.input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if !reflect.DeepEqual(tt.asPath, r) {
 			t.Fatalf("expected %+v and result %+v as path do not match", tt.asPath, r)
 		}

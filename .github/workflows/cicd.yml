@@ -48,7 +48,15 @@ jobs:
       - name: Run go tests
         run: |
             go test -v ./... 2>&1 | tee test-output.txt
-            go test -race ./...
+            go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.txt
+          flags: unittests
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: Generate test summary
         if: always()
         run: |
@@ -73,21 +81,7 @@ jobs:
         run: |
             go test -bench=. -benchmem -run=^$ ./... | tee benchmark.txt
         continue-on-error: true
-
-      # --- Coverage Tracking ---
-      - name: Generate coverage report
-        run: |
-            go test -coverprofile=coverage.txt -covermode=atomic ./...
-      - name: Upload test artifacts
-        uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: test-results
-          path: |
-            coverage.txt
-            benchmark.txt
-          retention-days: 30
-
+      
       # --- Build ---
       - name: Build binary
         run: make build

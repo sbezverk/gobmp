@@ -69,6 +69,12 @@ func makeExtCommunity(b []byte) (*ExtCommunity, error) {
 // UnmarshalBGPExtCommunity builds a slice of Extended Communities
 func UnmarshalBGPExtCommunity(b []byte) ([]ExtCommunity, error) {
 	exts := make([]ExtCommunity, 0)
+	if len(b) == 0 {
+		return exts, nil
+	}
+	if len(b)%8 != 0 {
+		return nil, fmt.Errorf("invalid length expected multiple of 8 got %d", len(b))
+	}
 	for p := 0; p < len(b); {
 		if glog.V(6) {
 			glog.Infof("Extended community: %s", tools.MessageHex(b[p:p+8]))

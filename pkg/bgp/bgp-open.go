@@ -1,6 +1,7 @@
 package bgp
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -11,15 +12,16 @@ import (
 const (
 	// BGPMinOpenMessageLength defines a minimum length of BGP Open Message
 	BGPMinOpenMessageLength = 29
+	BGPMessageMarkerLength  = 16
 )
 
 // OpenMessage defines BGP Open Message structure
 type OpenMessage struct {
-	Length             int16
+	Length             uint16
 	Type               byte
 	Version            byte
 	MyAS               uint16
-	HoldTime           int16
+	HoldTime           uint16
 	BGPID              []byte
 	OptParamLen        byte
 	OptionalParameters []InformationalTLV
@@ -42,7 +44,7 @@ func (o *OpenMessage) Is4BytesASCapable() (uint32, bool) {
 	return binary.BigEndian.Uint32(v[0].Value), true
 }
 
-// IsAddPathCapable returns a map of NLRI types and bool indicating if a particular NLRI type
+// AddPathCapability returns a map of NLRI types and bool indicating if a particular NLRI type
 // supports Add Path capability
 func (o *OpenMessage) AddPathCapability() map[int]bool {
 	m := make(map[int]bool)
@@ -94,7 +96,7 @@ func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 	if glog.V(6) {
 		glog.Infof("BGPOpenMessage Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) < BGPMinOpenMessageLength-16 {
+	if len(b) < BGPMinOpenMessageLength-BGPMessageMarkerLength {
 		return nil, fmt.Errorf("BGP Open Message length %d is invalid", len(b))
 	}
 	var err error
@@ -102,7 +104,7 @@ func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 	m := OpenMessage{
 		BGPID: make([]byte, 4),
 	}
-	m.Length = int16(binary.BigEndian.Uint16(b[p : p+2]))
+	m.Length = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	if b[p] != 1 {
 		return nil, fmt.Errorf("invalid message type %d for BGP Open Message", b[p])
@@ -116,14 +118,47 @@ func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 	p++
 	m.MyAS = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	m.HoldTime = int16(binary.BigEndian.Uint16(b[p : p+2]))
+	m.HoldTime = binary.BigEndian.Uint16(b[p : p+2])
+	switch {
+	case m.HoldTime == 0:
+		fallthrough
+	case m.HoldTime >= 3:
+	default:
+		return nil, fmt.Errorf("invalid Hold Time %d for BGP Open Message", m.HoldTime)
+	}
+
 	p += 2
 	copy(m.BGPID, b[p:p+4])
+	// According to RFC 6286 BGP ID of 0.0.0.0 is invalid for BGP Open Message
+	if bytes.Equal(m.BGPID, []byte{0, 0, 0, 0}) {
+		return nil, fmt.Errorf("invalid BGP ID %v for BGP Open Message", m.BGPID)
+	}
 	p += 4
 	m.OptParamLen = b[p]
 	p++
 	if m.OptParamLen != 0 {
-		if m.OptionalParameters, m.Capabilities, err = UnmarshalBGPTLV(b[p : p+int(m.OptParamLen)]); err != nil {
+		optStart := p
+		optEnd := p + int(m.OptParamLen)
+		extendedParamLen := false
+		// RFC 9072: if OptParamLen == 255 and the next byte is also 255 (Non-Ext OP Type),
+		// the Optional Parameters use the extended encoding with a 2-byte total length field
+		// and 2-byte individual parameter length fields.
+		if m.OptParamLen == 255 && p < len(b) && b[p] == 255 {
+			if p+3 > len(b) {
+				return nil, fmt.Errorf("BGP Open Message too short for RFC 9072 extended Optional Parameters header: need 3 bytes, have %d", len(b)-p)
+			}
+			extLen := int(binary.BigEndian.Uint16(b[p+1 : p+3]))
+			optStart = p + 3 // skip Non-Ext OP Type (1 byte) + Extended Opt. Parm. Length (2 bytes)
+			optEnd = optStart + extLen
+			extendedParamLen = true
+			if optEnd > len(b) {
+				return nil, fmt.Errorf("BGP Open Message RFC 9072 extended Optional Parameters: need %d bytes, have %d", extLen, len(b)-optStart)
+			}
+		}
+		if !extendedParamLen && optEnd > len(b) {
+			return nil, fmt.Errorf("BGP Open Message Optional Parameters: need %d bytes, have %d", m.OptParamLen, len(b)-p)
+		}
+		if m.OptionalParameters, m.Capabilities, err = unmarshalTLVs(b[optStart:optEnd], extendedParamLen); err != nil {
 			return nil, err
 		}
 	}

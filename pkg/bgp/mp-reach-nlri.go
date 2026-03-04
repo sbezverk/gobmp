@@ -199,10 +199,17 @@ func (mp *MPReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetFlowspecNLRI checks for presence of NLRI 133 IPv4 Flowspec in the NLRI 14 NLRI data and if exists, instantiate NLRI object
+// GetFlowspecNLRI checks for presence of IPv4 Flowspec (AFI=1, SAFI=133) in MP_REACH_NLRI and, if present, parses the NLRI.
+// IPv6 Flowspec (AFI=2, SAFI=133) and VPN Flowspec (SAFI=134) variants are not yet implemented and return an explicit error.
 func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
-	if mp.SubAddressFamilyID == 133 {
+	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 133 {
 		return flowspec.UnmarshalFlowspecNLRI(mp.NLRI)
+	}
+	if mp.AddressFamilyID == 2 && mp.SubAddressFamilyID == 133 {
+		return nil, fmt.Errorf("IPv6 Flowspec (AFI=2, SAFI=133) is not yet implemented")
+	}
+	if mp.SubAddressFamilyID == 134 {
+		return nil, fmt.Errorf("VPN Flowspec (AFI=%d, SAFI=134) is not yet implemented", mp.AddressFamilyID)
 	}
 
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
@@ -214,7 +221,7 @@ func (mp *MPReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
 		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.NLRI)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetNLRIMVPN instantiates Multicast VPN (SAFI 129) NLRI
@@ -223,7 +230,7 @@ func (mp *MPReachNLRI) GetNLRIMVPN() (*mcastvpn.Route, error) {
 		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.NLRI)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // GetNLRIRTC checks for presence of NLRI 132 Route Target Constraint in the NLRI 14 NLRI data and if exists, instantiate RTC NLRI object
@@ -232,7 +239,7 @@ func (mp *MPReachNLRI) GetNLRIRTC() (*rtc.Route, error) {
 		return rtc.UnmarshalRTCNLRI(mp.NLRI)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
 // UnmarshalMPReachNLRI builds MP Reach NLRI attributes
@@ -240,25 +247,36 @@ func UnmarshalMPReachNLRI(b []byte, srv6 bool, addPath map[int]bool) (MPNLRI, er
 	if glog.V(6) {
 		glog.Infof("MPReachNLRI Raw: %s SRv6 flag: %t add path: %+v", tools.MessageHex(b), srv6, addPath)
 	}
-	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
-	}
 	mp := MPReachNLRI{
 		addPath: addPath,
 		SRv6:    srv6,
 	}
 	p := 0
+	if p+3 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: need at least 3 bytes from offset %d, have %d", p, len(b)-p)
+	}
 	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	mp.SubAddressFamilyID = uint8(b[p])
 	p++
+	if p+1 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: need 1 byte for Next Hop Address Length at offset %d, have %d", p, len(b)-p)
+	}
 	mp.NextHopAddressLength = uint8(b[p])
 	p++
+	if p+int(mp.NextHopAddressLength) > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: need %d bytes for Next Hop Address, have %d", mp.NextHopAddressLength, len(b)-p)
+	}
 	mp.NextHopAddress = make([]byte, mp.NextHopAddressLength)
 	copy(mp.NextHopAddress, b[p:p+int(mp.NextHopAddressLength)])
 	p += int(mp.NextHopAddressLength)
-	// Skip reserved byte
-	p++
+	// RFC 4760 §3: Reserved field (1 octet) — MUST be set to 0 by sender, SHOULD be ignored by receiver.
+	// Note: RFC 4760 (which obsoletes RFC 2858) renamed the former "Number of SNPAs" field to Reserved
+	// and removed all SNPA-related handling from MP_REACH_NLRI (see RFC 4760 §10).
+	if p+1 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: need 1 byte for Reserved at offset %d, have %d", p, len(b)-p)
+	}
+	p++ // skip Reserved byte (RFC 4760 §3)
 	mp.NLRI = make([]byte, len(b[p:]))
 	copy(mp.NLRI, b[p:])
 

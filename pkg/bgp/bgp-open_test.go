@@ -16,14 +16,14 @@ func TestUnmarshalBGPOpenMessage(t *testing.T) {
 	}{
 		{
 			name:  "valid",
-			input: []byte{0, 91, 1, 4, 19, 206, 0, 90, 192, 168, 8, 8, 62, 2, 6, 1, 4, 0, 1, 0, 1, 2, 6, 1, 4, 0, 1, 0, 4, 2, 6, 1, 4, 0, 1, 0, 128, 2, 2, 128, 0, 2, 2, 2, 0, 2, 6, 65, 4, 0, 0, 19, 206, 2, 6, 69, 4, 1, 0, 134, 3, 2, 20, 5, 18, 0, 1, 0, 1, 0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 0, 128, 0, 2},
+			input: []byte{0, 99, 1, 4, 19, 206, 0, 90, 192, 168, 8, 8, 70, 2, 6, 1, 4, 0, 1, 0, 1, 2, 6, 1, 4, 0, 1, 0, 4, 2, 6, 1, 4, 0, 1, 0, 128, 2, 2, 128, 0, 2, 2, 2, 0, 2, 6, 65, 4, 0, 0, 19, 206, 2, 6, 69, 4, 1, 0, 134, 3, 2, 20, 5, 18, 0, 1, 0, 1, 0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 0, 128, 0, 2},
 			expect: &OpenMessage{
-				Length:  91,
+				Length:  99,
 				Type:    1,
 				Version: 4,
 				MyAS:    5070, HoldTime: 90,
 				BGPID:              []byte{192, 168, 8, 8},
-				OptParamLen:        62,
+				OptParamLen:        70,
 				OptionalParameters: []InformationalTLV{},
 				Capabilities: Capability{
 					1: []*CapabilityData{
@@ -79,7 +79,7 @@ func TestUnmarshalBGPOpenMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			message, err := UnmarshalBGPOpenMessage(tt.input)
 			if err != nil && !tt.fail {
-				t.Fatal("expected to succeed but failed")
+				t.Fatalf("expected to succeed but failed with: %v", err)
 			}
 			if err == nil && tt.fail {
 				t.Fatal("expected to fail but succeeded")

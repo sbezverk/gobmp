@@ -6,13 +6,14 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/pmsi"
-	"github.com/sbezverk/tools"
 	"github.com/sbezverk/tools/sort"
 )
 
@@ -70,13 +71,13 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	}
 	if ba.MED != oba.MED {
 		equal = false
-		diffs = append(diffs, "as_path_count mismatch: "+strconv.Itoa(int(ba.MED))+" and "+strconv.Itoa(int(oba.MED)))
+		diffs = append(diffs, "med mismatch: "+strconv.Itoa(int(ba.MED))+" and "+strconv.Itoa(int(oba.MED)))
 	}
 	if ba.LocalPref != oba.LocalPref {
 		equal = false
 		diffs = append(diffs, "local_pref mismatch: "+strconv.Itoa(int(ba.LocalPref))+" and "+strconv.Itoa(int(oba.LocalPref)))
 	}
-	if ba.IsAtomicAgg && !oba.IsAtomicAgg {
+	if ba.IsAtomicAgg != oba.IsAtomicAgg {
 		equal = false
 		diffs = append(diffs, "is_atomic_agg mismatch: "+strconv.FormatBool(ba.IsAtomicAgg)+" and "+strconv.FormatBool(oba.IsAtomicAgg))
 	}
@@ -122,92 +123,138 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 }
 
 // UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
-// and instantiates BaseAttributes object
+// and instantiates BaseAttributes object. It is a convenience wrapper that parses
+// the raw byte slice via UnmarshalBGPPathAttributes and then populates BaseAttributes.
 func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
-	if glog.V(6) {
-		glog.Infof("UnmarshalBGPBaseAttributes RAW: %+v", tools.MessageHex(b))
-	}
+	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b)
+	_ = attrs // raw slice not needed by this call-path
+	return baseAttrs, err
+}
+
+// unmarshalBaseAttrsFromSlice populates a BaseAttributes struct from an already-parsed
+// []PathAttribute slice, avoiding a second walk of the raw byte buffer.
+func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error) {
 	baseAttr := BaseAttributes{}
-	for p := 0; p < len(b); {
-		flag := b[p]
-		p++
-		t := b[p]
-		p++
-		var l uint16
-		// Checking for Extened
-		if flag&0x10 == 0x10 {
-			l = binary.BigEndian.Uint16(b[p : p+2])
-			p += 2
-		} else {
-			l = uint16(b[p])
-			p++
-		}
-		switch t {
+	for _, attr := range attrs {
+		b := attr.Attribute
+		switch attr.AttributeType {
 		case 1:
-			baseAttr.Origin = unmarshalAttrOrigin(b[p : p+int(l)])
+			baseAttr.Origin = unmarshalAttrOrigin(b)
 		case 2:
-			baseAttr.ASPath = unmarshalAttrASPath(b[p : p+int(l)])
+			var err error
+			baseAttr.ASPath, err = unmarshalAttrASPath(b)
+			if err != nil {
+				return nil, err
+			}
 			baseAttr.ASPathCount = int32(len(baseAttr.ASPath))
 		case 3:
-			baseAttr.Nexthop = unmarshalAttrNextHop(b[p : p+int(l)])
+			baseAttr.Nexthop = unmarshalAttrNextHop(b)
 		case 4:
-			baseAttr.MED = unmarshalAttrMED(b[p : p+int(l)])
+			baseAttr.MED = unmarshalAttrMED(b)
 		case 5:
-			baseAttr.LocalPref = unmarshalAttrLocalPref(b[p : p+int(l)])
+			baseAttr.LocalPref = unmarshalAttrLocalPref(b)
 		case 6:
 			baseAttr.IsAtomicAgg = true
 		case 7:
-			baseAttr.Aggregator = unmarshalAttrAggregator(b[p : p+int(l)])
+			baseAttr.Aggregator = unmarshalAttrAggregator(b)
 		case 8:
-			baseAttr.CommunityList = unmarshalAttrCommunity(b[p : p+int(l)])
+			baseAttr.CommunityList = unmarshalAttrCommunity(b)
 		case 9:
-			baseAttr.OriginatorID = unmarshalAttrOriginatorID(b[p : p+int(l)])
+			baseAttr.OriginatorID = unmarshalAttrOriginatorID(b)
 		case 10:
-			baseAttr.ClusterList = unmarshalAttrClusterList(b[p : p+int(l)])
+			var err error
+			baseAttr.ClusterList, err = unmarshalAttrClusterList(b)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal Cluster List attribute with error: %+v", err)
+			}
+		case 11:
+			// DPA (deprecated) - RFC 6938
+		case 12:
+			// ADVERTISER (deprecated) - RFC 1863, RFC 6938
+		case 13:
+			// RCID_PATH / CLUSTER_ID (deprecated) - RFC 1863, RFC 6938
+		case 14:
+			// MP_REACH_NLRI - RFC 4760 (parsed separately in path attribute parser)
+		case 15:
+			// MP_UNREACH_NLRI - RFC 4760 (parsed separately in path attribute parser)
 		case 16:
-			baseAttr.ExtCommunityList = unmarshalAttrExtCommunity(b[p : p+int(l)])
+			baseAttr.ExtCommunityList = unmarshalAttrExtCommunity(b)
 		case 17:
-			baseAttr.AS4Path = unmarshalAttrAS4Path(b[p : p+int(l)])
+			baseAttr.AS4Path = unmarshalAttrAS4Path(b)
 			baseAttr.AS4PathCount = int32(len(baseAttr.AS4Path))
 		case 18:
-			baseAttr.AS4Aggregator = unmarshalAttrAS4Aggregator(b[p : p+int(l)])
+			baseAttr.AS4Aggregator = unmarshalAttrAS4Aggregator(b)
+		case 19:
+			// SAFI Specific Attribute (SSA, deprecated)
+		case 20:
+			// Connector Attribute (deprecated) - RFC 6037
+		case 21:
+			// AS_PATHLIMIT (deprecated) - draft-ietf-idr-as-pathlimit
 		case 22:
 			// RFC 6514 PMSI Tunnel Attribute
-			tunnel, err := pmsi.ParsePMSITunnel(b[p : p+int(l)])
+			tunnel, err := pmsi.ParsePMSITunnel(b)
 			if err != nil {
-				glog.Warningf("failed to parse PMSI Tunnel attribute: %v", err)
+				glog.Errorf("failed to parse PMSI Tunnel attribute: %v", err)
 			} else {
 				baseAttr.PMSITunnel = tunnel
 			}
 		case 23:
-			baseAttr.TunnelEncapAttr = make([]byte, l)
-			copy(baseAttr.TunnelEncapAttr, b[p:p+int(l)])
+			// Tunnel Encapsulation Attribute - RFC 9012
+			baseAttr.TunnelEncapAttr = make([]byte, len(b))
+			copy(baseAttr.TunnelEncapAttr, b)
 		case 24:
+			// Traffic Engineering - RFC 5543
 		case 25:
+			// IPv6 Address Specific Extended Community - RFC 5701
 		case 26:
 			// RFC 7311: AIGP Attribute
-			aigp, err := UnmarshalAIGP(b[p : p+int(l)])
+			aigp, err := UnmarshalAIGP(b)
 			if err != nil {
-				glog.Warningf("failed to unmarshal AIGP attribute with error: %+v", err)
+				glog.Errorf("failed to unmarshal AIGP attribute with error: %+v", err)
 			} else {
 				baseAttr.AIGP = aigp
 			}
 		case 27:
+			// PE Distinguisher Labels - RFC 6514
 		case 28:
+			// BGP Entropy Label Capability Attribute (deprecated) - RFC 6790, RFC 7447
 		case 29:
+			// BGP-LS Attribute - RFC 9552
+		case 30:
+			// Deprecated - RFC 8093
+		case 31:
+			// Deprecated - RFC 8093
 		case 32:
-			baseAttr.LgCommunityList = unmarshalAttrLgCommunity(b[p : p+int(l)])
+			baseAttr.LgCommunityList = unmarshalAttrLgCommunity(b)
 		case 33:
+			// BGPsec_Path - RFC 8205
+		case 34:
+			// BGP Community Container Attribute (TEMPORARY) - draft-ietf-idr-wide-bgp-communities
+		case 35:
+			// Only to Customer (OTC) - RFC 9234
+		case 36:
+			// BGP Domain Path (D-PATH, TEMPORARY) - draft-ietf-bess-evpn-ipvpn-interworking
+		case 37:
+			// SFP attribute - RFC 9015
+		case 38:
+			// BFD Discriminator - RFC 9026
+		case 39:
+			// BGP Next Hop Dependent Characteristic (NHC, TEMPORARY) - draft-ietf-idr-nhc
 		case 40:
 			// RFC 8669: BGP Prefix-SID
 			var err error
-			baseAttr.BGPPrefixSID, err = UnmarshalBGPPrefixSID(b[p : p+int(l)])
+			baseAttr.BGPPrefixSID, err = UnmarshalBGPPrefixSID(b)
 			if err != nil {
+				baseAttr.BGPPrefixSID = nil
 				glog.Errorf("failed to unmarshal BGP Prefix-SID attribute with error: %+v", err)
 			}
+		case 41:
+			// BIER - RFC 9793
+		case 42:
+			// Edge Metadata Path Attribute (TEMPORARY) - draft-ietf-idr-5g-edge-service-metadata
 		case 128:
+			// ATTR_SET - RFC 6368
 		}
-		p += int(l)
 	}
 	// Calculating hash of all recovered base attributes
 	ba, err := json.Marshal(baseAttr)
@@ -222,6 +269,9 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 
 // unmarshalAttrOrigin returns the value of Origin attribute
 func unmarshalAttrOrigin(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
 	switch b[0] {
 	case 0:
 		return "igp"
@@ -235,68 +285,88 @@ func unmarshalAttrOrigin(b []byte) string {
 }
 
 // unmarshalAttrASPath returns a slice with a list of ASes
-func unmarshalAttrASPath(b []byte) []uint32 {
+func unmarshalAttrASPath(b []byte) ([]uint32, error) {
 	if len(b) == 0 {
-		return nil
+		return []uint32{}, nil
 	}
 	path := make([]uint32, 0)
-	as4 := isASPath4(b)
+	// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 only inspects the
+	// first segment, so full per-segment bounds validation is done in the loop below.
+	as4, err := isASPath4(b)
+	if err != nil {
+		return nil, err
+	}
+	asSize := 2
+	if as4 {
+		asSize = 4
+	}
 	for p := 0; p < len(b); {
-		// Skipping type
+		// Segment type byte
+		if p+1 > len(b) {
+			return nil, fmt.Errorf("AS_PATH attribute truncated: cannot read segment type at offset %d", p)
+		}
+		p++ // skip segment type
+		// Segment length (number of ASNs in this segment)
+		if p+1 > len(b) {
+			return nil, fmt.Errorf("AS_PATH attribute truncated: cannot read segment length at offset %d", p)
+		}
+		l := int(b[p])
 		p++
-		// Length of path segment of type
-		l := b[p]
-		p++
-		// Attempting to detect if 2 or 4 bytes AS is used
-		for n := 0; n < int(l); n++ {
+		// Validate that all ASN values for this segment are present before reading any
+		if p+l*asSize > len(b) {
+			return nil, fmt.Errorf("AS_PATH attribute truncated: segment at offset %d claims %d ASes (%d bytes) but only %d bytes remain",
+				p, l, l*asSize, len(b)-p)
+		}
+		for n := 0; n < l; n++ {
 			if as4 {
-				as := binary.BigEndian.Uint32(b[p : p+4])
+				path = append(path, binary.BigEndian.Uint32(b[p:p+4]))
 				p += 4
-				path = append(path, as)
 			} else {
-				as := binary.BigEndian.Uint16(b[p : p+2])
+				path = append(path, uint32(binary.BigEndian.Uint16(b[p:p+2])))
 				p += 2
-				path = append(path, uint32(as))
 			}
 		}
 	}
 
-	return path
+	return path, nil
 }
 
-func isASPath4(b []byte) bool {
-	p := 0
-	// Skipping type
-	p++
-	// Length of path segment in 2 or 4 bytes depending if AS2 or AS4 is used.
-	l := int(b[p])
-	p++
-	// Check if next segment can be found with AS4
-	if l*4 == len(b[p:]) {
-		// Found last AS4 segment, confirmed AS4
+func isASPath4(b []byte) (bool, error) {
+	if len(b) == 0 {
+		return false, fmt.Errorf("invalid AS_PATH attribute: empty buffer")
+	}
+	// validSegmentType returns true for the four defined AS_PATH segment types:
+	//   0x01 AS_SET, 0x02 AS_SEQUENCE, 0x03 AS_CONFED_SEQUENCE, 0x04 AS_CONFED_SET
+	validSegmentType := func(t byte) bool {
+		return t == 0x01 || t == 0x02 || t == 0x03 || t == 0x04
+	}
+	// triesWidth walks the full buffer consuming segments of asSize bytes per ASN.
+	// Returns true only when all bytes are consumed and every segment type is valid.
+	triesWidth := func(asSize int) bool {
+		for p := 0; p < len(b); {
+			if p+2 > len(b) {
+				return false
+			}
+			if !validSegmentType(b[p]) {
+				return false
+			}
+			l := int(b[p+1])
+			p += 2
+			if p+l*asSize > len(b) {
+				return false
+			}
+			p += l * asSize
+		}
 		return true
 	}
-	// Check if next segment can be found with AS4
-	if l*2 == len(b[p:]) {
-		// Found last AS2 segment, confirmed AS2
-		return false
+	switch {
+	case triesWidth(4):
+		return true, nil
+	case triesWidth(2):
+		return false, nil
+	default:
+		return false, fmt.Errorf("invalid AS_PATH attribute: buffer does not parse as either AS2 or AS4 segments")
 	}
-	// Check if next segment can be found with AS4
-	if p+l*4 < len(b) {
-		if b[p+l*4] == 0x1 || b[p+l*4] == 0x2 {
-			// Found next AS4 segment, confirmed AS4
-			return true
-		}
-	}
-	// Check if next segment can be found with AS2
-	if p+l*2 < len(b) {
-		if b[p+l*2] == 0x1 || b[p+l*2] == 0x2 {
-			// Found next AS2 segment, confirmed AS2
-			return false
-		}
-	}
-	// Should never reach here
-	return false
 }
 
 // unmarshalAttrNextHop returns the value of Next Hop attribute
@@ -334,6 +404,9 @@ func unmarshalAttrAggregator(b []byte) []byte {
 // getCommunity returns a slice of communities
 func getCommunity(b []byte) []uint32 {
 	comm := make([]uint32, 0)
+	if len(b)%4 != 0 {
+		return comm
+	}
 	for p := 0; p < len(b); {
 		c := binary.BigEndian.Uint32(b[p : p+4])
 		p += 4
@@ -363,33 +436,19 @@ func unmarshalAttrOriginatorID(b []byte) string {
 	return "invalid length"
 }
 
-// getClusterID returns a slice of Cluster IDs from Cluster List attribute
-func getClusterID(b []byte) [][]byte {
-	cl := make([][]byte, 0)
-	i := 0
-	for p := 0; p < len(b); {
-		c := make([]byte, 4)
-		copy(c, b[p:p+4])
-		p += 4
-		i++
-		cl = append(cl, c)
-	}
-
-	return cl
-}
-
 // unmarshalAttrClusterList returns the string with comma separated communities.
-func unmarshalAttrClusterList(b []byte) string {
-	var clist string
-	cl := getClusterID(b)
-	for i, c := range cl {
-		clist += net.IP(c).To4().String()
-		if i < len(cl)-1 {
-			clist += ", "
-		}
+func unmarshalAttrClusterList(b []byte) (string, error) {
+	if len(b) == 0 {
+		return "", nil
 	}
-
-	return clist
+	if len(b)%4 != 0 {
+		return "", fmt.Errorf("invalid length expected multiple of 4 got %d", len(b))
+	}
+	parts := make([]string, len(b)/4)
+	for i := 0; i < len(b); i += 4 {
+		parts[i/4] = net.IP(b[i : i+4]).To4().String()
+	}
+	return strings.Join(parts, ", "), nil
 }
 
 // unmarshalAttrExtCommunity returns a slice with all extended communities found in bgp update
@@ -400,7 +459,7 @@ func unmarshalAttrExtCommunity(b []byte) []string {
 	}
 	s := make([]string, len(ext))
 	for i, c := range ext {
-		s[i] += c.String()
+		s[i] = c.String()
 	}
 
 	return s
@@ -424,12 +483,21 @@ func unmarshalAttrLgCommunity(b []byte) []string {
 func unmarshalAttrAS4Path(b []byte) []uint32 {
 	path := make([]uint32, 0)
 	for p := 0; p < len(b); {
-		// Skipping type
+		// Segment type byte
+		if p+1 > len(b) {
+			break
+		}
 		p++
-		// Length of path segment in 4 bytes
-		l := b[p]
+		// Length of path segment in number of 4-byte ASes
+		if p+1 > len(b) {
+			break
+		}
+		l := int(b[p])
 		p++
-		for n := 0; n < int(l); n++ {
+		for n := 0; n < l; n++ {
+			if p+4 > len(b) {
+				return path
+			}
 			as := binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 			path = append(path, as)

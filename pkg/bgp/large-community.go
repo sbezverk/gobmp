@@ -33,6 +33,12 @@ func (lg *LgCommunity) String() string {
 // UnmarshalBGPLgCommunity builds a slice of Large Communities
 func UnmarshalBGPLgCommunity(b []byte) ([]LgCommunity, error) {
 	lgs := make([]LgCommunity, 0)
+	if len(b) == 0 {
+		return lgs, nil
+	}
+	if len(b)%12 != 0 {
+		return nil, fmt.Errorf("invalid length expected multiple of 12 got %d", len(b))
+	}
 	for p := 0; p < len(b); {
 		lg, err := makeLgCommunity(b[p : p+12])
 		if err != nil {
