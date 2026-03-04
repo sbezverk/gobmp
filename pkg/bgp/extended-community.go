@@ -40,9 +40,6 @@ func makeExtCommunity(b []byte) (*ExtCommunity, error) {
 	}
 	p := 0
 	ext.Type = b[p]
-	if p+1 > len(b) {
-		return nil, fmt.Errorf("truncated extended community type at offset %d: need 1 byte, have 0", p)
-	}
 	p++
 	l := 7
 	switch ext.Type & 0x3f {
