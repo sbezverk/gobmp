@@ -31,7 +31,7 @@ func TestUnmarshalMPReachNLRI_Errors(t *testing.T) {
 			name: "missing Reserved byte",
 			// AFI=1, SAFI=1, NextHopLen=4, 4 NH bytes, then buffer ends (no Reserved)
 			input:   []byte{0x00, 0x01, 0x01, 0x04, 0xC0, 0xA8, 0x01, 0x01},
-			wantErr: "missing Reserved byte",
+			wantErr: "need 1 byte for Reserved",
 		},
 	}
 	for _, tt := range tests {
