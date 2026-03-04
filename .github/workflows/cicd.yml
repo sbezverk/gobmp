@@ -2,7 +2,7 @@ name: cicd
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
 
 jobs:
