@@ -19,6 +19,8 @@ jobs:
       # --- Setup ---
       - name: Checkout Repo
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # full history required by Codecov to resolve merge-base
       - name: Setup Environment
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
