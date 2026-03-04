@@ -304,12 +304,12 @@ All four variants are indistinguishable after this function. Downstream consumer
 
 | Variant | Current | Suggested |
 |---------|---------|-----------|
-| IPv4 Flowspec (1, 133) | 27 | 27 |
-| IPv6 Flowspec (2, 133) | 27 | 30 |
-| VPNv4 Flowspec (1, 134) | 27 | 31 |
-| VPNv6 Flowspec (2, 134) | 27 | 32 |
+| IPv4 Flowspec (1, 133) | 27 | 27 (keep existing code) |
+| IPv6 Flowspec (2, 133) | 27 | use a distinct, unused type code |
+| VPNv4 Flowspec (1, 134) | 27 | use a distinct, unused type code |
+| VPNv6 Flowspec (2, 134) | 27 | use a distinct, unused type code |
 
-(Concrete values should be chosen to not conflict with existing type codes in the switch statement.)
+(Suggested values must be chosen so they do not conflict with any existing type codes in the `NLRIMessageType` switch statement in `mp-nlri.go`; no specific numeric values are mandated here.)
 
 ### 8.2 `UnmarshalFlowspecNLRI` — No AFI/SAFI Context
 
