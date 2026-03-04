@@ -2,6 +2,7 @@ package bgp
 
 import (
 	"encoding/binary"
+	"fmt"
 	"strconv"
 
 	"github.com/golang/glog"
@@ -84,11 +85,20 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 		glog.Infof("UnmarshalBGPCapability Raw: %s", tools.MessageHex(b))
 	}
 	caps := make(Capability)
+	if len(b) == 0 {
+		return caps, nil
+	}
 	for p := 0; p < len(b); {
 		code := b[p]
+		if p+2 > len(b) {
+			return nil, fmt.Errorf("truncated capability header at offset %d: need 2 bytes, have %d", p, len(b)-p)
+		}
 		p++
 		length := b[p]
 		p++
+		if p+int(length) > len(b) {
+			return nil, fmt.Errorf("truncated capability value at offset %d: need %d bytes, have %d", p, length, len(b)-p)
+		}
 		capData := &CapabilityData{}
 		capData.Value = make([]byte, length)
 		copy(capData.Value, b[p:p+int(length)])

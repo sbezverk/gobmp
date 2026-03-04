@@ -95,7 +95,10 @@ func TestUnmarshalASPath(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		r := unmarshalAttrASPath(tt.input)
+		r, err := unmarshalAttrASPath(tt.input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if !reflect.DeepEqual(tt.asPath, r) {
 			t.Fatalf("expected %+v and result %+v as path do not match", tt.asPath, r)
 		}

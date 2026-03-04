@@ -6,11 +6,12 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net"
 	"reflect"
 	"strconv"
+	"strings"
 
-	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/pmsi"
 	"github.com/sbezverk/tools/sort"
 )
@@ -69,13 +70,13 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	}
 	if ba.MED != oba.MED {
 		equal = false
-		diffs = append(diffs, "as_path_count mismatch: "+strconv.Itoa(int(ba.MED))+" and "+strconv.Itoa(int(oba.MED)))
+		diffs = append(diffs, "med mismatch: "+strconv.Itoa(int(ba.MED))+" and "+strconv.Itoa(int(oba.MED)))
 	}
 	if ba.LocalPref != oba.LocalPref {
 		equal = false
 		diffs = append(diffs, "local_pref mismatch: "+strconv.Itoa(int(ba.LocalPref))+" and "+strconv.Itoa(int(oba.LocalPref)))
 	}
-	if ba.IsAtomicAgg && !oba.IsAtomicAgg {
+	if ba.IsAtomicAgg != oba.IsAtomicAgg {
 		equal = false
 		diffs = append(diffs, "is_atomic_agg mismatch: "+strconv.FormatBool(ba.IsAtomicAgg)+" and "+strconv.FormatBool(oba.IsAtomicAgg))
 	}
@@ -139,7 +140,11 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 		case 1:
 			baseAttr.Origin = unmarshalAttrOrigin(b)
 		case 2:
-			baseAttr.ASPath = unmarshalAttrASPath(b)
+			var err error
+			baseAttr.ASPath, err = unmarshalAttrASPath(b)
+			if err != nil {
+				return nil, err
+			}
 			baseAttr.ASPathCount = int32(len(baseAttr.ASPath))
 		case 3:
 			baseAttr.Nexthop = unmarshalAttrNextHop(b)
@@ -156,7 +161,21 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 		case 9:
 			baseAttr.OriginatorID = unmarshalAttrOriginatorID(b)
 		case 10:
-			baseAttr.ClusterList = unmarshalAttrClusterList(b)
+			var err error
+			baseAttr.ClusterList, err = unmarshalAttrClusterList(b)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal Cluster List attribute with error: %+v", err)
+			}
+		case 11:
+			// DPA (deprecated) - RFC 6938
+		case 12:
+			// ADVERTISER (deprecated) - RFC 1863, RFC 6938
+		case 13:
+			// RCID_PATH / CLUSTER_ID (deprecated) - RFC 1863, RFC 6938
+		case 14:
+			// MP_REACH_NLRI - RFC 4760 (parsed separately in path attribute parser)
+		case 15:
+			// MP_UNREACH_NLRI - RFC 4760 (parsed separately in path attribute parser)
 		case 16:
 			baseAttr.ExtCommunityList = unmarshalAttrExtCommunity(b)
 		case 17:
@@ -164,41 +183,75 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			baseAttr.AS4PathCount = int32(len(baseAttr.AS4Path))
 		case 18:
 			baseAttr.AS4Aggregator = unmarshalAttrAS4Aggregator(b)
+		case 19:
+			// SAFI Specific Attribute (SSA, deprecated)
+		case 20:
+			// Connector Attribute (deprecated) - RFC 6037
+		case 21:
+			// AS_PATHLIMIT (deprecated) - draft-ietf-idr-as-pathlimit
 		case 22:
 			// RFC 6514 PMSI Tunnel Attribute
 			tunnel, err := pmsi.ParsePMSITunnel(b)
 			if err != nil {
-				glog.Warningf("failed to parse PMSI Tunnel attribute: %v", err)
+				return nil, fmt.Errorf("failed to parse PMSI Tunnel attribute: %v", err)
 			} else {
 				baseAttr.PMSITunnel = tunnel
 			}
 		case 23:
+			// Tunnel Encapsulation Attribute - RFC 9012
 			baseAttr.TunnelEncapAttr = make([]byte, len(b))
 			copy(baseAttr.TunnelEncapAttr, b)
 		case 24:
+			// Traffic Engineering - RFC 5543
 		case 25:
+			// IPv6 Address Specific Extended Community - RFC 5701
 		case 26:
 			// RFC 7311: AIGP Attribute
 			aigp, err := UnmarshalAIGP(b)
 			if err != nil {
-				glog.Warningf("failed to unmarshal AIGP attribute with error: %+v", err)
+				return nil, fmt.Errorf("failed to unmarshal AIGP attribute with error: %+v", err)
 			} else {
 				baseAttr.AIGP = aigp
 			}
 		case 27:
+			// PE Distinguisher Labels - RFC 6514
 		case 28:
+			// BGP Entropy Label Capability Attribute (deprecated) - RFC 6790, RFC 7447
 		case 29:
+			// BGP-LS Attribute - RFC 9552
+		case 30:
+			// Deprecated - RFC 8093
+		case 31:
+			// Deprecated - RFC 8093
 		case 32:
 			baseAttr.LgCommunityList = unmarshalAttrLgCommunity(b)
 		case 33:
+			// BGPsec_Path - RFC 8205
+		case 34:
+			// BGP Community Container Attribute (TEMPORARY) - draft-ietf-idr-wide-bgp-communities
+		case 35:
+			// Only to Customer (OTC) - RFC 9234
+		case 36:
+			// BGP Domain Path (D-PATH, TEMPORARY) - draft-ietf-bess-evpn-ipvpn-interworking
+		case 37:
+			// SFP attribute - RFC 9015
+		case 38:
+			// BFD Discriminator - RFC 9026
+		case 39:
+			// BGP Next Hop Dependent Characteristic (NHC, TEMPORARY) - draft-ietf-idr-nhc
 		case 40:
 			// RFC 8669: BGP Prefix-SID
 			var err error
 			baseAttr.BGPPrefixSID, err = UnmarshalBGPPrefixSID(b)
 			if err != nil {
-				glog.Errorf("failed to unmarshal BGP Prefix-SID attribute with error: %+v", err)
+				return nil, fmt.Errorf("failed to unmarshal BGP Prefix-SID attribute with error: %+v", err)
 			}
+		case 41:
+			// BIER - RFC 9793
+		case 42:
+			// Edge Metadata Path Attribute (TEMPORARY) - draft-ietf-idr-5g-edge-service-metadata
 		case 128:
+			// ATTR_SET - RFC 6368
 		}
 	}
 	// Calculating hash of all recovered base attributes
@@ -227,12 +280,17 @@ func unmarshalAttrOrigin(b []byte) string {
 }
 
 // unmarshalAttrASPath returns a slice with a list of ASes
-func unmarshalAttrASPath(b []byte) []uint32 {
+func unmarshalAttrASPath(b []byte) ([]uint32, error) {
 	if len(b) == 0 {
-		return nil
+		return []uint32{}, nil
 	}
 	path := make([]uint32, 0)
-	as4 := isASPath4(b)
+	// Attempting to detect if AS4 is used in AS_PATH attribute, thia call also validates
+	// the attribute and returns error if invalid, no further guards needed in the loop below.
+	as4, err := isASPath4(b)
+	if err != nil {
+		return nil, err
+	}
 	for p := 0; p < len(b); {
 		// Skipping type
 		p++
@@ -253,42 +311,48 @@ func unmarshalAttrASPath(b []byte) []uint32 {
 		}
 	}
 
-	return path
+	return path, nil
 }
 
-func isASPath4(b []byte) bool {
+func isASPath4(b []byte) (bool, error) {
 	p := 0
 	// Skipping type
+	if p+1 >= len(b) {
+		return false, fmt.Errorf("invalid AS_PATH attribute, not enough bytes %d to read path segment type", len(b)-p)
+	}
 	p++
 	// Length of path segment in 2 or 4 bytes depending if AS2 or AS4 is used.
 	l := int(b[p])
+	if p+1 >= len(b) {
+		return false, fmt.Errorf("invalid AS_PATH attribute, not enough bytes %d to read path segment length", len(b)-p)
+	}
 	p++
 	// Check if next segment can be found with AS4
 	if l*4 == len(b[p:]) {
 		// Found last AS4 segment, confirmed AS4
-		return true
+		return true, nil
 	}
 	// Check if next segment can be found with AS4
 	if l*2 == len(b[p:]) {
 		// Found last AS2 segment, confirmed AS2
-		return false
+		return false, nil
 	}
 	// Check if next segment can be found with AS4
 	if p+l*4 < len(b) {
 		if b[p+l*4] == 0x1 || b[p+l*4] == 0x2 {
 			// Found next AS4 segment, confirmed AS4
-			return true
+			return true, nil
 		}
 	}
 	// Check if next segment can be found with AS2
 	if p+l*2 < len(b) {
 		if b[p+l*2] == 0x1 || b[p+l*2] == 0x2 {
 			// Found next AS2 segment, confirmed AS2
-			return false
+			return false, nil
 		}
 	}
 	// Should never reach here
-	return false
+	return false, fmt.Errorf("invalid AS_PATH attribute, unable to determine AS path type")
 }
 
 // unmarshalAttrNextHop returns the value of Next Hop attribute
@@ -355,33 +419,19 @@ func unmarshalAttrOriginatorID(b []byte) string {
 	return "invalid length"
 }
 
-// getClusterID returns a slice of Cluster IDs from Cluster List attribute
-func getClusterID(b []byte) [][]byte {
-	cl := make([][]byte, 0)
-	i := 0
-	for p := 0; p < len(b); {
-		c := make([]byte, 4)
-		copy(c, b[p:p+4])
-		p += 4
-		i++
-		cl = append(cl, c)
-	}
-
-	return cl
-}
-
 // unmarshalAttrClusterList returns the string with comma separated communities.
-func unmarshalAttrClusterList(b []byte) string {
-	var clist string
-	cl := getClusterID(b)
-	for i, c := range cl {
-		clist += net.IP(c).To4().String()
-		if i < len(cl)-1 {
-			clist += ", "
-		}
+func unmarshalAttrClusterList(b []byte) (string, error) {
+	if len(b) == 0 {
+		return "", nil
 	}
-
-	return clist
+	if len(b)%4 != 0 {
+		return "", fmt.Errorf("invalid length expected multiple of 4 got %d", len(b))
+	}
+	parts := make([]string, len(b)/4)
+	for i := 0; i < len(b); i += 4 {
+		parts[i/4] = net.IP(b[i : i+4]).To4().String()
+	}
+	return strings.Join(parts, ", "), nil
 }
 
 // unmarshalAttrExtCommunity returns a slice with all extended communities found in bgp update
@@ -392,7 +442,7 @@ func unmarshalAttrExtCommunity(b []byte) []string {
 	}
 	s := make([]string, len(ext))
 	for i, c := range ext {
-		s[i] += c.String()
+		s[i] = c.String()
 	}
 
 	return s

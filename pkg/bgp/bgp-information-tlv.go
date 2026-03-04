@@ -1,6 +1,9 @@
 package bgp
 
 import (
+	"encoding/binary"
+	"fmt"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
 )
@@ -12,43 +15,78 @@ type InformationalTLV struct {
 	Value  []byte
 }
 
-// UnmarshalBGPTLV builds a slice of Informational TLVs
+// UnmarshalBGPTLV builds a slice of Informational TLVs from a standard BGP OPEN Optional Parameters
+// field (RFC 4271: 1-byte parameter length). For RFC 9072 extended encoding use the caller in
+// UnmarshalBGPOpenMessage which detects the sentinel and calls unmarshalTLVs directly.
 func UnmarshalBGPTLV(b []byte) ([]InformationalTLV, Capability, error) {
 	if glog.V(6) {
 		glog.Infof("BGPTLV Raw: %s", tools.MessageHex(b))
 	}
+	return unmarshalTLVs(b, false)
+}
+
+// unmarshalTLVs is the shared implementation for both RFC 4271 (extendedParamLen=false, 1-byte
+// parameter length) and RFC 9072 (extendedParamLen=true, 2-byte parameter length) encodings.
+func unmarshalTLVs(b []byte, extendedParamLen bool) ([]InformationalTLV, Capability, error) {
 	tlvs := make([]InformationalTLV, 0)
 	caps := make(Capability)
+	if len(b) == 0 {
+		return tlvs, caps, nil
+	}
 	for p := 0; p < len(b); {
+		if p >= len(b) {
+			break
+		}
 		t := b[p]
 		p++
-		l := b[p]
-		p++
+
+		var l int
+		if extendedParamLen {
+			// RFC 9072: each Optional Parameter uses a 2-byte Length field.
+			if p+2 > len(b) {
+				return nil, nil, fmt.Errorf("truncated informational TLV length at offset %d: need 2 bytes, have %d", p, len(b)-p)
+			}
+			l = int(binary.BigEndian.Uint16(b[p : p+2]))
+			p += 2
+		} else {
+			// RFC 4271: each Optional Parameter uses a 1-byte Length field.
+			if p >= len(b) {
+				return nil, nil, fmt.Errorf("truncated informational TLV length at offset %d", p)
+			}
+			l = int(b[p])
+			p++
+		}
+
+		if p+l > len(b) {
+			return nil, nil, fmt.Errorf("truncated informational TLV value at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+		}
 		// Check if informational TLV carries Capabilities
 		if t == 2 {
-			c, err := UnmarshalBGPCapability(b[p : p+int(l)])
+			c, err := UnmarshalBGPCapability(b[p : p+l])
 			if err != nil {
 				return nil, nil, err
 			}
-			copyCapabilitiyMap(c, caps)
-			p += int(l)
+			copyCapabilityMap(c, caps)
+			p += l
 			continue
 		}
-		// Other than Capabilities informational tlvs are stored as is
+		// Other than Capabilities informational TLVs are stored as-is.
+		// Note: InformationalTLV.Length is byte; in RFC 9072 mode individual parameter lengths
+		// could theoretically exceed 255, but in practice capability values never do.
 		v := make([]byte, l)
-		copy(v, b[p:p+int(l)])
+		copy(v, b[p:p+l])
 		tlvs = append(tlvs, InformationalTLV{
 			Type:   t,
-			Length: l,
+			Length: byte(l),
 			Value:  v,
 		})
-		p += int(l)
+		p += l
 	}
 
 	return tlvs, caps, nil
 }
 
-func copyCapabilitiyMap(s, d Capability) {
+func copyCapabilityMap(s, d Capability) {
 	for k, v := range s {
 		src := make([]*CapabilityData, len(v))
 		copy(src, v)
