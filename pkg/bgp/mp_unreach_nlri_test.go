@@ -23,6 +23,18 @@ func TestUnmarshalMPUnReachNLRI(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "1 byte input returns error",
+			input:   []byte{0x00},
+			addPath: map[int]bool{},
+			wantErr: true,
+		},
+		{
+			name:    "2 bytes input returns error",
+			input:   []byte{0x00, 0x01},
+			addPath: map[int]bool{},
+			wantErr: true,
+		},
+		{
 			name:       "IPv4 unicast withdrawal no prefixes",
 			input:      []byte{0x00, 0x01, 0x01},
 			addPath:    map[int]bool{},

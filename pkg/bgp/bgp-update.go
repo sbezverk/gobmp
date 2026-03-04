@@ -28,7 +28,7 @@ type Update struct {
 	BaseAttributes           *BaseAttributes
 }
 
-// GetAllAttributeID return a slice of int with all attributes found in BGP Update
+// GetAllAttributeID returns a slice of uint8 with all attribute type codes found in BGP Update
 func (up *Update) GetAllAttributeID() []uint8 {
 	attrs := make([]uint8, 0)
 	for _, attr := range up.PathAttributes {

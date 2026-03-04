@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/pmsi"
 	"github.com/sbezverk/tools/sort"
 )
@@ -193,7 +194,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			// RFC 6514 PMSI Tunnel Attribute
 			tunnel, err := pmsi.ParsePMSITunnel(b)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse PMSI Tunnel attribute: %v", err)
+				glog.Errorf("failed to parse PMSI Tunnel attribute: %v", err)
 			} else {
 				baseAttr.PMSITunnel = tunnel
 			}
@@ -209,7 +210,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			// RFC 7311: AIGP Attribute
 			aigp, err := UnmarshalAIGP(b)
 			if err != nil {
-				return nil, fmt.Errorf("failed to unmarshal AIGP attribute with error: %+v", err)
+				glog.Errorf("failed to unmarshal AIGP attribute with error: %+v", err)
 			} else {
 				baseAttr.AIGP = aigp
 			}

@@ -74,7 +74,7 @@ func (mp *MPUnReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
 }
 
-// GetNLRIL3VPN check for presence of NLRI L3VPN AFI 1/2 and SAFI 128 in the NLRI 14 NLRI data and if exists, instantiate L3VPN object
+// GetNLRIL3VPN check for presence of NLRI L3VPN AFI 1/2 and SAFI 128 in the NLRI 15 NLRI data and if exists, instantiate L3VPN object
 func (mp *MPUnReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 128 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
@@ -211,6 +211,9 @@ func UnmarshalMPUnReachNLRI(b []byte, addPath map[int]bool) (MPNLRI, error) {
 		addPath: addPath,
 	}
 	p := 0
+	if p+3 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal MP_UNREACH_NLRI: need at least 3 bytes, have %d", len(b))
+	}
 	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	mp.SubAddressFamilyID = uint8(b[p])
