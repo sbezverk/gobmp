@@ -318,15 +318,15 @@ func unmarshalAttrASPath(b []byte) ([]uint32, error) {
 func isASPath4(b []byte) (bool, error) {
 	p := 0
 	// Skipping type
-	if p+1 >= len(b) {
+	if p >= len(b) {
 		return false, fmt.Errorf("invalid AS_PATH attribute, not enough bytes %d to read path segment type", len(b)-p)
 	}
 	p++
 	// Length of path segment in 2 or 4 bytes depending if AS2 or AS4 is used.
-	l := int(b[p])
-	if p+1 >= len(b) {
+	if p >= len(b) {
 		return false, fmt.Errorf("invalid AS_PATH attribute, not enough bytes %d to read path segment length", len(b)-p)
 	}
+	l := int(b[p])
 	p++
 	// Check if next segment can be found with AS4
 	if l*4 == len(b[p:]) {
