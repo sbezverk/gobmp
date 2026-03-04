@@ -285,7 +285,7 @@ func unmarshalAttrASPath(b []byte) ([]uint32, error) {
 		return []uint32{}, nil
 	}
 	path := make([]uint32, 0)
-	// Attempting to detect if AS4 is used in AS_PATH attribute, thia call also validates
+	// Attempting to detect if AS4 is used in AS_PATH attribute, this call also validates
 	// the attribute and returns error if invalid, no further guards needed in the loop below.
 	as4, err := isASPath4(b)
 	if err != nil {

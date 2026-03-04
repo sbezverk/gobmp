@@ -2,7 +2,6 @@
 
 **Scope:** Differences between IPv4, IPv6, VPNv4, and VPNv6 Flowspec  
 **Reference RFCs:** RFC 8955 (IPv4 / VPNv4), RFC 8956 (IPv6 / VPNv6)  
-**Relation to gobmp review:** §1.9 of `/tmp/gobmp_bgp_review.md`
 
 ---
 

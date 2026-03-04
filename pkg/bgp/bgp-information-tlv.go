@@ -11,7 +11,7 @@ import (
 // InformationalTLV defines BGP informational TLV object
 type InformationalTLV struct {
 	Type   byte
-	Length byte
+	Length uint16
 	Value  []byte
 }
 
@@ -71,13 +71,13 @@ func unmarshalTLVs(b []byte, extendedParamLen bool) ([]InformationalTLV, Capabil
 			continue
 		}
 		// Other than Capabilities informational TLVs are stored as-is.
-		// Note: InformationalTLV.Length is byte; in RFC 9072 mode individual parameter lengths
+		// Note: InformationalTLV.Length is uint16; in RFC 9072 mode individual parameter lengths
 		// could theoretically exceed 255, but in practice capability values never do.
 		v := make([]byte, l)
 		copy(v, b[p:p+l])
 		tlvs = append(tlvs, InformationalTLV{
 			Type:   t,
-			Length: byte(l),
+			Length: uint16(l),
 			Value:  v,
 		})
 		p += l
