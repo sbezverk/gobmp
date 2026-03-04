@@ -156,7 +156,7 @@ func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 			}
 		}
 		if !extendedParamLen && optEnd > len(b) {
-			return nil, fmt.Errorf("optional Parameters length %d exceeds buffer of %d bytes", m.OptParamLen, len(b)-optStart)
+			return nil, fmt.Errorf("bgp Open Message too short for Optional Parameters: need %d bytes / have %d bytes at offset %d", m.OptParamLen, len(b)-optStart, optStart)
 		}
 		if m.OptionalParameters, m.Capabilities, err = unmarshalTLVs(b[optStart:optEnd], extendedParamLen); err != nil {
 			return nil, err
