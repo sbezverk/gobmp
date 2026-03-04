@@ -2,6 +2,7 @@ package base
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
@@ -19,7 +20,13 @@ func UnmarshalMultiTopologyIdentifierTLV(b []byte) ([]*MultiTopologyIdentifier, 
 	if glog.V(6) {
 		glog.Infof("MultiTopologyIdentifierTLV Raw: %s", tools.MessageHex(b))
 	}
+	if len(b) == 0 {
+		return nil, fmt.Errorf("MultiTopologyIdentifierTLV length is 0")
+	}
 	p := 0
+	if len(b)%2 != 0 {
+		return nil, fmt.Errorf("MultiTopologyIdentifier: odd-length input %d", len(b))
+	}
 	// number of mt_id entries length / 2
 	mti := make([]*MultiTopologyIdentifier, len(b)/2)
 	for i := 0; i < len(b)/2; i++ {

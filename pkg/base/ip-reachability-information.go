@@ -1,6 +1,8 @@
 package base
 
 import (
+	"fmt"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
 )
@@ -17,15 +19,17 @@ func UnmarshalIPReachabilityInformation(b []byte) (*IPReachabilityInformation, e
 	if glog.V(6) {
 		glog.Infof("IPReachabilityInformationTLV Raw: %s", tools.MessageHex(b))
 	}
+	if len(b) < 1 {
+		return nil, fmt.Errorf("invalid IPReachabilityInformationTLV length, got %d, expected at least 1", len(b))
+	}
 	ipr := IPReachabilityInformation{
 		LengthInBits: b[0],
 	}
-	l := ipr.LengthInBits / 8
-	if ipr.LengthInBits%8 != 0 {
-		l++
+	l := (int(ipr.LengthInBits) + 7) / 8 // ceiling division
+	if len(b)-1 < l {
+		return nil, fmt.Errorf("IPReachabilityInformation: need %d bytes for prefix, got %d", l, len(b)-1)
 	}
 	ipr.Prefix = make([]byte, l)
-	copy(ipr.Prefix, b[1:])
-
+	copy(ipr.Prefix, b[1:1+l])
 	return &ipr, nil
 }

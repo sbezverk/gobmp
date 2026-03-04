@@ -6,6 +6,31 @@ import (
 	"testing"
 )
 
+func TestLabelString(t *testing.T) {
+	l := &Label{Value: 100, Exp: 2, BoS: true}
+	got := l.String()
+	if got == "" {
+		t.Error("Label.String() returned empty string")
+	}
+	// Check it contains the value
+	if !strings.Contains(got, "100") {
+		t.Errorf("Label.String() = %q, expected to contain \"100\"", got)
+	}
+}
+
+func TestLabelGetRawValue(t *testing.T) {
+	// Value=1 Exp=0 BoS=true → raw = 1*16 + 0*2 + 1 = 17
+	l := &Label{Value: 1, Exp: 0, BoS: true}
+	if got := l.GetRawValue(); got != 17 {
+		t.Errorf("GetRawValue() = %d, want 17", got)
+	}
+	// Value=1 Exp=0 BoS=false → raw = 16
+	l2 := &Label{Value: 1, Exp: 0, BoS: false}
+	if got := l2.GetRawValue(); got != 16 {
+		t.Errorf("GetRawValue() = %d, want 16", got)
+	}
+}
+
 func TestMakeLabel(t *testing.T) {
 	tests := []struct {
 		name   string
