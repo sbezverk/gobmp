@@ -21,16 +21,6 @@ type SIDNLRI struct {
 	LocalNodeHash string
 }
 
-// GetAllAttribute returns a slice with all attribute types found in SRv6 SID NLRI object
-func (sr *SIDNLRI) GetAllAttribute() []uint16 {
-	attrs := make([]uint16, 0)
-	for _, attr := range sr.LocalNode.SubTLV {
-		attrs = append(attrs, attr.Type)
-	}
-
-	return attrs
-}
-
 // GetIdentifier returns value of Identifier as int64
 func (sr *SIDNLRI) GetIdentifier() int64 {
 	return int64(binary.BigEndian.Uint64(sr.Identifier))

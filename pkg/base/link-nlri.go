@@ -14,29 +14,13 @@ import (
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type LinkNLRI struct {
 	ProtocolID     ProtoID
-	Identifier     []byte `json:"domain_id,omitempty"`
+	Identifier     [8]byte
 	LocalNode      *NodeDescriptor
 	RemoteNode     *NodeDescriptor
 	Link           *LinkDescriptor
 	LocalNodeHash  string
 	RemoteNodeHash string
 	LinkHash       string
-}
-
-// GetAllAttribute returns a slice with all attribute types found in Link NLRI object
-func (l *LinkNLRI) GetAllAttribute() []uint16 {
-	attrs := make([]uint16, 0)
-	for _, attr := range l.LocalNode.SubTLV {
-		attrs = append(attrs, attr.Type)
-	}
-	for _, attr := range l.RemoteNode.SubTLV {
-		attrs = append(attrs, attr.Type)
-	}
-	for _, attr := range l.Link.LinkTLV {
-		attrs = append(attrs, attr.Type)
-	}
-
-	return attrs
 }
 
 // GetLinkProtocolID returns a string representation of LinkNLRI ProtocolID field
@@ -46,7 +30,7 @@ func (l *LinkNLRI) GetLinkProtocolID() string {
 
 // GetIdentifier returns value of Identifier as int64
 func (l *LinkNLRI) GetIdentifier() int64 {
-	return int64(binary.BigEndian.Uint64(l.Identifier))
+	return int64(binary.BigEndian.Uint64(l.Identifier[:]))
 }
 
 // GetLinkLSID returns a value of Link Descriptor TLV BGP-LS Identifier
@@ -126,14 +110,20 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	p := 0
 	l.ProtocolID = ProtoID(b[p])
 	p++
-	// Skip 3 reserved bytes
-	//	p += 3
-	l.Identifier = make([]byte, 8)
-	copy(l.Identifier, b[p:p+8])
+	if p+8 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Link NLRI")
+	}
+	copy(l.Identifier[:], b[p:p+8])
 	p += 8
 	// Local Node Descriptor
 	// Get Node Descriptor's length, skip Node Descriptor Type
+	if p+4 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Local Node Descriptor")
+	}
 	ndl := binary.BigEndian.Uint16(b[p+2 : p+4])
+	if p+int(ndl)+4 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Local Node Descriptor")
+	}
 	ln, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)+4])
 	if err != nil {
 		return nil, err
@@ -145,7 +135,13 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 	p += int(ndl)
 	// Remote Node Descriptor
 	// Get Node Descriptor's length, skip Node Descriptor Type
+	if p+4 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Remote Node Descriptor")
+	}
 	ndl = binary.BigEndian.Uint16(b[p+2 : p+4])
+	if p+int(ndl)+4 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to Unmarshal Remote Node Descriptor")
+	}
 	rn, err := UnmarshalNodeDescriptor(b[p : p+int(ndl)+4])
 	if err != nil {
 		return nil, err

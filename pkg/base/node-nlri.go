@@ -12,18 +12,8 @@ import (
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type NodeNLRI struct {
 	ProtocolID ProtoID
-	Identifier []byte `json:"domain_id,omitempty"`
+	Identifier [8]byte
 	LocalNode  *NodeDescriptor
-}
-
-// GetAllAttribute returns a slice with all attribute types found in Node NLRI object
-func (n *NodeNLRI) GetAllAttribute() []uint16 {
-	attrs := make([]uint16, 0)
-	for _, attr := range n.LocalNode.SubTLV {
-		attrs = append(attrs, attr.Type)
-	}
-
-	return attrs
 }
 
 // GetNodeProtocolID returns a string representation of NodeNLRI ProtocolID field
@@ -33,7 +23,7 @@ func (n *NodeNLRI) GetNodeProtocolID() string {
 
 // GetIdentifier returns value of Identifier as int64
 func (n *NodeNLRI) GetIdentifier() int64 {
-	return int64(binary.BigEndian.Uint64(n.Identifier))
+	return int64(binary.BigEndian.Uint64(n.Identifier[:]))
 }
 
 // GetNodeLSID returns a value of Node Descriptor TLV BGP-LS Identifier
@@ -68,9 +58,10 @@ func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
 	p := 0
 	n.ProtocolID = ProtoID(b[p])
 	p++
-
-	n.Identifier = make([]byte, 8)
-	copy(n.Identifier, b[p:p+8])
+	if p+8 > len(b) {
+		return nil, fmt.Errorf("NLRI too short for Node Identifier: need 8 bytes, have %d", len(b)-p)
+	}
+	copy(n.Identifier[:], b[p:p+8])
 	p += 8
 	// Local Node Descriptor
 	ln, err := UnmarshalNodeDescriptor(b[p:])

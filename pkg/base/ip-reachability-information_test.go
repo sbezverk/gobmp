@@ -14,6 +14,11 @@ func TestUnmarshalIPReachabilityInformation(t *testing.T) {
 		wantErr    bool
 	}{
 		{
+			name:    "invalid length (empty input)",
+			input:   []byte{},
+			wantErr: true,
+		},
+		{
 			name:       "ipv4 /24 prefix",
 			input:      []byte{24, 192, 168, 1},
 			wantBits:   24,

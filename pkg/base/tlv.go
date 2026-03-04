@@ -2,6 +2,7 @@ package base
 
 import (
 	"encoding/binary"
+	"fmt"
 )
 
 // TLV defines generic Typle Length Value element
@@ -24,17 +25,20 @@ func UnmarshalTLV(b []byte) (map[uint16]TLV, error) {
 	for p := 0; p < len(b); {
 		stlv := TLV{}
 		if p+2 > len(b) {
-			break
+			return nil, fmt.Errorf("invalid TLV, not enough bytes to read type, got %d", len(b)-p)
 		}
 		stlv.Type = binary.BigEndian.Uint16(b[p : p+2])
+		if _, ok := stlvs[stlv.Type]; ok {
+			return nil, fmt.Errorf("duplicate TLV type %d", stlv.Type)
+		}
 		p += 2
 		if p+2 > len(b) {
-			break
+			return nil, fmt.Errorf("invalid TLV, not enough bytes to read length, got %d", len(b)-p)
 		}
 		stlv.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		if p+int(stlv.Length) > len(b) {
-			break
+			return nil, fmt.Errorf("invalid TLV, not enough bytes to read value, got %d", len(b)-p)
 		}
 		stlv.Value = make([]byte, stlv.Length)
 		copy(stlv.Value, b[p:p+int(stlv.Length)])
@@ -51,17 +55,17 @@ func UnmarshalSubTLV(b []byte) ([]*SubTLV, error) {
 	for p := 0; p < len(b); {
 		stlv := &SubTLV{}
 		if p+2 > len(b) {
-			break
+			return nil, fmt.Errorf("invalid SubTLV, not enough bytes to read type, got %d", len(b)-p)
 		}
 		stlv.Type = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		if p+2 > len(b) {
-			break
+			return nil, fmt.Errorf("invalid SubTLV, not enough bytes to read length, got %d", len(b)-p)
 		}
 		stlv.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		if p+int(stlv.Length) > len(b) {
-			break
+			return nil, fmt.Errorf("invalid SubTLV, not enough bytes to read value, got %d", len(b)-p)
 		}
 		stlv.Value = make([]byte, stlv.Length)
 		copy(stlv.Value, b[p:p+int(stlv.Length)])
