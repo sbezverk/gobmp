@@ -133,7 +133,7 @@ func TestUnmarshalBGPOpenMessage_ErrorCases(t *testing.T) {
 				b[12] = 100 // claim 100 bytes but buffer ends here
 				return b
 			},
-			wantErrMsg: "too short for Optional Parameters",
+			wantErrMsg: "Optional Parameters: need",
 		},
 		// ----------------------------------------------------------------
 		// RFC 9072 extended header
@@ -162,7 +162,7 @@ func TestUnmarshalBGPOpenMessage_ErrorCases(t *testing.T) {
 				b = append(b, 3, 232) // extLen = 1000
 				return b
 			},
-			wantErrMsg: "exceeds buffer",
+			wantErrMsg: "RFC 9072 extended Optional Parameters: need",
 		},
 	}
 

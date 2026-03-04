@@ -26,7 +26,8 @@ type AIGPTLV struct {
 //	Value  = uint64    (8 octets; accumulated IGP metric)
 //
 // The IANA "BGP AIGP Attribute Types" registry (Type 0 reserved, Types 2-255 unassigned)
-// defines no other types as of RFC 7311. Unknown types are skipped per RFC 7311 §3.2.
+// defines no other types as of RFC 7311. Unknown TLV types are stored in TLVs with
+// Value=0 (not decoded) but do not cause a parse error per RFC 7311 §3.2.
 func UnmarshalAIGP(b []byte) (*AIGP, error) {
 	if len(b) < 3 {
 		return nil, fmt.Errorf("invalid AIGP length: %d", len(b))
@@ -62,8 +63,10 @@ func UnmarshalAIGP(b []byte) (*AIGP, error) {
 			}
 			tlv.Value = binary.BigEndian.Uint64(b[p : p+8])
 		}
-		// Unknown TLV types are skipped per RFC 7311 §3.2 (attribute MUST NOT be
-		// considered malformed merely because it contains TLVs of unknown types).
+		// Unknown TLV types are retained in TLVs (with Value=0) but not decoded.
+		// RFC 7311 §3.2: an AIGP attribute MUST NOT be considered malformed merely
+		// because it contains TLVs of unknown type; only Type 1 (AIGP Metric) is
+		// currently defined and parsed.
 		p += valueLen
 
 		aigp.TLVs = append(aigp.TLVs, tlv)

@@ -145,18 +145,18 @@ func UnmarshalBGPOpenMessage(b []byte) (*OpenMessage, error) {
 		// and 2-byte individual parameter length fields.
 		if m.OptParamLen == 255 && p < len(b) && b[p] == 255 {
 			if p+3 > len(b) {
-				return nil, fmt.Errorf("bgp Open Message too short for RFC 9072 extended Optional Parameters header: need 3 bytes / have %d bytes at offset %d", len(b)-p, p)
+				return nil, fmt.Errorf("BGP Open Message too short for RFC 9072 extended Optional Parameters header: need 3 bytes, have %d", len(b)-p)
 			}
 			extLen := int(binary.BigEndian.Uint16(b[p+1 : p+3]))
 			optStart = p + 3 // skip Non-Ext OP Type (1 byte) + Extended Opt. Parm. Length (2 bytes)
 			optEnd = optStart + extLen
 			extendedParamLen = true
 			if optEnd > len(b) {
-				return nil, fmt.Errorf("rfc 9072 extended Optional Parameters length %d exceeds buffer of %d bytes", extLen, len(b)-optStart)
+				return nil, fmt.Errorf("BGP Open Message RFC 9072 extended Optional Parameters: need %d bytes, have %d", extLen, len(b)-optStart)
 			}
 		}
 		if !extendedParamLen && optEnd > len(b) {
-			return nil, fmt.Errorf("bgp Open Message too short for Optional Parameters: need %d bytes / have %d bytes at offset %d", m.OptParamLen, len(b)-optStart, optStart)
+			return nil, fmt.Errorf("BGP Open Message Optional Parameters: need %d bytes, have %d", m.OptParamLen, len(b)-p)
 		}
 		if m.OptionalParameters, m.Capabilities, err = unmarshalTLVs(b[optStart:optEnd], extendedParamLen); err != nil {
 			return nil, err

@@ -260,7 +260,7 @@ func UnmarshalMPReachNLRI(b []byte, srv6 bool, addPath map[int]bool) (MPNLRI, er
 	mp.SubAddressFamilyID = uint8(b[p])
 	p++
 	if p+1 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: need at least 1 byte for Next Hop Address Length, have 0")
+		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: need 1 byte for Next Hop Address Length at offset %d, have %d", p, len(b)-p)
 	}
 	mp.NextHopAddressLength = uint8(b[p])
 	p++
