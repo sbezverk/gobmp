@@ -50,17 +50,11 @@ func makeExtCommunity(b []byte) (*ExtCommunity, error) {
 	case 2:
 		fallthrough
 	case 6:
-		if p+1 > len(b) {
-			return nil, fmt.Errorf("truncated extended community subtype at offset %d: need 1 byte, have 0", p)
-		}
 		st := uint8(b[p])
 		ext.SubType = &st
 		l = 6
 		p++
 	case 3:
-		if p+3 > len(b) {
-			return nil, fmt.Errorf("truncated extended community subtype at offset %d: need 3 bytes, have %d", p, len(b)-p)
-		}
 		st := uint8(b[p])
 		ext.SubType = &st
 		l = 6
