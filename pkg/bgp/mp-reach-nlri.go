@@ -253,7 +253,7 @@ func UnmarshalMPReachNLRI(b []byte, srv6 bool, addPath map[int]bool) (MPNLRI, er
 	}
 	p := 0
 	if p+3 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: need at least 3 bytes, have %d", len(b))
+		return nil, fmt.Errorf("not enough bytes to unmarshal MP_REACH_NLRI: need at least 3 bytes from offset %d, have %d", p, len(b)-p)
 	}
 	mp.AddressFamilyID = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
