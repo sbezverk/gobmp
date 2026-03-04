@@ -38,25 +38,11 @@ const (
 // https://tools.ietf.org/html/rfc7752#section-3.2
 type PrefixNLRI struct {
 	ProtocolID    ProtoID
-	Identifier    []byte `json:"domain_id,omitempty"`
+	Identifier    [8]byte `json:"domain_id,omitempty"`
 	LocalNode     *NodeDescriptor
 	Prefix        *PrefixDescriptor
 	LocalNodeHash string
 	IsIPv4        bool
-}
-
-// GetAllAttribute returns a slice with all attribute types found in Prefix NLRI object
-func (p *PrefixNLRI) GetAllAttribute() []uint16 {
-	attrs := make([]uint16, 0)
-	for _, attr := range p.LocalNode.SubTLV {
-		attrs = append(attrs, attr.Type)
-	}
-
-	for _, attr := range p.Prefix.PrefixTLV {
-		attrs = append(attrs, attr.Type)
-	}
-
-	return attrs
 }
 
 // GetPrefixProtocolID returns a string representation of Prefix NLRI ProtocolID field
@@ -66,7 +52,7 @@ func (p *PrefixNLRI) GetPrefixProtocolID() string {
 
 // GetIdentifier returns value of Identifier as int64
 func (p *PrefixNLRI) GetIdentifier() int64 {
-	return int64(binary.BigEndian.Uint64(p.Identifier))
+	return int64(binary.BigEndian.Uint64(p.Identifier[:]))
 }
 
 // GetPrefixASN returns Autonomous System Number used to uniquely identify BGP-LS domain
@@ -111,8 +97,7 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 	if p+8 > len(b) {
 		return nil, fmt.Errorf("not enough bytes to Unmarshal Prefix NLRI")
 	}
-	pr.Identifier = make([]byte, 8)
-	copy(pr.Identifier, b[p:p+8])
+	copy(pr.Identifier[:], b[p:p+8])
 	p += 8
 
 	// Get Node Descriptor's length, skip Node Descriptor Type

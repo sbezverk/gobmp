@@ -32,7 +32,7 @@ func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
 	// Handle EoR case.
 	routes := make([]Route, 0)
 	if len(b) == 0 {
-		return nil, nil
+		return routes, nil
 	}
 	var err error = nil
 	for p := 0; p < len(b); {

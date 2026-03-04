@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
@@ -49,24 +50,20 @@ func (nd *NodeDescriptor) GetOSPFAreaID() string {
 
 // GetIGPRouterID returns a value of Node Descriptor sub TLV IGP Router ID
 func (nd *NodeDescriptor) GetIGPRouterID() string {
-	var s string
-	i := 0
 	if tlv, ok := nd.SubTLV[515]; ok {
 		if tlv.Length == 4 {
 			return net.IP(tlv.Value).To4().String()
 		}
-		for p := 0; p < len(tlv.Value); p++ {
-			s += fmt.Sprintf("%02x", tlv.Value[p])
-			if i == 1 && p < len(tlv.Value)-1 {
-				s += "."
-				i = 0
-				continue
+		var sb strings.Builder
+		for p, b := range tlv.Value {
+			fmt.Fprintf(&sb, "%02x", b)
+			if (p+1)%2 == 0 && p < len(tlv.Value)-1 {
+				sb.WriteByte('.')
 			}
-			i++
 		}
-		return s
+		return sb.String()
 	}
-	return s
+	return ""
 }
 
 // GetBGPRouterID returns BGP Router ID found in Node Descriptor sub tlv

@@ -78,7 +78,7 @@ func TestUnmarshalBaseNLRI(t *testing.T) {
 			name:    "EoR Case",
 			input:   []byte{},
 			pathID:  false,
-			expect:  nil,
+			expect:  []Route{},
 			wantErr: false,
 		},
 		{
