@@ -12,7 +12,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/pmsi"
-	"github.com/sbezverk/tools"
 	"github.com/sbezverk/tools/sort"
 )
 
@@ -122,71 +121,65 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 }
 
 // UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
-// and instantiates BaseAttributes object
+// and instantiates BaseAttributes object. It is a convenience wrapper that parses
+// the raw byte slice via UnmarshalBGPPathAttributes and then populates BaseAttributes.
 func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
-	if glog.V(6) {
-		glog.Infof("UnmarshalBGPBaseAttributes RAW: %+v", tools.MessageHex(b))
-	}
+	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b)
+	_ = attrs // raw slice not needed by this call-path
+	return baseAttrs, err
+}
+
+// unmarshalBaseAttrsFromSlice populates a BaseAttributes struct from an already-parsed
+// []PathAttribute slice, avoiding a second walk of the raw byte buffer.
+func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error) {
 	baseAttr := BaseAttributes{}
-	for p := 0; p < len(b); {
-		flag := b[p]
-		p++
-		t := b[p]
-		p++
-		var l uint16
-		// Checking for Extened
-		if flag&0x10 == 0x10 {
-			l = binary.BigEndian.Uint16(b[p : p+2])
-			p += 2
-		} else {
-			l = uint16(b[p])
-			p++
-		}
-		switch t {
+	for _, attr := range attrs {
+		b := attr.Attribute
+		switch attr.AttributeType {
 		case 1:
-			baseAttr.Origin = unmarshalAttrOrigin(b[p : p+int(l)])
+			baseAttr.Origin = unmarshalAttrOrigin(b)
 		case 2:
-			baseAttr.ASPath = unmarshalAttrASPath(b[p : p+int(l)])
+			baseAttr.ASPath = unmarshalAttrASPath(b)
 			baseAttr.ASPathCount = int32(len(baseAttr.ASPath))
 		case 3:
-			baseAttr.Nexthop = unmarshalAttrNextHop(b[p : p+int(l)])
+			baseAttr.Nexthop = unmarshalAttrNextHop(b)
 		case 4:
-			baseAttr.MED = unmarshalAttrMED(b[p : p+int(l)])
+			baseAttr.MED = unmarshalAttrMED(b)
 		case 5:
-			baseAttr.LocalPref = unmarshalAttrLocalPref(b[p : p+int(l)])
+			baseAttr.LocalPref = unmarshalAttrLocalPref(b)
 		case 6:
 			baseAttr.IsAtomicAgg = true
 		case 7:
-			baseAttr.Aggregator = unmarshalAttrAggregator(b[p : p+int(l)])
+			baseAttr.Aggregator = unmarshalAttrAggregator(b)
 		case 8:
-			baseAttr.CommunityList = unmarshalAttrCommunity(b[p : p+int(l)])
+			baseAttr.CommunityList = unmarshalAttrCommunity(b)
 		case 9:
-			baseAttr.OriginatorID = unmarshalAttrOriginatorID(b[p : p+int(l)])
+			baseAttr.OriginatorID = unmarshalAttrOriginatorID(b)
 		case 10:
-			baseAttr.ClusterList = unmarshalAttrClusterList(b[p : p+int(l)])
+			baseAttr.ClusterList = unmarshalAttrClusterList(b)
 		case 16:
-			baseAttr.ExtCommunityList = unmarshalAttrExtCommunity(b[p : p+int(l)])
+			baseAttr.ExtCommunityList = unmarshalAttrExtCommunity(b)
 		case 17:
-			baseAttr.AS4Path = unmarshalAttrAS4Path(b[p : p+int(l)])
+			baseAttr.AS4Path = unmarshalAttrAS4Path(b)
 			baseAttr.AS4PathCount = int32(len(baseAttr.AS4Path))
 		case 18:
-			baseAttr.AS4Aggregator = unmarshalAttrAS4Aggregator(b[p : p+int(l)])
+			baseAttr.AS4Aggregator = unmarshalAttrAS4Aggregator(b)
 		case 22:
 			// RFC 6514 PMSI Tunnel Attribute
-			tunnel, err := pmsi.ParsePMSITunnel(b[p : p+int(l)])
+			tunnel, err := pmsi.ParsePMSITunnel(b)
 			if err != nil {
 				glog.Warningf("failed to parse PMSI Tunnel attribute: %v", err)
 			} else {
 				baseAttr.PMSITunnel = tunnel
 			}
 		case 23:
-			baseAttr.TunnelEncapAttr = make([]byte, l)
-			copy(baseAttr.TunnelEncapAttr, b[p:p+int(l)])
+			baseAttr.TunnelEncapAttr = make([]byte, len(b))
+			copy(baseAttr.TunnelEncapAttr, b)
 		case 24:
 		case 25:
 		case 26:
 			// RFC 7311: AIGP Attribute
-			aigp, err := UnmarshalAIGP(b[p : p+int(l)])
+			aigp, err := UnmarshalAIGP(b)
 			if err != nil {
 				glog.Warningf("failed to unmarshal AIGP attribute with error: %+v", err)
 			} else {
@@ -196,18 +189,17 @@ func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
 		case 28:
 		case 29:
 		case 32:
-			baseAttr.LgCommunityList = unmarshalAttrLgCommunity(b[p : p+int(l)])
+			baseAttr.LgCommunityList = unmarshalAttrLgCommunity(b)
 		case 33:
 		case 40:
 			// RFC 8669: BGP Prefix-SID
 			var err error
-			baseAttr.BGPPrefixSID, err = UnmarshalBGPPrefixSID(b[p : p+int(l)])
+			baseAttr.BGPPrefixSID, err = UnmarshalBGPPrefixSID(b)
 			if err != nil {
 				glog.Errorf("failed to unmarshal BGP Prefix-SID attribute with error: %+v", err)
 			}
 		case 128:
 		}
-		p += int(l)
 	}
 	// Calculating hash of all recovered base attributes
 	ba, err := json.Marshal(baseAttr)

@@ -134,12 +134,8 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	if p+int(u.TotalPathAttributeLength) > len(b) {
 		return nil, fmt.Errorf("Not enough bytes %d to unmarshal Path Attributes", len(b))
 	}
-	attrs, err := UnmarshalBGPPathAttributes(b[p : p+int(u.TotalPathAttributeLength)])
-	if err != nil {
-		return nil, err
-	}
-	// Building BGP's update Base attributes struct which is common to all messages
-	baseAttrs, err := UnmarshalBGPBaseAttributes(b[p : p+int(u.TotalPathAttributeLength)])
+	// Single pass: parse path attributes and populate base attributes simultaneously
+	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b[p : p+int(u.TotalPathAttributeLength)])
 	if err != nil {
 		return nil, err
 	}

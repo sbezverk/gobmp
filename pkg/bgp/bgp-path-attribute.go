@@ -15,8 +15,9 @@ type PathAttribute struct {
 	Attribute          []byte
 }
 
-// UnmarshalBGPPathAttributes builds BGP Path attributes slice
-func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, error) {
+// UnmarshalBGPPathAttributes builds BGP Path attributes slice and populates
+// BaseAttributes in a single pass over the byte buffer.
+func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, *BaseAttributes, error) {
 	if glog.V(6) {
 		glog.Infof("BGPPathAttributes Raw: %s", tools.MessageHex(b))
 	}
@@ -27,7 +28,7 @@ func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, error) {
 		t := b[p+1]
 		p += 2
 		var l uint16
-		// Checking for Extened
+		// Checking for Extended
 		if f&0x10 == 0x10 {
 			l = binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
@@ -47,5 +48,10 @@ func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, error) {
 		p += int(l)
 	}
 
-	return attrs, nil
+	baseAttrs, err := unmarshalBaseAttrsFromSlice(attrs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return attrs, baseAttrs, nil
 }
