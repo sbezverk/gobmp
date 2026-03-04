@@ -110,15 +110,30 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	if glog.V(6) {
 		glog.Infof("BGPUpdate Raw: %s", tools.MessageHex(b))
 	}
+	if len(b) == 0 {
+		return nil, fmt.Errorf("Not enough bytes %d to unmarshal BGP Update", len(b))
+	}
 	p := 0
 	u := Update{}
+	if p+2 > len(b) {
+		return nil, fmt.Errorf("Not enough bytes %d to unmarshal Withdrawn Routes Length", len(b))
+	}
 	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
+	if p+int(u.WithdrawnRoutesLength) > len(b) {
+		return nil, fmt.Errorf("Not enough bytes %d to unmarshal Withdrawn Routes", len(b))
+	}
 	u.WithdrawnRoutes = make([]byte, u.WithdrawnRoutesLength)
 	copy(u.WithdrawnRoutes, b[p:p+int(u.WithdrawnRoutesLength)])
 	p += int(u.WithdrawnRoutesLength)
+	if p+2 > len(b) {
+		return nil, fmt.Errorf("Not enough bytes %d to unmarshal Total Path Attribute Length", len(b))
+	}
 	u.TotalPathAttributeLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
+	if p+int(u.TotalPathAttributeLength) > len(b) {
+		return nil, fmt.Errorf("Not enough bytes %d to unmarshal Path Attributes", len(b))
+	}
 	attrs, err := UnmarshalBGPPathAttributes(b[p : p+int(u.TotalPathAttributeLength)])
 	if err != nil {
 		return nil, err
@@ -130,6 +145,9 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	}
 	u.PathAttributes = attrs
 	u.BaseAttributes = baseAttrs
+	if p+int(u.TotalPathAttributeLength) > len(b) {
+		return nil, fmt.Errorf("Not enough bytes %d to unmarshal NLRI", len(b))
+	}
 	p += int(u.TotalPathAttributeLength)
 	u.NLRI = make([]byte, len(b)-p)
 	copy(u.NLRI, b[p:])
