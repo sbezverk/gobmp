@@ -34,11 +34,9 @@ func TestUnmarshaBaseAttributes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected to succeed but failed with error: %+v", err)
 			}
-			if err == nil {
-				if !reflect.DeepEqual(got, tt.expect) {
-					t.Logf("differences: %+v\n", deep.Equal(got, tt.expect))
-					t.Errorf("Expected base attributes %+v does not match to actual base attributes %+v", tt.expect, got)
-				}
+			if !reflect.DeepEqual(got, tt.expect) {
+				t.Logf("differences: %+v\n", deep.Equal(got, tt.expect))
+				t.Errorf("Expected base attributes %+v does not match to actual base attributes %+v", tt.expect, got)
 			}
 		})
 	}
