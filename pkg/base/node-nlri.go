@@ -58,7 +58,9 @@ func UnmarshalNodeNLRI(b []byte) (*NodeNLRI, error) {
 	p := 0
 	n.ProtocolID = ProtoID(b[p])
 	p++
-
+	if p+8 > len(b) {
+		return nil, fmt.Errorf("NLRI too short for Node Identifier: need 8 bytes, have %d", len(b)-p)
+	}
 	copy(n.Identifier[:], b[p:p+8])
 	p += 8
 	// Local Node Descriptor

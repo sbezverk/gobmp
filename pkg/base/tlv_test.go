@@ -65,15 +65,17 @@ func TestUnmarshalTLV(t *testing.T) {
 			for i, typ := range tt.wantTypes {
 				tlv, ok := got[typ]
 				if !ok {
-					t.Errorf("expected TLV type %d not found in result", typ)
-					continue
+					t.Fatalf("expected TLV type %d not found in result", typ)
 				}
 				if int(tlv.Length) != len(tt.wantValues[i]) {
-					t.Errorf("TLV type %d: length = %d, want %d", typ, tlv.Length, len(tt.wantValues[i]))
+					t.Fatalf("TLV type %d: length = %d, want %d", typ, tlv.Length, len(tt.wantValues[i]))
+				}
+				if len(tlv.Value) != len(tt.wantValues[i]) {
+					t.Fatalf("TLV type %d: value length = %d, want %d", typ, len(tlv.Value), len(tt.wantValues[i]))
 				}
 				for j, b := range tt.wantValues[i] {
 					if tlv.Value[j] != b {
-						t.Errorf("TLV type %d: value[%d] = 0x%02x, want 0x%02x", typ, j, tlv.Value[j], b)
+						t.Fatalf("TLV type %d: value[%d] = 0x%02x, want 0x%02x", typ, j, tlv.Value[j], b)
 					}
 				}
 			}
