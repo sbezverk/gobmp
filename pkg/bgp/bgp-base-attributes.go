@@ -290,28 +290,40 @@ func unmarshalAttrASPath(b []byte) ([]uint32, error) {
 		return []uint32{}, nil
 	}
 	path := make([]uint32, 0)
-	// Attempting to detect if AS4 is used in AS_PATH attribute, this call also validates
-	// the attribute and returns error if invalid, no further guards needed in the loop below.
+	// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 only inspects the
+	// first segment, so full per-segment bounds validation is done in the loop below.
 	as4, err := isASPath4(b)
 	if err != nil {
 		return nil, err
 	}
+	asSize := 2
+	if as4 {
+		asSize = 4
+	}
 	for p := 0; p < len(b); {
-		// Skipping type
+		// Segment type byte
+		if p+1 > len(b) {
+			return nil, fmt.Errorf("AS_PATH attribute truncated: cannot read segment type at offset %d", p)
+		}
+		p++ // skip segment type
+		// Segment length (number of ASNs in this segment)
+		if p+1 > len(b) {
+			return nil, fmt.Errorf("AS_PATH attribute truncated: cannot read segment length at offset %d", p)
+		}
+		l := int(b[p])
 		p++
-		// Length of path segment of type
-		l := b[p]
-		p++
-		// Attempting to detect if 2 or 4 bytes AS is used
-		for n := 0; n < int(l); n++ {
+		// Validate that all ASN values for this segment are present before reading any
+		if p+l*asSize > len(b) {
+			return nil, fmt.Errorf("AS_PATH attribute truncated: segment at offset %d claims %d ASes (%d bytes) but only %d bytes remain",
+				p, l, l*asSize, len(b)-p)
+		}
+		for n := 0; n < l; n++ {
 			if as4 {
-				as := binary.BigEndian.Uint32(b[p : p+4])
+				path = append(path, binary.BigEndian.Uint32(b[p:p+4]))
 				p += 4
-				path = append(path, as)
 			} else {
-				as := binary.BigEndian.Uint16(b[p : p+2])
+				path = append(path, uint32(binary.BigEndian.Uint16(b[p:p+2])))
 				p += 2
-				path = append(path, uint32(as))
 			}
 		}
 	}
