@@ -109,6 +109,9 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 		}
 		if code == 1 {
 			// According RFC https://tools.ietf.org/html/rfc2858#section-7 Length will always be 4 bytes.
+			if length != 4 {
+				return nil, fmt.Errorf("invalid capability length %d for Multiprotocol Extensions, expected 4", length)
+			}
 			afi := binary.BigEndian.Uint16(capData.Value[:2])
 			safi := capData.Value[3]
 			capData.Description += getAFISAFIString(afi, safi)

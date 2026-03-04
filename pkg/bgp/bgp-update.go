@@ -111,28 +111,28 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 		glog.Infof("BGPUpdate Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) == 0 {
-		return nil, fmt.Errorf("not enough bytes %d to unmarshal BGP Update", len(b))
+		return nil, fmt.Errorf("not enough bytes to unmarshal BGP Update: need at least 1 byte, have 0")
 	}
 	p := 0
 	u := Update{}
 	if p+2 > len(b) {
-		return nil, fmt.Errorf("not enough bytes %d to unmarshal Withdrawn Routes Length", len(b))
+		return nil, fmt.Errorf("not enough bytes to unmarshal Withdrawn Routes Length: need 2 bytes, have %d", len(b)-p)
 	}
 	u.WithdrawnRoutesLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	if p+int(u.WithdrawnRoutesLength) > len(b) {
-		return nil, fmt.Errorf("not enough bytes %d to unmarshal Withdrawn Routes", len(b))
+		return nil, fmt.Errorf("not enough bytes to unmarshal Withdrawn Routes: need %d bytes, have %d", u.WithdrawnRoutesLength, len(b)-p)
 	}
 	u.WithdrawnRoutes = make([]byte, u.WithdrawnRoutesLength)
 	copy(u.WithdrawnRoutes, b[p:p+int(u.WithdrawnRoutesLength)])
 	p += int(u.WithdrawnRoutesLength)
 	if p+2 > len(b) {
-		return nil, fmt.Errorf("not enough bytes %d to unmarshal Total Path Attribute Length", len(b))
+		return nil, fmt.Errorf("not enough bytes to unmarshal Total Path Attribute Length: need 2 bytes, have %d", len(b)-p)
 	}
 	u.TotalPathAttributeLength = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	if p+int(u.TotalPathAttributeLength) > len(b) {
-		return nil, fmt.Errorf("not enough bytes %d to unmarshal Path Attributes", len(b))
+		return nil, fmt.Errorf("not enough bytes to unmarshal Path Attributes: need %d bytes, have %d", u.TotalPathAttributeLength, len(b)-p)
 	}
 	// Single pass: parse path attributes and populate base attributes simultaneously
 	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b[p : p+int(u.TotalPathAttributeLength)])
@@ -141,9 +141,6 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 	}
 	u.PathAttributes = attrs
 	u.BaseAttributes = baseAttrs
-	if p+int(u.TotalPathAttributeLength) > len(b) {
-		return nil, fmt.Errorf("not enough bytes %d to unmarshal NLRI", len(b))
-	}
 	p += int(u.TotalPathAttributeLength)
 	u.NLRI = make([]byte, len(b)-p)
 	copy(u.NLRI, b[p:])
