@@ -160,6 +160,12 @@ func TestGetPeerDistinguisherString(t *testing.T) {
 			wantExact: "0:0",
 		},
 		{
+			name:         "PeerType1 — RD-style (fallthrough to PeerType3 path)",
+			peerType:     PeerType1,
+			rd:           []byte{0, 1, 0, 0, 0, 0, 0, 200}, // type 1 RD
+			wantNotEmpty: true,
+		},
+		{
 			name:      "PeerType2 — decimal encoding",
 			peerType:  PeerType2,
 			rd:        []byte{0, 0, 0, 0, 0, 0, 0, 42},
