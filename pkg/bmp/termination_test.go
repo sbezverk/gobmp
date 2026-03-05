@@ -193,6 +193,10 @@ func TestUnmarshalTerminationMessage(t *testing.T) {
 						t.Errorf("Strings[%d] = %q, want %q", i, got.Strings[i], s)
 					}
 				}
+			} else {
+				if len(got.Strings) != 0 {
+					t.Fatalf("Strings count = %d, want 0", len(got.Strings))
+				}
 			}
 		})
 	}
