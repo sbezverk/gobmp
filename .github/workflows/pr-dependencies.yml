@@ -1,0 +1,188 @@
+name: PR Dependency Check
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  check-dependencies:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Analyze PR dependencies
+        uses: actions/github-script@v7
+        env:
+          CURRENT_PR: ${{ github.event.pull_request.number }}
+          CURRENT_HEAD: ${{ github.event.pull_request.head.ref }}
+          CURRENT_BASE: ${{ github.event.pull_request.base.ref }}
+        with:
+          script: |
+            const currentPR = parseInt(process.env.CURRENT_PR);
+            const currentHead = process.env.CURRENT_HEAD;
+            const currentBase = process.env.CURRENT_BASE;
+
+            // Get all open PRs
+            const { data: openPRs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 50,
+            });
+
+            const otherPRs = openPRs.filter(pr => pr.number !== currentPR);
+            if (otherPRs.length === 0) {
+              console.log('No other open PRs to check against');
+              return;
+            }
+
+            // Get files changed in current PR
+            const { data: currentFiles } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: currentPR,
+              per_page: 100,
+            });
+            const currentFileSet = new Set(currentFiles.map(f => f.filename));
+
+            const conflicts = [];
+            const dependencies = [];
+
+            for (const pr of otherPRs) {
+              // Check file overlap
+              const { data: prFiles } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                per_page: 100,
+              });
+              const prFileSet = new Set(prFiles.map(f => f.filename));
+
+              const overlap = [...currentFileSet].filter(f => prFileSet.has(f));
+              if (overlap.length > 0) {
+                conflicts.push({
+                  pr: pr.number,
+                  title: pr.title,
+                  branch: pr.head.ref,
+                  files: overlap,
+                });
+              }
+
+              // Check if current PR branch contains commits from other PR branch
+              // (indicates dependency: current PR was branched from other PR)
+              if (pr.head.ref !== currentBase) {
+                try {
+                  const { data: comparison } = await github.rest.repos.compareCommits({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    base: currentHead,
+                    head: pr.head.ref,
+                  });
+                  // If the other PR is behind current PR (0 ahead), current depends on it
+                  if (comparison.behind_by > 0 && comparison.ahead_by === 0) {
+                    dependencies.push({
+                      pr: pr.number,
+                      title: pr.title,
+                      branch: pr.head.ref,
+                      relationship: 'current PR includes commits from this PR',
+                    });
+                  }
+                } catch (e) {
+                  // Branch comparison failed, skip
+                }
+              }
+            }
+
+            // Check merge conflict potential
+            let hasMergeConflict = false;
+            try {
+              const { data: prData } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: currentPR,
+              });
+              hasMergeConflict = prData.mergeable === false;
+            } catch (e) {
+              // Skip
+            }
+
+            // Build comment
+            if (conflicts.length === 0 && dependencies.length === 0 && !hasMergeConflict) {
+              console.log('No dependencies or conflicts detected');
+              return;
+            }
+
+            let body = '## PR Dependency Analysis\n\n';
+
+            if (hasMergeConflict) {
+              body += ':warning: **Merge conflict detected** with base branch `' + currentBase + '`\n\n';
+            }
+
+            if (dependencies.length > 0) {
+              body += '### Dependencies\n\n';
+              body += 'This PR depends on the following PRs (merge these first):\n\n';
+              body += '| PR | Title | Branch |\n';
+              body += '|----|-------|--------|\n';
+              for (const dep of dependencies) {
+                body += `| #${dep.pr} | ${dep.title} | \`${dep.branch}\` |\n`;
+              }
+              body += '\n';
+            }
+
+            if (conflicts.length > 0) {
+              body += '### File Conflicts\n\n';
+              body += 'These open PRs modify the same files (potential merge conflicts):\n\n';
+              for (const conflict of conflicts) {
+                body += `**#${conflict.pr}** — ${conflict.title}\n`;
+                body += '<details><summary>Overlapping files (' + conflict.files.length + ')</summary>\n\n';
+                for (const f of conflict.files) {
+                  body += `- \`${f}\`\n`;
+                }
+                body += '\n</details>\n\n';
+              }
+            }
+
+            if (conflicts.length > 0 || dependencies.length > 0) {
+              body += '### Suggested Merge Order\n\n';
+              if (dependencies.length > 0) {
+                const depNums = dependencies.map(d => `#${d.pr}`).join(', ');
+                body += `Merge ${depNums} before this PR (#${currentPR}).\n`;
+              }
+              if (conflicts.length > 0 && dependencies.length === 0) {
+                const conflictNums = conflicts.map(c => `#${c.pr}`).join(', ');
+                body += `This PR has file overlaps with ${conflictNums}. `;
+                body += 'Merge one first, then rebase the other to resolve conflicts.\n';
+              }
+            }
+
+            body += '\n---\n*Auto-generated by CI*';
+
+            // Find and update existing comment or create new one
+            const marker = '## PR Dependency Analysis';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: currentPR,
+            });
+
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: currentPR,
+                body,
+              });
+            }
