@@ -58,10 +58,10 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 	if glog.V(6) {
 		glog.Infof("SR Binding SID TLV Raw: %s", tools.MessageHex(b))
 	}
+	bsid := &SRBindingSID{}
 	if len(b) != 12 && len(b) != 36 {
 		return nil, fmt.Errorf("invalid length %d to decode SR Binding SID TLV", len(b))
 	}
-	bsid := &SRBindingSID{}
 	p := 0
 	bsid.FlagD = b[p]&0x80 == 0x80
 	bsid.FlagB = b[p]&0x40 == 0x40
@@ -79,6 +79,9 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 	// The D-Flag determines field size: set = 16 octets (SRv6), clear = 4 octets (MPLS)
 	if bsid.FlagD {
 		// BSID is ipv6 address
+		if p+16 > len(b) {
+			return nil, fmt.Errorf("not enough bytes to decode SR Binding SID TLV, need 16 bytes, have %d", len(b)-p)
+		}
 		bsid.BSID, err = UnmarshalSRv6SID(b[p : p+16])
 		if err != nil {
 			return nil, err
@@ -98,7 +101,7 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 		return bsid, nil
 	}
 	if p+l > len(b) {
-		return nil, fmt.Errorf("not enough bytes to decode SR Binding SID TLV")
+		return nil, fmt.Errorf("not enough bytes to decode SR Binding SID TLV, need %d bytes, have %d", l, len(b)-p)
 	}
 	switch l {
 	case 4:
@@ -317,23 +320,23 @@ func UnmarshalSRAffinityConstraint(b []byte) (*SRAffinityConstraint, error) {
 	p++
 	if s.ExclAnySize != 0 {
 		if p+4 > len(b) {
-			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint Sub TLV")
+			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint ExclAnySize, need 4 bytes, have %d", len(b)-p)
 		}
-		binary.BigEndian.PutUint32(b[p:p+4], s.ExclAnyEAG)
+		s.ExclAnyEAG = binary.BigEndian.Uint32(b[p : p+4])
 		p += 4
 	}
 	if s.InclAnySize != 0 {
 		if p+4 > len(b) {
-			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint Sub TLV")
+			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint InclAnySize, need 4 bytes, have %d", len(b)-p)
 		}
-		binary.BigEndian.PutUint32(b[p:p+4], s.InclAnyEAG)
+		s.InclAnyEAG = binary.BigEndian.Uint32(b[p : p+4])
 		p += 4
 	}
 	if s.InclAllSize != 0 {
 		if p+4 > len(b) {
-			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint Sub TLV")
+			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint InclAllSize, need 4 bytes, have %d", len(b)-p)
 		}
-		binary.BigEndian.PutUint32(b[p:p+4], s.InclAllEAG)
+		s.InclAllEAG = binary.BigEndian.Uint32(b[p : p+4])
 	}
 
 	return s, nil
@@ -353,18 +356,30 @@ func (a *SRAffinityConstraint) MarshalJSON() ([]byte, error) {
 		InclAnySize: a.InclAnySize,
 		InclAllSize: a.InclAllSize,
 		ExclAnyEAG:  a.ExclAnyEAG,
-		InclAnyEAG:  a.InclAllEAG,
+		InclAnyEAG:  a.InclAnyEAG,
 		InclAllEAG:  a.InclAllEAG,
 	})
 }
 
 // UnmarshalJSON instantiates SRAffinityConstraint object from  a slice of bytes
 func (a *SRAffinityConstraint) UnmarshalJSON(b []byte) error {
-	t := &SRAffinityConstraint{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		ExclAnySize uint8  `json:"excl_any_size"`
+		InclAnySize uint8  `json:"incl_any_size"`
+		InclAllSize uint8  `json:"incl_all_size"`
+		ExclAnyEAG  uint32 `json:"excl_any_eag,omitempty"`
+		InclAnyEAG  uint32 `json:"incl_any_eag,omitempty"`
+		InclAllEAG  uint32 `json:"incl_all_eag,omitempty"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*a = *t
+	a.ExclAnySize = t.ExclAnySize
+	a.InclAnySize = t.InclAnySize
+	a.InclAllSize = t.InclAllSize
+	a.ExclAnyEAG = t.ExclAnyEAG
+	a.InclAnyEAG = t.InclAnyEAG
+	a.InclAllEAG = t.InclAllEAG
 
 	return nil
 }
@@ -383,16 +398,16 @@ func UnmarshalSRSRLGConstraint(b []byte) (*SRSRLGConstraint, error) {
 		glog.Infof("SR SRLG Constraint Sub TLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 4 {
-		return nil, fmt.Errorf("not enough bytes to decode SR SRLG Constraint Sub TLV")
+		return nil, fmt.Errorf("not enough bytes to decode SR SRLG Constraint Sub TLV, need at least 4 bytes, have %d", len(b))
 	}
 	n := len(b) % 4
 	if n != 0 {
-		return nil, fmt.Errorf("invalid length of SR SRLG Constraint Sub TLV")
+		return nil, fmt.Errorf("invalid length of SR SRLG Constraint Sub TLV, need multiple of 4 bytes, have %d", len(b))
 	}
 	s := &SRSRLGConstraint{
-		SRLG: make([]uint32, n),
+		SRLG: make([]uint32, len(b)/4),
 	}
-	for p := 0; p < n; p++ {
+	for p := 0; p < len(b)/4; p++ {
 		s.SRLG[p] = binary.BigEndian.Uint32(b[p*4 : p*4+4])
 	}
 
@@ -410,11 +425,13 @@ func (s *SRSRLGConstraint) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON instantiates SRSRLGConstraint object from  a slice of bytes
 func (s *SRSRLGConstraint) UnmarshalJSON(b []byte) error {
-	t := &SRSRLGConstraint{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		SRLG []uint32 `json:"srlg"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*s = *t
+	s.SRLG = t.SRLG
 
 	return nil
 }
@@ -452,11 +469,13 @@ func (w *SRBandwidthConstraint) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON instantiates SRBandwidthConstraint object from  a slice of bytes
 func (w *SRBandwidthConstraint) UnmarshalJSON(b []byte) error {
-	t := &SRBandwidthConstraint{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		Bandwidth uint32 `json:"bandwidth"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*w = *t
+	w.Bandwidth = t.Bandwidth
 
 	return nil
 }
@@ -530,9 +549,9 @@ func (d *SRDisjointGroupConstraint) MarshalJSON() ([]byte, error) {
 		RequestFlagL:    d.RequestFlagL,
 		RequestFlagF:    d.RequestFlagF,
 		RequestFlagI:    d.RequestFlagI,
-		StatusFlagS:     d.StatusFlagN,
+		StatusFlagS:     d.StatusFlagS,
 		StatusFlagN:     d.StatusFlagN,
-		StatusFlagL:     d.StatusFlagF,
+		StatusFlagL:     d.StatusFlagL,
 		StatusFlagF:     d.StatusFlagF,
 		StatusFlagI:     d.StatusFlagI,
 		StatusFlagX:     d.StatusFlagX,
@@ -542,11 +561,35 @@ func (d *SRDisjointGroupConstraint) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON instantiates SRDisjointGroupConstraint object from  a slice of bytes
 func (d *SRDisjointGroupConstraint) UnmarshalJSON(b []byte) error {
-	t := &SRDisjointGroupConstraint{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		RequestFlagS    bool   `json:"s_request_flag"`
+		RequestFlagN    bool   `json:"n_request_flag"`
+		RequestFlagL    bool   `json:"l_request_flag"`
+		RequestFlagF    bool   `json:"f_request_flag"`
+		RequestFlagI    bool   `json:"i_request_flag"`
+		StatusFlagS     bool   `json:"s_status_flag"`
+		StatusFlagN     bool   `json:"n_status_flag"`
+		StatusFlagL     bool   `json:"l_status_flag"`
+		StatusFlagF     bool   `json:"f_status_flag"`
+		StatusFlagI     bool   `json:"i_status_flag"`
+		StatusFlagX     bool   `json:"x_status_flag"`
+		DisjointGroupID uint32 `json:"disjoint_group_id"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*d = *t
+	d.RequestFlagS = t.RequestFlagS
+	d.RequestFlagN = t.RequestFlagN
+	d.RequestFlagL = t.RequestFlagL
+	d.RequestFlagF = t.RequestFlagF
+	d.RequestFlagI = t.RequestFlagI
+	d.StatusFlagS = t.StatusFlagS
+	d.StatusFlagN = t.StatusFlagN
+	d.StatusFlagL = t.StatusFlagL
+	d.StatusFlagF = t.StatusFlagF
+	d.StatusFlagI = t.StatusFlagI
+	d.StatusFlagX = t.StatusFlagX
+	d.DisjointGroupID = t.DisjointGroupID
 
 	return nil
 }
@@ -557,7 +600,7 @@ type SRSegmentListSubTLV interface {
 	UnmarshalJSON([]byte) error
 }
 
-// SRSegmentList defines SR Segment List objects which reports the SID-List(s) of acandidate path.
+// SRSegmentList defines SR Segment List objects which reports the SID-List(s) of a candidate path.
 type SRSegmentList struct {
 	FlagD  bool                           `json:"d_flag"`
 	FlagE  bool                           `json:"e_flag"`
@@ -741,11 +784,19 @@ func (sid *MPLSLabelSID) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON instantiates PLSLabelSID object from  a slice of bytes
 func (sid *MPLSLabelSID) UnmarshalJSON(b []byte) error {
-	t := &MPLSLabelSID{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		Label uint32 `json:"label"`
+		TC    uint8  `json:"tc"`
+		S     bool   `json:"s"`
+		TTL   uint8  `json:"ttl"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*sid = *t
+	sid.Label = t.Label
+	sid.TC = t.TC
+	sid.S = t.S
+	sid.TTL = t.TTL
 
 	return nil
 }
@@ -787,11 +838,13 @@ func (sid *SRv6SID) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON instantiates SRv6SID object from  a slice of bytes
 func (sid *SRv6SID) UnmarshalJSON(b []byte) error {
-	t := &SRv6SID{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		SID []byte `json:"srv6_sid"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*sid = *t
+	sid.SID = t.SID
 
 	return nil
 }
@@ -841,12 +894,13 @@ func (d *SRType1Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON instantiates SRType1Descriptor object from a slice of bytes
 func (d *SRType1Descriptor) UnmarshalJSON(b []byte) error {
-	type alias SRType1Descriptor
-	t := &alias{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		Algorithm uint8 `json:"algorithm"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*d = SRType1Descriptor(*t)
+	d.Algorithm = t.Algorithm
 	return nil
 }
 
@@ -883,12 +937,15 @@ func (d *SRType3Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType3Descriptor.
 func (d *SRType3Descriptor) UnmarshalJSON(b []byte) error {
-	type alias SRType3Descriptor
-	t := &alias{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		IPv4NodeAddress []byte `json:"ipv4_node_address"`
+		Algorithm       uint8  `json:"algorithm"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*d = SRType3Descriptor(*t)
+	d.IPv4NodeAddress = t.IPv4NodeAddress
+	d.Algorithm = t.Algorithm
 	return nil
 }
 
@@ -927,12 +984,15 @@ func (d *SRType4Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType4Descriptor.
 func (d *SRType4Descriptor) UnmarshalJSON(b []byte) error {
-	type alias SRType4Descriptor
-	t := &alias{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		IPv6NodeAddress []byte `json:"ipv6_node_address"`
+		Algorithm       uint8  `json:"algorithm"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*d = SRType4Descriptor(*t)
+	d.IPv6NodeAddress = t.IPv6NodeAddress
+	d.Algorithm = t.Algorithm
 	return nil
 }
 
@@ -971,12 +1031,15 @@ func (d *SRType5Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType5Descriptor.
 func (d *SRType5Descriptor) UnmarshalJSON(b []byte) error {
-	type alias SRType5Descriptor
-	t := &alias{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		LocalNodeIPv4    []byte `json:"local_node_ipv4"`
+		LocalInterfaceID uint32 `json:"local_interface_id"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*d = SRType5Descriptor(*t)
+	d.LocalNodeIPv4 = t.LocalNodeIPv4
+	d.LocalInterfaceID = t.LocalInterfaceID
 	return nil
 }
 
@@ -1015,12 +1078,15 @@ func (d *SRType6Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType6Descriptor.
 func (d *SRType6Descriptor) UnmarshalJSON(b []byte) error {
-	type alias SRType6Descriptor
-	t := &alias{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		LocalInterfaceIPv4  []byte `json:"local_interface_ipv4"`
+		RemoteInterfaceIPv4 []byte `json:"remote_interface_ipv4"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*d = SRType6Descriptor(*t)
+	d.LocalInterfaceIPv4 = t.LocalInterfaceIPv4
+	d.RemoteInterfaceIPv4 = t.RemoteInterfaceIPv4
 	return nil
 }
 
@@ -1071,12 +1137,19 @@ func (d *SRType7Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType7Descriptor.
 func (d *SRType7Descriptor) UnmarshalJSON(b []byte) error {
-	type alias SRType7Descriptor
-	t := &alias{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		LocalNodeIPv6     []byte `json:"local_node_ipv6"`
+		LocalInterfaceID  uint32 `json:"local_interface_id"`
+		RemoteNodeIPv6    []byte `json:"remote_node_ipv6"`
+		RemoteInterfaceID uint32 `json:"remote_interface_id"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*d = SRType7Descriptor(*t)
+	d.LocalNodeIPv6 = t.LocalNodeIPv6
+	d.LocalInterfaceID = t.LocalInterfaceID
+	d.RemoteNodeIPv6 = t.RemoteNodeIPv6
+	d.RemoteInterfaceID = t.RemoteInterfaceID
 	return nil
 }
 
@@ -1116,12 +1189,15 @@ func (d *SRType8Descriptor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON deserializes SRType8Descriptor.
 func (d *SRType8Descriptor) UnmarshalJSON(b []byte) error {
-	type alias SRType8Descriptor
-	t := &alias{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		LocalInterfaceIPv6  []byte `json:"local_interface_ipv6"`
+		RemoteInterfaceIPv6 []byte `json:"remote_interface_ipv6"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*d = SRType8Descriptor(*t)
+	d.LocalInterfaceIPv6 = t.LocalInterfaceIPv6
+	d.RemoteInterfaceIPv6 = t.RemoteInterfaceIPv6
 	return nil
 }
 
@@ -1321,16 +1397,56 @@ func (s *SRSegment) MarshalJSON() ([]byte, error) {
 		FlagR   bool        `json:"r_flag"`
 		FlagA   bool        `json:"a_flag"`
 		SID     SID         `json:"sid"`
-	}{})
+	}{
+		Segment: s.Segment,
+		FlagS:   s.FlagS,
+		FlagE:   s.FlagE,
+		FlagV:   s.FlagV,
+		FlagR:   s.FlagR,
+		FlagA:   s.FlagA,
+		SID:     s.SID,
+	})
 }
 
 // UnmarshalJSON instantiates SRSegment object from  a slice of bytes
 func (s *SRSegment) UnmarshalJSON(b []byte) error {
-	t := &SRSegment{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		Segment SegmentType     `json:"segment_type"`
+		FlagS   bool            `json:"s_flag"`
+		FlagE   bool            `json:"e_flag"`
+		FlagV   bool            `json:"v_flag"`
+		FlagR   bool            `json:"r_flag"`
+		FlagA   bool            `json:"a_flag"`
+		SID     json.RawMessage `json:"sid"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*s = *t
+	s.Segment = t.Segment
+	s.FlagS = t.FlagS
+	s.FlagE = t.FlagE
+	s.FlagV = t.FlagV
+	s.FlagR = t.FlagR
+	s.FlagA = t.FlagA
+	// Decode the concrete SID type based on segment_type.
+	// SID is only present when the raw JSON is non-null.
+	if len(t.SID) > 0 && string(t.SID) != "null" {
+		switch t.Segment {
+		case SegmentType2, SegmentType9, SegmentType10, SegmentType11:
+			sid := &SRv6SID{}
+			if err := json.Unmarshal(t.SID, sid); err != nil {
+				return err
+			}
+			s.SID = sid
+		default:
+			// Types 1, 3, 4, 5, 6, 7, 8 use MPLS label SID.
+			sid := &MPLSLabelSID{}
+			if err := json.Unmarshal(t.SID, sid); err != nil {
+				return err
+			}
+			s.SID = sid
+		}
+	}
 
 	return nil
 }
@@ -1414,11 +1530,27 @@ func (m *SRSegmentListMetric) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON instantiates SRSegmentListMetric object from  a slice of bytes
 func (m *SRSegmentListMetric) UnmarshalJSON(b []byte) error {
-	t := &SRSegmentListMetric{}
-	if err := json.Unmarshal(b, t); err != nil {
+	t := struct {
+		Metric SRMetricType `json:"metric_type"`
+		FlagM  bool         `json:"m_flag"`
+		FlagA  bool         `json:"a_flag"`
+		FlagB  bool         `json:"b_flag"`
+		FlagV  bool         `json:"v_flag"`
+		Margin uint32       `json:"metric_margine"`
+		Bound  uint32       `json:"metric_bound"`
+		Value  uint32       `json:"metric_value"`
+	}{}
+	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	*m = *t
+	m.Metric = t.Metric
+	m.FlagM = t.FlagM
+	m.FlagA = t.FlagA
+	m.FlagB = t.FlagB
+	m.FlagV = t.FlagV
+	m.Margin = t.Margin
+	m.Bound = t.Bound
+	m.Value = t.Value
 
 	return nil
 }

@@ -70,27 +70,39 @@ func UnmarshalFlexAlgoDefinition(b []byte) (*FlexAlgoDefinition, error) {
 		}
 		fad.SubTLV = &FADSubTLV{}
 		for _, tlv := range sstlvs {
-			ints, err := getFADSubTLVValue(tlv)
-			if err != nil {
-				return nil, err
-			}
 			switch tlv.Type {
 			case 1040:
+				ints, err := getFADSubTLVValue(tlv)
+				if err != nil {
+					return nil, err
+				}
 				fad.SubTLV.ExcludeAny = ints
 			case 1041:
+				ints, err := getFADSubTLVValue(tlv)
+				if err != nil {
+					return nil, err
+				}
 				fad.SubTLV.IncludeAny = ints
 			case 1042:
+				ints, err := getFADSubTLVValue(tlv)
+				if err != nil {
+					return nil, err
+				}
 				fad.SubTLV.IncludeAll = ints
 			case 1043:
 				fad.SubTLV.Flags = &FADSubTLVFlags{}
 				if tlv.Length < 1 {
-					return nil, fmt.Errorf("not enough bytes to decode FlexAlgo definition Sub TLV Flag")
+					return nil, fmt.Errorf("not enough bytes to decode FlexAlgo definition Sub TLV Flag, need 1 byte, have %d", tlv.Length)
 				}
 				fad.SubTLV.Flags.MFLag = tlv.Value[0]&0x80 == 0x80
 			case 1045: // the type is really TBD in the draft
+				ints, err := getFADSubTLVValue(tlv)
+				if err != nil {
+					return nil, err
+				}
 				fad.SubTLV.ExcludeSRLG = ints
 			default:
-				return nil, fmt.Errorf("unknown FlexAlgo definition subtlv type %d", tlv.Type)
+				glog.Warningf("unknown FlexAlgo definition subtlv type %d", tlv.Type)
 			}
 		}
 	}

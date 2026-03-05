@@ -22,7 +22,7 @@ func UnmarshalIGPFlags(b []byte) (*IGPFlags, error) {
 		glog.Infof("IGP Flags TLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 1 {
-		return nil, fmt.Errorf("not enough bytes to unmarshal")
+		return nil, fmt.Errorf("not enough bytes to unmarshal IGP Flags: need at least 1 byte, have %d", len(b))
 	}
 	f := &IGPFlags{}
 	p := 0

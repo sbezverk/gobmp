@@ -62,7 +62,7 @@ func (ls *NLRI) GetNodeFlags() (*NodeAttrFlags, error) {
 		}
 		return UnmarshalNodeAttrFlags(tlv.Value)
 	}
-	return nil, fmt.Errorf("node found")
+	return nil, fmt.Errorf("TLV 1024 not found")
 }
 
 // GetNodeName returns Value field identifies the symbolic name of the router node
@@ -166,7 +166,7 @@ func (ls *NLRI) GetNodeMSD() ([]*base.MSDTV, error) {
 		return base.UnmarshalMSDTV(tlv.Value)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return nil, fmt.Errorf("MSD TLV 266 not found")
 }
 
 // GetLinkMSD returns Link's MSD object
@@ -178,7 +178,7 @@ func (ls *NLRI) GetLinkMSD() ([]*base.MSDTV, error) {
 		return base.UnmarshalMSDTV(tlv.Value)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return nil, fmt.Errorf("MSD TLV 267 not found")
 }
 
 // GetNodeSRCapabilities returns string representation of SR Capabilities
@@ -190,7 +190,7 @@ func (ls *NLRI) GetNodeSRCapabilities(proto base.ProtoID) (*sr.Capability, error
 		return sr.UnmarshalSRCapability(tlv.Value, proto)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return nil, fmt.Errorf("SR Capability TLV 1034 not found")
 }
 
 // GetSRAlgorithm returns a list of SR Algorithms
@@ -296,7 +296,7 @@ func (ls *NLRI) GetLSSRv6Locator() (*srv6.LocatorTLV, error) {
 		return srv6.UnmarshalSRv6LocatorTLV(tlv.Value)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return nil, fmt.Errorf("SRv6 Locator TLV 1162 not found")
 }
 
 // GetLSPrefixAttrFlags returns a Prefix Attribute Flags interface
@@ -308,7 +308,7 @@ func (ls *NLRI) GetLSPrefixAttrFlags(proto base.ProtoID) (PrefixAttrFlags, error
 		return UnmarshalPrefixAttrFlags(tlv.Value, proto)
 	}
 
-	return nil, fmt.Errorf("not found")
+	return nil, fmt.Errorf("prefix Attribute Flags TLV 1170 not found")
 }
 
 // GetLSSourceRouterID returns a Prefix Source Router ID
@@ -338,7 +338,7 @@ func (ls *NLRI) GetLSSourceRouterID() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("source router ID TLV not found")
+	return "", fmt.Errorf("source Router ID TLV 1171 not found")
 }
 
 // GetLSSRv6ENDXSID returns SRv6 END.X SID TLV
@@ -365,7 +365,7 @@ func (ls *NLRI) GetNodeSRv6CapabilitiesTLV() (*srv6.CapabilityTLV, error) {
 		}
 		return srv6.UnmarshalSRv6CapabilityTLV(tlv.Value)
 	}
-	return nil, fmt.Errorf("not found")
+	return nil, fmt.Errorf("SRv6 Capability TLV 1038 not found")
 }
 
 // GetAdminGroup returns Administrative group (color)
@@ -373,6 +373,9 @@ func (ls *NLRI) GetAdminGroup() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1088 {
 			continue
+		}
+		if len(tlv.Value) < 4 {
+			return 0
 		}
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
@@ -385,6 +388,9 @@ func (ls *NLRI) GetTEDefaultMetric() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1092 {
 			continue
+		}
+		if len(tlv.Value) < 4 {
+			return 0
 		}
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
@@ -401,6 +407,10 @@ func (ls *NLRI) GetIGPMetric() uint32 {
 		m := make([]byte, 4)
 		// 1095 TLV has variable length
 		// 1, 2 or 3 bytes, depending on the length copying the actual value into the right position.
+		if tlv.Length < 1 || tlv.Length > 3 {
+			glog.Errorf("Invalid length %d for IGP Metric TLV 1095, expected 1, 2 or 3", tlv.Length)
+			return 0
+		}
 		copy(m[4-tlv.Length:], tlv.Value)
 		return binary.BigEndian.Uint32(m)
 	}
@@ -413,6 +423,9 @@ func (ls *NLRI) GetPrefixMetric() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1155 {
 			continue
+		}
+		if len(tlv.Value) < 4 {
+			return 0
 		}
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
@@ -492,6 +505,9 @@ func (ls *NLRI) GetLinkProtectionType() uint16 {
 		if tlv.Type != 1093 {
 			continue
 		}
+		if len(tlv.Value) < 2 {
+			return 0
+		}
 		return binary.BigEndian.Uint16(tlv.Value)
 	}
 
@@ -503,6 +519,9 @@ func (ls *NLRI) GetLinkMPLSProtocolMask() uint8 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1094 {
 			continue
+		}
+		if len(tlv.Value) < 1 {
+			return 0
 		}
 		return uint8(tlv.Value[0])
 	}
@@ -517,6 +536,10 @@ func (ls *NLRI) GetSRLG() []uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1096 {
 			continue
+		}
+		if tlv.Length%4 != 0 {
+			glog.Errorf("BGP-LS TLV 1096 invalid length: %d, returning empty SRLG\n", tlv.Length)
+			return srlg
 		}
 		for p := 0; p < len(tlv.Value); {
 			srlg = append(srlg, binary.BigEndian.Uint32(tlv.Value[p:p+4]))
@@ -633,6 +656,9 @@ func (ls *NLRI) GetUnidirLinkDelay() uint32 {
 		if tlv.Type != 1114 {
 			continue
 		}
+		if len(tlv.Value) < 4 {
+			return 0
+		}
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
 
@@ -647,6 +673,9 @@ func (ls *NLRI) GetUnidirLinkDelayMinMax() []uint32 {
 		if tlv.Type != 1115 {
 			continue
 		}
+		if len(tlv.Value) < 8 {
+			return nil
+		}
 		return []uint32{binary.BigEndian.Uint32(tlv.Value[:4]), binary.BigEndian.Uint32(tlv.Value[4:])}
 	}
 
@@ -659,6 +688,9 @@ func (ls *NLRI) GetUnidirDelayVariation() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1116 {
 			continue
+		}
+		if len(tlv.Value) < 4 {
+			return 0
 		}
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
@@ -673,6 +705,9 @@ func (ls *NLRI) GetUnidirLinkLoss() uint32 {
 		if tlv.Type != 1117 {
 			continue
 		}
+		if len(tlv.Value) < 4 {
+			return 0
+		}
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
 
@@ -685,6 +720,9 @@ func (ls *NLRI) GetUnidirResidualBandwidth() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1118 {
 			continue
+		}
+		if len(tlv.Value) < 4 {
+			return 0
 		}
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
@@ -699,6 +737,9 @@ func (ls *NLRI) GetUnidirAvailableBandwidth() uint32 {
 		if tlv.Type != 1119 {
 			continue
 		}
+		if len(tlv.Value) < 4 {
+			return 0
+		}
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
 
@@ -711,6 +752,9 @@ func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1120 {
 			continue
+		}
+		if len(tlv.Value) < 4 {
+			return 0
 		}
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
