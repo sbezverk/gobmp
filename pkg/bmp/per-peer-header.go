@@ -86,7 +86,7 @@ func peerType(b byte) (PeerType, error) {
 		// RFC 7854 §11: implementations MUST ignore messages with unrecognized
 		// peer types and continue processing subsequent messages. Return a
 		// sentinel so callers can skip this message without aborting the stream.
-		glog.Warningf("unknown BMP peer type %d — skipping message", b)
+		glog.V(2).Infof("unknown BMP peer type %d — skipping message", b)
 		return PeerTypeUnknown, ErrUnknownPeerType
 	}
 }
