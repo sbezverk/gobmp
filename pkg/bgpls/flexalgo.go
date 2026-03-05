@@ -90,7 +90,7 @@ func UnmarshalFlexAlgoDefinition(b []byte) (*FlexAlgoDefinition, error) {
 			case 1045: // the type is really TBD in the draft
 				fad.SubTLV.ExcludeSRLG = ints
 			default:
-				return nil, fmt.Errorf("unknown FlexAlgo definition subtlv type %d", tlv.Type)
+				glog.Warningf("unknown FlexAlgo definition subtlv type %d", tlv.Type)
 			}
 		}
 	}

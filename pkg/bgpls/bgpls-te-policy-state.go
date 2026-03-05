@@ -30,5 +30,5 @@ const (
 type MPLSTEPolicyState struct {
 	ObjectOrigin  ObjectOriginType                   `json:"object_origin,omitempty"`
 	AddressFamily MPLSTEPolicyStateAddressFamilyType `json:"address_family,omitempty"`
-	StateObjects  []TEPolicyStateObjects             ` json:"te_policy_state_objects,omitempty"`
+	StateObjects  []TEPolicyStateObjects             `json:"te_policy_state_objects,omitempty"`
 }
