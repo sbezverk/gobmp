@@ -15,6 +15,16 @@ type CommonHeader struct {
 	MessageType   byte
 }
 
+// IntMessageLength returns the MessageLength as an int with overflow checking.
+// It is intended for use in allocations and slicing operations that require an int length.
+func (c *CommonHeader) IntMessageLength() (int, error) {
+	// Compute platform-specific max int (e.g., 2^31-1 on 32-bit, 2^63-1 on 64-bit).
+	maxInt := int(^uint(0) >> 1)
+	if c.MessageLength > uint32(maxInt) {
+		return 0, fmt.Errorf("bmp: message length %d overflows int (max %d)", c.MessageLength, maxInt)
+	}
+	return int(c.MessageLength), nil
+}
 // UnmarshalCommonHeader processes Common Header and returns BMPCommonHeader object
 func UnmarshalCommonHeader(b []byte) (*CommonHeader, error) {
 	if glog.V(6) {
