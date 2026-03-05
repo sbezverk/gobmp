@@ -2,6 +2,7 @@ package bmp
 
 import (
 	"encoding/binary"
+	"strings"
 	"testing"
 )
 
@@ -247,14 +248,7 @@ func TestReasonString(t *testing.T) {
 				t.Fatalf("ReasonString() returned empty string")
 			}
 			// Basic check: result contains expected substring
-			found := false
-			for i := 0; i <= len(got)-len(tt.wantSubst); i++ {
-				if got[i:i+len(tt.wantSubst)] == tt.wantSubst {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !strings.Contains(got, tt.wantSubst) {
 				t.Errorf("ReasonString() = %q, want substring %q", got, tt.wantSubst)
 			}
 		})

@@ -53,9 +53,6 @@ func UnmarshalPeerUpMessage(b []byte, isIPv6 bool) (*PeerUpMessage, error) {
 	if glog.V(6) {
 		glog.Infof("BMP Peer Up Message Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) == 0 {
-		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message")
-	}
 	var err error
 	pu := &PeerUpMessage{
 		LocalAddress:     make([]byte, 16),

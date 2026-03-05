@@ -1,10 +1,119 @@
 package parser
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
+
+// buildPeerDownMsg returns a complete BMP PeerDown message as a byte slice.
+// perPeerHeader must be exactly 42 bytes (bmp.PerPeerHeaderLength).
+func buildPeerDownMsg(perPeerHeader []byte, reason byte, extraData []byte) []byte {
+	body := append([]byte{reason}, extraData...)
+	msgLen := bmp.CommonHeaderLength + bmp.PerPeerHeaderLength + len(body)
+	b := make([]byte, msgLen)
+	b[0] = 3 // BMP version
+	binary.BigEndian.PutUint32(b[1:5], uint32(msgLen))
+	b[5] = bmp.PeerDownMsg
+	copy(b[6:], perPeerHeader)
+	copy(b[6+bmp.PerPeerHeaderLength:], body)
+	return b
+}
+
+// buildStatsReportMsg returns a BMP StatsReport message with one TLV
+// (type=1, length=4, value=tlvValue).
+func buildStatsReportMsg(perPeerHeader []byte, tlvValue uint32) []byte {
+	statsBody := make([]byte, 4+4+4)
+	binary.BigEndian.PutUint32(statsBody[0:], 1) // count=1
+	binary.BigEndian.PutUint16(statsBody[4:], 1) // TLV type=1
+	binary.BigEndian.PutUint16(statsBody[6:], 4) // TLV length=4
+	binary.BigEndian.PutUint32(statsBody[8:], tlvValue)
+	msgLen := bmp.CommonHeaderLength + bmp.PerPeerHeaderLength + len(statsBody)
+	b := make([]byte, msgLen)
+	b[0] = 3
+	binary.BigEndian.PutUint32(b[1:5], uint32(msgLen))
+	b[5] = bmp.StatsReportMsg
+	copy(b[6:], perPeerHeader)
+	copy(b[6+bmp.PerPeerHeaderLength:], statsBody)
+	return b
+}
+
+// buildInitiationMsg returns a minimal (empty-body) BMP Initiation message.
+func buildInitiationMsg() []byte {
+	b := make([]byte, bmp.CommonHeaderLength)
+	b[0] = 3
+	binary.BigEndian.PutUint32(b[1:5], uint32(bmp.CommonHeaderLength))
+	b[5] = bmp.InitiationMsg
+	return b
+}
+
+// collectMessages drains the producer queue and returns all collected messages.
+func collectMessages(q chan bmp.Message) []bmp.Message {
+	close(q)
+	var msgs []bmp.Message
+	for m := range q {
+		msgs = append(msgs, m)
+	}
+	return msgs
+}
+
+// TestParsingWorkerConsecutivePeerDown verifies that two PeerDown messages in one
+// buffer both produce output. This catches the double-advance bug where
+// pos was incremented by PerPeerHeaderLength inside the switch AND again by
+// (MessageLength-CommonHeaderLength) after the switch, causing the cursor to
+// overshoot by 42 bytes and land in the middle of the second message.
+func TestParsingWorkerConsecutivePeerDown(t *testing.T) {
+	emptyPPH := make([]byte, bmp.PerPeerHeaderLength)
+	input := append(buildPeerDownMsg(emptyPPH, 5, nil), // reason 5
+		buildPeerDownMsg(emptyPPH, 1, nil)...) // reason 1
+
+	producerQueue := make(chan bmp.Message, 10)
+	p := &parser{producerQueue: producerQueue, config: &Config{}}
+	p.parsingWorker(input)
+	msgs := collectMessages(producerQueue)
+
+	if len(msgs) != 2 {
+		t.Fatalf("expected 2 messages, got %d — double-advance bug likely not fixed", len(msgs))
+	}
+	for i, want := range []uint8{5, 1} {
+		pd, ok := msgs[i].Payload.(*bmp.PeerDownMessage)
+		if !ok {
+			t.Fatalf("msgs[%d] payload type = %T, want *bmp.PeerDownMessage", i, msgs[i].Payload)
+		}
+		if pd.Reason != want {
+			t.Errorf("msgs[%d] reason = %d, want %d", i, pd.Reason, want)
+		}
+	}
+}
+
+// TestParsingWorkerStatsReportBoundedSlice verifies the StatsReport payload slice
+// is bounded to the current message. The old code used an open-ended slice
+// b[pos+PerPeerHeaderLength:] which included bytes from the following message;
+// if those bytes caused a TLV length overflow the stats message was lost entirely.
+func TestParsingWorkerStatsReportBoundedSlice(t *testing.T) {
+	emptyPPH := make([]byte, bmp.PerPeerHeaderLength)
+	input := append(buildStatsReportMsg(emptyPPH, 42), buildInitiationMsg()...)
+
+	producerQueue := make(chan bmp.Message, 10)
+	p := &parser{producerQueue: producerQueue, config: &Config{}}
+	p.parsingWorker(input)
+	msgs := collectMessages(producerQueue)
+
+	if len(msgs) != 1 {
+		t.Fatalf("expected 1 message (StatsReport), got %d — bounded slice bug likely not fixed", len(msgs))
+	}
+	sr, ok := msgs[0].Payload.(*bmp.StatsReport)
+	if !ok {
+		t.Fatalf("payload type = %T, want *bmp.StatsReport", msgs[0].Payload)
+	}
+	if sr.StatsCount != 1 {
+		t.Errorf("StatsCount = %d, want 1", sr.StatsCount)
+	}
+	if len(sr.StatsTLV) != 1 || sr.StatsTLV[0].InformationType != 1 {
+		t.Errorf("unexpected StatsTLV: %+v", sr.StatsTLV)
+	}
+}
 
 func TestParsingWorker(t *testing.T) {
 	tests := []struct {

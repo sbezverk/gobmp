@@ -38,13 +38,13 @@ func UnmarshalPeerDownMessage(b []byte) (*PeerDownMessage, error) {
 	switch pdw.Reason {
 	// valid reason codes defined in RFC 7854 and RFC 9069
 	case 1, 2, 3, 4, 5, 6:
-		copy(pdw.Data, b[p:])
 	default:
 		// As per RFC 7854 recommendation, BMP implementations MUST ignore messages
 		// with unrecognized reason codes and continue processing subsequent messages.
 		// Therefore, we will not return an error for unrecognized reason codes, but we will log a warning.
 		glog.Warningf("unknown reason code %d in Peer Down message", pdw.Reason)
 	}
+	copy(pdw.Data, b[p:])
 
 	return pdw, nil
 }

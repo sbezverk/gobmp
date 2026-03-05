@@ -57,7 +57,7 @@ func UnmarshalTerminationMessage(b []byte) (*TerminationMessage, error) {
 			tm.Strings = append(tm.Strings, string(tlv.Information))
 		case 1: // Reason TLV — 2-byte reason code
 			if len(tlv.Information) < 2 {
-				return nil, fmt.Errorf("termination reason TLV too short: %d bytes", len(tlv.Information))
+				return nil, fmt.Errorf("not enough bytes to unmarshal termination reason TLV need 2 bytes, have: %d bytes", len(tlv.Information))
 			}
 			tm.Reason = binary.BigEndian.Uint16(tlv.Information[:2])
 			tm.HasReason = true
