@@ -334,7 +334,6 @@ func UnmarshalSRAffinityConstraint(b []byte) (*SRAffinityConstraint, error) {
 			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint InclAllSize, need 4 bytes, have %d", len(b)-p)
 		}
 		s.InclAllEAG = binary.BigEndian.Uint32(b[p : p+4])
-		p += 4
 	}
 
 	return s, nil
@@ -1409,13 +1408,13 @@ func (s *SRSegment) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON instantiates SRSegment object from  a slice of bytes
 func (s *SRSegment) UnmarshalJSON(b []byte) error {
 	t := struct {
-		Segment SegmentType `json:"segment_type"`
-		FlagS   bool        `json:"s_flag"`
-		FlagE   bool        `json:"e_flag"`
-		FlagV   bool        `json:"v_flag"`
-		FlagR   bool        `json:"r_flag"`
-		FlagA   bool        `json:"a_flag"`
-		SID     SID         `json:"sid"`
+		Segment SegmentType     `json:"segment_type"`
+		FlagS   bool            `json:"s_flag"`
+		FlagE   bool            `json:"e_flag"`
+		FlagV   bool            `json:"v_flag"`
+		FlagR   bool            `json:"r_flag"`
+		FlagA   bool            `json:"a_flag"`
+		SID     json.RawMessage `json:"sid"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
@@ -1426,7 +1425,25 @@ func (s *SRSegment) UnmarshalJSON(b []byte) error {
 	s.FlagV = t.FlagV
 	s.FlagR = t.FlagR
 	s.FlagA = t.FlagA
-	s.SID = t.SID
+	// Decode the concrete SID type based on segment_type.
+	// SID is only present when the raw JSON is non-null.
+	if len(t.SID) > 0 && string(t.SID) != "null" {
+		switch t.Segment {
+		case SegmentType2, SegmentType9, SegmentType10, SegmentType11:
+			sid := &SRv6SID{}
+			if err := json.Unmarshal(t.SID, sid); err != nil {
+				return err
+			}
+			s.SID = sid
+		default:
+			// Types 1, 3, 4, 5, 6, 7, 8 use MPLS label SID.
+			sid := &MPLSLabelSID{}
+			if err := json.Unmarshal(t.SID, sid); err != nil {
+				return err
+			}
+			s.SID = sid
+		}
+	}
 
 	return nil
 }

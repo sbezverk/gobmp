@@ -308,7 +308,7 @@ func (ls *NLRI) GetLSPrefixAttrFlags(proto base.ProtoID) (PrefixAttrFlags, error
 		return UnmarshalPrefixAttrFlags(tlv.Value, proto)
 	}
 
-	return nil, fmt.Errorf("Prefix Attribute Flags TLV 1170 not found")
+	return nil, fmt.Errorf("prefix Attribute Flags TLV 1170 not found")
 }
 
 // GetLSSourceRouterID returns a Prefix Source Router ID
@@ -338,7 +338,7 @@ func (ls *NLRI) GetLSSourceRouterID() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("Source Router ID TLV 1171 not found")
+	return "", fmt.Errorf("source Router ID TLV 1171 not found")
 }
 
 // GetLSSRv6ENDXSID returns SRv6 END.X SID TLV

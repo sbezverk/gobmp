@@ -221,9 +221,8 @@ func TestSRType8Descriptor_JSON(t *testing.T) {
 // JSON round-trip tests for SRSegment and SRSegmentListMetric
 // ─────────────────────────────────────────────────────────────────────────────
 
-// SRSegment.UnmarshalJSON restores flags and segment type. The SID field has
-// interface type SID, so json.Unmarshal cannot determine the concrete type;
-// SID is left nil after an unmarshal round-trip.
+// SRSegment.UnmarshalJSON decodes the sid field as json.RawMessage and
+// instantiates the concrete SID type based on segment_type.
 func TestSRSegment_JSON_NoSID(t *testing.T) {
 	orig := &SRSegment{
 		Segment: SegmentType1,
@@ -249,6 +248,68 @@ func TestSRSegment_JSON_NoSID(t *testing.T) {
 		t.Errorf("flags mismatch: got FlagE=%v FlagR=%v, want FlagE=%v FlagR=%v",
 			got.FlagE, got.FlagR, orig.FlagE, orig.FlagR)
 	}
+	if got.SID != nil {
+		t.Errorf("SID should be nil when FlagS=false, got %v", got.SID)
+	}
+}
+
+func TestSRSegment_JSON_MPLSsid(t *testing.T) {
+	orig := &SRSegment{
+		Segment: SegmentType1,
+		FlagS:   true,
+		FlagE:   false,
+		FlagV:   false,
+		FlagR:   false,
+		FlagA:   false,
+		SID:     &MPLSLabelSID{Label: 300, TC: 2, S: false, TTL: 128},
+	}
+	b, err := orig.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON() error = %v", err)
+	}
+	got := &SRSegment{}
+	if err := json.Unmarshal(b, got); err != nil {
+		t.Fatalf("UnmarshalJSON() error = %v", err)
+	}
+	if got.Segment != orig.Segment {
+		t.Errorf("Segment = %v, want %v", got.Segment, orig.Segment)
+	}
+	mplsSID, ok := got.SID.(*MPLSLabelSID)
+	if !ok {
+		t.Fatalf("SID is %T, want *MPLSLabelSID", got.SID)
+	}
+	wantSID := orig.SID.(*MPLSLabelSID)
+	if mplsSID.Label != wantSID.Label || mplsSID.TC != wantSID.TC || mplsSID.S != wantSID.S || mplsSID.TTL != wantSID.TTL {
+		t.Errorf("SID = %+v, want %+v", mplsSID, wantSID)
+	}
+}
+
+func TestSRSegment_JSON_SRv6sid(t *testing.T) {
+	orig := &SRSegment{
+		Segment: SegmentType2,
+		FlagS:   true,
+		FlagE:   false,
+		FlagV:   false,
+		FlagR:   false,
+		FlagA:   false,
+		SID:     &SRv6SID{SID: []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}},
+	}
+	b, err := orig.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON() error = %v", err)
+	}
+	got := &SRSegment{}
+	if err := json.Unmarshal(b, got); err != nil {
+		t.Fatalf("UnmarshalJSON() error = %v", err)
+	}
+	srv6SID, ok := got.SID.(*SRv6SID)
+	if !ok {
+		t.Fatalf("SID is %T, want *SRv6SID", got.SID)
+	}
+	wantSID := orig.SID.(*SRv6SID)
+	if !bytes.Equal(srv6SID.SID, wantSID.SID) {
+		t.Errorf("SID = %v, want %v", srv6SID.SID, wantSID.SID)
+	}
 }
 
 func TestSRSegment_JSON_AllFlags(t *testing.T) {
@@ -259,7 +320,7 @@ func TestSRSegment_JSON_AllFlags(t *testing.T) {
 		FlagV:   true,
 		FlagR:   true,
 		FlagA:   true,
-		SID:     nil,
+		SID:     &MPLSLabelSID{Label: 100, TC: 1, S: true, TTL: 64},
 	}
 	b, err := orig.MarshalJSON()
 	if err != nil {
@@ -274,6 +335,9 @@ func TestSRSegment_JSON_AllFlags(t *testing.T) {
 	}
 	if got.Segment != SegmentType3 {
 		t.Errorf("Segment = %v, want %v", got.Segment, SegmentType3)
+	}
+	if _, ok := got.SID.(*MPLSLabelSID); !ok {
+		t.Errorf("SID is %T, want *MPLSLabelSID", got.SID)
 	}
 }
 
