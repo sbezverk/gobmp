@@ -129,14 +129,14 @@ func TestRFC8956_IPv6DestinationPrefix(t *testing.T) {
 
 // TestRFC8956_IPv6SourcePrefix validates Type 2 IPv6 Source Prefix parsing.
 func TestRFC8956_IPv6SourcePrefix(t *testing.T) {
+	// Truncated: /48 with offset=0 requires ceil((48-0)/8)=6 prefix bytes, but only 4 provided
 	input := []byte{
 		0x07,                         // NLRI length: 7
 		0x02,                         // Type 2: Source Prefix
 		0x30,                         // Prefix length: 48
 		0x00,                         // Offset: 0
-		0xfd, 0x00, 0x00, 0x01,       // fd00:1:: (only need 4 bytes for /48 - wait, ceil(48/8)=6)
+		0xfd, 0x00, 0x00, 0x01,       // 4 bytes instead of required 6
 	}
-	// This should fail because ceil(48/8)=6 bytes but we only have 4
 	_, err := UnmarshalAllIPv6FlowspecNLRI(input)
 	if err == nil {
 		t.Error("expected error for truncated IPv6 source prefix")

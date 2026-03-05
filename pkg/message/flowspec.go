@@ -56,6 +56,9 @@ func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *b
 	if fsnlri != nil {
 		fs.SpecHash = fsnlri.GetSpecHash()
 		fs.Spec = fsnlri.Spec
+	} else {
+		// Withdraw-all: deterministic key for publish routing
+		fs.SpecHash = "withdraw-all"
 	}
 
 	if ases := update.BaseAttributes.ASPath; len(ases) != 0 {

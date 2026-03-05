@@ -320,7 +320,7 @@ func makePrefixSpec(b []byte) (Spec, int, error) {
 // Format: Type(1) + PrefixLength(1) + Offset(1) + Prefix(ceil((PrefixLength-Offset)/8))
 func makeIPv6PrefixSpec(b []byte) (Spec, int, error) {
 	if len(b) < 3 {
-		return nil, 0, fmt.Errorf("insufficient data for IPv6 prefix spec: need at least 3 bytes, got %d", len(b))
+		return nil, 0, fmt.Errorf("not enough bytes for IPv6 prefix spec: need 3, have %d", len(b))
 	}
 	s := &PrefixSpec{}
 	p := 0
@@ -330,7 +330,7 @@ func makeIPv6PrefixSpec(b []byte) (Spec, int, error) {
 	p++
 	s.Offset = b[p]
 	p++
-	// RFC 8956: prefix bytes encode (PrefixLength - Offset) significant bits
+	// RFC 8956 Section 3: prefix bytes encode (PrefixLength - Offset) significant bits
 	bits := int(s.PrefixLength) - int(s.Offset)
 	if bits < 0 {
 		return nil, 0, fmt.Errorf("IPv6 prefix offset %d exceeds prefix length %d", s.Offset, s.PrefixLength)
@@ -340,7 +340,7 @@ func makeIPv6PrefixSpec(b []byte) (Spec, int, error) {
 		l++
 	}
 	if p+l > len(b) {
-		return nil, 0, fmt.Errorf("insufficient data for IPv6 prefix spec: need %d bytes at offset %d, got %d", l, p, len(b)-p)
+		return nil, 0, fmt.Errorf("not enough bytes for IPv6 prefix: need %d, have %d", l, len(b)-p)
 	}
 	s.Prefix = make([]byte, l)
 	copy(s.Prefix, b[p:p+l])

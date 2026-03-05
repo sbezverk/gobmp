@@ -272,7 +272,7 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 			name:       "AFI=2 SAFI=133 IPv6 flowspec empty withdraw-all",
 			afi:        2,
 			safi:       133,
-			wantErrMsg: "", // empty WithdrawnRoutes returns empty NLRI, no error
+			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (withdraw-all)
 		},
 		{
 			name:       "SAFI=134 AFI=1 VPN not implemented",

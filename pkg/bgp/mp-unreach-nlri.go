@@ -157,11 +157,13 @@ func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 }
 
 // GetFlowspecNLRI checks for presence of Flowspec (SAFI=133) in MP_UNREACH_NLRI and parses the first withdrawn route.
+// Returns nil NLRI with nil error for empty withdrawn routes (withdraw-all signal).
 // Use GetAllFlowspecNLRI to parse multiple NLRIs per RFC 8955/8956.
 func (mp *MPUnReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	if mp.SubAddressFamilyID == 133 && (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) {
 		if len(mp.WithdrawnRoutes) == 0 {
-			return &flowspec.NLRI{}, nil
+			// Empty MP_UNREACH_NLRI: withdraw-all signal
+			return nil, nil
 		}
 		if mp.AddressFamilyID == 2 {
 			return flowspec.UnmarshalIPv6FlowspecNLRI(mp.WithdrawnRoutes)
