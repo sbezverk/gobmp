@@ -321,6 +321,100 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 	}
 }
 
+// TestMPUnReachNLRI_GetAllFlowspecNLRI tests all branches of GetAllFlowspecNLRI.
+func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
+	twoNLRIs := []byte{
+		0x05, 0x02, 0x18, 0x0A, 0x00, 0x07,
+		0x03, 0x03, 0x81, 0x2F,
+	}
+
+	tests := []struct {
+		name         string
+		afi          uint16
+		safi         uint8
+		withdrawn    []byte
+		wantCount    int
+		wantNil      bool
+		wantErrMsg   string
+		wantNotFound bool
+	}{
+		{
+			name:      "AFI=1 SAFI=133 with two NLRIs",
+			afi:       1,
+			safi:      133,
+			withdrawn: twoNLRIs,
+			wantCount: 2,
+		},
+		{
+			name:      "AFI=1 SAFI=133 empty withdrawn (withdraw-all)",
+			afi:       1,
+			safi:      133,
+			withdrawn: []byte{},
+			wantNil:   true,
+		},
+		{
+			name:       "AFI=2 SAFI=133 not implemented",
+			afi:        2,
+			safi:       133,
+			wantErrMsg: "not yet implemented",
+		},
+		{
+			name:       "SAFI=134 VPN not implemented",
+			afi:        1,
+			safi:       134,
+			wantErrMsg: "not yet implemented",
+		},
+		{
+			name:         "unknown SAFI returns NLRINotFoundError",
+			afi:          1,
+			safi:         200,
+			wantNotFound: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mp := &MPUnReachNLRI{
+				AddressFamilyID:    tt.afi,
+				SubAddressFamilyID: tt.safi,
+				WithdrawnRoutes:    tt.withdrawn,
+				addPath:            map[int]bool{},
+			}
+			nlris, err := mp.GetAllFlowspecNLRI()
+			if tt.wantNotFound {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				notFound := &NLRINotFoundError{}
+				if !errors.As(err, &notFound) {
+					t.Errorf("expected NLRINotFoundError, got %T: %v", err, err)
+				}
+				return
+			}
+			if tt.wantErrMsg != "" {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), tt.wantErrMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.wantErrMsg)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.wantNil {
+				if nlris != nil {
+					t.Errorf("expected nil slice for withdraw-all, got %d NLRIs", len(nlris))
+				}
+				return
+			}
+			if len(nlris) != tt.wantCount {
+				t.Errorf("NLRI count=%d, want %d", len(nlris), tt.wantCount)
+			}
+		})
+	}
+}
+
 // TestMPUnReachNLRI_GetNLRIUnicast_match verifies the SAFI match branch is entered.
 func TestMPUnReachNLRI_GetNLRIUnicast_match(t *testing.T) {
 	// A valid single IPv4 /24 prefix: 0x18 0x0A 0x0A 0x0A (10.10.10.0/24)
