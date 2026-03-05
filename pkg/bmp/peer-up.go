@@ -80,47 +80,41 @@ func UnmarshalPeerUpMessage(b []byte, isIPv6 bool) (*PeerUpMessage, error) {
 	}
 	pu.RemotePort = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	if p+16 > len(b) {
-		return nil, fmt.Errorf("not enough bytes for BGP 1st marker, need 16 bytes, have %d", len(b)-p)
+	// Processing Sent Open and Received Open messages.
+	if p+bgp.BGPMinOpenMessageLength > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Sent Open message, need at least %d bytes, have %d", bgp.BGPMinOpenMessageLength, len(b)-p)
 	}
-	// Skip first marker 16 bytes
-	p += 16
-	if p+2 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Sent Open message length, need 2 bytes, have %d", len(b)-p)
+	// Getting actual length which is located right after BGP marker (16 bytes) and BGP length field (2 bytes)
+	l1 := binary.BigEndian.Uint16(b[p+bgp.BGPMessageMarkerLength : p+bgp.BGPMessageMarkerLength+2])
+	if l1 < bgp.BGPMinOpenMessageLength {
+		return nil, fmt.Errorf("invalid BGP Open message length %d, less than minimum %d bytes", l1, bgp.BGPMinOpenMessageLength)
 	}
-	l1 := binary.BigEndian.Uint16(b[p : p+2])
-	if l1 < 16 {
-		return nil, fmt.Errorf("invalid BGP Open message length %d, less than minimum 16 bytes", l1)
+	if p+int(l1) > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Sent Open message, need %d bytes, have %d", l1, len(b)-p)
 	}
-	if p+int(l1)-16 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Sent Open message, need %d bytes, have %d", int(l1)-16, len(b)-p)
-	}
-	pu.SentOpen, err = bgp.UnmarshalBGPOpenMessage(b[p : p+int(l1)-16])
+	pu.SentOpen, err = bgp.UnmarshalBGPOpenMessage(b[p+bgp.BGPMessageMarkerLength : p+int(l1)])
 	if err != nil {
 		return nil, err
 	}
-	// Moving pointer to the next marker
-	p += int(l1) - 16
-	// Skip second marker
-	if p+16 > len(b) {
-		return nil, fmt.Errorf("not enough bytes for BGP 2nd marker, need 16 bytes, have %d", len(b)-p)
+	p += int(l1)
+
+	// Processing Received Open message.
+	if p+bgp.BGPMinOpenMessageLength > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Received Open message, need at least %d bytes, have %d", bgp.BGPMinOpenMessageLength, len(b)-p)
 	}
-	p += 16
-	if p+2 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Received Open message length, need 2 bytes, have %d", len(b)-p)
+	// Getting actual length which is located right after BGP marker (16 bytes) and BGP length field (2 bytes)
+	l2 := binary.BigEndian.Uint16(b[p+bgp.BGPMessageMarkerLength : p+bgp.BGPMessageMarkerLength+2])
+	if l2 < bgp.BGPMinOpenMessageLength {
+		return nil, fmt.Errorf("invalid BGP Open message length %d, less than minimum %d bytes", l2, bgp.BGPMinOpenMessageLength)
 	}
-	l2 := binary.BigEndian.Uint16(b[p : p+2])
-	if l2 < 16 {
-		return nil, fmt.Errorf("invalid BGP Open message length %d, less than minimum 16 bytes", l2)
+	if p+int(l2) > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Received Open message, need %d bytes, have %d", l2, len(b)-p)
 	}
-	if p+int(l2)-16 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Received Open message, need %d bytes, have %d", int(l2)-16, len(b)-p)
-	}
-	pu.ReceivedOpen, err = bgp.UnmarshalBGPOpenMessage(b[p : p+int(l2)-16])
+	pu.ReceivedOpen, err = bgp.UnmarshalBGPOpenMessage(b[p+bgp.BGPMessageMarkerLength : p+int(l2)])
 	if err != nil {
 		return nil, err
 	}
-	p += int(l2) - 16
+	p += int(l2)
 	// Last part is optional Informational TLVs
 	if len(b) > int(p) {
 		// Since pointer p does not point to the end of buffer,
