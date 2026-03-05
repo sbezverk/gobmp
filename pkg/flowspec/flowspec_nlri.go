@@ -58,30 +58,31 @@ const (
 	Type12 SpecType = 12
 )
 
-// UnmarshalFlowspecNLRI creates an instance of Flowspec NLRI from a slice of bytes
-func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
-	if glog.V(5) {
-		glog.Infof("Flowspec NLRI Raw: %s", tools.MessageHex(b))
-	}
+// unmarshalSingleFlowspecNLRI parses a single Flowspec NLRI starting at b[0].
+// It reads the length prefix, parses all filter specs within that NLRI, and
+// returns the NLRI plus the total number of bytes consumed (including the length field).
+func unmarshalSingleFlowspecNLRI(b []byte) (*NLRI, int, error) {
 	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
+		return nil, 0, fmt.Errorf("NLRI length is 0")
 	}
 	fs := &NLRI{}
 	p := 0
 	if b[p]&0xf0 == 0xf0 {
-		// NLRI length is encoded into 2 bytes
-		// Mask off the 0xf indicator nibble and read actual length
+		// NLRI length is encoded into 2 bytes (RFC 8955 Section 4)
+		if len(b) < 2 {
+			return nil, 0, fmt.Errorf("need 2 bytes for extended NLRI length, have %d", len(b))
+		}
 		fs.Length = ((uint16(b[p]) & 0x0f) << 8) | uint16(b[p+1])
 		p += 2
 	} else {
-		// Otherwise it is encoded in the single byte
 		fs.Length = uint16(b[p])
 		p++
 	}
-	if p+int(fs.Length) != len(b) {
-		return nil, fmt.Errorf("invalid length encoded length %d does not match with slice length %d", fs.Length, len(b))
+	end := p + int(fs.Length)
+	if end > len(b) {
+		return nil, 0, fmt.Errorf("invalid length: NLRI length %d exceeds available bytes %d", fs.Length, len(b)-p)
 	}
-	for p < len(b) {
+	for p < end {
 		t := b[p]
 		l := 0
 		var spec Spec
@@ -90,9 +91,9 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 		case Type1:
 			fallthrough
 		case Type2:
-			spec, l, err = makePrefixSpec(b[p:])
+			spec, l, err = makePrefixSpec(b[p:end])
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 		case Type3:
 			fallthrough
@@ -113,12 +114,12 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 		case Type11:
 			fallthrough
 		case Type12:
-			spec, l, err = makeGenericSpec(b[p:])
+			spec, l, err = makeGenericSpec(b[p:end])
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 		default:
-			return nil, fmt.Errorf("unknown Flowspec type: %+v", t)
+			return nil, 0, fmt.Errorf("unknown Flowspec type: %+v", t)
 		}
 		fs.Spec = append(fs.Spec, spec)
 		p += l
@@ -127,12 +128,56 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 	// Calculating hash of all recovered spec
 	sp, err := json.Marshal(fs.Spec)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	s := md5.Sum(sp)
 	fs.SpecHash = hex.EncodeToString(s[:])
 
+	return fs, end, nil
+}
+
+// UnmarshalFlowspecNLRI creates an instance of Flowspec NLRI from a slice of bytes.
+// It parses only the first NLRI in the slice and logs a warning if trailing data
+// exists. Use UnmarshalAllFlowspecNLRI to parse multiple NLRIs per RFC 8955 Section 4.
+func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
+	if glog.V(5) {
+		glog.Infof("Flowspec NLRI Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
+	}
+	fs, consumed, err := unmarshalSingleFlowspecNLRI(b)
+	if err != nil {
+		return nil, err
+	}
+	if consumed < len(b) {
+		glog.Warningf("UnmarshalFlowspecNLRI: %d trailing bytes ignored (multiple NLRIs), use UnmarshalAllFlowspecNLRI", len(b)-consumed)
+	}
 	return fs, nil
+}
+
+// UnmarshalAllFlowspecNLRI parses one or more Flowspec NLRIs from a byte slice
+// as specified in RFC 8955 Section 4. The NLRI field of MP_REACH_NLRI or
+// MP_UNREACH_NLRI may contain multiple concatenated Flow Specifications,
+// each with its own length prefix.
+func UnmarshalAllFlowspecNLRI(b []byte) ([]*NLRI, error) {
+	if glog.V(5) {
+		glog.Infof("Flowspec NLRI Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) == 0 {
+		return nil, nil
+	}
+	var result []*NLRI
+	p := 0
+	for p < len(b) {
+		fs, consumed, err := unmarshalSingleFlowspecNLRI(b[p:])
+		if err != nil {
+			return nil, fmt.Errorf("NLRI at offset %d: %w", p, err)
+		}
+		result = append(result, fs)
+		p += consumed
+	}
+	return result, nil
 }
 
 // Operator defines a data structure representing Flowspec operator byte
@@ -329,7 +374,7 @@ func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
 	return opvals, nil
 }
 
-// GenericSpec defines a structure of Flowspec Types (3,4,5,6,7,8,10,11) specs.
+// GenericSpec defines a structure of Flowspec Types 3-12 (operator/value) specs.
 type GenericSpec struct {
 	SpecType uint8    `json:"type,omitempty"`
 	OpVal    []*OpVal `json:"op_val_pairs,omitempty"`
