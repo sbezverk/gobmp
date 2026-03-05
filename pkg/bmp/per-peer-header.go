@@ -29,7 +29,8 @@ const (
 	PeerType1
 	PeerType2
 	PeerType3
-	// PeerTypeUnknown is used for unrecognized peer types; messages with this type will be ignored per RFC 7854 recommendations
+	// PeerTypeUnknown represents unrecognized peer types; callers SHOULD ignore or drop
+	// messages using this type in accordance with RFC 7854 recommendations.
 	PeerTypeUnknown = 0xff
 )
 
