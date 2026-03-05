@@ -1,0 +1,27 @@
+name: Copilot Review
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  request-review:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Request Copilot Review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                reviewers: ['copilot-pull-request-reviewer']
+              });
+              console.log('Copilot review requested successfully');
+            } catch (error) {
+              // Copilot may already be assigned or not available
+              console.log(`Could not request Copilot review: ${error.message}`);
+            }

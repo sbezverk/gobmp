@@ -8,11 +8,73 @@ messages consumed by downstream systems (Kafka, NATS, MongoDB connectors).
 
 ---
 
-## Review Scope
+## Review Scope and Behavior
 
 When reviewing a pull request, **always produce a complete review of every changed file**.
 Do not stop after 2–3 comments. Continue until every changed file has been reviewed and all
 findings have been reported. Group related findings per file.
+
+### Review Completeness
+
+- Review ALL changed files in a single pass. Do not split findings across multiple reviews.
+- Provide ALL comments in one review submission. Do not batch into groups of 4-5.
+- For each file, check: correctness, bounds safety, error handling, test coverage, RFC compliance.
+- Prioritize findings by severity: security/crash > logic bug > style > nit.
+
+### What to Flag
+
+- Missing bounds checks before slice operations
+- Incorrect byte offset tracking (forgetting `p += N` after reading N bytes)
+- Type assertions without comma-ok pattern
+- Slice aliasing bugs (modifying shared backing arrays)
+- Missing test coverage for new code paths
+- RFC specification violations (cite the specific RFC section)
+- Error messages missing context (need/have byte counts)
+- Unreachable dead code (redundant bounds checks, impossible branches)
+
+### Confidence and Quality
+
+- **Only report findings you are highly confident about.** Do not speculate or flag potential
+  issues unless you can explain exactly why the code is wrong and how to fix it.
+- If you are unsure whether something is a bug or intentional, do not comment on it.
+- Every comment must include a concrete fix or actionable suggestion, not just "this looks wrong."
+- Avoid false positives. One accurate, high-impact comment is worth more than ten speculative ones.
+
+### RFC Compliance (Mandatory)
+
+This project implements multiple IETF RFCs. **Every review comment about protocol behavior must
+reference the specific RFC and section number** that supports the finding.
+
+Examples of good RFC references:
+- "RFC 8955 Section 4 requires multiple NLRIs to be concatenated in a single MP_REACH_NLRI"
+- "Per RFC 4760 Section 3, the Reserved byte must be consumed after the Next Hop field"
+- "RFC 8956 Section 3 defines prefix byte count as ceil((length - offset) / 8)"
+
+Do NOT make protocol claims without citing the RFC. If you cannot find the relevant RFC section
+to support your comment, do not post the comment.
+
+Key RFCs for this project:
+- RFC 4271: BGP-4 base specification
+- RFC 4760: Multiprotocol Extensions (MP_REACH_NLRI / MP_UNREACH_NLRI)
+- RFC 7854: BMP (BGP Monitoring Protocol)
+- RFC 8955: FlowSpec IPv4
+- RFC 8956: FlowSpec IPv6
+- RFC 9072: Extended Optional Parameters Length
+- RFC 9256: Segment Routing Policy
+- RFC 7432: EVPN
+- RFC 4364: BGP/MPLS IP VPNs (L3VPN)
+- RFC 6513/6514: Multicast VPN
+- RFC 4684: Route Target Constraint
+- RFC 9252: SRv6 BGP Overlay Services
+- RFC 9012: Tunnel Encapsulation Attribute
+
+### What NOT to Flag
+
+- Style preferences that don't affect correctness
+- Minor comment wording unless factually wrong
+- Import ordering (handled by goimports)
+- Line length unless it affects readability
+- Speculative issues without concrete evidence of a bug
 
 ---
 
