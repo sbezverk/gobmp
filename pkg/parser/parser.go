@@ -158,7 +158,7 @@ func (p *parser) parsingWorker(b []byte) {
 			perPerHeaderLen = bmp.PerPeerHeaderLength
 			if bmpMsg.Payload, err = bmp.UnmarshalPeerDownMessage(b[pos+perPerHeaderLen : pos+int(ch.MessageLength)-bmp.CommonHeaderLength]); err != nil {
 				glog.Errorf("fail to recover BMP Peer Down message with error: %+v", err)
-				return
+				break // skip malformed PeerDown message, continue processing stream
 			}
 		case bmp.PeerUpMsg:
 			if ch.MessageLength < uint32(bmp.CommonHeaderLength+bmp.PerPeerHeaderLength) {
