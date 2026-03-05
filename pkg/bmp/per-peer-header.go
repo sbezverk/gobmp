@@ -34,6 +34,12 @@ const (
 	PeerTypeUnknown = 0xff
 )
 
+// ErrUnknownPeerType is returned by UnmarshalPerPeerHeader when the peer type
+// byte is not one of the four values defined in RFC 7854 / RFC 9069. The
+// caller SHOULD skip the current message and continue processing subsequent
+// messages, consistent with RFC 7854 §11 extensibility guidance.
+var ErrUnknownPeerType = errors.New("unknown BMP peer type")
+
 // PerPeerHeader defines BMP Per-Peer Header per rfc7854
 type PerPeerHeader struct {
 	PeerType PeerType
@@ -77,11 +83,11 @@ func peerType(b byte) (PeerType, error) {
 	case PeerType3:
 		return PeerType3, nil
 	default:
-		// As per RFC 7854 recommendation, BMP implementations MUST ignore messages
-		// with unrecognized types and continue processing subsequent messages.
-		// Therefore, we will not return an error for unrecognized peer types, but we will log a warning.
-		glog.Warningf("unknown BMP peer type found %d", b)
-		return PeerTypeUnknown, nil
+		// RFC 7854 §11: implementations MUST ignore messages with unrecognized
+		// peer types and continue processing subsequent messages. Return a
+		// sentinel so callers can skip this message without aborting the stream.
+		glog.Warningf("unknown BMP peer type %d — skipping message", b)
+		return PeerTypeUnknown, ErrUnknownPeerType
 	}
 }
 

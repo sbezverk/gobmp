@@ -89,6 +89,37 @@ func TestParsingWorkerConsecutivePeerDown(t *testing.T) {
 	}
 }
 
+// TestParsingWorkerUnknownPeerTypeSkipped verifies that a peer-bearing message
+// with an unknown peer type byte (0xFF) is skipped rather than aborting the
+// worker, and that a valid message following it is still processed.
+func TestParsingWorkerUnknownPeerTypeSkipped(t *testing.T) {
+	// Build a PeerDown with an unknown peer type byte (0xFF in byte 0 of PPH).
+	unknownPPH := make([]byte, bmp.PerPeerHeaderLength)
+	unknownPPH[0] = 0xFF // unrecognized peer type
+	invalidMsg := buildPeerDownMsg(unknownPPH, 1, nil)
+
+	// Follow it with a valid PeerDown.
+	validPPH := make([]byte, bmp.PerPeerHeaderLength)
+	validMsg := buildPeerDownMsg(validPPH, 5, nil)
+
+	input := append(invalidMsg, validMsg...)
+	producerQueue := make(chan bmp.Message, 10)
+	p := &parser{producerQueue: producerQueue, config: &Config{}}
+	p.parsingWorker(input)
+	msgs := collectMessages(producerQueue)
+
+	if len(msgs) != 1 {
+		t.Fatalf("expected 1 message (valid PeerDown), got %d — unknown peer type not skipped cleanly", len(msgs))
+	}
+	pd, ok := msgs[0].Payload.(*bmp.PeerDownMessage)
+	if !ok {
+		t.Fatalf("payload type = %T, want *bmp.PeerDownMessage", msgs[0].Payload)
+	}
+	if pd.Reason != 5 {
+		t.Errorf("reason = %d, want 5", pd.Reason)
+	}
+}
+
 // TestParsingWorkerStatsReportBoundedSlice verifies the StatsReport payload slice
 // is bounded to the current message. The old code used an open-ended slice
 // b[pos+PerPeerHeaderLength:] which included bytes from the following message;

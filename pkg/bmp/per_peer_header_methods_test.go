@@ -322,13 +322,13 @@ func TestUnmarshalPerPeerHeaderGuards(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "unknown peer type — logged as warning, not error",
+			name: "unknown peer type — returns ErrUnknownPeerType",
 			input: func() []byte {
 				b := make([]byte, 42)
 				b[0] = 0xFF // unknown
 				return b
 			}(),
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 

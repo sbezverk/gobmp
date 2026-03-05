@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"errors"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/tools"
@@ -97,6 +99,9 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[pos : pos+bmp.PerPeerHeaderLength]); err != nil {
+				if errors.Is(err, bmp.ErrUnknownPeerType) {
+					break // skip message, continue processing stream
+				}
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}
@@ -125,6 +130,9 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[pos : pos+bmp.PerPeerHeaderLength]); err != nil {
+				if errors.Is(err, bmp.ErrUnknownPeerType) {
+					break // skip message, continue processing stream
+				}
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}
@@ -140,6 +148,9 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[pos : pos+bmp.PerPeerHeaderLength]); err != nil {
+				if errors.Is(err, bmp.ErrUnknownPeerType) {
+					break // skip message, continue processing stream
+				}
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}
@@ -155,6 +166,9 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[pos : pos+bmp.PerPeerHeaderLength]); err != nil {
+				if errors.Is(err, bmp.ErrUnknownPeerType) {
+					break // skip message, continue processing stream
+				}
 				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
 				return
 			}
