@@ -82,8 +82,9 @@ func (p *parser) parsingWorker(b []byte) {
 			glog.Errorf("invalid BMP message length: %d, must be at least %d", ch.MessageLength, bmp.CommonHeaderLength)
 			return
 		}
-		if ch.MessageLength > uint32(len(b)-pos) {
-			glog.Errorf("truncated BMP message: pos=%d, message length=%d, remaining=%d", pos, ch.MessageLength, len(b)-pos)
+		remaining := len(b) - pos
+		if uint64(ch.MessageLength) > uint64(remaining) {
+			glog.Errorf("truncated BMP message: pos=%d, message length=%d, remaining=%d", pos, ch.MessageLength, remaining)
 			return
 		}
 		// Common header's length is a part  of the total message length
