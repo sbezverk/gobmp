@@ -50,9 +50,9 @@ func UnmarshalCommonHeader(b []byte) (*CommonHeader, error) {
 
 	// As per RFC 7854 recommendation, BMP implementations MUST ignore messages
 	// with unrecognized types and continue processing subsequent messages.
-	// Therefore, we will not return an error for unrecognized message types, but we will log a warning.
-	if ch.MessageType > 6 {
-		glog.Warningf("unknown BMP message type found %d", ch.MessageType)
+	// Therefore, we will not return an error for unrecognized message types.
+	if ch.MessageType > 6 && glog.V(6) {
+		glog.Infof("unknown BMP message type found %d", ch.MessageType)
 	}
 
 	return ch, nil
