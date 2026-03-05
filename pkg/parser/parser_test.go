@@ -49,11 +49,13 @@ func buildInitiationMsg() []byte {
 }
 
 // collectMessages drains the producer queue and returns all collected messages.
+// parsingWorker is called synchronously in tests, so all sends have completed
+// before this is called. We do not close the channel because it is
+// producer-owned (parsingWorker sends on it).
 func collectMessages(q chan bmp.Message) []bmp.Message {
-	close(q)
 	var msgs []bmp.Message
-	for m := range q {
-		msgs = append(msgs, m)
+	for len(q) > 0 {
+		msgs = append(msgs, <-q)
 	}
 	return msgs
 }
@@ -149,6 +151,28 @@ func TestParsingWorkerShortMessageLength(t *testing.T) {
 				t.Errorf("expected 0 messages for truncated %s, got %d", tt.name, n)
 			}
 		})
+	}
+}
+
+// TestParsingWorkerStatsReportTooShortForCount verifies that a StatsReport whose
+// MessageLength claims exactly CommonHeaderLength+PerPeerHeaderLength (no room for
+// the 4-byte StatsCount) is rejected with a clear log before reaching the unmarshaller.
+func TestParsingWorkerStatsReportTooShortForCount(t *testing.T) {
+	emptyPPH := make([]byte, bmp.PerPeerHeaderLength)
+	// Build a StatsReport message with no body (length = header + per-peer only).
+	truncLen := bmp.CommonHeaderLength + bmp.PerPeerHeaderLength
+	b := make([]byte, truncLen)
+	b[0] = 3
+	binary.BigEndian.PutUint32(b[1:5], uint32(truncLen))
+	b[5] = bmp.StatsReportMsg
+	copy(b[6:], emptyPPH)
+
+	producerQueue := make(chan bmp.Message, 4)
+	p := &parser{producerQueue: producerQueue, config: &Config{}}
+	// Must not panic.
+	p.parsingWorker(b)
+	if n := len(producerQueue); n != 0 {
+		t.Errorf("expected 0 messages for truncated StatsReport, got %d", n)
 	}
 }
 

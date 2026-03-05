@@ -82,7 +82,7 @@ func (p *parser) parsingWorker(b []byte) {
 			glog.Errorf("invalid BMP message length: %d, must be at least %d", ch.MessageLength, bmp.CommonHeaderLength)
 			return
 		}
-		if pos+int(ch.MessageLength) > len(b) {
+		if ch.MessageLength > uint32(len(b)-pos) {
 			glog.Errorf("truncated BMP message: pos=%d, message length=%d, remaining=%d", pos, ch.MessageLength, len(b)-pos)
 			return
 		}
@@ -91,7 +91,7 @@ func (p *parser) parsingWorker(b []byte) {
 		pos += bmp.CommonHeaderLength
 		switch ch.MessageType {
 		case bmp.RouteMonitorMsg:
-			if int(ch.MessageLength) < bmp.CommonHeaderLength+bmp.PerPeerHeaderLength {
+			if ch.MessageLength < uint32(bmp.CommonHeaderLength+bmp.PerPeerHeaderLength) {
 				glog.Errorf("BMP RouteMonitor message too short for Per-Peer Header: length=%d, need at least %d",
 					ch.MessageLength, bmp.CommonHeaderLength+bmp.PerPeerHeaderLength)
 				return
@@ -113,9 +113,15 @@ func (p *parser) parsingWorker(b []byte) {
 			}
 			bmpMsg.Payload = rm
 		case bmp.StatsReportMsg:
-			if int(ch.MessageLength) < bmp.CommonHeaderLength+bmp.PerPeerHeaderLength {
+			if ch.MessageLength < uint32(bmp.CommonHeaderLength+bmp.PerPeerHeaderLength) {
 				glog.Errorf("BMP StatsReport message too short for Per-Peer Header: length=%d, need at least %d",
 					ch.MessageLength, bmp.CommonHeaderLength+bmp.PerPeerHeaderLength)
+				return
+			}
+			// StatsReport body must also contain the 4-byte StatsCount field.
+			if ch.MessageLength < uint32(bmp.CommonHeaderLength+bmp.PerPeerHeaderLength+4) {
+				glog.Errorf("BMP StatsReport message too short for StatsCount: length=%d, need at least %d",
+					ch.MessageLength, bmp.CommonHeaderLength+bmp.PerPeerHeaderLength+4)
 				return
 			}
 			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[pos : pos+bmp.PerPeerHeaderLength]); err != nil {
@@ -128,7 +134,7 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 		case bmp.PeerDownMsg:
-			if int(ch.MessageLength) < bmp.CommonHeaderLength+bmp.PerPeerHeaderLength {
+			if ch.MessageLength < uint32(bmp.CommonHeaderLength+bmp.PerPeerHeaderLength) {
 				glog.Errorf("BMP PeerDown message too short for Per-Peer Header: length=%d, need at least %d",
 					ch.MessageLength, bmp.CommonHeaderLength+bmp.PerPeerHeaderLength)
 				return
@@ -143,7 +149,7 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 		case bmp.PeerUpMsg:
-			if int(ch.MessageLength) < bmp.CommonHeaderLength+bmp.PerPeerHeaderLength {
+			if ch.MessageLength < uint32(bmp.CommonHeaderLength+bmp.PerPeerHeaderLength) {
 				glog.Errorf("BMP PeerUp message too short for Per-Peer Header: length=%d, need at least %d",
 					ch.MessageLength, bmp.CommonHeaderLength+bmp.PerPeerHeaderLength)
 				return
