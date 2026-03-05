@@ -267,7 +267,14 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 		safi         uint8
 		wantErrMsg   string // substring expected in error string; "" means no error or NLRINotFoundError
 		wantNotFound bool
+		wantNoErr    bool // true means nil error expected (e.g. withdraw-all)
 	}{
+		{
+			name:      "AFI=1 SAFI=133 empty withdrawn (withdraw-all)",
+			afi:       1,
+			safi:      133,
+			wantNoErr: true,
+		},
 		{
 			name:       "AFI=2 SAFI=133 not implemented",
 			afi:        2,
@@ -302,6 +309,12 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 				addPath:            map[int]bool{},
 			}
 			_, err := mp.GetFlowspecNLRI()
+			if tt.wantNoErr {
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				return
+			}
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}

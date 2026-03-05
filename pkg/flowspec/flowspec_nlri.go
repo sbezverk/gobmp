@@ -150,8 +150,8 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 	if err != nil {
 		return nil, err
 	}
-	if consumed < len(b) {
-		glog.Warningf("UnmarshalFlowspecNLRI: %d trailing bytes ignored (multiple NLRIs), use UnmarshalAllFlowspecNLRI", len(b)-consumed)
+	if consumed < len(b) && glog.V(5) {
+		glog.Infof("UnmarshalFlowspecNLRI: %d trailing bytes ignored (multiple NLRIs per RFC 8955 Section 4), use UnmarshalAllFlowspecNLRI", len(b)-consumed)
 	}
 	return fs, nil
 }

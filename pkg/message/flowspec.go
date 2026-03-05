@@ -57,8 +57,8 @@ func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *b
 		fs.SpecHash = fsnlri.GetSpecHash()
 		fs.Spec = fsnlri.Spec
 	} else {
-		// Withdraw-all: use peer-specific key so the message is routable
-		fs.SpecHash = "withdraw-all"
+		// Withdraw-all: peer-scoped key to avoid cross-peer collisions on compacted topics
+		fs.SpecHash = fmt.Sprintf("withdraw-all:%s:%s", ph.GetPeerAddrString(), ph.GetPeerDistinguisherString())
 	}
 
 	if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
