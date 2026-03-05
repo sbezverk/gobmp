@@ -34,8 +34,8 @@ jobs:
           else
             echo "test_status=fail" >> "$GITHUB_OUTPUT"
           fi
-          PASS_COUNT=$(grep -c "^--- PASS" test-output.txt 2>/dev/null || echo 0)
-          FAIL_COUNT=$(grep -c "^--- FAIL" test-output.txt 2>/dev/null || echo 0)
+          PASS_COUNT=$(grep -c "^--- PASS" test-output.txt 2>/dev/null) || PASS_COUNT=0
+          FAIL_COUNT=$(grep -c "^--- FAIL" test-output.txt 2>/dev/null) || FAIL_COUNT=0
           echo "pass_count=${PASS_COUNT}" >> "$GITHUB_OUTPUT"
           echo "fail_count=${FAIL_COUNT}" >> "$GITHUB_OUTPUT"
 
