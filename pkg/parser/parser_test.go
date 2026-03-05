@@ -115,6 +115,43 @@ func TestParsingWorkerStatsReportBoundedSlice(t *testing.T) {
 	}
 }
 
+// TestParsingWorkerShortMessageLength verifies that a peer-bearing message whose
+// MessageLength is too small to contain a Per-Peer Header is rejected cleanly
+// (logged and worker returns) rather than panicking via an inverted or
+// out-of-bounds slice expression.
+func TestParsingWorkerShortMessageLength(t *testing.T) {
+	tests := []struct {
+		name    string
+		msgType byte
+	}{
+		{"RouteMonitor too short", bmp.RouteMonitorMsg},
+		{"StatsReport too short", bmp.StatsReportMsg},
+		{"PeerDown too short", bmp.PeerDownMsg},
+		{"PeerUp too short", bmp.PeerUpMsg},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Build a message whose MessageLength claims only CommonHeaderLength+1 bytes
+			// (too short to hold a 42-byte Per-Peer Header).
+			truncLen := bmp.CommonHeaderLength + 1
+			b := make([]byte, truncLen)
+			b[0] = 3 // BMP version
+			binary.BigEndian.PutUint32(b[1:5], uint32(truncLen))
+			b[5] = tt.msgType
+
+			producerQueue := make(chan bmp.Message, 4)
+			p := &parser{producerQueue: producerQueue, config: &Config{}}
+			// Must not panic.
+			p.parsingWorker(b)
+			// No message should have been produced.
+			close(producerQueue)
+			if n := len(producerQueue); n != 0 {
+				t.Errorf("expected 0 messages for truncated %s, got %d", tt.name, n)
+			}
+		})
+	}
+}
+
 func TestParsingWorker(t *testing.T) {
 	tests := []struct {
 		name  string

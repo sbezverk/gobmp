@@ -163,7 +163,7 @@ func TestUnmarshalInitiationMessage(t *testing.T) {
 			wantTypes: []uint16{2, 1},
 		},
 		{
-			name: "unknown TLV type skipped (extensibility per RFC 7854)",
+			name: "unknown TLV type preserved (extensibility per RFC 7854)",
 			input: func() []byte {
 				b := make([]byte, 4+3)
 				binary.BigEndian.PutUint16(b[0:], 99) // unknown type
