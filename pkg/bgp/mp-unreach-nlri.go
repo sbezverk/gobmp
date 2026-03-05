@@ -156,14 +156,34 @@ func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
 }
 
-// GetFlowspecNLRI checks for presence of IPv4 Flowspec (AFI=1, SAFI=133) in MP_UNREACH_NLRI and, if present, parses the withdrawn routes.
-// IPv6 Flowspec (AFI=2, SAFI=133) and VPN Flowspec (SAFI=134) variants are not yet implemented and return an explicit error.
+// GetFlowspecNLRI checks for presence of Flowspec (SAFI=133) in MP_UNREACH_NLRI and parses the first withdrawn route.
+// Use GetAllFlowspecNLRI to parse multiple NLRIs per RFC 8955/8956.
 func (mp *MPUnReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
-	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 133 {
+	if mp.SubAddressFamilyID == 133 && (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) {
+		if len(mp.WithdrawnRoutes) == 0 {
+			return &flowspec.NLRI{}, nil
+		}
+		if mp.AddressFamilyID == 2 {
+			return flowspec.UnmarshalIPv6FlowspecNLRI(mp.WithdrawnRoutes)
+		}
 		return flowspec.UnmarshalFlowspecNLRI(mp.WithdrawnRoutes)
 	}
+	if mp.SubAddressFamilyID == 134 {
+		return nil, fmt.Errorf("VPN Flowspec (AFI=%d, SAFI=134) is not yet implemented", mp.AddressFamilyID)
+	}
+
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
+}
+
+// GetAllFlowspecNLRI parses all Flowspec NLRIs from MP_UNREACH_NLRI.
+// Supports IPv4 (AFI=1, RFC 8955) and IPv6 (AFI=2, RFC 8956).
+// Returns nil slice with nil error for empty withdrawn routes (withdraw-all).
+func (mp *MPUnReachNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
+	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 133 {
+		return flowspec.UnmarshalAllFlowspecNLRI(mp.WithdrawnRoutes)
+	}
 	if mp.AddressFamilyID == 2 && mp.SubAddressFamilyID == 133 {
-		return nil, fmt.Errorf("IPv6 Flowspec (AFI=2, SAFI=133) is not yet implemented")
+		return flowspec.UnmarshalAllIPv6FlowspecNLRI(mp.WithdrawnRoutes)
 	}
 	if mp.SubAddressFamilyID == 134 {
 		return nil, fmt.Errorf("VPN Flowspec (AFI=%d, SAFI=134) is not yet implemented", mp.AddressFamilyID)

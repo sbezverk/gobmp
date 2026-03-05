@@ -285,10 +285,10 @@ func TestMPReachNLRI_GetFlowspecNLRI_Stubs(t *testing.T) {
 		wantNotFound bool
 	}{
 		{
-			name:       "AFI=2 SAFI=133 not implemented",
+			name:       "AFI=2 SAFI=133 IPv6 flowspec (empty NLRI)",
 			afi:        2,
 			safi:       133,
-			wantErrMsg: "not yet implemented",
+			wantErrMsg: "NLRI length is 0",
 		},
 		{
 			name:       "AFI=1 SAFI=134 VPN not implemented",

@@ -269,10 +269,10 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 		wantNotFound bool
 	}{
 		{
-			name:       "AFI=2 SAFI=133 not implemented",
+			name:       "AFI=2 SAFI=133 IPv6 flowspec empty withdraw-all",
 			afi:        2,
 			safi:       133,
-			wantErrMsg: "not yet implemented",
+			wantErrMsg: "", // empty WithdrawnRoutes returns empty NLRI, no error
 		},
 		{
 			name:       "SAFI=134 AFI=1 VPN not implemented",
@@ -302,6 +302,12 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 				addPath:            map[int]bool{},
 			}
 			_, err := mp.GetFlowspecNLRI()
+			if tt.wantErrMsg == "" && !tt.wantNotFound {
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				return
+			}
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
