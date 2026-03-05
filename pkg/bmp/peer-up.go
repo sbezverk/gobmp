@@ -28,10 +28,33 @@ func (pum *PeerUpMessage) GetLocalAddressString() string {
 	return net.IP(pum.LocalAddress[12:]).To4().String()
 }
 
+func (pum *PeerUpMessage) GetVRFTableName() (string, bool) {
+	for _, tlv := range pum.Information {
+		if tlv.InformationType != 3 {
+			continue
+		}
+		return string(tlv.Information), true
+	}
+	return "", false
+}
+
+func (pum *PeerUpMessage) GetAdminLabel() (string, bool) {
+	for _, tlv := range pum.Information {
+		if tlv.InformationType != 4 {
+			continue
+		}
+		return string(tlv.Information), true
+	}
+	return "", false
+}
+
 // UnmarshalPeerUpMessage processes Peer Up message and returns BMPPeerUpMessage object
 func UnmarshalPeerUpMessage(b []byte, isIPv6 bool) (*PeerUpMessage, error) {
 	if glog.V(6) {
 		glog.Infof("BMP Peer Up Message Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) == 0 {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message")
 	}
 	var err error
 	pu := &PeerUpMessage{
@@ -42,23 +65,35 @@ func UnmarshalPeerUpMessage(b []byte, isIPv6 bool) (*PeerUpMessage, error) {
 		isRemotePeerIPv6: isIPv6,
 	}
 	p := 0
+	if p+16 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Local Address, need 16 bytes, have %d", len(b)-p)
+	}
 	copy(pu.LocalAddress, b[:16])
 	p += 16
+	if p+2 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Local Port, need 2 bytes, have %d", len(b)-p)
+	}
 	pu.LocalPort = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
+	if p+2 > len(b) {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Remote Port, need 2 bytes, have %d", len(b)-p)
+	}
 	pu.RemotePort = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
+	if p+16 > len(b) {
+		return nil, fmt.Errorf("not enough bytes for BGP 1st marker, need 16 bytes, have %d", len(b)-p)
+	}
 	// Skip first marker 16 bytes
 	p += 16
 	if p+2 > len(b) {
-		return nil, fmt.Errorf("buffer too short to read Sent Open message length")
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Sent Open message length, need 2 bytes, have %d", len(b)-p)
 	}
 	l1 := binary.BigEndian.Uint16(b[p : p+2])
 	if l1 < 16 {
-		return nil, fmt.Errorf("invalid BGP Open message length %d", l1)
+		return nil, fmt.Errorf("invalid BGP Open message length %d, less than minimum 16 bytes", l1)
 	}
 	if p+int(l1)-16 > len(b) {
-		return nil, fmt.Errorf("sent Open message length %d exceeds available buffer", l1)
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Sent Open message, need %d bytes, have %d", int(l1)-16, len(b)-p)
 	}
 	pu.SentOpen, err = bgp.UnmarshalBGPOpenMessage(b[p : p+int(l1)-16])
 	if err != nil {
@@ -67,16 +102,19 @@ func UnmarshalPeerUpMessage(b []byte, isIPv6 bool) (*PeerUpMessage, error) {
 	// Moving pointer to the next marker
 	p += int(l1) - 16
 	// Skip second marker
+	if p+16 > len(b) {
+		return nil, fmt.Errorf("not enough bytes for BGP 2nd marker, need 16 bytes, have %d", len(b)-p)
+	}
 	p += 16
 	if p+2 > len(b) {
-		return nil, fmt.Errorf("buffer too short to read Received Open message length")
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Received Open message length, need 2 bytes, have %d", len(b)-p)
 	}
 	l2 := binary.BigEndian.Uint16(b[p : p+2])
 	if l2 < 16 {
-		return nil, fmt.Errorf("invalid BGP Open message length %d", l2)
+		return nil, fmt.Errorf("invalid BGP Open message length %d, less than minimum 16 bytes", l2)
 	}
 	if p+int(l2)-16 > len(b) {
-		return nil, fmt.Errorf("received Open message length %d exceeds available buffer", l2)
+		return nil, fmt.Errorf("not enough bytes to unmarshal Peer Up message Received Open message, need %d bytes, have %d", int(l2)-16, len(b)-p)
 	}
 	pu.ReceivedOpen, err = bgp.UnmarshalBGPOpenMessage(b[p : p+int(l2)-16])
 	if err != nil {

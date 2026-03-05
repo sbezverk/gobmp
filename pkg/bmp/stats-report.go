@@ -10,7 +10,7 @@ import (
 
 // StatsReport defines BMP Stats message structure
 type StatsReport struct {
-	StatsCount int32
+	StatsCount uint32
 	StatsTLV   []InformationalTLV
 }
 
@@ -29,7 +29,7 @@ func UnmarshalBMPStatsReportMessage(b []byte) (*StatsReport, error) {
 	if count > uint32(len(b)-4)/4 {
 		return nil, fmt.Errorf("invalid Stats Report count %d exceeds available buffer", count)
 	}
-	sr.StatsCount = int32(count)
+	sr.StatsCount = count
 	p += 4
 	tlvs, err := UnmarshalTLV(b[p:])
 	if err != nil {

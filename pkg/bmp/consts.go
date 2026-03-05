@@ -77,3 +77,17 @@ const (
 	// BMPRawMsg defines BMP RAW message type for unprocessed BMP messages
 	BMPRawMsg = 255
 )
+
+// Termination message reason codes per RFC 7854 §10.7
+const (
+	// TermReasonAdminClosed indicates the session was administratively closed and may be re-initiated
+	TermReasonAdminClosed = 0
+	// TermReasonUnspecified indicates an unspecified termination reason
+	TermReasonUnspecified = 1
+	// TermReasonOutOfResources indicates the router has exhausted resources for the BMP session
+	TermReasonOutOfResources = 2
+	// TermReasonRedundant indicates the router determined this connection is redundant
+	TermReasonRedundant = 3
+	// TermReasonPermAdminClosed indicates permanently administratively closed; monitoring station should reduce reconnection rate
+	TermReasonPermAdminClosed = 4
+)

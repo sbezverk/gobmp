@@ -29,6 +29,8 @@ const (
 	PeerType1
 	PeerType2
 	PeerType3
+
+	PeerTypeUnknown = 0xff
 )
 
 // PerPeerHeader defines BMP Per-Peer Header per rfc7854
@@ -74,7 +76,11 @@ func peerType(b byte) (PeerType, error) {
 	case PeerType3:
 		return PeerType3, nil
 	default:
-		return 0xff, fmt.Errorf("invalid peer type, expected between 0 and 3 found %d", b)
+		// As per RFC 7854 recommendation, BMP implementations MUST ignore messages
+		// with unrecognized types and continue processing subsequent messages.
+		// Therefore, we will not return an error for unrecognized peer types, but we will log a warning.
+		glog.Warningf("unknown BMP peer type found %d", b)
+		return PeerTypeUnknown, nil
 	}
 }
 
@@ -101,7 +107,11 @@ func (p *PerPeerHeader) GetPeerHash() string {
 
 // GetPeerBGPIDString returns a string representation of Peer BGP ID
 func (p *PerPeerHeader) GetPeerBGPIDString() string {
-	return net.IP(p.PeerBGPID).To4().String()
+	ip := net.IP(p.PeerBGPID)
+	if v4 := ip.To4(); v4 != nil {
+		return v4.String()
+	}
+	return ip.String()
 }
 
 // GetPeerAddrString returns a string representation of Peer address
@@ -268,6 +278,9 @@ func (p *PerPeerHeader) GetTableKey() string {
 func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	if glog.V(6) {
 		glog.Infof("BMP Per Peer Header Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) < BMP_PEER_HEADER_SIZE {
+		return nil, fmt.Errorf("not enough bytes to decode BMP per-peer header, need %d bytes, have %d", BMP_PEER_HEADER_SIZE, len(b))
 	}
 	pph := &PerPeerHeader{
 		PeerDistinguisher: make([]byte, 8), // newPeerDistinguisher(),
