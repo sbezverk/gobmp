@@ -386,3 +386,170 @@ func TestSRSegmentListMetric_JSON_ZeroValues(t *testing.T) {
 		t.Errorf("zero-value round-trip failed: got %+v", got)
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UnmarshalJSON error-path coverage (bad JSON input triggers error return)
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestUnmarshalJSON_ErrorPaths(t *testing.T) {
+	bad := []byte("not-valid-json{{{")
+	t.Run("MPLSLabelSID", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &MPLSLabelSID{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRv6SID", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRv6SID{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRType1Descriptor", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRType1Descriptor{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRType3Descriptor", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRType3Descriptor{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRType4Descriptor", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRType4Descriptor{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRType5Descriptor", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRType5Descriptor{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRType6Descriptor", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRType6Descriptor{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRType7Descriptor", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRType7Descriptor{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRType8Descriptor", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRType8Descriptor{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRAffinityConstraint", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRAffinityConstraint{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRSRLGConstraint", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRSRLGConstraint{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRBandwidthConstraint", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRBandwidthConstraint{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRDisjointGroupConstraint", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRDisjointGroupConstraint{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("SRSegmentListMetric", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRSegmentListMetric{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	// Outer JSON invalid for SRSegment
+	t.Run("SRSegment_outer", func(t *testing.T) {
+		if err := json.Unmarshal(bad, &SRSegment{}); err == nil {
+			t.Error("expected error")
+		}
+	})
+	// Valid outer JSON but SID is a string, not an object — triggers MPLS SID decode error
+	t.Run("SRSegment_bad_mpls_sid", func(t *testing.T) {
+		input := []byte(`{"segment_type":1,"s_flag":true,"e_flag":false,"v_flag":false,"r_flag":false,"a_flag":false,"sid":"not-an-object"}`)
+		if err := json.Unmarshal(input, &SRSegment{}); err == nil {
+			t.Error("expected error decoding non-object SID as MPLSLabelSID")
+		}
+	})
+	// Valid outer JSON but SID is a string — triggers SRv6 SID decode error
+	t.Run("SRSegment_bad_srv6_sid", func(t *testing.T) {
+		input := []byte(`{"segment_type":2,"s_flag":true,"e_flag":false,"v_flag":false,"r_flag":false,"a_flag":false,"sid":"not-an-object"}`)
+		if err := json.Unmarshal(input, &SRSegment{}); err == nil {
+			t.Error("expected error decoding non-object SID as SRv6SID")
+		}
+	})
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UnmarshalSRSegmentListSubTLV
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestUnmarshalSRSegmentListSubTLV(t *testing.T) {
+	t.Run("too short (3 bytes)", func(t *testing.T) {
+		if _, err := UnmarshalSRSegmentListSubTLV(make([]byte, 3)); err == nil {
+			t.Error("expected error for too-short input")
+		}
+	})
+
+	t.Run("truncated value", func(t *testing.T) {
+		// header claims length=8 but only 4 bytes follow
+		b := []byte{0x04, 0xB6, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00}
+		if _, err := UnmarshalSRSegmentListSubTLV(b); err == nil {
+			t.Error("expected error for truncated value")
+		}
+	})
+
+	t.Run("SRSegmentType type1 no flags", func(t *testing.T) {
+		// SRSegmentType = 1206 = 0x04B6; segment bytes: type=1, reserved, flags=0, reserved
+		b := []byte{
+			0x04, 0xB6, 0x00, 0x04, // sub-TLV type=1206, length=4
+			0x01, 0x00, 0x00, 0x00, // SegmentType1, no flags
+		}
+		got, err := UnmarshalSRSegmentListSubTLV(b)
+		if err != nil {
+			t.Fatalf("UnmarshalSRSegmentListSubTLV() error = %v", err)
+		}
+		if _, ok := got[SRSegmentType]; !ok {
+			t.Error("SRSegmentType key missing from result")
+		}
+	})
+
+	t.Run("SRSegmentListMetricType", func(t *testing.T) {
+		// SRSegmentListMetricType = 1207 = 0x04B7; exactly 16 bytes of metric
+		b := []byte{
+			0x04, 0xB7, 0x00, 0x10, // sub-TLV type=1207, length=16
+			0x02,       // metric = SRMetricTE
+			0x80,       // FlagM=1
+			0x00, 0x00, // reserved
+			0x00, 0x00, 0x00, 0x64, // margin=100
+			0x00, 0x00, 0x00, 0xC8, // bound=200
+			0x00, 0x00, 0x01, 0x2C, // value=300
+		}
+		got, err := UnmarshalSRSegmentListSubTLV(b)
+		if err != nil {
+			t.Fatalf("UnmarshalSRSegmentListSubTLV() error = %v", err)
+		}
+		tlv, ok := got[SRSegmentListMetricType]
+		if !ok {
+			t.Fatal("SRSegmentListMetricType key missing from result")
+		}
+		m, ok := tlv.(*SRSegmentListMetric)
+		if !ok {
+			t.Fatalf("value type = %T, want *SRSegmentListMetric", tlv)
+		}
+		if m.Metric != SRMetricTE {
+			t.Errorf("Metric = %d, want %d", m.Metric, SRMetricTE)
+		}
+		if !m.FlagM {
+			t.Error("FlagM should be true")
+		}
+		if m.Margin != 100 || m.Bound != 200 || m.Value != 300 {
+			t.Errorf("Margin/Bound/Value = %d/%d/%d, want 100/200/300", m.Margin, m.Bound, m.Value)
+		}
+	})
+}

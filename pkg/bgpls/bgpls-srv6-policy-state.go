@@ -79,6 +79,9 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 	// The D-Flag determines field size: set = 16 octets (SRv6), clear = 4 octets (MPLS)
 	if bsid.FlagD {
 		// BSID is ipv6 address
+		if p+16 > len(b) {
+			return nil, fmt.Errorf("not enough bytes to decode SR Binding SID TLV, need 16 bytes, have %d", len(b)-p)
+		}
 		bsid.BSID, err = UnmarshalSRv6SID(b[p : p+16])
 		if err != nil {
 			return nil, err

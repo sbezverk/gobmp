@@ -448,6 +448,45 @@ func TestUnmarshalSRCandidatePathConstraintsSubTLV(t *testing.T) {
 			}(),
 			wantErr: true,
 		},
+		{
+			// SRAffinityConstraintType = 1208 = 0x04B8, all-zero (sizes=0, no EAG words)
+			name: "affinity constraint zero sizes",
+			input: []byte{
+				0x04, 0xB8, 0x00, 0x04, // type=1208, length=4
+				0x00, 0x00, 0x00, 0x00, // ExclAnySize=0, InclAnySize=0, InclAllSize=0, reserved
+			},
+			wantN: 1,
+		},
+		{
+			// SRSRLGConstraintType = 1209 = 0x04B9, one SRLG entry
+			name: "SRLG constraint one entry",
+			input: []byte{
+				0x04, 0xB9, 0x00, 0x04, // type=1209, length=4
+				0x00, 0x00, 0x00, 0xAA, // SRLG=0xAA
+			},
+			wantN: 1,
+		},
+		{
+			// SRDisjointGroupConstraintType = 1211 = 0x04BB, 8 bytes
+			name: "disjoint group constraint",
+			input: []byte{
+				0x04, 0xBB, 0x00, 0x08, // type=1211, length=8
+				0x80,       // RequestFlagS=1
+				0x80,       // StatusFlagS=1
+				0x00, 0x00, // reserved
+				0x00, 0x00, 0x00, 0x2A, // DisjointGroupID=42
+			},
+			wantN: 1,
+		},
+		{
+			// Unknown type — silently ignored, no sub-TLV added to map
+			name: "unknown sub-TLV type ignored",
+			input: []byte{
+				0x27, 0x0F, 0x00, 0x04, // type=9999(unknown), length=4
+				0x00, 0x00, 0x00, 0x00,
+			},
+			wantN: 0,
+		},
 	}
 
 	for _, tt := range tests {

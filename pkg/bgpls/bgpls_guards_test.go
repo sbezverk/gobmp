@@ -998,6 +998,114 @@ func TestUnmarshalFlexAlgoDefinition_ErrorCases(t *testing.T) {
 				}
 			},
 		},
+		{
+			// type 1040 = 0x0410, length = 8, two ExcludeAny entries
+			name: "sub-TLV type 1040 ExcludeAny two entries",
+			input: []byte{
+				128, 0, 0, 200, // base: FlexAlgo, MetricType, CalcType, Priority
+				0x04, 0x10, 0x00, 0x08, // type=1040, length=8
+				0x00, 0x00, 0x00, 0x01, // entry 1
+				0x00, 0x00, 0x00, 0x02, // entry 2
+			},
+			checkFn: func(t *testing.T, f *FlexAlgoDefinition) {
+				if f.SubTLV == nil {
+					t.Fatal("SubTLV should not be nil")
+				}
+				if len(f.SubTLV.ExcludeAny) != 2 {
+					t.Errorf("ExcludeAny len = %d, want 2", len(f.SubTLV.ExcludeAny))
+				}
+			},
+		},
+		{
+			// type 1041 = 0x0411, length = 4, one IncludeAny entry
+			name: "sub-TLV type 1041 IncludeAny one entry",
+			input: []byte{
+				128, 0, 0, 200,
+				0x04, 0x11, 0x00, 0x04, // type=1041, length=4
+				0x00, 0x00, 0x00, 0x0A, // entry = 10
+			},
+			checkFn: func(t *testing.T, f *FlexAlgoDefinition) {
+				if f.SubTLV == nil || len(f.SubTLV.IncludeAny) != 1 || f.SubTLV.IncludeAny[0] != 10 {
+					t.Errorf("IncludeAny = %v, want [10]", f.SubTLV.IncludeAny)
+				}
+			},
+		},
+		{
+			// type 1042 = 0x0412, length = 4, one IncludeAll entry
+			name: "sub-TLV type 1042 IncludeAll one entry",
+			input: []byte{
+				128, 0, 0, 200,
+				0x04, 0x12, 0x00, 0x04, // type=1042, length=4
+				0x00, 0x00, 0x00, 0x14, // entry = 20
+			},
+			checkFn: func(t *testing.T, f *FlexAlgoDefinition) {
+				if f.SubTLV == nil || len(f.SubTLV.IncludeAll) != 1 || f.SubTLV.IncludeAll[0] != 20 {
+					t.Errorf("IncludeAll = %v, want [20]", f.SubTLV.IncludeAll)
+				}
+			},
+		},
+		{
+			// type 1043 = 0x0413, length = 1, MFlag=true
+			name: "sub-TLV type 1043 Flags MFlag=true",
+			input: []byte{
+				128, 0, 0, 200,
+				0x04, 0x13, 0x00, 0x01, // type=1043, length=1
+				0x80, // MFlag=1
+			},
+			checkFn: func(t *testing.T, f *FlexAlgoDefinition) {
+				if f.SubTLV == nil || f.SubTLV.Flags == nil || !f.SubTLV.Flags.MFLag {
+					t.Error("Flags.MFLag should be true")
+				}
+			},
+		},
+		{
+			// type 1043 = 0x0413, length = 0 — too short for flags byte
+			name:    "sub-TLV type 1043 Flags zero length",
+			wantErr: true,
+			input: []byte{
+				128, 0, 0, 200,
+				0x04, 0x13, 0x00, 0x00, // type=1043, length=0 (invalid)
+			},
+		},
+		{
+			// type 1045 = 0x0415, length = 4, one ExcludeSRLG entry
+			name: "sub-TLV type 1045 ExcludeSRLG one entry",
+			input: []byte{
+				128, 0, 0, 200,
+				0x04, 0x15, 0x00, 0x04, // type=1045, length=4
+				0x00, 0x00, 0x00, 0x1E, // entry = 30
+			},
+			checkFn: func(t *testing.T, f *FlexAlgoDefinition) {
+				if f.SubTLV == nil || len(f.SubTLV.ExcludeSRLG) != 1 || f.SubTLV.ExcludeSRLG[0] != 30 {
+					t.Errorf("ExcludeSRLG = %v, want [30]", f.SubTLV.ExcludeSRLG)
+				}
+			},
+		},
+		{
+			// Unknown type — logged as warning, not an error
+			name: "sub-TLV unknown type 9999",
+			input: []byte{
+				128, 0, 0, 200,
+				0x27, 0x0F, 0x00, 0x04, // type=9999(unknown), length=4
+				0x00, 0x00, 0x00, 0x00,
+			},
+			checkFn: func(t *testing.T, f *FlexAlgoDefinition) {
+				// No error expected; SubTLV is allocated but fields remain zero-value
+				if f.SubTLV == nil {
+					t.Error("SubTLV should be allocated even for unknown types")
+				}
+			},
+		},
+		{
+			// type 1040 with length=3 (not multiple of 4) — getFADSubTLVValue error
+			name:    "sub-TLV type 1040 length not multiple of 4",
+			wantErr: true,
+			input: []byte{
+				128, 0, 0, 200,
+				0x04, 0x10, 0x00, 0x03, // type=1040, length=3 (invalid)
+				0xAA, 0xBB, 0xCC,
+			},
+		},
 	}
 
 	for _, tt := range tests {
