@@ -21,6 +21,7 @@ type PeerUpMessage struct {
 	isRemotePeerIPv6 bool
 }
 
+// GetLocalAddressString returns the local address as a string, properly formatted as IPv4 or IPv6 based on the isRemotePeerIPv6 flag.
 func (pum *PeerUpMessage) GetLocalAddressString() string {
 	if pum.isRemotePeerIPv6 {
 		return net.IP(pum.LocalAddress).To16().String()
@@ -28,6 +29,7 @@ func (pum *PeerUpMessage) GetLocalAddressString() string {
 	return net.IP(pum.LocalAddress[12:]).To4().String()
 }
 
+// GetVRFTableName returns the VRF table name from the Peer Up message's Informational TLVs, if present.
 func (pum *PeerUpMessage) GetVRFTableName() (string, bool) {
 	for _, tlv := range pum.Information {
 		if tlv.InformationType != 3 {
@@ -38,6 +40,7 @@ func (pum *PeerUpMessage) GetVRFTableName() (string, bool) {
 	return "", false
 }
 
+// GetAdminLabel returns the administrative label from the Peer Up message's Informational TLVs, if present.
 func (pum *PeerUpMessage) GetAdminLabel() (string, bool) {
 	for _, tlv := range pum.Information {
 		if tlv.InformationType != 4 {
