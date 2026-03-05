@@ -89,6 +89,15 @@ func (p *parser) parsingWorker(b []byte) {
 			glog.Errorf("truncated BMP message: pos=%d, message length=%d, remaining=%d", pos, ch.MessageLength, remaining)
 			return
 		}
+		// Convert once with overflow checking. After the guard above,
+		// ch.MessageLength ≤ remaining ≤ len(b) ≤ maxInt, so this never
+		// errors in practice, but the check documents the safety invariant
+		// and is correct on 32-bit platforms.
+		msgLen, err := ch.IntMessageLength()
+		if err != nil {
+			glog.Errorf("BMP message length overflows int: %+v", err)
+			return
+		}
 		// Common header's length is a part  of the total message length
 		// to get to next header, the pointer needs to advance by CommonHeaderLength
 		pos += bmp.CommonHeaderLength
@@ -107,13 +116,13 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 			perPerHeaderLen = bmp.PerPeerHeaderLength
-			rm, err := bmp.UnmarshalBMPRouteMonitorMessage(b[pos+perPerHeaderLen : pos+int(ch.MessageLength)-bmp.CommonHeaderLength])
+			rm, err := bmp.UnmarshalBMPRouteMonitorMessage(b[pos+perPerHeaderLen : pos+msgLen-bmp.CommonHeaderLength])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Route Monitoring with error: %+v", err)
 				if glog.V(5) {
 					glog.Infof("common header content: %+v", ch)
 					glog.Infof("per peer header content: %s", tools.MessageHex(b[pos:pos+bmp.PerPeerHeaderLength]))
-					glog.Infof("message content: %s", tools.MessageHex(b[pos+perPerHeaderLen:pos+int(ch.MessageLength)-bmp.CommonHeaderLength]))
+					glog.Infof("message content: %s", tools.MessageHex(b[pos+perPerHeaderLen:pos+msgLen-bmp.CommonHeaderLength]))
 				}
 				return
 			}
@@ -138,7 +147,7 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 			perPerHeaderLen = bmp.PerPeerHeaderLength
-			if bmpMsg.Payload, err = bmp.UnmarshalBMPStatsReportMessage(b[pos+perPerHeaderLen : pos+int(ch.MessageLength)-bmp.CommonHeaderLength]); err != nil {
+			if bmpMsg.Payload, err = bmp.UnmarshalBMPStatsReportMessage(b[pos+perPerHeaderLen : pos+msgLen-bmp.CommonHeaderLength]); err != nil {
 				glog.Errorf("fail to recover BMP Stats Reports message with error: %+v", err)
 				return
 			}
@@ -156,7 +165,7 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 			perPerHeaderLen = bmp.PerPeerHeaderLength
-			if bmpMsg.Payload, err = bmp.UnmarshalPeerDownMessage(b[pos+perPerHeaderLen : pos+int(ch.MessageLength)-bmp.CommonHeaderLength]); err != nil {
+			if bmpMsg.Payload, err = bmp.UnmarshalPeerDownMessage(b[pos+perPerHeaderLen : pos+msgLen-bmp.CommonHeaderLength]); err != nil {
 				glog.Errorf("fail to recover BMP Peer Down message with error: %+v", err)
 				break // skip malformed PeerDown message, continue processing stream
 			}
@@ -174,17 +183,17 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 			perPerHeaderLen = bmp.PerPeerHeaderLength
-			if bmpMsg.Payload, err = bmp.UnmarshalPeerUpMessage(b[pos+perPerHeaderLen:pos+int(ch.MessageLength)-bmp.CommonHeaderLength], bmpMsg.PeerHeader.IsRemotePeerIPv6()); err != nil {
+			if bmpMsg.Payload, err = bmp.UnmarshalPeerUpMessage(b[pos+perPerHeaderLen:pos+msgLen-bmp.CommonHeaderLength], bmpMsg.PeerHeader.IsRemotePeerIPv6()); err != nil {
 				glog.Errorf("fail to recover BMP Peer Up message with error: %+v", err)
 				return
 			}
 		case bmp.InitiationMsg:
-			if _, err := bmp.UnmarshalInitiationMessage(b[pos : pos+(int(ch.MessageLength)-bmp.CommonHeaderLength)]); err != nil {
+			if _, err := bmp.UnmarshalInitiationMessage(b[pos : pos+msgLen-bmp.CommonHeaderLength]); err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
 			}
 		case bmp.TerminationMsg:
-			tm, err := bmp.UnmarshalTerminationMessage(b[pos : pos+(int(ch.MessageLength)-bmp.CommonHeaderLength)])
+			tm, err := bmp.UnmarshalTerminationMessage(b[pos : pos+msgLen-bmp.CommonHeaderLength])
 			if err != nil {
 				glog.Errorf("fail to recover BMP Termination message with error: %+v", err)
 			} else {
@@ -199,7 +208,7 @@ func (p *parser) parsingWorker(b []byte) {
 				glog.Infof("Content:%s", tools.MessageHex(b))
 			}
 		}
-		pos += (int(ch.MessageLength) - bmp.CommonHeaderLength)
+		pos += msgLen - bmp.CommonHeaderLength
 		if p.producerQueue != nil && bmpMsg.Payload != nil {
 			p.producerQueue <- bmpMsg
 		}
