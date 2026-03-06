@@ -381,7 +381,16 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeK):
-			glog.Infof("Segment of type K not implemented")
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type K Segment STLV: missing length byte")
+			}
+			l := b[p]
+			p++
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type K Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
+			}
+			glog.Infof("Segment of type K not yet implemented, skipping %d bytes", l)
+			p += int(l)
 		default:
 			return nil, fmt.Errorf("unknown type of segment sub tlv %d", t)
 		}
