@@ -10,7 +10,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 )
 
-// flowspec processes MP_REACH/UNREACH NLRI for AFI 1/2 SAFI 133 and generates Flowspec messages.
+// flowspec processes MP_REACH/UNREACH NLRI for IPv4 FlowSpec (AFI 1, SAFI 133) and generates Flowspec messages.
 // Per RFC 8955 Section 4, the NLRI field may contain multiple Flow Specifications.
 func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*Flowspec, error) {
 	var operation string

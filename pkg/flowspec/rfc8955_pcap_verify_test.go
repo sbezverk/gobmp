@@ -70,18 +70,22 @@ func TestRFC8955_PcapFullVerification(t *testing.T) {
 		t.Fatalf("NLRI[0]: expected 4 specs, got %d", len(nlris[0].Spec))
 	}
 	// Type1: dst 1.2.4.0/24
-	ps := nlris[0].Spec[0].(*PrefixSpec)
+	ps, ok := nlris[0].Spec[0].(*PrefixSpec)
+	if !ok { t.Fatalf("NLRI[0].Spec[0]: expected *PrefixSpec, got %T", nlris[0].Spec[0]) }
 	assertPrefix(t, "NLRI[0].dst", ps, 1, 24, []byte{1, 2, 4})
 	// Type2: src 1.2.0.0/16
-	ps = nlris[0].Spec[1].(*PrefixSpec)
+	ps, ok = nlris[0].Spec[1].(*PrefixSpec)
+	if !ok { t.Fatalf("NLRI[0].Spec[1]: expected *PrefixSpec, got %T", nlris[0].Spec[1]) }
 	assertPrefix(t, "NLRI[0].src", ps, 2, 16, []byte{1, 2})
 	// Type3: proto =6 || =17
-	gs := nlris[0].Spec[2].(*GenericSpec)
+	gs, ok := nlris[0].Spec[2].(*GenericSpec)
+	if !ok { t.Fatalf("NLRI[0].Spec[2]: expected *GenericSpec, got %T", nlris[0].Spec[2]) }
 	assertGeneric(t, "NLRI[0].proto", gs, 3, 2)
 	assertOpVal(t, "NLRI[0].proto[0]", gs.OpVal[0], false, false, true, []byte{6})
 	assertOpVal(t, "NLRI[0].proto[1]", gs.OpVal[1], true, false, true, []byte{17})
 	// Type4: port =80
-	gs = nlris[0].Spec[3].(*GenericSpec)
+	gs, ok = nlris[0].Spec[3].(*GenericSpec)
+	if !ok { t.Fatalf("NLRI[0].Spec[3]: expected *GenericSpec, got %T", nlris[0].Spec[3]) }
 	assertGeneric(t, "NLRI[0].port", gs, 4, 1)
 	assertOpVal(t, "NLRI[0].port[0]", gs.OpVal[0], true, false, true, []byte{80})
 
@@ -89,9 +93,11 @@ func TestRFC8955_PcapFullVerification(t *testing.T) {
 	if len(nlris[1].Spec) != 2 {
 		t.Fatalf("NLRI[1]: expected 2 specs, got %d", len(nlris[1].Spec))
 	}
-	ps = nlris[1].Spec[0].(*PrefixSpec)
+	ps, ok = nlris[1].Spec[0].(*PrefixSpec)
+	if !ok { t.Fatalf("NLRI[1].Spec[0]: expected *PrefixSpec, got %T", nlris[1].Spec[0]) }
 	assertPrefix(t, "NLRI[1].dst", ps, 1, 24, []byte{1, 2, 6})
-	gs = nlris[1].Spec[1].(*GenericSpec)
+	gs, ok = nlris[1].Spec[1].(*GenericSpec)
+	if !ok { t.Fatalf("NLRI[1].Spec[1]: expected *GenericSpec, got %T", nlris[1].Spec[1]) }
 	assertGeneric(t, "NLRI[1].frag", gs, 12, 1)
 	assertOpVal(t, "NLRI[1].frag[0]", gs.OpVal[0], true, false, true, []byte{2})
 
@@ -99,12 +105,15 @@ func TestRFC8955_PcapFullVerification(t *testing.T) {
 	if len(nlris[2].Spec) != 6 {
 		t.Fatalf("NLRI[2]: expected 6 specs, got %d", len(nlris[2].Spec))
 	}
-	ps = nlris[2].Spec[0].(*PrefixSpec)
+	ps, ok = nlris[2].Spec[0].(*PrefixSpec)
+	if !ok { t.Fatalf("NLRI[2].Spec[0]: expected *PrefixSpec, got %T", nlris[2].Spec[0]) }
 	assertPrefix(t, "NLRI[2].dst", ps, 1, 24, []byte{1, 2, 5})
-	ps = nlris[2].Spec[1].(*PrefixSpec)
+	ps, ok = nlris[2].Spec[1].(*PrefixSpec)
+	if !ok { t.Fatalf("NLRI[2].Spec[1]: expected *PrefixSpec, got %T", nlris[2].Spec[1]) }
 	assertPrefix(t, "NLRI[2].src", ps, 2, 16, []byte{1, 2})
 	// Type5: dstport =3128 || >8080 && <8088
-	gs = nlris[2].Spec[2].(*GenericSpec)
+	gs, ok = nlris[2].Spec[2].(*GenericSpec)
+	if !ok { t.Fatalf("NLRI[2].Spec[2]: expected *GenericSpec, got %T", nlris[2].Spec[2]) }
 	assertGeneric(t, "NLRI[2].dstport", gs, 5, 3)
 	assertOpVal(t, "NLRI[2].dstport[0]", gs.OpVal[0], false, false, true, []byte{0x0c, 0x38})   // =3128
 	assertOpVal(t, "NLRI[2].dstport[1]", gs.OpVal[1], false, false, false, []byte{0x1f, 0x90})  // >8080 (GT only)
@@ -113,38 +122,46 @@ func TestRFC8955_PcapFullVerification(t *testing.T) {
 	if !gs.OpVal[2].Op.LTBit { t.Error("NLRI[2].dstport[2]: expected LT bit") }
 	if !gs.OpVal[2].Op.ANDBit { t.Error("NLRI[2].dstport[2]: expected AND bit") }
 	// Type6: srcport >1000 && <=2000
-	gs = nlris[2].Spec[3].(*GenericSpec)
+	gs, ok = nlris[2].Spec[3].(*GenericSpec)
+	if !ok { t.Fatalf("NLRI[2].Spec[3]: expected *GenericSpec, got %T", nlris[2].Spec[3]) }
 	assertGeneric(t, "NLRI[2].srcport", gs, 6, 2)
 	// Type9: tcpflags = SF (0x03 = SYN+FIN)
-	gs = nlris[2].Spec[4].(*GenericSpec)
+	gs, ok = nlris[2].Spec[4].(*GenericSpec)
+	if !ok { t.Fatalf("NLRI[2].Spec[4]: expected *GenericSpec, got %T", nlris[2].Spec[4]) }
 	assertGeneric(t, "NLRI[2].tcpflags", gs, 9, 1)
 	assertOpVal(t, "NLRI[2].tcpflags[0]", gs.OpVal[0], true, false, true, []byte{0x03})
 	// Type11: dscp =42
-	gs = nlris[2].Spec[5].(*GenericSpec)
+	gs, ok = nlris[2].Spec[5].(*GenericSpec)
+	if !ok { t.Fatalf("NLRI[2].Spec[5]: expected *GenericSpec, got %T", nlris[2].Spec[5]) }
 	assertGeneric(t, "NLRI[2].dscp", gs, 11, 1)
 	assertOpVal(t, "NLRI[2].dscp[0]", gs.OpVal[0], true, false, true, []byte{0x2a})
 
 	// --- NLRI 4: 1 spec ---
 	if len(nlris[3].Spec) != 1 { t.Fatalf("NLRI[3]: expected 1 spec, got %d", len(nlris[3].Spec)) }
-	ps = nlris[3].Spec[0].(*PrefixSpec)
+	ps, ok = nlris[3].Spec[0].(*PrefixSpec)
+	if !ok { t.Fatalf("NLRI[3].Spec[0]: expected *PrefixSpec, got %T", nlris[3].Spec[0]) }
 	assertPrefix(t, "NLRI[3].src", ps, 2, 16, []byte{1, 2})
 
 	// --- NLRI 5: 1 spec ---
 	if len(nlris[4].Spec) != 1 { t.Fatalf("NLRI[4]: expected 1 spec, got %d", len(nlris[4].Spec)) }
-	ps = nlris[4].Spec[0].(*PrefixSpec)
+	ps, ok = nlris[4].Spec[0].(*PrefixSpec)
+	if !ok { t.Fatalf("NLRI[4].Spec[0]: expected *PrefixSpec, got %T", nlris[4].Spec[0]) }
 	assertPrefix(t, "NLRI[4].dst", ps, 1, 24, []byte{1, 2, 3})
 
 	// --- NLRI 6: 3 specs ---
 	if len(nlris[5].Spec) != 3 { t.Fatalf("NLRI[5]: expected 3 specs, got %d", len(nlris[5].Spec)) }
-	ps = nlris[5].Spec[0].(*PrefixSpec)
+	ps, ok = nlris[5].Spec[0].(*PrefixSpec)
+	if !ok { t.Fatalf("NLRI[5].Spec[0]: expected *PrefixSpec, got %T", nlris[5].Spec[0]) }
 	assertPrefix(t, "NLRI[5].dst", ps, 1, 24, []byte{1, 2, 4})
 	// Type7: icmptype =15 || =16
-	gs = nlris[5].Spec[1].(*GenericSpec)
+	gs, ok = nlris[5].Spec[1].(*GenericSpec)
+	if !ok { t.Fatalf("NLRI[5].Spec[1]: expected *GenericSpec, got %T", nlris[5].Spec[1]) }
 	assertGeneric(t, "NLRI[5].icmptype", gs, 7, 2)
 	assertOpVal(t, "NLRI[5].icmptype[0]", gs.OpVal[0], false, false, true, []byte{15})
 	assertOpVal(t, "NLRI[5].icmptype[1]", gs.OpVal[1], true, false, true, []byte{16})
 	// Type8: icmpcode =0 || =1
-	gs = nlris[5].Spec[2].(*GenericSpec)
+	gs, ok = nlris[5].Spec[2].(*GenericSpec)
+	if !ok { t.Fatalf("NLRI[5].Spec[2]: expected *GenericSpec, got %T", nlris[5].Spec[2]) }
 	assertGeneric(t, "NLRI[5].icmpcode", gs, 8, 2)
 	assertOpVal(t, "NLRI[5].icmpcode[0]", gs.OpVal[0], false, false, true, []byte{0})
 	assertOpVal(t, "NLRI[5].icmpcode[1]", gs.OpVal[1], true, false, true, []byte{1})
@@ -159,7 +176,7 @@ func TestRFC8955_PcapFullVerification(t *testing.T) {
 		hashes[n.SpecHash] = i
 	}
 
-	// Verify JSON round-trip for each NLRI
+	// Verify JSON serialization for each NLRI
 	for i, n := range nlris {
 		b, err := json.Marshal(n.Spec)
 		if err != nil { t.Errorf("NLRI[%d]: Marshal error: %v", i, err) }
@@ -221,8 +238,10 @@ func TestRFC8955_Section4_LengthEncoding(t *testing.T) {
 		{"2-byte 240", nil, 240}, // skip
 	}
 	for _, tt := range tests {
-		if tt.lenBytes == nil { continue }
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.lenBytes == nil {
+				t.Skip("lenBytes not provided for this case")
+			}
 			nlri, _, err := unmarshalSingleFlowspecNLRI(tt.lenBytes)
 			if err != nil { t.Fatalf("error: %v", err) }
 			if nlri.Length != tt.expectedLength {
