@@ -1,6 +1,7 @@
 package dumper
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 
@@ -8,7 +9,7 @@ import (
 )
 
 type msgOut struct {
-	MsgType int    `json:"msg_type,omitempty"`
+	MsgType int    `json:"msg_type"`
 	MsgHash string `json:"msg_hash,omitempty"`
 	Msg     string `json:"msg_data,omitempty"`
 }
@@ -24,7 +25,11 @@ func (p *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) erro
 		Msg:     string(msg),
 	}
 
-	p.output.Printf("%+v", m)
+	b, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	p.output.Println(string(b))
 
 	return nil
 }
