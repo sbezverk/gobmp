@@ -113,7 +113,7 @@ docker run --net=host sbezverk/ris2bmp:1
 
 Expected output:
 ```json
-{"action":"add","prefix":"223.104.44.0","prefix_len":24,"peer_ip":"80.81.195.241","peer_asn":49697,"nexthop":"80.81.195.241","as_path":[49697,41047,24961,33891,58453,9808,56048],"origin":"igp"...}
+{"msg_type":0,"msg_hash":"some_hash","msg_data":{"action":"add","prefix":"1.1.1.0","prefix_len":24,"peer_ip":"2.2.2.2","peer_asn":65530,"nexthop":"3.3.3.3","as_path":[1,2,3],"origin":"igp"...}}
 ```
 
 ### Option 2: Build from Source

@@ -73,11 +73,7 @@ func main() {
 		}
 		glog.V(5).Infof("file publisher has been successfully initialized.")
 	case "console":
-		publisher, err = dumper.NewDumper()
-		if err != nil {
-			glog.Errorf("failed to initialize console publisher with error: %+v", err)
-			os.Exit(1)
-		}
+		publisher = dumper.NewDumper()
 		glog.V(5).Infof("console publisher has been successfully initialized.")
 	case "nats":
 		publisher, err = nats.NewPublisher(natsSrv)
