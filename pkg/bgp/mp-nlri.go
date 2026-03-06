@@ -23,6 +23,7 @@ type MPNLRI interface {
 	GetNLRI71() (*ls.NLRI71, error)
 	GetNLRI73() (*srpolicy.NLRI73, error)
 	GetFlowspecNLRI() (*flowspec.NLRI, error)
+	GetAllFlowspecNLRI() ([]*flowspec.NLRI, error)
 	GetNLRIMCASTVPN() (*mcastvpn.Route, error)
 	GetNLRIMVPN() (*mcastvpn.Route, error)
 	GetNLRIRTC() (*rtc.Route, error)
