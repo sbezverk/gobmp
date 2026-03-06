@@ -59,30 +59,27 @@ func TestMessageAsValidJSON(t *testing.T) {
 			if tt.wantErr {
 				return
 			}
-			var msgOut msgOut
-			err = json.Unmarshal(buff.Bytes(), &msgOut)
+			var got msgOut
+			err = json.Unmarshal(buff.Bytes(), &got)
 			if err != nil {
 				t.Errorf("Failed to unmarshal msgOut: %v", err)
 			}
-			if err := json.Unmarshal(buff.Bytes(), &msgOut); err != nil {
-				t.Fatalf("Failed to unmarshal msgOut: %v", err)
+			if tt.msgOut.MsgType != got.MsgType {
+				t.Errorf("MsgType mismatch: expected %d, got %d", tt.msgOut.MsgType, got.MsgType)
 			}
-			if tt.msgOut.MsgType != msgOut.MsgType {
-				t.Errorf("MsgType mismatch: expected %d, got %d", tt.msgOut.MsgType, msgOut.MsgType)
-			}
-			if tt.msgOut.MsgHash != msgOut.MsgHash {
-				t.Errorf("MsgHash mismatch: expected %s, got %s", tt.msgOut.MsgHash, msgOut.MsgHash)
+			if tt.msgOut.MsgHash != got.MsgHash {
+				t.Errorf("MsgHash mismatch: expected %s, got %s", tt.msgOut.MsgHash, got.MsgHash)
 			}
 			var expectedMsg any
 			if err := json.Unmarshal(tt.msgOut.Msg, &expectedMsg); err != nil {
 				t.Fatalf("Failed to unmarshal expected JSON message: %v", err)
 			}
 			var actualMsg any
-			if err := json.Unmarshal(msgOut.Msg, &actualMsg); err != nil {
+			if err := json.Unmarshal(got.Msg, &actualMsg); err != nil {
 				t.Fatalf("Failed to unmarshal actual JSON message: %v", err)
 			}
 			if !reflect.DeepEqual(expectedMsg, actualMsg) {
-				t.Errorf("Msg JSON mismatch: expected %s, got %s", string(tt.msgOut.Msg), string(msgOut.Msg))
+				t.Errorf("Msg JSON mismatch: expected %s, got %s", string(tt.msgOut.Msg), string(got.Msg))
 			}
 		})
 	}
