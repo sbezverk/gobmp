@@ -40,10 +40,16 @@ func TestCommonHeader(t *testing.T) {
 			fail:   true,
 		},
 		{
-			name:   "invalid type 10",
-			input:  []byte{3, 0, 0, 0, 32, 10},
-			expect: nil,
-			fail:   true,
+			// RFC 7854 §4.1: unknown message types MUST be ignored, not rejected.
+			// UnmarshalCommonHeader logs a warning and returns the parsed header.
+			name:  "unknown type 10 — accepted per RFC 7854",
+			input: []byte{3, 0, 0, 0, 32, 10},
+			expect: &bmp.CommonHeader{
+				Version:       3,
+				MessageLength: 32,
+				MessageType:   10,
+			},
+			fail: false,
 		},
 	}
 	for _, tt := range tests {
@@ -93,10 +99,24 @@ func TestInitiationMessage(t *testing.T) {
 			fail: false,
 		},
 		{
-			name:   "invalid 2 TLVs wrong type 3",
-			input:  []byte{0, 3, 0, 10, 32, 55, 46, 50, 46, 49, 46, 50, 51, 73, 0, 2, 0, 8, 120, 114, 118, 57, 107, 45, 114, 49},
-			expect: nil,
-			fail:   true,
+			// RFC 7854 extensibility: unknown TLV types must be silently accepted.
+			name:  "unknown TLV type 3 — accepted per RFC 7854 extensibility",
+			input: []byte{0, 3, 0, 10, 32, 55, 46, 50, 46, 49, 46, 50, 51, 73, 0, 2, 0, 8, 120, 114, 118, 57, 107, 45, 114, 49},
+			expect: &bmp.InitiationMessage{
+				TLV: []bmp.InformationalTLV{
+					{
+						InformationType:   3,
+						InformationLength: 10,
+						Information:       []byte{32, 55, 46, 50, 46, 49, 46, 50, 51, 73},
+					},
+					{
+						InformationType:   2,
+						InformationLength: 8,
+						Information:       []byte{120, 114, 118, 57, 107, 45, 114, 49},
+					},
+				},
+			},
+			fail: false,
 		},
 		{
 			name:   "invalid 2 TLVs wrong length 100",

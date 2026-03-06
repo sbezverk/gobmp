@@ -29,7 +29,16 @@ const (
 	PeerType1
 	PeerType2
 	PeerType3
+	// PeerTypeUnknown represents unrecognized peer types; callers SHOULD ignore or drop
+	// messages using this type in accordance with RFC 7854 recommendations.
+	PeerTypeUnknown = 0xff
 )
+
+// ErrUnknownPeerType is returned by UnmarshalPerPeerHeader when the peer type
+// byte is not one of the four values defined in RFC 7854 / RFC 9069. The
+// caller SHOULD skip the current message and continue processing subsequent
+// messages, consistent with RFC 7854 §11 extensibility guidance.
+var ErrUnknownPeerType = errors.New("unknown BMP peer type")
 
 // PerPeerHeader defines BMP Per-Peer Header per rfc7854
 type PerPeerHeader struct {
@@ -74,7 +83,11 @@ func peerType(b byte) (PeerType, error) {
 	case PeerType3:
 		return PeerType3, nil
 	default:
-		return 0xff, fmt.Errorf("invalid peer type, expected between 0 and 3 found %d", b)
+		// RFC 7854 §11: implementations MUST ignore messages with unrecognized
+		// peer types and continue processing subsequent messages. Return a
+		// sentinel so callers can skip this message without aborting the stream.
+		glog.V(2).Infof("unknown BMP peer type %d — skipping message", b)
+		return PeerTypeUnknown, ErrUnknownPeerType
 	}
 }
 
@@ -101,7 +114,11 @@ func (p *PerPeerHeader) GetPeerHash() string {
 
 // GetPeerBGPIDString returns a string representation of Peer BGP ID
 func (p *PerPeerHeader) GetPeerBGPIDString() string {
-	return net.IP(p.PeerBGPID).To4().String()
+	ip := net.IP(p.PeerBGPID)
+	if v4 := ip.To4(); v4 != nil {
+		return v4.String()
+	}
+	return ip.String()
 }
 
 // GetPeerAddrString returns a string representation of Peer address
@@ -268,6 +285,9 @@ func (p *PerPeerHeader) GetTableKey() string {
 func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	if glog.V(6) {
 		glog.Infof("BMP Per Peer Header Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) < BMP_PEER_HEADER_SIZE {
+		return nil, fmt.Errorf("not enough bytes to decode BMP per-peer header, need %d bytes, have %d", BMP_PEER_HEADER_SIZE, len(b))
 	}
 	pph := &PerPeerHeader{
 		PeerDistinguisher: make([]byte, 8), // newPeerDistinguisher(),
