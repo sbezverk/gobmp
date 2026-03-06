@@ -51,10 +51,10 @@ func TestMessageAsValidJSON(t *testing.T) {
 			}
 			err := pw.PublishMessage(tt.msgOut.MsgType, []byte(tt.msgOut.MsgHash), tt.msgOut.Msg)
 			if (err != nil) && !tt.wantErr {
-				t.Errorf("PublishMessage() error = %v, wantErr %v", err, tt.wantErr)
+				t.Fatalf("PublishMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if (err == nil) && tt.wantErr {
-				t.Errorf("PublishMessage() expected error but got none, wantErr %v", tt.wantErr)
+				t.Fatalf("PublishMessage() expected error but got none, wantErr %v", tt.wantErr)
 			}
 			if tt.wantErr {
 				return
