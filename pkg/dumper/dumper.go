@@ -9,9 +9,9 @@ import (
 )
 
 type msgOut struct {
-	MsgType int    `json:"msg_type"`
-	MsgHash string `json:"msg_hash,omitempty"`
-	Msg     string `json:"msg_data,omitempty"`
+	MsgType int             `json:"msg_type"`
+	MsgHash string          `json:"msg_hash,omitempty"`
+	Msg     json.RawMessage `json:"msg_data,omitempty"`
 }
 
 type pubwriter struct {
@@ -22,7 +22,7 @@ func (p *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) erro
 	m := msgOut{
 		MsgType: msgType,
 		MsgHash: string(msgHash),
-		Msg:     string(msg),
+		Msg:     json.RawMessage(msg),
 	}
 
 	b, err := json.Marshal(m)
@@ -41,7 +41,7 @@ func (p *pubwriter) Stop() {
 // NewDumper returns a new instance of standard out dumper.
 func NewDumper() (pub.Publisher, error) {
 	pw := pubwriter{
-		output: log.New(os.Stdout, "gobmp: ", log.Lmicroseconds),
+		output: log.New(os.Stdout, "", 0),
 	}
 
 	return &pw, nil
