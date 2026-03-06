@@ -27,7 +27,9 @@ type bmpServer struct {
 	sourcePort      int
 	destinationPort int
 	incoming        net.Listener
-	wg              sync.WaitGroup // tracks in-flight bmpWorker goroutines
+	wg              sync.WaitGroup        // tracks in-flight bmpWorker goroutines
+	mu              sync.Mutex            // protects clients
+	clients         map[net.Conn]struct{} // active bmpWorker connections
 	bmpRaw          bool
 	adminID         string
 }
@@ -40,14 +42,24 @@ func (srv *bmpServer) Start() {
 
 func (srv *bmpServer) Stop() {
 	glog.Infof("Stopping gobmp server\n")
+	// 1. Stop accepting new connections.
+	_ = srv.incoming.Close()
+	// 2. Close every active client connection so workers blocked in io.ReadFull
+	//    receive an immediate error and exit promptly (e.g. on SIGTERM).
+	srv.mu.Lock()
+	for c := range srv.clients {
+		_ = c.Close()
+	}
+	srv.mu.Unlock()
+	// 3. Wait for all bmpWorker goroutines (and their parser/producer pipelines)
+	//    to finish.  This must happen before stopping the publisher so that no
+	//    in-flight call to PublishMessage races against the publisher tearing
+	//    down its internal channels (e.g. Kafka async-producer Input()).
+	srv.wg.Wait()
+	// 4. Now it is safe to stop the publisher — no goroutine can call it anymore.
 	if srv.publisher != nil {
 		srv.publisher.Stop()
 	}
-	// Closing the listener unblocks server()'s Accept() call so that goroutine exits cleanly.
-	_ = srv.incoming.Close()
-	// Wait for every in-flight bmpWorker to finish before returning, so callers
-	// (and test functions with deferred Stop()) are guaranteed a clean slate.
-	srv.wg.Wait()
 }
 
 func (srv *bmpServer) server() {
@@ -69,13 +81,22 @@ func (srv *bmpServer) server() {
 	}
 }
 
-// startWorker registers the new connection with the WaitGroup and spawns a
-// bmpWorker goroutine.  wg.Add must happen before the goroutine is created so
-// that a concurrent Stop()/wg.Wait() cannot race past a live worker.
+// startWorker registers the new connection with the WaitGroup and the active
+// client set, then spawns a bmpWorker goroutine.
+// wg.Add and map insertion happen before the goroutine starts so that a
+// concurrent Stop()/wg.Wait() cannot race past a live worker.
 func (srv *bmpServer) startWorker(client net.Conn) {
 	srv.wg.Add(1)
+	srv.mu.Lock()
+	srv.clients[client] = struct{}{}
+	srv.mu.Unlock()
 	go func() {
-		defer srv.wg.Done()
+		defer func() {
+			srv.mu.Lock()
+			delete(srv.clients, client)
+			srv.mu.Unlock()
+			srv.wg.Done()
+		}()
 		srv.bmpWorker(client)
 	}()
 }
@@ -183,6 +204,7 @@ func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF boo
 		return nil, err
 	}
 	bmp := bmpServer{
+		clients:         make(map[net.Conn]struct{}),
 		sourcePort:      sPort,
 		destinationPort: dPort,
 		intercept:       intercept,

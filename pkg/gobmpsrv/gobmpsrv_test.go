@@ -381,14 +381,11 @@ func TestBMPServer_AcceptsMultipleClients(t *testing.T) {
 		}
 		conns[i] = c
 	}
-	// Close all client connections to unblock every bmpWorker (EOF on next read).
-	for _, c := range conns {
-		_ = c.Close()
-	}
 
-	// Stop() closes the listener and calls wg.Wait(), which blocks until all
-	// spawned bmpWorker goroutines have returned.  The 2-second deadline catches
-	// any worker that might be stuck.
+	// Stop() closes the listener, then closes every active client connection
+	// (unblocking io.ReadFull in each worker), then calls wg.Wait().
+	// We do NOT close the conns manually here — the test exercises that Stop()
+	// itself drives all workers to exit even on long-lived connections.
 	stopped := make(chan struct{})
 	go func() {
 		srv.Stop()
@@ -398,6 +395,11 @@ func TestBMPServer_AcceptsMultipleClients(t *testing.T) {
 	case <-stopped:
 	case <-time.After(2 * time.Second):
 		t.Fatal("Stop() did not return within 2s — goroutines from bmpWorker may have leaked")
+	}
+
+	// Drain any connections the server already closed; ignore errors.
+	for _, c := range conns {
+		_ = c.Close()
 	}
 }
 
