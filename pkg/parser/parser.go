@@ -209,7 +209,14 @@ func (p *parser) parsingWorker(b []byte) {
 		}
 		pos += msgLen - bmp.CommonHeaderLength
 		if p.producerQueue != nil && bmpMsg.Payload != nil {
-			p.producerQueue <- bmpMsg
+			// Use a stop-aware send: if shutdown is signalled while we are
+			// blocked waiting for the producer to drain, we exit immediately
+			// rather than deadlocking.
+			select {
+			case p.producerQueue <- bmpMsg:
+			case <-p.stop:
+				return
+			}
 		}
 	}
 }
@@ -238,9 +245,9 @@ func (p *parser) sendRawMessage(b []byte) {
 
 	// Send the raw message
 	if p.producerQueue != nil {
-		p.producerQueue <- bmp.Message{
-			PeerHeader: peerHeader,
-			Payload:    rm,
+		select {
+		case p.producerQueue <- bmp.Message{PeerHeader: peerHeader, Payload: rm}:
+		case <-p.stop:
 		}
 	}
 }

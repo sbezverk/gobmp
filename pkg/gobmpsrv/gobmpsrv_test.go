@@ -1,126 +1,428 @@
 package gobmpsrv
 
 import (
+	"encoding/binary"
+	"net"
+	"strconv"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-// TestMessageLengthValidation tests the message length validation logic
-// This tests the validation that prevents panic on corrupted data
-func TestMessageLengthValidation(t *testing.T) {
-	tests := []struct {
-		name          string
-		messageLength uint32
-		shouldReject  bool
-		description   string
-	}{
-		{
-			name:          "Valid message length",
-			messageLength: bmp.CommonHeaderLength + 100,
-			shouldReject:  false,
-			description:   "Normal BMP message with 100 bytes of payload",
-		},
-		{
-			name:          "Minimum valid message length",
-			messageLength: bmp.CommonHeaderLength + 1,
-			shouldReject:  false,
-			description:   "Minimum valid message with 1 byte of payload",
-		},
-		{
-			name:          "Zero payload length (msgLen = 0)",
-			messageLength: bmp.CommonHeaderLength,
-			shouldReject:  true,
-			description:   "Invalid: MessageLength equals CommonHeaderLength, resulting in zero-length payload",
-		},
-		{
-			name:          "Negative payload length (msgLen < 0)",
-			messageLength: bmp.CommonHeaderLength - 1,
-			shouldReject:  true,
-			description:   "Invalid: MessageLength less than CommonHeaderLength, resulting in negative payload length",
-		},
-		{
-			name:          "Extremely small MessageLength",
-			messageLength: 1,
-			shouldReject:  true,
-			description:   "Invalid: MessageLength of 1 is far too small",
-		},
-		{
-			name:          "Maximum allowed message length (1MB payload)",
-			messageLength: bmp.CommonHeaderLength + (1 << 20),
-			shouldReject:  false,
-			description:   "Maximum allowed payload size of 1MB",
-		},
-		{
-			name:          "Exceeds maximum allowed length",
-			messageLength: bmp.CommonHeaderLength + (1 << 20) + 1,
-			shouldReject:  true,
-			description:   "Invalid: Payload size exceeds 1MB limit",
-		},
-		{
-			name:          "Extremely large MessageLength",
-			messageLength: 1 << 30, // 1GB
-			shouldReject:  true,
-			description:   "Invalid: Extremely large message length that could cause resource exhaustion",
-		},
+// ---- test helpers -----------------------------------------------------------
+
+// makePeerDownMessage returns a minimal, fully-valid 49-byte BMP PeerDown
+// message suitable for end-to-end pipeline tests.
+//
+// Structure:
+//   - Common Header (6 bytes):    version=3, length=49, type=PeerDownMsg
+//   - Per-Peer Header (42 bytes): PeerType=0 (Global), all-zero flags /
+//     address / AS / BGPID / timestamp — parses as an IPv4, AS-0 peer
+//   - PeerDown body (1 byte):     reason=4 (remote system closed, no NOTIFICATION)
+func makePeerDownMessage() []byte {
+	totalLen := bmp.CommonHeaderLength + bmp.PerPeerHeaderLength + 1
+	b := make([]byte, totalLen)
+	b[0] = 3
+	binary.BigEndian.PutUint32(b[1:5], uint32(totalLen))
+	b[5] = bmp.PeerDownMsg
+	// Per-Peer Header bytes [6:48] remain zero: PeerType0, IPv4, 0.0.0.0, AS 0.
+	b[bmp.CommonHeaderLength+bmp.PerPeerHeaderLength] = 4 // PeerDown reason 4
+	return b
+}
+
+// ---- mock publisher ---------------------------------------------------------
+
+type mockPublisher struct {
+	mu      sync.Mutex
+	count   int
+	ch      chan struct{}
+	stopped bool
+}
+
+func newMockPublisher() *mockPublisher {
+	return &mockPublisher{ch: make(chan struct{}, 64)}
+}
+
+func (m *mockPublisher) PublishMessage(_ int, _ []byte, _ []byte) error {
+	m.mu.Lock()
+	m.count++
+	m.mu.Unlock()
+	select {
+	case m.ch <- struct{}{}:
+	default:
 	}
+	return nil
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Calculate msgLen as done in clientHandler
-			msgLen := int(tt.messageLength) - bmp.CommonHeaderLength
+func (m *mockPublisher) Stop() {
+	m.mu.Lock()
+	m.stopped = true
+	m.mu.Unlock()
+}
 
-			// Apply the validation logic from clientHandler
-			isInvalid := msgLen <= 0 || msgLen > 1<<20
-
-			if isInvalid != tt.shouldReject {
-				t.Errorf("%s: expected shouldReject=%v, got isInvalid=%v (msgLen=%d, MessageLength=%d)",
-					tt.description, tt.shouldReject, isInvalid, msgLen, tt.messageLength)
+// waitForMessages blocks until n PublishMessage calls have been observed or
+// the deadline d expires.
+func (m *mockPublisher) waitForMessages(n int, d time.Duration) bool {
+	deadline := time.NewTimer(d)
+	defer deadline.Stop()
+	received := 0
+	for {
+		select {
+		case <-m.ch:
+			received++
+			if received >= n {
+				return true
 			}
-		})
+		case <-deadline.C:
+			return false
+		}
 	}
 }
 
-// TestMessageLengthEdgeCases tests specific edge cases for message length calculation
-func TestMessageLengthEdgeCases(t *testing.T) {
-	// Test that CommonHeaderLength constant is correctly defined
-	if bmp.CommonHeaderLength != 6 {
-		t.Errorf("Expected CommonHeaderLength to be 6, got %d", bmp.CommonHeaderLength)
+// ---- helpers for direct bmpWorker tests -------------------------------------
+
+// newTestServer creates a minimal bmpServer for direct bmpWorker invocation.
+// A listener is not required when calling bmpWorker directly.
+func newTestServer(pub *mockPublisher, raw bool) *bmpServer {
+	return &bmpServer{
+		publisher: pub,
+		bmpRaw:    raw,
+	}
+}
+
+// workerDone starts bmpWorker in a goroutine and returns a channel that is
+// closed when the function returns.
+func workerDone(srv *bmpServer, conn net.Conn) <-chan struct{} {
+	ch := make(chan struct{})
+	go func() {
+		srv.bmpWorker(conn)
+		close(ch)
+	}()
+	return ch
+}
+
+// assertWorkerExits fails the test if bmpWorker has not returned within 2s.
+func assertWorkerExits(t *testing.T, done <-chan struct{}) {
+	t.Helper()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("bmpWorker did not exit within 2s")
+	}
+}
+
+// ---- NewBMPServer -----------------------------------------------------------
+
+func TestNewBMPServer_Success(t *testing.T) {
+	srv, err := NewBMPServer(0, 0, false, nil, false, false, "")
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Stop()
+}
+
+func TestNewBMPServer_PortInUse(t *testing.T) {
+	srv1, err := NewBMPServer(0, 0, false, nil, false, false, "")
+	if err != nil {
+		t.Fatalf("first NewBMPServer: %v", err)
+	}
+	defer srv1.Stop()
+
+	port := srv1.(*bmpServer).incoming.Addr().(*net.TCPAddr).Port
+	_, err = NewBMPServer(port, 0, false, nil, false, false, "")
+	if err == nil {
+		t.Fatal("expected error binding already-used port, got nil")
+	}
+}
+
+// ---- Start / Stop lifecycle -------------------------------------------------
+
+func TestBMPServer_StartStop_NoHang(t *testing.T) {
+	srv, err := NewBMPServer(0, 0, false, newMockPublisher(), false, false, "")
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Start()
+
+	done := make(chan struct{})
+	go func() {
+		srv.Stop()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop() did not return within 2s — possible goroutine leak")
+	}
+}
+
+func TestBMPServer_Stop_CallsPublisherStop(t *testing.T) {
+	pub := newMockPublisher()
+	srv, err := NewBMPServer(0, 0, false, pub, false, false, "")
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Stop()
+
+	pub.mu.Lock()
+	defer pub.mu.Unlock()
+	if !pub.stopped {
+		t.Error("expected publisher.Stop() to be called by srv.Stop()")
+	}
+}
+
+// ---- bmpWorker: error / connection-close paths ------------------------------
+
+func TestBMPWorker_ImmediateEOF(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+	_ = clientConn.Close() // triggers EOF on the server side immediately
+
+	assertWorkerExits(t, workerDone(newTestServer(nil, false), serverConn))
+}
+
+func TestBMPWorker_BadHeaderVersion(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
+
+	// Version byte must be 3; send 1 to trigger an unmarshal error.
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 1
+	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength+10))
+	hdr[5] = bmp.TerminationMsg
+
+	done := workerDone(newTestServer(nil, false), serverConn)
+	if _, err := clientConn.Write(hdr); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	assertWorkerExits(t, done)
+}
+
+func TestBMPWorker_InvalidMsgLen_Negative(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
+
+	// MessageLength < CommonHeaderLength is structurally impossible — reject immediately.
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 3
+	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength-1))
+	hdr[5] = bmp.TerminationMsg
+
+	done := workerDone(newTestServer(nil, false), serverConn)
+	if _, err := clientConn.Write(hdr); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	assertWorkerExits(t, done)
+}
+
+func TestBMPWorker_ZeroPayload_GracefulExit(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+
+	// MessageLength == CommonHeaderLength means zero-byte payload.
+	// Valid for Initiation/Termination (RFC 7854 §4.3/§4.5 allow an empty TLV section).
+	// After writing the header we close the connection so the worker exits on
+	// the subsequent ReadFull.
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 3
+	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength))
+	hdr[5] = bmp.TerminationMsg
+
+	done := workerDone(newTestServer(nil, false), serverConn)
+	if _, err := clientConn.Write(hdr); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	_ = clientConn.Close() // triggers EOF on the next header read
+	assertWorkerExits(t, done)
+}
+
+func TestBMPWorker_ZeroPayload_NonTLVType_Rejected(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
+
+	// PeerDown requires at least a Per-Peer Header; zero payload is malformed
+	// and must cause the server to close the connection immediately.
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 3
+	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength))
+	hdr[5] = bmp.PeerDownMsg
+
+	done := workerDone(newTestServer(nil, false), serverConn)
+	if _, err := clientConn.Write(hdr); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	assertWorkerExits(t, done)
+}
+
+func TestBMPWorker_InvalidMsgLen_TooLarge(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
+
+	// Declare a payload one byte over the 1 MB limit.
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 3
+	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength+(1<<20)+1))
+	hdr[5] = bmp.TerminationMsg
+
+	done := workerDone(newTestServer(nil, false), serverConn)
+	if _, err := clientConn.Write(hdr); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	assertWorkerExits(t, done)
+}
+
+func TestBMPWorker_InvalidMsgLen_MaxUint32(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
+
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 3
+	binary.BigEndian.PutUint32(hdr[1:5], ^uint32(0)) // 0xFFFFFFFF
+	hdr[5] = bmp.TerminationMsg
+
+	done := workerDone(newTestServer(nil, false), serverConn)
+	if _, err := clientConn.Write(hdr); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	assertWorkerExits(t, done)
+}
+
+func TestBMPWorker_TruncatedPayload(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+
+	// Header declares 50 bytes of payload; we only deliver 10 then close.
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 3
+	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength+50))
+	hdr[5] = bmp.TerminationMsg
+
+	done := workerDone(newTestServer(nil, false), serverConn)
+	if _, err := clientConn.Write(hdr); err != nil {
+		t.Fatalf("Write header: %v", err)
+	}
+	if _, err := clientConn.Write(make([]byte, 10)); err != nil {
+		t.Fatalf("Write partial payload: %v", err)
+	}
+	_ = clientConn.Close() // EOF mid-payload
+	assertWorkerExits(t, done)
+}
+
+// ---- bmpWorker: valid message / publisher integration -----------------------
+
+// TestBMPWorker_ValidMessage_ReachesPublisher sends a fully-valid BMP PeerDown
+// message through the complete pipeline (bmpWorker → parser → producer →
+// publisher) and asserts that PublishMessage is invoked.
+//
+// Message anatomy:
+//   - Common Header  (6 bytes):  version=3, length=49, type=2 (PeerDown)
+//   - Per-Peer Header (42 bytes): PeerType0, IPv4, all-zero address / AS / BGPID
+//   - PeerDown body   (1 byte):  reason=4 (remote closed, no NOTIFICATION)
+func TestBMPWorker_ValidMessage_ReachesPublisher(t *testing.T) {
+	pub := newMockPublisher()
+	serverConn, clientConn := net.Pipe()
+
+	done := workerDone(newTestServer(pub, false), serverConn)
+
+	if _, err := clientConn.Write(makePeerDownMessage()); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if !pub.waitForMessages(1, 3*time.Second) {
+		t.Fatal("timed out waiting for message to reach publisher")
+	}
+	_ = clientConn.Close()
+	assertWorkerExits(t, done)
+}
+
+// TestBMPWorker_MultipleMessages verifies that the worker correctly sequences
+// multiple messages and each one independently reaches the publisher.
+func TestBMPWorker_MultipleMessages(t *testing.T) {
+	const count = 5
+	pub := newMockPublisher()
+	serverConn, clientConn := net.Pipe()
+
+	done := workerDone(newTestServer(pub, false), serverConn)
+
+	msg := makePeerDownMessage()
+	for i := 0; i < count; i++ {
+		if _, err := clientConn.Write(msg); err != nil {
+			t.Fatalf("Write[%d]: %v", i, err)
+		}
+	}
+	if !pub.waitForMessages(count, 5*time.Second) {
+		pub.mu.Lock()
+		got := pub.count
+		pub.mu.Unlock()
+		t.Fatalf("expected %d published messages, got %d", count, got)
+	}
+	_ = clientConn.Close()
+	assertWorkerExits(t, done)
+}
+
+// ---- server-level integration -----------------------------------------------
+
+// TestBMPServer_AcceptsMultipleClients verifies that the server correctly
+// spawns a worker goroutine per connection for concurrent clients and that
+// all worker goroutines exit cleanly once their connections are closed.
+// srv.Stop() calls wg.Wait() internally, so a test-wide timeout on Stop()
+// is the implicit assertion that no workers leaked.
+func TestBMPServer_AcceptsMultipleClients(t *testing.T) {
+	srv, err := NewBMPServer(0, 0, false, newMockPublisher(), false, false, "")
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Start()
+
+	port := srv.(*bmpServer).incoming.Addr().(*net.TCPAddr).Port
+	addr := "127.0.0.1:" + strconv.Itoa(port)
+	const numClients = 3
+	conns := make([]net.Conn, numClients)
+	for i := range conns {
+		c, err := net.Dial("tcp", addr)
+		if err != nil {
+			t.Fatalf("client %d Dial: %v", i, err)
+		}
+		conns[i] = c
 	}
 
-	// Test integer overflow scenarios
-	t.Run("uint32 max value", func(t *testing.T) {
-		messageLength := uint32(^uint32(0)) // max uint32
-		msgLen := int(messageLength) - bmp.CommonHeaderLength
+	// Stop() closes the listener, then closes every active client connection
+	// (unblocking io.ReadFull in each worker), then calls wg.Wait().
+	// We do NOT close the conns manually here — the test exercises that Stop()
+	// itself drives all workers to exit even on long-lived connections.
+	stopped := make(chan struct{})
+	go func() {
+		srv.Stop()
+		close(stopped)
+	}()
+	select {
+	case <-stopped:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop() did not return within 2s — goroutines from bmpWorker may have leaked")
+	}
 
-		// This should be rejected as it exceeds max allowed size
-		if msgLen <= 0 || msgLen > 1<<20 {
-			// Expected: should be rejected
-		} else {
-			t.Error("Max uint32 value should be rejected")
-		}
-	})
+	// Drain any connections the server already closed; ignore errors.
+	for _, c := range conns {
+		_ = c.Close()
+	}
+}
 
-	// Test boundary at exactly 1MB
-	t.Run("exactly 1MB payload", func(t *testing.T) {
-		messageLength := uint32(bmp.CommonHeaderLength + (1 << 20))
-		msgLen := int(messageLength) - bmp.CommonHeaderLength
+// ---- message length boundary coverage ---------------------------------------
 
-		// This should be accepted (exactly at the limit)
-		if msgLen <= 0 || msgLen > 1<<20 {
-			t.Errorf("Exactly 1MB payload should be accepted, got msgLen=%d", msgLen)
-		}
-	})
+func TestBMPWorker_MsgLen_ExactlyAtLimit(t *testing.T) {
+	// A message with payload == 1MB (the maximum allowed) must NOT be rejected.
+	// Write only the header so the worker blocks on ReadFull for the body.
+	// Then close the connection to trigger a truncation error (not a limit error).
+	serverConn, clientConn := net.Pipe()
 
-	// Test boundary at 1MB + 1 byte
-	t.Run("1MB + 1 byte payload", func(t *testing.T) {
-		messageLength := uint32(bmp.CommonHeaderLength + (1 << 20) + 1)
-		msgLen := int(messageLength) - bmp.CommonHeaderLength
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 3
+	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength+(1<<20)))
+	hdr[5] = bmp.TerminationMsg
 
-		// This should be rejected (exceeds the limit)
-		// Apply De Morgan's law: !(A || B) = !A && !B
-		if msgLen > 0 && msgLen <= 1<<20 {
-			t.Errorf("1MB+1 payload should be rejected, got msgLen=%d", msgLen)
-		}
-	})
+	done := workerDone(newTestServer(nil, false), serverConn)
+	if _, err := clientConn.Write(hdr); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	// Close without sending body — worker should exit due to truncation, not length rejection.
+	_ = clientConn.Close()
+	assertWorkerExits(t, done)
 }
