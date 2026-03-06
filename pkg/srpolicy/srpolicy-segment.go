@@ -147,7 +147,11 @@ func (sl *SegmentList) UnmarshalJSON(b []byte) error {
 				}
 				seg = t
 			case TypeJ:
-				fallthrough
+				t := &typeJSegment{}
+				if err := t.unmarshalJSONObj(s); err != nil {
+					return err
+				}
+				seg = t
 			case TypeK:
 				return fmt.Errorf("unsupported type of segment sub tlv %d", segType)
 			default:
@@ -359,9 +363,34 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			sl.Segment = append(sl.Segment, s)
 			p += int(l)
 		case int(TypeJ):
-			glog.Infof("Segment of type J not implemented")
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type J Segment STLV: missing length byte")
+			}
+			l := b[p]
+			p++
+			if l != 42 && l != 58 {
+				return nil, fmt.Errorf("invalid length of Type J Segment STLV: got %d, expected 42 or 58", l)
+			}
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type J Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
+			}
+			s, err := UnmarshalTypeJSegment(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			sl.Segment = append(sl.Segment, s)
+			p += int(l)
 		case int(TypeK):
-			glog.Infof("Segment of type K not implemented")
+			if p >= len(b) {
+				return nil, fmt.Errorf("truncated Type K Segment STLV: missing length byte")
+			}
+			l := b[p]
+			p++
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("insufficient data for Type K Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
+			}
+			glog.Infof("Segment of type K not yet implemented, skipping %d bytes", l)
+			p += int(l)
 		default:
 			return nil, fmt.Errorf("unknown type of segment sub tlv %d", t)
 		}
@@ -1541,6 +1570,189 @@ func UnmarshalTypeHSegment(b []byte) (Segment, error) {
 	if len(b) == 38 {
 		sid := binary.BigEndian.Uint32(b[p : p+4])
 		s.sid = &sid
+	}
+
+	return s, nil
+}
+
+// TypeJSegment defines methods to access Type J specific elements (IPv6 link-local adjacency with interface IDs + SR Algorithm + optional SRv6 SID)
+type TypeJSegment interface {
+	GetSRAlgorithm() byte
+	GetLocalInterfaceID() uint32
+	GetLocalIPv6Address() []byte
+	GetRemoteInterfaceID() uint32
+	GetRemoteIPv6Address() []byte
+	GetSRv6SID() ([]byte, bool)
+}
+
+type typeJSegment struct {
+	flags             *SegmentFlags
+	srAlgorithm       byte
+	localInterfaceID  uint32
+	localIPv6Address  []byte
+	remoteInterfaceID uint32
+	remoteIPv6Address []byte
+	srv6SID           []byte
+}
+
+var _ Segment = &typeJSegment{}
+var _ TypeJSegment = &typeJSegment{}
+
+// GetFlags returns the segment flags.
+func (tj *typeJSegment) GetFlags() *SegmentFlags {
+	return tj.flags
+}
+
+// GetType returns the segment type identifier.
+func (tj *typeJSegment) GetType() SegmentType {
+	return TypeJ
+}
+
+// GetSRAlgorithm returns the SR algorithm byte.
+func (tj *typeJSegment) GetSRAlgorithm() byte {
+	return tj.srAlgorithm
+}
+
+// GetLocalInterfaceID returns the local interface identifier.
+func (tj *typeJSegment) GetLocalInterfaceID() uint32 {
+	return tj.localInterfaceID
+}
+
+// GetLocalIPv6Address returns a 16-byte copy of the local IPv6 address safe for modification.
+func (tj *typeJSegment) GetLocalIPv6Address() []byte {
+	return append([]byte(nil), tj.localIPv6Address...)
+}
+
+// GetRemoteInterfaceID returns the remote interface identifier.
+func (tj *typeJSegment) GetRemoteInterfaceID() uint32 {
+	return tj.remoteInterfaceID
+}
+
+// GetRemoteIPv6Address returns a 16-byte copy of the remote IPv6 address safe for modification.
+func (tj *typeJSegment) GetRemoteIPv6Address() []byte {
+	return append([]byte(nil), tj.remoteIPv6Address...)
+}
+
+// GetSRv6SID returns a 16-byte copy of the optional SRv6 SID and whether it is present.
+func (tj *typeJSegment) GetSRv6SID() ([]byte, bool) {
+	if tj.srv6SID != nil {
+		return append([]byte(nil), tj.srv6SID...), true
+	}
+	return nil, false
+}
+
+func (tj *typeJSegment) MarshalJSON() ([]byte, error) {
+	v := struct {
+		SegmentType       SegmentType   `json:"segment_type,omitempty"`
+		Flags             *SegmentFlags `json:"flags,omitempty"`
+		SRAlgorithm       byte          `json:"sr_algorithm,omitempty"`
+		LocalInterfaceID  uint32        `json:"local_interface_id,omitempty"`
+		LocalIPv6Address  []byte        `json:"local_ipv6_address,omitempty"`
+		RemoteInterfaceID uint32        `json:"remote_interface_id,omitempty"`
+		RemoteIPv6Address []byte        `json:"remote_ipv6_address,omitempty"`
+		SRv6SID           []byte        `json:"srv6_sid,omitempty"`
+	}{
+		SegmentType:       TypeJ,
+		Flags:             tj.flags,
+		SRAlgorithm:       tj.srAlgorithm,
+		LocalInterfaceID:  tj.localInterfaceID,
+		LocalIPv6Address:  tj.localIPv6Address,
+		RemoteInterfaceID: tj.remoteInterfaceID,
+		RemoteIPv6Address: tj.remoteIPv6Address,
+		SRv6SID:           tj.srv6SID,
+	}
+	return json.Marshal(v)
+}
+
+func (tj *typeJSegment) unmarshalJSONObj(objmap map[string]json.RawMessage) error {
+	if b, ok := objmap["flags"]; ok {
+		if err := json.Unmarshal(b, &tj.flags); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["sr_algorithm"]; ok {
+		if err := json.Unmarshal(b, &tj.srAlgorithm); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["local_interface_id"]; ok {
+		if err := json.Unmarshal(b, &tj.localInterfaceID); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["local_ipv6_address"]; ok {
+		if err := json.Unmarshal(b, &tj.localIPv6Address); err != nil {
+			return err
+		}
+		if len(tj.localIPv6Address) != 16 {
+			return fmt.Errorf("local_ipv6_address must be exactly 16 bytes, got %d", len(tj.localIPv6Address))
+		}
+	}
+	if b, ok := objmap["remote_interface_id"]; ok {
+		if err := json.Unmarshal(b, &tj.remoteInterfaceID); err != nil {
+			return err
+		}
+	}
+	if b, ok := objmap["remote_ipv6_address"]; ok {
+		if err := json.Unmarshal(b, &tj.remoteIPv6Address); err != nil {
+			return err
+		}
+		if len(tj.remoteIPv6Address) != 16 {
+			return fmt.Errorf("remote_ipv6_address must be exactly 16 bytes, got %d", len(tj.remoteIPv6Address))
+		}
+	}
+	if b, ok := objmap["srv6_sid"]; ok {
+		if err := json.Unmarshal(b, &tj.srv6SID); err != nil {
+			return err
+		}
+		if len(tj.srv6SID) != 16 {
+			return fmt.Errorf("srv6_sid must be exactly 16 bytes, got %d", len(tj.srv6SID))
+		}
+	}
+	return nil
+}
+
+func (tj *typeJSegment) UnmarshalJSON(b []byte) error {
+	var objmap map[string]json.RawMessage
+	if err := json.Unmarshal(b, &objmap); err != nil {
+		return err
+	}
+	return tj.unmarshalJSONObj(objmap)
+}
+
+// UnmarshalTypeJSegment instantiates an instance of Type J Segment sub tlv (IPv6 link-local adjacency with interface IDs + SR Algorithm + optional SRv6 SID)
+func UnmarshalTypeJSegment(b []byte) (Segment, error) {
+	if glog.V(5) {
+		glog.Infof("SR Policy Type J Segment STLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != 42 && len(b) != 58 {
+		return nil, fmt.Errorf("invalid length of Type J Segment STLV: got %d, expected 42 or 58", len(b))
+	}
+	s := &typeJSegment{}
+	p := 0
+	s.flags = NewSegmentFlags(b[p])
+	p++
+	// SR Algorithm is 1 byte
+	s.srAlgorithm = b[p]
+	p++
+	// Local Interface ID is 4 bytes
+	s.localInterfaceID = binary.BigEndian.Uint32(b[p : p+4])
+	p += 4
+	// Local IPv6 address is 16 bytes
+	s.localIPv6Address = make([]byte, 16)
+	copy(s.localIPv6Address, b[p:p+16])
+	p += 16
+	// Remote Interface ID is 4 bytes
+	s.remoteInterfaceID = binary.BigEndian.Uint32(b[p : p+4])
+	p += 4
+	// Remote IPv6 address is 16 bytes
+	s.remoteIPv6Address = make([]byte, 16)
+	copy(s.remoteIPv6Address, b[p:p+16])
+	p += 16
+	// Optional SRv6 SID (16 bytes) if length is 58
+	if len(b) == 58 {
+		s.srv6SID = make([]byte, 16)
+		copy(s.srv6SID, b[p:p+16])
 	}
 
 	return s, nil
