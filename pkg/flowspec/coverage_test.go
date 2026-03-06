@@ -313,3 +313,43 @@ func TestMakeIPv6PrefixSpec_OffsetExceedsLength(t *testing.T) {
 		t.Error("expected error when offset exceeds prefix length, got nil")
 	}
 }
+
+// TestExtendedNLRILength_TooShort verifies the error when a 0xf0-prefix byte appears
+// but there is no second byte to complete the 2-byte extended length field.
+func TestExtendedNLRILength_TooShort(t *testing.T) {
+	_, err := UnmarshalFlowspecNLRI([]byte{0xf0})
+	if err == nil {
+		t.Error("expected error for truncated extended NLRI length, got nil")
+	}
+}
+
+// TestUnmarshalIPv6FlowspecNLRI_Error verifies that parse errors inside the single-parse
+// IPv6 function are returned (covering the error return at the unmarshalSingleFlowspecNLRI call).
+func TestUnmarshalIPv6FlowspecNLRI_Error(t *testing.T) {
+	// NLRI length=2, content=[Type1, PrefixLen=32] — too short for IPv6 prefix (needs offset byte too)
+	_, err := UnmarshalIPv6FlowspecNLRI([]byte{0x02, 0x01, 0x20})
+	if err == nil {
+		t.Error("expected error for truncated IPv6 prefix spec, got nil")
+	}
+}
+
+// TestSpecHash_AFINamespace verifies that IPv4 and IPv6 NLRIs with identical Type3 specs
+// produce different SpecHash values after the AFI-namespacing fix.
+func TestSpecHash_AFINamespace(t *testing.T) {
+	// Type 3 (IP Protocol = TCP): Type(1) + Operator(1 byte EOL+EQ) + Value(1 byte = 6)
+	spec := []byte{0x03, 0x81, 0x06}
+	ipv4Input := append([]byte{byte(len(spec))}, spec...)
+	ipv6Input := append([]byte{byte(len(spec))}, spec...)
+
+	ipv4NLRIs, err := UnmarshalAllFlowspecNLRI(ipv4Input)
+	if err != nil {
+		t.Fatalf("IPv4 parse error: %v", err)
+	}
+	ipv6NLRIs, err := UnmarshalAllIPv6FlowspecNLRI(ipv6Input)
+	if err != nil {
+		t.Fatalf("IPv6 parse error: %v", err)
+	}
+	if ipv4NLRIs[0].SpecHash == ipv6NLRIs[0].SpecHash {
+		t.Errorf("SpecHash collision: IPv4 and IPv6 produced identical hash %s", ipv4NLRIs[0].SpecHash)
+	}
+}

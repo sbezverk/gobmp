@@ -130,10 +130,14 @@ func unmarshalSingleFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, int, error) {
 		p += l
 	}
 
-	// Calculating hash of all recovered spec
+	// Calculating hash of all recovered spec, namespaced by address family to
+	// prevent IPv4 and IPv6 rules with identical spec sets from colliding on the publish key.
 	sp, err := json.Marshal(fs.Spec)
 	if err != nil {
 		return nil, 0, err
+	}
+	if ipv6 {
+		sp = append([]byte("afi=2;"), sp...)
 	}
 	s := md5.Sum(sp)
 	fs.SpecHash = hex.EncodeToString(s[:])

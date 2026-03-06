@@ -28,7 +28,7 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		return nil, err
 	}
 
-	// RFC 8955: empty MP_UNREACH means withdraw all flowspec routes
+	// RFC 8955/8956: empty MP_UNREACH means withdraw all flowspec routes
 	if len(allNLRI) == 0 && operation == "del" {
 		fs := p.buildFlowspecMessage(operation, nlri, ph, update, nil)
 		return []*Flowspec{fs}, nil
