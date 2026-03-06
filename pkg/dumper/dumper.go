@@ -2,9 +2,11 @@ package dumper
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/pub"
 )
 
@@ -19,12 +21,14 @@ type pubwriter struct {
 }
 
 func (p *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) error {
+	if !json.Valid(msg) {
+		return fmt.Errorf("failed to publish message of type %d, hash: %s, invalid JSON detected in message data.", msgType, string(msgHash))
+	}
 	m := msgOut{
 		MsgType: msgType,
 		MsgHash: string(msgHash),
 		Msg:     json.RawMessage(msg),
 	}
-
 	b, err := json.Marshal(m)
 	if err != nil {
 		return err
@@ -35,7 +39,7 @@ func (p *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) erro
 }
 
 func (p *pubwriter) Stop() {
-	p.output.Printf("gobmp is stopping...")
+	glog.Info("gobmp's Dump Publisher is stopping...")
 }
 
 // NewDumper returns a new instance of standard out dumper.
