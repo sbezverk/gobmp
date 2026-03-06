@@ -2913,3 +2913,154 @@ func TestUnmarshalSegmentListSTLV_TypeJ(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalSegmentListSTLV_TypeJ_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name      string
+		stlvBytes []byte
+	}{
+		{
+			name:      "TypeJ truncated missing length byte",
+			stlvBytes: []byte{byte(TypeJ)},
+		},
+		{
+			name:      "TypeJ invalid length 10",
+			stlvBytes: []byte{byte(TypeJ), 10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name:      "TypeJ insufficient data",
+			stlvBytes: []byte{byte(TypeJ), 42, 0x00, 0x01},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.stlvBytes); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestUnmarshalSegmentListSTLV_TypeK_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name      string
+		stlvBytes []byte
+	}{
+		{
+			name:      "TypeK truncated missing length byte",
+			stlvBytes: []byte{byte(TypeK)},
+		},
+		{
+			name:      "TypeK insufficient data",
+			stlvBytes: []byte{byte(TypeK), 20, 0x00, 0x01},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.stlvBytes); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestUnmarshalSegmentListSTLV_TypeK_Skip(t *testing.T) {
+	// TypeK with valid length should be skipped without error
+	payload := make([]byte, 34)
+	stlvBytes := append([]byte{byte(TypeK), 34}, payload...)
+	result, err := UnmarshalSegmentListSTLV(stlvBytes)
+	if err != nil {
+		t.Fatalf("expected TypeK skip, got error: %v", err)
+	}
+	if len(result.Segment) != 0 {
+		t.Errorf("expected 0 segments (TypeK skipped), got %d", len(result.Segment))
+	}
+}
+
+func TestTypeJSegment_GetFlagsAndType(t *testing.T) {
+	input := make([]byte, 42)
+	input[0] = 0xf0 // V=1, A=1, S=1, B=1
+	result, err := UnmarshalTypeJSegment(input)
+	if err != nil {
+		t.Fatalf("UnmarshalTypeJSegment() error = %v", err)
+	}
+	flags := result.GetFlags()
+	if flags == nil {
+		t.Fatal("GetFlags() returned nil")
+	}
+	if !flags.Vflag {
+		t.Error("Vflag should be true")
+	}
+	if !flags.Aflag {
+		t.Error("Aflag should be true")
+	}
+	if !flags.Sflag {
+		t.Error("Sflag should be true")
+	}
+	if !flags.Bflag {
+		t.Error("Bflag should be true")
+	}
+	if result.GetType() != TypeJ {
+		t.Errorf("GetType() = %v, want TypeJ", result.GetType())
+	}
+}
+
+func TestTypeJSegment_UnmarshalJSONObj_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name string
+		json string
+	}{
+		{"bad flags", `{"segment_type":10,"flags":"not_an_object"}`},
+		{"bad sr_algorithm", `{"segment_type":10,"sr_algorithm":"x"}`},
+		{"bad local_interface_id", `{"segment_type":10,"local_interface_id":"x"}`},
+		{"bad local_ipv6_address", `{"segment_type":10,"local_ipv6_address":"not_base64!!"}`},
+		{"bad remote_interface_id", `{"segment_type":10,"remote_interface_id":"x"}`},
+		{"bad remote_ipv6_address", `{"segment_type":10,"remote_ipv6_address":"not_base64!!"}`},
+		{"bad srv6_sid", `{"segment_type":10,"srv6_sid":"not_base64!!"}`},
+		{"local_ipv6 wrong length", `{"segment_type":10,"local_ipv6_address":"AQID"}`},
+		{"remote_ipv6 wrong length", `{"segment_type":10,"remote_ipv6_address":"AQID"}`},
+		{"srv6_sid wrong length", `{"segment_type":10,"srv6_sid":"AQID"}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var seg typeJSegment
+			if err := seg.UnmarshalJSON([]byte(tt.json)); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestTypeJSegment_UnmarshalJSON_InvalidJSON(t *testing.T) {
+	var seg typeJSegment
+	if err := seg.UnmarshalJSON([]byte(`{invalid`)); err == nil {
+		t.Error("expected error for invalid JSON, got nil")
+	}
+}
+
+func TestSegmentList_UnmarshalJSON_TypeJ(t *testing.T) {
+	// Build a SegmentList with a TypeJ segment, marshal, then unmarshal
+	seg := &typeJSegment{
+		flags:             &SegmentFlags{Vflag: true},
+		srAlgorithm:       1,
+		localInterfaceID:  10,
+		localIPv6Address:  make([]byte, 16),
+		remoteInterfaceID: 20,
+		remoteIPv6Address: make([]byte, 16),
+	}
+	sl := &SegmentList{Segment: []Segment{seg}}
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("Marshal error: %v", err)
+	}
+	var result SegmentList
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal error: %v", err)
+	}
+	if len(result.Segment) != 1 {
+		t.Fatalf("expected 1 segment, got %d", len(result.Segment))
+	}
+	if result.Segment[0].GetType() != TypeJ {
+		t.Errorf("GetType() = %v, want TypeJ", result.Segment[0].GetType())
+	}
+}
