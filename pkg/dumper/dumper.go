@@ -39,10 +39,10 @@ func (p *pubwriter) Stop() {
 }
 
 // NewDumper returns a new instance of standard out dumper.
-func NewDumper() (pub.Publisher, error) {
+func NewDumper() pub.Publisher {
 	pw := pubwriter{
 		output: log.New(os.Stdout, "", 0),
 	}
 
-	return &pw, nil
+	return &pw
 }
