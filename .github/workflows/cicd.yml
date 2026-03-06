@@ -58,6 +58,19 @@ jobs:
           flags: unittests
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      # --- Coverage Gate ---
+      - name: Check coverage threshold
+        run: |
+          TOTAL=$(go tool cover -func=coverage.txt | grep "^total:" | awk '{print $3}' | tr -d '%')
+          echo "Total coverage: ${TOTAL}%"
+          THRESHOLD=50
+          if [ "$(echo "${TOTAL} < ${THRESHOLD}" | bc)" -eq 1 ]; then
+            echo "Coverage ${TOTAL}% is below threshold ${THRESHOLD}%"
+            exit 1
+          fi
+          echo "Coverage ${TOTAL}% meets threshold ${THRESHOLD}%"
+
       - name: Generate test summary
         if: always()
         run: |
