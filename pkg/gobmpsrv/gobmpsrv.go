@@ -117,12 +117,12 @@ func (srv *bmpServer) startWorker(client net.Conn) {
 }
 
 // isCleanClose reports whether err represents a normal connection close:
-// the peer hung up (io.EOF / io.ErrUnexpectedEOF) or Stop() closed the
-// connection from our side (net.ErrClosed). These should not be logged
-// as errors during normal operation or graceful shutdown.
+// the peer hung up (io.EOF) or Stop() closed the connection from our side
+// (net.ErrClosed). io.ErrUnexpectedEOF is intentionally excluded: on the
+// payload read path it indicates a truncated BMP frame and should be logged
+// as an error.
 func isCleanClose(err error) bool {
 	return errors.Is(err, io.EOF) ||
-		errors.Is(err, io.ErrUnexpectedEOF) ||
 		errors.Is(err, net.ErrClosed)
 }
 
@@ -173,7 +173,9 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	for {
 		// Read the fixed-size common header into a stack-allocated array — no heap alloc.
 		if _, err := io.ReadFull(client, headerBuf[:]); err != nil {
-			if isCleanClose(err) {
+			// io.ErrUnexpectedEOF here means the peer closed mid-header (e.g.
+			// Stop() interrupted an in-flight read), which is a clean exit.
+			if isCleanClose(err) || errors.Is(err, io.ErrUnexpectedEOF) {
 				glog.V(5).Infof("client %+v closed connection: %+v", client.RemoteAddr(), err)
 			} else {
 				glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
@@ -211,6 +213,9 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		fullMsg := make([]byte, totalLen)
 		copy(fullMsg, headerBuf[:])
 		if _, err := io.ReadFull(client, fullMsg[bmp.CommonHeaderLength:]); err != nil {
+			// io.ErrUnexpectedEOF here means the peer sent a valid header but
+			// disconnected before delivering the full payload — a truncated BMP
+			// frame, which is a protocol error and should be logged accordingly.
 			if isCleanClose(err) {
 				glog.V(5).Infof("client %+v closed connection: %+v", client.RemoteAddr(), err)
 			} else {
