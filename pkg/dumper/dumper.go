@@ -31,7 +31,7 @@ func (p *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) erro
 	}
 	b, err := json.Marshal(m)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal message for publishing: type %d, hash %s: %w", msgType, string(msgHash), err)
 	}
 	p.output.Println(string(b))
 
