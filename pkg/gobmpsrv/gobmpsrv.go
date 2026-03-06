@@ -37,6 +37,7 @@ type bmpServer struct {
 func (srv *bmpServer) Start() {
 	// Starting bmp server server
 	glog.Infof("Starting gobmp server on %s, intercept mode: %t\n", srv.incoming.Addr().String(), srv.intercept)
+	srv.wg.Add(1)
 	go srv.server()
 }
 
@@ -63,6 +64,7 @@ func (srv *bmpServer) Stop() {
 }
 
 func (srv *bmpServer) server() {
+	defer srv.wg.Done()
 	for {
 		client, err := srv.incoming.Accept()
 		if err != nil {
