@@ -22,7 +22,7 @@ type pubwriter struct {
 
 func (p *pubwriter) PublishMessage(msgType int, msgHash []byte, msg []byte) error {
 	if !json.Valid(msg) {
-		return fmt.Errorf("failed to publish message of type %d, hash: %s, invalid JSON detected in message data.", msgType, string(msgHash))
+		return fmt.Errorf("failed to publish message of type %d, hash: %s, invalid JSON detected in message data", msgType, string(msgHash))
 	}
 	m := msgOut{
 		MsgType: msgType,
