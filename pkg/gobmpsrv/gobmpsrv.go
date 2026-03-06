@@ -70,9 +70,7 @@ func (srv *bmpServer) server() {
 		client, err := srv.incoming.Accept()
 		if err != nil {
 			// net.ErrClosed is returned when the listener has been closed,
-			// which is exactly what Stop() does. Treat it as a clean shutdown
-			// regardless of whether srv.stop has been closed yet, avoiding
-			// log spam from the race between closing the listener and the channel.
+			// which is exactly what Stop() does. Treat it as a clean shutdown.
 			if errors.Is(err, net.ErrClosed) {
 				return
 			}
@@ -116,6 +114,16 @@ func (srv *bmpServer) startWorker(client net.Conn) {
 		}()
 		srv.bmpWorker(client)
 	}()
+}
+
+// isCleanClose reports whether err represents a normal connection close:
+// the peer hung up (io.EOF / io.ErrUnexpectedEOF) or Stop() closed the
+// connection from our side (net.ErrClosed). These should not be logged
+// as errors during normal operation or graceful shutdown.
+func isCleanClose(err error) bool {
+	return errors.Is(err, io.EOF) ||
+		errors.Is(err, io.ErrUnexpectedEOF) ||
+		errors.Is(err, net.ErrClosed)
 }
 
 func (srv *bmpServer) bmpWorker(client net.Conn) {
@@ -165,7 +173,11 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	for {
 		// Read the fixed-size common header into a stack-allocated array — no heap alloc.
 		if _, err := io.ReadFull(client, headerBuf[:]); err != nil {
-			glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
+			if isCleanClose(err) {
+				glog.V(5).Infof("client %+v closed connection: %+v", client.RemoteAddr(), err)
+			} else {
+				glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
+			}
 			return
 		}
 		// Recovering common header first
@@ -199,7 +211,11 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		fullMsg := make([]byte, totalLen)
 		copy(fullMsg, headerBuf[:])
 		if _, err := io.ReadFull(client, fullMsg[bmp.CommonHeaderLength:]); err != nil {
-			glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
+			if isCleanClose(err) {
+				glog.V(5).Infof("client %+v closed connection: %+v", client.RemoteAddr(), err)
+			} else {
+				glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
+			}
 			return
 		}
 		// Sending information to the server only in intercept mode
