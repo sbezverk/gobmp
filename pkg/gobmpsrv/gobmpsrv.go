@@ -1,6 +1,7 @@
 package gobmpsrv
 
 import (
+	"errors"
 	"io"
 	"net"
 	"strconv"
@@ -15,10 +16,14 @@ import (
 const (
 	// parserQueueDepth is the number of raw BMP messages buffered between the
 	// TCP reader and the parser goroutine. A non-zero buffer decouples network
-	// I/O from parsing so that a momentary parse stall does not stall the read
-	// loop and vice-versa. 64 entries is a conservative starting point; tune
-	// upward if profiling shows the reader goroutine blocking on this channel.
-	parserQueueDepth = 64
+	// I/O from parsing so that a momentary parse stall (e.g. a GC pause) does
+	// not stall the read loop. The value is intentionally small: with a 1 MB
+	// per-message ceiling, 8 slots caps the worst-case per-connection memory to
+	// ~8 MB. In practice, most BMP messages are order-of-magnitude smaller
+	// (hundreds of bytes to a few KB), so the effective budget is much lower.
+	// Increasing this beyond a small single digit offers diminishing decoupling
+	// returns while raising the memory-exhaustion risk with many concurrent clients.
+	parserQueueDepth = 8
 )
 
 // BMPServer defines methods to manage BMP Server
@@ -59,11 +64,12 @@ func (srv *bmpServer) server() {
 	for {
 		client, err := srv.incoming.Accept()
 		if err != nil {
-			// A closed listener returns a permanent error; treat it as a clean shutdown.
-			select {
-			case <-srv.stop:
+			// net.ErrClosed is returned when the listener has been closed,
+			// which is exactly what Stop() does. Treat it as a clean shutdown
+			// regardless of whether srv.stop has been closed yet, avoiding
+			// log spam from the race between closing the listener and the channel.
+			if errors.Is(err, net.ErrClosed) {
 				return
-			default:
 			}
 			glog.Errorf("fail to accept client connection with error: %+v", err)
 			continue
@@ -130,13 +136,22 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 			return
 		}
 		// Validate message length before allocating (prevents resource exhaustion on corrupted data).
-		msgLen := int(header.MessageLength) - bmp.CommonHeaderLength
-		if msgLen <= 0 || msgLen > 1<<20 { // Max 1MB per BMP message
+		// msgLen < 0 means MessageLength is less than the header size — structurally impossible and
+		// rejected immediately. msgLen == 0 is allowed: BMP Initiation and Termination messages may
+		// legitimately carry no TLV body (RFC 7854 §4.3 / §4.5).
+		totalLen, err := header.IntMessageLength()
+		if err != nil {
+			glog.Errorf("invalid message length from client %+v: %+v", client.RemoteAddr(), err)
+			return
+		}
+		msgLen := totalLen - bmp.CommonHeaderLength
+		if msgLen < 0 || msgLen > 1<<20 { // Max 1MB per BMP message
 			glog.Errorf("invalid message length %d from client %+v, closing connection", header.MessageLength, client.RemoteAddr())
 			return
 		}
 		// Single allocation for the full message; read payload directly into it.
-		fullMsg := make([]byte, header.MessageLength)
+		// When msgLen == 0 the slice is header-only and ReadFull is a no-op.
+		fullMsg := make([]byte, totalLen)
 		copy(fullMsg, headerBuf[:])
 		if _, err := io.ReadFull(client, fullMsg[bmp.CommonHeaderLength:]); err != nil {
 			glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)

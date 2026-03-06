@@ -12,18 +12,6 @@ import (
 
 // ---- test helpers -----------------------------------------------------------
 
-// makeBMPMessage builds a complete BMP message: a version-3 common header
-// prepended to payload, with MessageLength set to the total frame length.
-func makeBMPMessage(msgType byte, payload []byte) []byte {
-	total := uint32(bmp.CommonHeaderLength + len(payload))
-	b := make([]byte, total)
-	b[0] = 3 // BMP version
-	binary.BigEndian.PutUint32(b[1:5], total)
-	b[5] = msgType
-	copy(b[bmp.CommonHeaderLength:], payload)
-	return b
-}
-
 // makePeerDownMessage returns a minimal, fully-valid 49-byte BMP PeerDown
 // message suitable for end-to-end pipeline tests.
 //
@@ -172,7 +160,10 @@ func TestBMPServer_StartStop_NoHang(t *testing.T) {
 
 func TestBMPServer_Stop_CallsPublisherStop(t *testing.T) {
 	pub := newMockPublisher()
-	srv, _ := NewBMPServer(0, 0, false, pub, false, false, "")
+	srv, err := NewBMPServer(0, 0, false, pub, false, false, "")
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
 	srv.Stop()
 
 	pub.mu.Lock()
@@ -186,14 +177,14 @@ func TestBMPServer_Stop_CallsPublisherStop(t *testing.T) {
 
 func TestBMPWorker_ImmediateEOF(t *testing.T) {
 	serverConn, clientConn := net.Pipe()
-	clientConn.Close() // triggers EOF on the server side immediately
+	_ = clientConn.Close() // triggers EOF on the server side immediately
 
 	assertWorkerExits(t, workerDone(newTestServer(nil, false), serverConn))
 }
 
 func TestBMPWorker_BadHeaderVersion(t *testing.T) {
 	serverConn, clientConn := net.Pipe()
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
 	// Version byte must be 3; send 1 to trigger an unmarshal error.
 	hdr := make([]byte, bmp.CommonHeaderLength)
@@ -208,12 +199,15 @@ func TestBMPWorker_BadHeaderVersion(t *testing.T) {
 	assertWorkerExits(t, done)
 }
 
-func TestBMPWorker_InvalidMsgLen_Zero(t *testing.T) {
+func TestBMPWorker_InvalidMsgLen_Negative(t *testing.T) {
 	serverConn, clientConn := net.Pipe()
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
-	// MessageLength == CommonHeaderLength → payload = 0 bytes → rejected.
-	hdr := makeBMPMessage(bmp.TerminationMsg, nil)[:bmp.CommonHeaderLength]
+	// MessageLength < CommonHeaderLength is structurally impossible — reject immediately.
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 3
+	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength-1))
+	hdr[5] = bmp.TerminationMsg
 
 	done := workerDone(newTestServer(nil, false), serverConn)
 	if _, err := clientConn.Write(hdr); err != nil {
@@ -222,9 +216,30 @@ func TestBMPWorker_InvalidMsgLen_Zero(t *testing.T) {
 	assertWorkerExits(t, done)
 }
 
+func TestBMPWorker_ZeroPayload_GracefulExit(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+
+	// MessageLength == CommonHeaderLength means zero-byte payload.
+	// This is valid for Initiation/Termination messages with no TLVs (RFC 7854).
+	// After writing the header we close the connection so the worker exits on
+	// the subsequent ReadFull, regardless of whether it accepted or skipped the
+	// zero-payload message.
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 3
+	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength))
+	hdr[5] = bmp.TerminationMsg
+
+	done := workerDone(newTestServer(nil, false), serverConn)
+	if _, err := clientConn.Write(hdr); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	_ = clientConn.Close() // triggers EOF on the next header read
+	assertWorkerExits(t, done)
+}
+
 func TestBMPWorker_InvalidMsgLen_TooLarge(t *testing.T) {
 	serverConn, clientConn := net.Pipe()
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
 	// Declare a payload one byte over the 1 MB limit.
 	hdr := make([]byte, bmp.CommonHeaderLength)
@@ -241,7 +256,7 @@ func TestBMPWorker_InvalidMsgLen_TooLarge(t *testing.T) {
 
 func TestBMPWorker_InvalidMsgLen_MaxUint32(t *testing.T) {
 	serverConn, clientConn := net.Pipe()
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
 	hdr := make([]byte, bmp.CommonHeaderLength)
 	hdr[0] = 3
@@ -271,7 +286,7 @@ func TestBMPWorker_TruncatedPayload(t *testing.T) {
 	if _, err := clientConn.Write(make([]byte, 10)); err != nil {
 		t.Fatalf("Write partial payload: %v", err)
 	}
-	clientConn.Close() // EOF mid-payload
+	_ = clientConn.Close() // EOF mid-payload
 	assertWorkerExits(t, done)
 }
 
@@ -288,7 +303,7 @@ func TestBMPWorker_TruncatedPayload(t *testing.T) {
 func TestBMPWorker_ValidMessage_ReachesPublisher(t *testing.T) {
 	pub := newMockPublisher()
 	serverConn, clientConn := net.Pipe()
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
 	go newTestServer(pub, false).bmpWorker(serverConn)
 
@@ -306,7 +321,7 @@ func TestBMPWorker_MultipleMessages(t *testing.T) {
 	const count = 5
 	pub := newMockPublisher()
 	serverConn, clientConn := net.Pipe()
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
 	go newTestServer(pub, false).bmpWorker(serverConn)
 
@@ -347,7 +362,7 @@ func TestBMPServer_AcceptsMultipleClients(t *testing.T) {
 		conns[i] = c
 	}
 	for _, c := range conns {
-		c.Close()
+		_ = c.Close()
 	}
 }
 
@@ -369,6 +384,6 @@ func TestBMPWorker_MsgLen_ExactlyAtLimit(t *testing.T) {
 		t.Fatalf("Write: %v", err)
 	}
 	// Close without sending body — worker should exit due to truncation, not length rejection.
-	clientConn.Close()
+	_ = clientConn.Close()
 	assertWorkerExits(t, done)
 }
