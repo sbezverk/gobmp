@@ -269,10 +269,10 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 		wantNotFound bool
 	}{
 		{
-			name:       "AFI=2 SAFI=133 not implemented",
+			name:       "AFI=2 SAFI=133 IPv6 flowspec empty withdraw-all",
 			afi:        2,
 			safi:       133,
-			wantErrMsg: "not yet implemented",
+			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (withdraw-all)
 		},
 		{
 			name:       "SAFI=134 AFI=1 VPN not implemented",
@@ -302,6 +302,12 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 				addPath:            map[int]bool{},
 			}
 			_, err := mp.GetFlowspecNLRI()
+			if tt.wantErrMsg == "" && !tt.wantNotFound {
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				return
+			}
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -316,6 +322,101 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 				if got := err.Error(); !strings.Contains(got, tt.wantErrMsg) {
 					t.Errorf("error %q does not contain %q", got, tt.wantErrMsg)
 				}
+			}
+		})
+	}
+}
+
+// TestMPUnReachNLRI_GetFlowspecNLRI_IPv6WithData verifies the IPv6 flowspec parse path
+// with actual wire-format data (non-empty WithdrawnRoutes, AFI=2, SAFI=133).
+func TestMPUnReachNLRI_GetFlowspecNLRI_IPv6WithData(t *testing.T) {
+	// 2001:db8::/32 destination prefix, offset=0
+	mp := &MPUnReachNLRI{
+		AddressFamilyID:    2,
+		SubAddressFamilyID: 133,
+		WithdrawnRoutes:    []byte{0x07, 0x01, 0x20, 0x00, 0x20, 0x01, 0x0d, 0xb8},
+		addPath:            map[int]bool{},
+	}
+	nlri, err := mp.GetFlowspecNLRI()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if nlri == nil {
+		t.Fatal("expected non-nil NLRI for IPv6 flowspec withdrawal")
+	}
+}
+
+// TestMPUnReachNLRI_GetAllFlowspecNLRI covers all branching paths of GetAllFlowspecNLRI.
+func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
+	tests := []struct {
+		name         string
+		afi          uint16
+		safi         uint8
+		routes       []byte
+		wantCount    int
+		wantNil      bool
+		wantErrMsg   string
+		wantNotFound bool
+	}{
+		{
+			// IPv4 single NLRI: 10.0.0.0/8
+			name:      "AFI=1 SAFI=133 single IPv4 NLRI",
+			afi:       1,
+			safi:      133,
+			routes:    []byte{0x03, 0x01, 0x08, 0x0a},
+			wantCount: 1,
+		},
+		{
+			// IPv6 single NLRI: 2001:db8::/32 offset=0
+			name:      "AFI=2 SAFI=133 single IPv6 NLRI",
+			afi:       2,
+			safi:      133,
+			routes:    []byte{0x07, 0x01, 0x20, 0x00, 0x20, 0x01, 0x0d, 0xb8},
+			wantCount: 1,
+		},
+		{
+			name:       "SAFI=134 VPN not implemented",
+			afi:        1,
+			safi:       134,
+			wantErrMsg: "not yet implemented",
+		},
+		{
+			name:         "unknown SAFI returns NLRINotFoundError",
+			afi:          1,
+			safi:         1,
+			wantNotFound: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mp := &MPUnReachNLRI{
+				AddressFamilyID:    tt.afi,
+				SubAddressFamilyID: tt.safi,
+				WithdrawnRoutes:    tt.routes,
+				addPath:            map[int]bool{},
+			}
+			nlris, err := mp.GetAllFlowspecNLRI()
+			if tt.wantNotFound {
+				notFound := &NLRINotFoundError{}
+				if !errors.As(err, &notFound) {
+					t.Errorf("expected NLRINotFoundError, got %T: %v", err, err)
+				}
+				return
+			}
+			if tt.wantErrMsg != "" {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), tt.wantErrMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.wantErrMsg)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(nlris) != tt.wantCount {
+				t.Errorf("got %d NLRIs, want %d", len(nlris), tt.wantCount)
 			}
 		})
 	}

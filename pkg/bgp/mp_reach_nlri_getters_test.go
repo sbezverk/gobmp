@@ -285,10 +285,10 @@ func TestMPReachNLRI_GetFlowspecNLRI_Stubs(t *testing.T) {
 		wantNotFound bool
 	}{
 		{
-			name:       "AFI=2 SAFI=133 not implemented",
+			name:       "AFI=2 SAFI=133 IPv6 flowspec (empty NLRI)",
 			afi:        2,
 			safi:       133,
-			wantErrMsg: "not yet implemented",
+			wantErrMsg: "NLRI length is 0",
 		},
 		{
 			name:       "AFI=1 SAFI=134 VPN not implemented",
@@ -324,6 +324,84 @@ func TestMPReachNLRI_GetFlowspecNLRI_Stubs(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tt.wantErrMsg) {
 				t.Errorf("error %q does not contain %q", err.Error(), tt.wantErrMsg)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// MPReachNLRI.GetAllFlowspecNLRI
+// ---------------------------------------------------------------------------
+
+func TestMPReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
+	tests := []struct {
+		name         string
+		afi          uint16
+		safi         uint8
+		nlri         []byte
+		wantCount    int
+		wantErrMsg   string
+		wantNotFound bool
+	}{
+		{
+			// Valid IPv4 flowspec NLRI: 10.0.0.0/8
+			name:      "AFI=1 SAFI=133 single IPv4 NLRI",
+			afi:       1,
+			safi:      133,
+			nlri:      []byte{0x03, 0x01, 0x08, 0x0a},
+			wantCount: 1,
+		},
+		{
+			// Valid IPv6 flowspec NLRI: 2001:db8::/32 offset=0
+			name:      "AFI=2 SAFI=133 single IPv6 NLRI",
+			afi:       2,
+			safi:      133,
+			nlri:      []byte{0x07, 0x01, 0x20, 0x00, 0x20, 0x01, 0x0d, 0xb8},
+			wantCount: 1,
+		},
+		{
+			name:       "AFI=1 SAFI=134 VPN not implemented",
+			afi:        1,
+			safi:       134,
+			wantErrMsg: "not yet implemented",
+		},
+		{
+			name:         "unknown SAFI returns NLRINotFoundError",
+			afi:          1,
+			safi:         200,
+			wantNotFound: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mp := &MPReachNLRI{
+				AddressFamilyID:    tt.afi,
+				SubAddressFamilyID: tt.safi,
+				NLRI:               tt.nlri,
+				addPath:            map[int]bool{},
+			}
+			nlris, err := mp.GetAllFlowspecNLRI()
+			if tt.wantNotFound {
+				notFound := &NLRINotFoundError{}
+				if !errors.As(err, &notFound) {
+					t.Errorf("expected NLRINotFoundError, got %T: %v", err, err)
+				}
+				return
+			}
+			if tt.wantErrMsg != "" {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), tt.wantErrMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.wantErrMsg)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(nlris) != tt.wantCount {
+				t.Errorf("got %d NLRIs, want %d", len(nlris), tt.wantCount)
 			}
 		})
 	}

@@ -10,7 +10,8 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 )
 
-// unicast process nlri 14 afi 1/2 safi 1 messages and generates UnicastPrefix messages
+// flowspec processes MP_REACH/UNREACH NLRI for AFI 1/2 SAFI 133 and generates Flowspec messages.
+// Per RFC 8955/8956, the NLRI field may contain multiple Flow Specifications.
 func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*Flowspec, error) {
 	var operation string
 	switch op {
@@ -22,10 +23,27 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 
-	fsnlri, err := nlri.GetFlowspecNLRI()
+	allNLRI, err := nlri.GetAllFlowspecNLRI()
 	if err != nil {
 		return nil, err
 	}
+
+	// RFC 8955/8956: empty MP_UNREACH means withdraw all flowspec routes
+	if len(allNLRI) == 0 && operation == "del" {
+		fs := p.buildFlowspecMessage(operation, nlri, ph, update, nil)
+		return []*Flowspec{fs}, nil
+	}
+
+	msgs := make([]*Flowspec, 0, len(allNLRI))
+	for _, fsnlri := range allNLRI {
+		fs := p.buildFlowspecMessage(operation, nlri, ph, update, fsnlri)
+		msgs = append(msgs, fs)
+	}
+	return msgs, nil
+}
+
+// buildFlowspecMessage constructs a single Flowspec message. Pass nil fsnlri for withdraw-all.
+func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *bmp.PerPeerHeader, update *bgp.Update, fsnlri *flowspec.NLRI) *Flowspec {
 	fs := &Flowspec{
 		Action:         operation,
 		RouterIP:       p.speakerIP,
@@ -33,16 +51,21 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		PeerASN:        ph.PeerAS,
 		Timestamp:      ph.GetPeerTimestamp(),
 		BaseAttributes: update.BaseAttributes,
-		SpecHash:       fsnlri.GetSpecHash(),
+	}
+
+	if fsnlri != nil {
+		fs.SpecHash = fsnlri.GetSpecHash()
+		fs.Spec = fsnlri.Spec
+	} else {
+		// Withdraw-all: deterministic key for publish routing
+		fs.SpecHash = "withdraw-all"
 	}
 
 	if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
-		// Last element in AS_PATH would be the AS of the origin
 		fs.OriginAS = ases[len(ases)-1]
 	}
 
 	fs.Nexthop = nlri.GetNextHop()
-	fs.Spec = fsnlri.Spec
 	fs.PeerIP = ph.GetPeerAddrString()
 	fs.IsIPv4 = !nlri.IsIPv6NLRI()
 	fs.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
@@ -66,7 +89,7 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		fs.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
 	}
 
-	return []*Flowspec{fs}, nil
+	return fs
 }
 
 func (fs *Flowspec) UnmarshalJSON(b []byte) error {
@@ -152,6 +175,9 @@ func makePrefixSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 	}
 	if p, ok := spec["prefix_len"]; ok {
 		s.PrefixLength = uint8(p.(float64))
+	}
+	if p, ok := spec["prefix_offset"]; ok {
+		s.Offset = uint8(p.(float64))
 	}
 	if p, ok := spec["prefix"]; ok {
 		s.Prefix = make([]byte, len(p.(string)))
