@@ -86,7 +86,6 @@ func (m *mockPublisher) waitForMessages(n int, d time.Duration) bool {
 // A listener is not required when calling bmpWorker directly.
 func newTestServer(pub *mockPublisher, raw bool) *bmpServer {
 	return &bmpServer{
-		stop:      make(chan struct{}),
 		publisher: pub,
 		bmpRaw:    raw,
 	}
@@ -220,10 +219,9 @@ func TestBMPWorker_ZeroPayload_GracefulExit(t *testing.T) {
 	serverConn, clientConn := net.Pipe()
 
 	// MessageLength == CommonHeaderLength means zero-byte payload.
-	// This is valid for Initiation/Termination messages with no TLVs (RFC 7854).
+	// Valid for Initiation/Termination (RFC 7854 §4.3/§4.5 allow an empty TLV section).
 	// After writing the header we close the connection so the worker exits on
-	// the subsequent ReadFull, regardless of whether it accepted or skipped the
-	// zero-payload message.
+	// the subsequent ReadFull.
 	hdr := make([]byte, bmp.CommonHeaderLength)
 	hdr[0] = 3
 	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength))
@@ -234,6 +232,24 @@ func TestBMPWorker_ZeroPayload_GracefulExit(t *testing.T) {
 		t.Fatalf("Write: %v", err)
 	}
 	_ = clientConn.Close() // triggers EOF on the next header read
+	assertWorkerExits(t, done)
+}
+
+func TestBMPWorker_ZeroPayload_NonTLVType_Rejected(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
+
+	// PeerDown requires at least a Per-Peer Header; zero payload is malformed
+	// and must cause the server to close the connection immediately.
+	hdr := make([]byte, bmp.CommonHeaderLength)
+	hdr[0] = 3
+	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength))
+	hdr[5] = bmp.PeerDownMsg
+
+	done := workerDone(newTestServer(nil, false), serverConn)
+	if _, err := clientConn.Write(hdr); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
 	assertWorkerExits(t, done)
 }
 
@@ -303,9 +319,8 @@ func TestBMPWorker_TruncatedPayload(t *testing.T) {
 func TestBMPWorker_ValidMessage_ReachesPublisher(t *testing.T) {
 	pub := newMockPublisher()
 	serverConn, clientConn := net.Pipe()
-	defer func() { _ = clientConn.Close() }()
 
-	go newTestServer(pub, false).bmpWorker(serverConn)
+	done := workerDone(newTestServer(pub, false), serverConn)
 
 	if _, err := clientConn.Write(makePeerDownMessage()); err != nil {
 		t.Fatalf("Write: %v", err)
@@ -313,6 +328,8 @@ func TestBMPWorker_ValidMessage_ReachesPublisher(t *testing.T) {
 	if !pub.waitForMessages(1, 3*time.Second) {
 		t.Fatal("timed out waiting for message to reach publisher")
 	}
+	_ = clientConn.Close()
+	assertWorkerExits(t, done)
 }
 
 // TestBMPWorker_MultipleMessages verifies that the worker correctly sequences
@@ -321,9 +338,8 @@ func TestBMPWorker_MultipleMessages(t *testing.T) {
 	const count = 5
 	pub := newMockPublisher()
 	serverConn, clientConn := net.Pipe()
-	defer func() { _ = clientConn.Close() }()
 
-	go newTestServer(pub, false).bmpWorker(serverConn)
+	done := workerDone(newTestServer(pub, false), serverConn)
 
 	msg := makePeerDownMessage()
 	for i := 0; i < count; i++ {
@@ -337,19 +353,23 @@ func TestBMPWorker_MultipleMessages(t *testing.T) {
 		pub.mu.Unlock()
 		t.Fatalf("expected %d published messages, got %d", count, got)
 	}
+	_ = clientConn.Close()
+	assertWorkerExits(t, done)
 }
 
 // ---- server-level integration -----------------------------------------------
 
 // TestBMPServer_AcceptsMultipleClients verifies that the server correctly
-// spawns a worker goroutine per connection for concurrent clients.
+// spawns a worker goroutine per connection for concurrent clients and that
+// all worker goroutines exit cleanly once their connections are closed.
+// srv.Stop() calls wg.Wait() internally, so a test-wide timeout on Stop()
+// is the implicit assertion that no workers leaked.
 func TestBMPServer_AcceptsMultipleClients(t *testing.T) {
 	srv, err := NewBMPServer(0, 0, false, newMockPublisher(), false, false, "")
 	if err != nil {
 		t.Fatalf("NewBMPServer: %v", err)
 	}
 	srv.Start()
-	defer srv.Stop()
 
 	addr := srv.(*bmpServer).incoming.Addr().String()
 	const numClients = 3
@@ -361,8 +381,23 @@ func TestBMPServer_AcceptsMultipleClients(t *testing.T) {
 		}
 		conns[i] = c
 	}
+	// Close all client connections to unblock every bmpWorker (EOF on next read).
 	for _, c := range conns {
 		_ = c.Close()
+	}
+
+	// Stop() closes the listener and calls wg.Wait(), which blocks until all
+	// spawned bmpWorker goroutines have returned.  The 2-second deadline catches
+	// any worker that might be stuck.
+	stopped := make(chan struct{})
+	go func() {
+		srv.Stop()
+		close(stopped)
+	}()
+	select {
+	case <-stopped:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop() did not return within 2s — goroutines from bmpWorker may have leaked")
 	}
 }
 

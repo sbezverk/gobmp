@@ -5,25 +5,13 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"sync"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/parser"
 	"github.com/sbezverk/gobmp/pkg/pub"
-)
-
-const (
-	// parserQueueDepth is the number of raw BMP messages buffered between the
-	// TCP reader and the parser goroutine. A non-zero buffer decouples network
-	// I/O from parsing so that a momentary parse stall (e.g. a GC pause) does
-	// not stall the read loop. The value is intentionally small: with a 1 MB
-	// per-message ceiling, 8 slots caps the worst-case per-connection memory to
-	// ~8 MB. In practice, most BMP messages are order-of-magnitude smaller
-	// (hundreds of bytes to a few KB), so the effective budget is much lower.
-	// Increasing this beyond a small single digit offers diminishing decoupling
-	// returns while raising the memory-exhaustion risk with many concurrent clients.
-	parserQueueDepth = 8
 )
 
 // BMPServer defines methods to manage BMP Server
@@ -39,7 +27,7 @@ type bmpServer struct {
 	sourcePort      int
 	destinationPort int
 	incoming        net.Listener
-	stop            chan struct{}
+	wg              sync.WaitGroup // tracks in-flight bmpWorker goroutines
 	bmpRaw          bool
 	adminID         string
 }
@@ -57,7 +45,9 @@ func (srv *bmpServer) Stop() {
 	}
 	// Closing the listener unblocks server()'s Accept() call so that goroutine exits cleanly.
 	_ = srv.incoming.Close()
-	close(srv.stop)
+	// Wait for every in-flight bmpWorker to finish before returning, so callers
+	// (and test functions with deferred Stop()) are guaranteed a clean slate.
+	srv.wg.Wait()
 }
 
 func (srv *bmpServer) server() {
@@ -75,8 +65,19 @@ func (srv *bmpServer) server() {
 			continue
 		}
 		glog.V(5).Infof("client %+v accepted, calling bmpWorker", client.RemoteAddr())
-		go srv.bmpWorker(client)
+		srv.startWorker(client)
 	}
+}
+
+// startWorker registers the new connection with the WaitGroup and spawns a
+// bmpWorker goroutine.  wg.Add must happen before the goroutine is created so
+// that a concurrent Stop()/wg.Wait() cannot race past a live worker.
+func (srv *bmpServer) startWorker(client net.Conn) {
+	srv.wg.Add(1)
+	go func() {
+		defer srv.wg.Done()
+		srv.bmpWorker(client)
+	}()
 }
 
 func (srv *bmpServer) bmpWorker(client net.Conn) {
@@ -109,7 +110,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	// Starting messages producer per client with dedicated work queue
 	go prod.Producer(producerQueue, prodStop)
 
-	parserQueue := make(chan []byte, parserQueueDepth)
+	parserQueue := make(chan []byte)
 	parsStop := make(chan struct{})
 	// Starting parser per client with dedicated work queue
 	parserConfig := &parser.Config{
@@ -136,9 +137,6 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 			return
 		}
 		// Validate message length before allocating (prevents resource exhaustion on corrupted data).
-		// msgLen < 0 means MessageLength is less than the header size — structurally impossible and
-		// rejected immediately. msgLen == 0 is allowed: BMP Initiation and Termination messages may
-		// legitimately carry no TLV body (RFC 7854 §4.3 / §4.5).
 		totalLen, err := header.IntMessageLength()
 		if err != nil {
 			glog.Errorf("invalid message length from client %+v: %+v", client.RemoteAddr(), err)
@@ -147,6 +145,15 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		msgLen := totalLen - bmp.CommonHeaderLength
 		if msgLen < 0 || msgLen > 1<<20 { // Max 1MB per BMP message
 			glog.Errorf("invalid message length %d from client %+v, closing connection", header.MessageLength, client.RemoteAddr())
+			return
+		}
+		// A zero-length payload is valid only for Initiation and Termination,
+		// which may carry an empty TLV section (RFC 7854 §4.3 / §4.5).
+		// All other message types require at least a Per-Peer Header; a
+		// zero-payload frame for them is structurally malformed and closing
+		// the connection prevents cheap log/CPU spam without useful data.
+		if msgLen == 0 && header.MessageType != bmp.InitiationMsg && header.MessageType != bmp.TerminationMsg {
+			glog.Errorf("zero-length payload not valid for BMP message type %d from client %+v, closing connection", header.MessageType, client.RemoteAddr())
 			return
 		}
 		// Single allocation for the full message; read payload directly into it.
@@ -176,7 +183,6 @@ func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF boo
 		return nil, err
 	}
 	bmp := bmpServer{
-		stop:            make(chan struct{}),
 		sourcePort:      sPort,
 		destinationPort: dPort,
 		intercept:       intercept,
