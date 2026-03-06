@@ -3,6 +3,7 @@ package gobmpsrv
 import (
 	"encoding/binary"
 	"net"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -371,7 +372,8 @@ func TestBMPServer_AcceptsMultipleClients(t *testing.T) {
 	}
 	srv.Start()
 
-	addr := srv.(*bmpServer).incoming.Addr().String()
+	port := srv.(*bmpServer).incoming.Addr().(*net.TCPAddr).Port
+	addr := "127.0.0.1:" + strconv.Itoa(port)
 	const numClients = 3
 	conns := make([]net.Conn, numClients)
 	for i := range conns {
