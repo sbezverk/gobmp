@@ -62,7 +62,7 @@ func TestMessageAsValidJSON(t *testing.T) {
 			var got msgOut
 			err = json.Unmarshal(buff.Bytes(), &got)
 			if err != nil {
-				t.Errorf("Failed to unmarshal msgOut: %v", err)
+				t.Fatalf("Failed to unmarshal msgOut: %v", err)
 			}
 			if tt.msgOut.MsgType != got.MsgType {
 				t.Errorf("MsgType mismatch: expected %d, got %d", tt.msgOut.MsgType, got.MsgType)
