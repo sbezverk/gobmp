@@ -3365,6 +3365,7 @@ func TestUnmarshalSegmentListSTLV_TypeK_ErrorPaths(t *testing.T) {
 	}
 }
 
+
 func TestTypeKSegment_GetFlags(t *testing.T) {
 	seg := &typeKSegment{flags: &SegmentFlags{Vflag: true, Aflag: false, Sflag: true, Bflag: false}}
 	f := seg.GetFlags()
