@@ -181,6 +181,9 @@ jobs:
         if: steps.session_3.outcome != 'success' || steps.validation_3.outcome != 'success'
         run: |
           docker ps -a
+          docker exec ceos-1 FastCli -p 15 -c "show ip bgp summ" || true
+          docker exec ceos-1 FastCli -p 15 -c "show ipv6 bgp summ" || true
+          docker exec ceos-1 FastCli -p 15 -c "show bgp monitoring" || true
           docker logs gobmp
           docker logs ceos-1
           exit 1
@@ -200,6 +203,9 @@ jobs:
         if: steps.session_4.outcome != 'success' || steps.validation_4.outcome != 'success'
         run: |
           docker ps -a
+          docker exec ceos-1 FastCli -p 15 -c "show ip bgp summ" || true
+          docker exec ceos-1 FastCli -p 15 -c "show ipv6 bgp summ" || true
+          docker exec ceos-1 FastCli -p 15 -c "show bgp monitoring" || true
           docker logs gobmp
           docker logs ceos-1
           exit 1

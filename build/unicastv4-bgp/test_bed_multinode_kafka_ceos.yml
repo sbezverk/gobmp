@@ -172,6 +172,7 @@ services:
     - NET_ADMIN
     - SYS_ADMIN
     - SYS_RESOURCE
+    command: /sbin/init
     container_name: ceos-1
     environment:
       CEOS: 1
@@ -182,6 +183,7 @@ services:
       ETBA: 1
       SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT: 1
     image: sbezverk/ceos-lab-4.35.2f:cicd
+    privileged: true
     networks:
       a-mgmt: null
       gobmp-ceos-1:
@@ -199,6 +201,7 @@ services:
     - NET_ADMIN
     - SYS_ADMIN
     - SYS_RESOURCE
+    command: /sbin/init
     container_name: ceos-2
     environment:
       CEOS: 1
@@ -209,6 +212,7 @@ services:
       ETBA: 1
       SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT: 1
     image: sbezverk/ceos-lab-4.35.2f:cicd
+    privileged: true
     networks:
       a-mgmt: null
       gobmp-ceos-1:
