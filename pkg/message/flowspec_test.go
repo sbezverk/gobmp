@@ -175,7 +175,7 @@ func (m *flowspecMockNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) { retu
 func (m *flowspecMockNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error)      { return nil, nil }
 func (m *flowspecMockNLRI) GetNextHop() string                            { return "10.0.0.1" }
 func (m *flowspecMockNLRI) IsIPv6NLRI() bool                              { return m.isIPv6 }
-func (m *flowspecMockNLRI) IsNextHopIPv6() bool                           { return false }
+func (m *flowspecMockNLRI) IsNextHopIPv6() bool                           { return m.isIPv6 }
 func (m *flowspecMockNLRI) GetAFISAFIType() int                           { return 27 }
 func (m *flowspecMockNLRI) GetNLRILU() (*base.MPNLRI, error)              { return nil, nil }
 func (m *flowspecMockNLRI) GetNLRIUnicast() (*base.MPNLRI, error)         { return nil, nil }
@@ -334,7 +334,8 @@ func TestFlowspecUnmarshalJSON_PrefixOffset(t *testing.T) {
 		t.Fatalf("expected *flowspec.PrefixSpec, got %T", fs.Spec[0])
 	}
 	if ps.Offset != 16 {
-		t.Errorf("Offset = %d, want 16", ps.Offset)	}
+		t.Errorf("Offset = %d, want 16", ps.Offset)
+	}
 }
 
 // buildFlowspecJSON builds a minimal Flowspec JSON payload with the given specs.
