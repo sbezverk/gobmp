@@ -182,7 +182,14 @@ func makePrefixSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 		s.PrefixLength = uint8(p.(float64))
 	}
 	if p, ok := spec["prefix_offset"]; ok {
-		s.Offset = uint8(p.(float64))
+		v := p.(float64)
+		if v < 0 || v > 255 {
+			return nil, fmt.Errorf("prefix_offset %v out of range [0, 255]", v)
+		}
+		s.Offset = uint8(v)
+		if s.Offset > s.PrefixLength {
+			return nil, fmt.Errorf("prefix_offset %d exceeds prefix_len %d", s.Offset, s.PrefixLength)
+		}
 	}
 	if p, ok := spec["prefix"]; ok {
 		s.Prefix = make([]byte, len(p.(string)))

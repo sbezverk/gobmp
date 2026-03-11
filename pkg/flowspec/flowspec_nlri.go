@@ -81,7 +81,7 @@ func unmarshalSingleFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, int, error) {
 	}
 	end := p + int(fs.Length)
 	if end > len(b) {
-		return nil, 0, fmt.Errorf("invalid length: NLRI length %d exceeds available bytes %d", fs.Length, len(b)-p)
+		return nil, 0, fmt.Errorf("not enough bytes to unmarshal flowspec NLRI: need %d bytes, have %d", fs.Length, len(b)-p)
 	}
 	for p < end {
 		t := b[p]
