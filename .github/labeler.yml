@@ -1,0 +1,57 @@
+flowspec:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/flowspec/**'
+
+sr-policy:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/srpolicy/**'
+
+evpn:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/evpn/**'
+
+bgp:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/bgp/**'
+
+bgp-ls:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/bgpls/**'
+
+bmp:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/bmp/**'
+
+l3vpn:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/l3vpn/**'
+
+evpn-vpls:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/vpls/**'
+
+mcast:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pkg/mcastvpn/**'
+      - 'pkg/multicast/**'
+
+srv6:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/srv6/**'
+
+rtc:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/rtc/**'
+
+kafka:
+  - changed-files:
+    - any-glob-to-any-file: 'pkg/kafka/**'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file: '.github/**'
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file: '**/*_test.go'
