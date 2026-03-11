@@ -156,8 +156,8 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	// Starting messages producer per client with dedicated work queue
 	go prod.Producer(producerQueue, prodStop)
 
-	// Extract speaker IP from the TCP connection for message types
-	// without a per-peer header (Initiation, Termination).
+	// Extract speaker IP from the TCP connection. Set on all BMP messages
+	// to provide a consistent router identity regardless of message type.
 	// Type-assert to *net.TCPAddr to get a clean IP string free of
 	// ports, brackets, and IPv6 zone identifiers.
 	var speakerIP string

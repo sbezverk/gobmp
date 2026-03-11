@@ -13,7 +13,7 @@ type Config struct {
 	// EnableRawMode when true produces RAW BMP messages without parsing
 	EnableRawMode bool
 	// SpeakerIP is the BMP speaker's IP from the TCP connection.
-	// Passed through to bmp.Message for message types without a per-peer header.
+	// Set on all bmp.Message values for consistent router identity across message types.
 	SpeakerIP string
 }
 
