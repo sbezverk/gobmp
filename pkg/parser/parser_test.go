@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/binary"
 	"testing"
+	"time"
 
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -317,6 +318,7 @@ func TestSendRawMessage_StopSignal(t *testing.T) {
 	select {
 	case <-done:
 		// sendRawMessage returned via stop branch — correct
-	case <-make(chan struct{}):
+	case <-time.After(5 * time.Second):
+		t.Fatal("sendRawMessage did not return after stop signal within timeout")
 	}
 }

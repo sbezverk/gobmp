@@ -59,7 +59,7 @@ func (p *producer) produceRawMessage(msg bmp.Message) {
 	} else if msg.SpeakerIP != "" {
 		routerIPStr = msg.SpeakerIP
 	} else {
-		glog.Errorf("no router IP available, cannot produce RAW message")
+		glog.Errorf("no router IP available, cannot produce RAW message: PeerHeader nil=%t, SpeakerIP=%q", msg.PeerHeader == nil, msg.SpeakerIP)
 		return
 	}
 	routerIPBytes, err := encodeIPToBytes(routerIPStr)

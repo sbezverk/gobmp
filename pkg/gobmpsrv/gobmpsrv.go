@@ -158,10 +158,18 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 
 	// Extract speaker IP from the TCP connection for message types
 	// without a per-peer header (Initiation, Termination).
-	speakerIP, _, err := net.SplitHostPort(client.RemoteAddr().String())
-	if err != nil {
-		glog.Warningf("failed to parse remote address %q, using full address as speaker IP: %+v", client.RemoteAddr().String(), err)
-		speakerIP = client.RemoteAddr().String()
+	// Type-assert to *net.TCPAddr to get a clean IP string free of
+	// ports, brackets, and IPv6 zone identifiers.
+	var speakerIP string
+	if tcpAddr, ok := client.RemoteAddr().(*net.TCPAddr); ok && tcpAddr.IP != nil {
+		speakerIP = tcpAddr.IP.String()
+	} else {
+		var err error
+		speakerIP, _, err = net.SplitHostPort(client.RemoteAddr().String())
+		if err != nil {
+			glog.Warningf("failed to parse remote address %q, using full address as speaker IP: %+v", client.RemoteAddr().String(), err)
+			speakerIP = client.RemoteAddr().String()
+		}
 	}
 
 	parserQueue := make(chan []byte)
