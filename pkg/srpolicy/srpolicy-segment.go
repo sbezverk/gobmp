@@ -389,7 +389,9 @@ func UnmarshalSegmentListSTLV(b []byte) (*SegmentList, error) {
 			if p+int(l) > len(b) {
 				return nil, fmt.Errorf("insufficient data for Type K Segment Sub TLV: need %d bytes, have %d", l, len(b)-p)
 			}
-			glog.Infof("Segment of type K not yet implemented, skipping %d bytes", l)
+			if glog.V(5) {
+				glog.Infof("Segment of type K not yet implemented, skipping %d bytes", l)
+			}
 			p += int(l)
 		default:
 			return nil, fmt.Errorf("unknown type of segment sub tlv %d", t)

@@ -3010,16 +3010,16 @@ func TestTypeJSegment_UnmarshalJSONObj_ErrorPaths(t *testing.T) {
 		name string
 		json string
 	}{
-		{"bad flags", `{"segment_type":10,"flags":"not_an_object"}`},
-		{"bad sr_algorithm", `{"segment_type":10,"sr_algorithm":"x"}`},
-		{"bad local_interface_id", `{"segment_type":10,"local_interface_id":"x"}`},
-		{"bad local_ipv6_address", `{"segment_type":10,"local_ipv6_address":"not_base64!!"}`},
-		{"bad remote_interface_id", `{"segment_type":10,"remote_interface_id":"x"}`},
-		{"bad remote_ipv6_address", `{"segment_type":10,"remote_ipv6_address":"not_base64!!"}`},
-		{"bad srv6_sid", `{"segment_type":10,"srv6_sid":"not_base64!!"}`},
-		{"local_ipv6 wrong length", `{"segment_type":10,"local_ipv6_address":"AQID"}`},
-		{"remote_ipv6 wrong length", `{"segment_type":10,"remote_ipv6_address":"AQID"}`},
-		{"srv6_sid wrong length", `{"segment_type":10,"srv6_sid":"AQID"}`},
+		{"bad flags", `{"segment_type":15,"flags":"not_an_object"}`},
+		{"bad sr_algorithm", `{"segment_type":15,"sr_algorithm":"x"}`},
+		{"bad local_interface_id", `{"segment_type":15,"local_interface_id":"x"}`},
+		{"bad local_ipv6_address", `{"segment_type":15,"local_ipv6_address":"not_base64!!"}`},
+		{"bad remote_interface_id", `{"segment_type":15,"remote_interface_id":"x"}`},
+		{"bad remote_ipv6_address", `{"segment_type":15,"remote_ipv6_address":"not_base64!!"}`},
+		{"bad srv6_sid", `{"segment_type":15,"srv6_sid":"not_base64!!"}`},
+		{"local_ipv6 wrong length", `{"segment_type":15,"local_ipv6_address":"AQID"}`},
+		{"remote_ipv6 wrong length", `{"segment_type":15,"remote_ipv6_address":"AQID"}`},
+		{"srv6_sid wrong length", `{"segment_type":15,"srv6_sid":"AQID"}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
