@@ -361,6 +361,7 @@ func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 		safi         uint8
 		routes       []byte
 		wantCount    int
+		wantNilSlice bool
 		wantErrMsg   string
 		wantNotFound bool
 	}{
@@ -379,6 +380,22 @@ func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 			safi:      133,
 			routes:    []byte{0x07, 0x01, 0x20, 0x00, 0x20, 0x01, 0x0d, 0xb8},
 			wantCount: 1,
+		},
+		{
+			// RFC 8955 §4: empty MP_UNREACH_NLRI is a withdraw-all signal.
+			name:         "AFI=1 SAFI=133 withdraw-all (empty routes)",
+			afi:          1,
+			safi:         133,
+			routes:       []byte{},
+			wantNilSlice: true,
+		},
+		{
+			// RFC 8956 §3: empty MP_UNREACH_NLRI is a withdraw-all signal.
+			name:         "AFI=2 SAFI=133 withdraw-all (empty routes)",
+			afi:          2,
+			safi:         133,
+			routes:       []byte{},
+			wantNilSlice: true,
 		},
 		{
 			name:       "SAFI=134 VPN not implemented",
@@ -423,6 +440,12 @@ func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 			}
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.wantNilSlice {
+				if nlris != nil {
+					t.Errorf("expected nil slice for withdraw-all, got %v", nlris)
+				}
+				return
 			}
 			if len(nlris) != tt.wantCount {
 				t.Errorf("got %d NLRIs, want %d", len(nlris), tt.wantCount)
