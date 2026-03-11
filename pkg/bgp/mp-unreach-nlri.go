@@ -156,11 +156,33 @@ func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
 }
 
-// GetFlowspecNLRI checks for presence of IPv4 Flowspec (AFI=1, SAFI=133) in MP_UNREACH_NLRI and, if present, parses the withdrawn routes.
+// GetFlowspecNLRI checks for presence of IPv4 Flowspec (AFI=1, SAFI=133) in MP_UNREACH_NLRI and, if present, parses the first withdrawn route.
 // IPv6 Flowspec (AFI=2, SAFI=133) and VPN Flowspec (SAFI=134) variants are not yet implemented and return an explicit error.
+// Use GetAllFlowspecNLRI to parse multiple NLRIs per RFC 8955 Section 4.
 func (mp *MPUnReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 133 {
+		if len(mp.WithdrawnRoutes) == 0 {
+			// RFC 8955 Section 4: empty MP_UNREACH_NLRI indicates
+			// withdrawal of all previously advertised FlowSpec routes.
+			return &flowspec.NLRI{}, nil
+		}
 		return flowspec.UnmarshalFlowspecNLRI(mp.WithdrawnRoutes)
+	}
+	if mp.AddressFamilyID == 2 && mp.SubAddressFamilyID == 133 {
+		return nil, fmt.Errorf("IPv6 Flowspec (AFI=2, SAFI=133) is not yet implemented")
+	}
+	if mp.SubAddressFamilyID == 134 {
+		return nil, fmt.Errorf("VPN Flowspec (AFI=%d, SAFI=134) is not yet implemented", mp.AddressFamilyID)
+	}
+
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
+}
+
+// GetAllFlowspecNLRI parses all Flowspec NLRIs from MP_UNREACH_NLRI per RFC 8955 Section 4.
+// Returns nil slice with nil error for empty withdrawn routes (withdraw-all signal).
+func (mp *MPUnReachNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
+	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 133 {
+		return flowspec.UnmarshalAllFlowspecNLRI(mp.WithdrawnRoutes)
 	}
 	if mp.AddressFamilyID == 2 && mp.SubAddressFamilyID == 133 {
 		return nil, fmt.Errorf("IPv6 Flowspec (AFI=2, SAFI=133) is not yet implemented")
