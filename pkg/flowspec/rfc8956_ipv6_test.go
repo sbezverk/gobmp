@@ -6,7 +6,7 @@ import (
 )
 
 // TestRFC8956_IPv6DestinationPrefix validates Type 1 IPv6 Destination Prefix parsing.
-// RFC 8956 Section 3.1: Type(1) + PrefixLength(1) + Offset(1) + Prefix(variable)
+// RFC 8956 §3.1: Type(1) + PrefixLength(1) + Offset(1) + Prefix(variable)
 func TestRFC8956_IPv6DestinationPrefix(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -164,7 +164,7 @@ func TestRFC8956_IPv6SourcePrefix(t *testing.T) {
 }
 
 // TestRFC8956_IPv6OperatorValueTypes validates that Types 3-12 work identically
-// to IPv4 in IPv6 FlowSpec mode (RFC 8956 Section 3.3).
+// to IPv4 in IPv6 FlowSpec mode (RFC 8956 §3.3).
 func TestRFC8956_IPv6OperatorValueTypes(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -385,7 +385,7 @@ func TestRFC8956_IPv6PrefixJSON(t *testing.T) {
 	}
 }
 
-// TestRFC8956_Section3_8_2_WireExample validates the exact wire format from RFC 8956 Section 3.8.2.
+// TestRFC8956_Section3_8_2_WireExample validates the exact wire format from RFC 8956 §3.8.2.
 // Hex: 02 68 41 24 68 ac f1 34
 // Type=2 (Source), Length=104, Offset=65, Pattern=5 bytes (39 bits + 1 pad bit)
 func TestRFC8956_Section3_8_2_WireExample(t *testing.T) {
@@ -400,7 +400,7 @@ func TestRFC8956_Section3_8_2_WireExample(t *testing.T) {
 	}
 	nlris, err := UnmarshalAllIPv6FlowspecNLRI(input)
 	if err != nil {
-		t.Fatalf("RFC 8956 Section 3.8.2 example parse error: %v", err)
+		t.Fatalf("RFC 8956 §3.8.2 example parse error: %v", err)
 	}
 	if len(nlris) != 1 {
 		t.Fatalf("expected 1 NLRI, got %d", len(nlris))
