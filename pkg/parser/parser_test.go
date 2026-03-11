@@ -318,7 +318,7 @@ func TestSendRawMessage_StopSignal(t *testing.T) {
 	select {
 	case <-done:
 		// sendRawMessage returned via stop branch — correct
-	case <-time.After(5 * time.Second):
+	case <-time.After(2 * time.Second):
 		t.Fatal("sendRawMessage did not return after stop signal within timeout")
 	}
 }
