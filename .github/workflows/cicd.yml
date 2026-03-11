@@ -164,6 +164,47 @@ jobs:
           exit 1
       - name: cleanup unicast v4 integration test on a multinode kafka
         run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka.yml down
+      - name: pulling cEOS container
+        run: docker pull sbezverk/ceos-lab-4.35.2f:cicd
+        continue-on-error: true
+      - name: starts unicast v4 integration test on a single node kafka with cEOS
+        run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_ceos.yml up --detach
+      - name: check connection to kafka and bmp session with cEOS router
+        id: session_3
+        run: ./build/monitor_container.sh gobmp ceos-1
+        continue-on-error: true
+      - name: run validator for ipv4 unicast (cEOS single kafka)
+        id: validation_3
+        run: ./bin/validator --validate=true --kafka=127.0.0.1:9092 --msg-file=./testdata/validator/ipv4_unicast.msg
+        continue-on-error: true
+      - name: Check on failures (cEOS single kafka)
+        if: steps.session_3.outcome != 'success' || steps.validation_3.outcome != 'success'
+        run: |
+          docker ps -a
+          docker logs gobmp
+          docker logs ceos-1
+          exit 1
+      - name: cleanup unicast v4 integration test on a single node kafka with cEOS
+        run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_ceos.yml down
+      - name: starts unicast v4 integration test on a multinode kafka with cEOS
+        run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka_ceos.yml up --detach
+      - name: check connection to kafka and bmp session with cEOS router (multinode)
+        id: session_4
+        run: ./build/monitor_container.sh gobmp ceos-1
+        continue-on-error: true
+      - name: run validator for ipv4 unicast (cEOS multinode kafka)
+        id: validation_4
+        run: ./bin/validator --validate=true --kafka=127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093,127.0.0.1:9094 --msg-file=./testdata/validator/ipv4_unicast.msg
+        continue-on-error: true
+      - name: Check on failures (cEOS multinode kafka)
+        if: steps.session_4.outcome != 'success' || steps.validation_4.outcome != 'success'
+        run: |
+          docker ps -a
+          docker logs gobmp
+          docker logs ceos-1
+          exit 1
+      - name: cleanup unicast v4 integration test on a multinode kafka with cEOS
+        run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka_ceos.yml down
 
   # ==============================================================================
   # RFC Compliance Validation (BGP-LS RFC 7752 & RFC 9085)

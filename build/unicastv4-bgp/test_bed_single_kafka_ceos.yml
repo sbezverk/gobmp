@@ -1,0 +1,129 @@
+networks:
+  a-mgmt:
+    internal: true
+  gobmp-ceos-1:
+    ipam:
+      config:
+      - subnet: 10.1.1.0/24
+
+services:
+  zoo:
+    image: sbezverk/zookeeper:cicd
+    hostname: zoo
+    container_name: zoo
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_SERVERS: zoo:2888:3888
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    networks:
+      gobmp-ceos-1:
+        ipv4_address: 10.1.1.5
+
+  kafka:
+    image: sbezverk/kafka:cicd
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      - KAFKA_ENABLE_KRAFT=no
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ADVERTISED_HOST_NAME=kafka
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=10.1.1.5:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - BITNAMI_DEBUG=true
+    depends_on:
+      - zoo
+    networks:
+      gobmp-ceos-1:
+        ipv4_address: 10.1.1.4
+
+  gobmp:
+    image: localhost/gobmp:cicd
+    hostname: gobmp
+    container_name: gobmp
+    command:
+      --v=9
+      --kafka-server=10.1.1.4:9092
+    ports:
+      - "5000:5000"
+    cap_add:
+    - NET_ADMIN
+    networks:
+      gobmp-ceos-1:
+        ipv4_address: 10.1.1.2
+    stdin_open: true
+    tty: true
+    depends_on:
+      - kafka
+    volumes:
+      - "/tmp:/tmp"
+
+  ceos-1:
+    cap_add:
+    - NET_ADMIN
+    - SYS_ADMIN
+    - SYS_RESOURCE
+    container_name: ceos-1
+    environment:
+      CEOS: 1
+      EOS_PLATFORM: ceoslab
+      container: docker
+      MGMT_INTF: eth0
+      INTFTYPE: eth
+      ETBA: 1
+      SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT: 1
+    image: sbezverk/ceos-lab-4.35.2f:cicd
+    networks:
+      a-mgmt: null
+      gobmp-ceos-1:
+        ipv4_address: 10.1.1.3
+    stdin_open: true
+    tty: true
+    volumes:
+    - source: ./ceos-1_startup.cfg
+      target: /mnt/flash/startup-config
+      type: bind
+    - ceos-1:/mnt/flash/
+
+  ceos-2:
+    cap_add:
+    - NET_ADMIN
+    - SYS_ADMIN
+    - SYS_RESOURCE
+    container_name: ceos-2
+    environment:
+      CEOS: 1
+      EOS_PLATFORM: ceoslab
+      container: docker
+      MGMT_INTF: eth0
+      INTFTYPE: eth
+      ETBA: 1
+      SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT: 1
+    image: sbezverk/ceos-lab-4.35.2f:cicd
+    networks:
+      a-mgmt: null
+      gobmp-ceos-1:
+        ipv4_address: 10.1.1.10
+    stdin_open: true
+    tty: true
+    volumes:
+    - source: ./ceos-2_startup.cfg
+      target: /mnt/flash/startup-config
+      type: bind
+    - ceos-2:/mnt/flash/
+
+volumes:
+  ceos-1:
+    name: ceos-1
+  ceos-2:
+    name: ceos-2
