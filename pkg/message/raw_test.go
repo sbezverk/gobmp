@@ -500,3 +500,28 @@ func TestHeaderWriter(t *testing.T) {
 		}
 	})
 }
+
+// TestProduceRawMessage_SpeakerIPFallback tests that SpeakerIP is used when PeerHeader is nil.
+func TestProduceRawMessage_SpeakerIPFallback(t *testing.T) {
+	mockPub := &mockPublisherRAW{}
+	p := &producer{
+		publisher: mockPub,
+		adminHash: "test-hash",
+	}
+
+	rawMsg := &bmp.RawMessage{
+		Msg: []byte{0x01, 0x02, 0x03},
+	}
+
+	msg := bmp.Message{
+		PeerHeader: nil,
+		SpeakerIP:  "192.0.2.1",
+		Payload:    rawMsg,
+	}
+
+	p.produceRawMessage(msg)
+
+	if !mockPub.publishCalled {
+		t.Error("PublishMessage should be called when SpeakerIP is set and PeerHeader is nil")
+	}
+}

@@ -295,3 +295,28 @@ func TestNewParser(t *testing.T) {
 		t.Error("NewParser should use provided config")
 	}
 }
+
+// TestSendRawMessage_StopSignal tests that sendRawMessage exits cleanly on stop signal.
+func TestSendRawMessage_StopSignal(t *testing.T) {
+	stop := make(chan struct{})
+	close(stop) // pre-closed: stop is immediately signalled
+
+	producerQueue := make(chan bmp.Message) // unbuffered, no reader
+	p := &parser{
+		producerQueue: producerQueue,
+		stop:          stop,
+		config:        &Config{EnableRawMode: true, SpeakerIP: "192.0.2.1"},
+	}
+
+	done := make(chan struct{})
+	go func() {
+		p.sendRawMessage(buildInitiationMsg())
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// sendRawMessage returned via stop branch — correct
+	case <-make(chan struct{}):
+	}
+}
