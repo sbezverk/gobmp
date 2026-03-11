@@ -51,13 +51,15 @@ func (p *producer) produceRawMessage(msg bmp.Message) {
 		return
 	}
 
-	// Get router IP from peer header, falling back to the TCP speaker IP
-	// for message types without a per-peer header (Initiation, Termination).
+	// Use SpeakerIP (TCP source = BMP speaker) as the router identity for all
+	// RAW messages so downstream consumers get a consistent router hash across
+	// Initiation, Termination, and peer-bearing message types. Fall back to the
+	// peer header address only when SpeakerIP was not populated.
 	var routerIPStr string
-	if msg.PeerHeader != nil {
-		routerIPStr = msg.PeerHeader.GetPeerAddrString()
-	} else if msg.SpeakerIP != "" {
+	if msg.SpeakerIP != "" {
 		routerIPStr = msg.SpeakerIP
+	} else if msg.PeerHeader != nil {
+		routerIPStr = msg.PeerHeader.GetPeerAddrString()
 	} else {
 		glog.Errorf("no router IP available, cannot produce RAW message: PeerHeader nil=%t, SpeakerIP=%q", msg.PeerHeader == nil, msg.SpeakerIP)
 		return

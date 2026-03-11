@@ -167,8 +167,12 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		var err error
 		speakerIP, _, err = net.SplitHostPort(client.RemoteAddr().String())
 		if err != nil {
-			glog.Warningf("failed to parse remote address %q, using full address as speaker IP: %+v", client.RemoteAddr().String(), err)
-			speakerIP = client.RemoteAddr().String()
+			addrStr := client.RemoteAddr().String()
+			if ip := net.ParseIP(addrStr); ip != nil {
+				speakerIP = ip.String()
+			} else {
+				glog.Warningf("failed to extract plain IP from remote address %q: %+v", addrStr, err)
+			}
 		}
 	}
 
