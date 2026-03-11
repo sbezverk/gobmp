@@ -200,7 +200,7 @@ func (mp *MPReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 }
 
 // GetFlowspecNLRI checks for presence of Flowspec (SAFI=133) in MP_REACH_NLRI and parses the first NLRI.
-// Use GetAllFlowspecNLRI to parse multiple NLRIs per RFC 8955/8956.
+// Use GetAllFlowspecNLRI to parse multiple NLRIs per RFC 8955 §4 / RFC 8956 §3.
 func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 133 {
 		return flowspec.UnmarshalFlowspecNLRI(mp.NLRI)

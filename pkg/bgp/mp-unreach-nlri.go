@@ -162,7 +162,7 @@ func (mp *MPUnReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 func (mp *MPUnReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	if mp.SubAddressFamilyID == 133 && (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) {
 		if len(mp.WithdrawnRoutes) == 0 {
-			// RFC 8955/8956: empty MP_UNREACH_NLRI is a withdraw-all signal.
+			// RFC 8955 §4 / RFC 8956 §3: empty MP_UNREACH_NLRI is a withdraw-all signal.
 			return nil, nil
 		}
 		if mp.AddressFamilyID == 2 {

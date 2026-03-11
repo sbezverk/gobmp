@@ -11,7 +11,7 @@ import (
 )
 
 // flowspec processes MP_REACH/UNREACH NLRI for AFI 1/2 SAFI 133 and generates Flowspec messages.
-// Per RFC 8955/8956, the NLRI field may contain multiple Flow Specifications.
+// Per RFC 8955 §4 and RFC 8956 §3, the NLRI field may contain multiple Flow Specifications.
 func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*Flowspec, error) {
 	var operation string
 	switch op {

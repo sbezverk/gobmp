@@ -160,13 +160,15 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 		return nil, err
 	}
 	if consumed < len(b) {
-		glog.Warningf("UnmarshalFlowspecNLRI: %d trailing bytes ignored (multiple NLRIs), use UnmarshalAllFlowspecNLRI", len(b)-consumed)
+		if glog.V(5) {
+			glog.Infof("UnmarshalFlowspecNLRI: %d trailing bytes ignored (multiple NLRIs), use UnmarshalAllFlowspecNLRI", len(b)-consumed)
+		}
 	}
 	return fs, nil
 }
 
 // UnmarshalIPv6FlowspecNLRI creates an instance of IPv6 Flowspec NLRI from a slice of bytes.
-// Uses RFC 8956 prefix encoding with offset field. Parses only the first NLRI.
+// Uses RFC 8956 §3 prefix encoding with offset field. Parses only the first NLRI.
 func UnmarshalIPv6FlowspecNLRI(b []byte) (*NLRI, error) {
 	if glog.V(5) {
 		glog.Infof("Flowspec IPv6 NLRI Raw: %s", tools.MessageHex(b))
@@ -179,7 +181,9 @@ func UnmarshalIPv6FlowspecNLRI(b []byte) (*NLRI, error) {
 		return nil, err
 	}
 	if consumed < len(b) {
-		glog.Warningf("UnmarshalIPv6FlowspecNLRI: %d trailing bytes ignored (multiple NLRIs), use UnmarshalAllIPv6FlowspecNLRI", len(b)-consumed)
+		if glog.V(5) {
+			glog.Infof("UnmarshalIPv6FlowspecNLRI: %d trailing bytes ignored (multiple NLRIs), use UnmarshalAllIPv6FlowspecNLRI", len(b)-consumed)
+		}
 	}
 	return fs, nil
 }
