@@ -242,7 +242,7 @@ func TestRFC8955_Section4_LengthEncoding(t *testing.T) {
 			if tt.lenBytes == nil {
 				t.Skip("lenBytes not provided for this case")
 			}
-			nlri, _, err := unmarshalSingleFlowspecNLRI(tt.lenBytes)
+			nlri, _, err := unmarshalSingleFlowspecNLRI(tt.lenBytes, false)
 			if err != nil { t.Fatalf("error: %v", err) }
 			if nlri.Length != tt.expectedLength {
 				t.Errorf("length=%d, want %d", nlri.Length, tt.expectedLength)

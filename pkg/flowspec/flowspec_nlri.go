@@ -61,7 +61,8 @@ const (
 // unmarshalSingleFlowspecNLRI parses a single Flowspec NLRI starting at b[0].
 // It reads the length prefix, parses all filter specs within that NLRI, and
 // returns the NLRI plus the total number of bytes consumed (including the length field).
-func unmarshalSingleFlowspecNLRI(b []byte) (*NLRI, int, error) {
+// Set ipv6=true for IPv6 FlowSpec (RFC 8956) prefix encoding with offset field.
+func unmarshalSingleFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, int, error) {
 	if len(b) == 0 {
 		return nil, 0, fmt.Errorf("NLRI length is 0")
 	}
@@ -91,7 +92,11 @@ func unmarshalSingleFlowspecNLRI(b []byte) (*NLRI, int, error) {
 		case Type1:
 			fallthrough
 		case Type2:
-			spec, l, err = makePrefixSpec(b[p:end])
+			if ipv6 {
+				spec, l, err = makeIPv6PrefixSpec(b[p:end])
+			} else {
+				spec, l, err = makePrefixSpec(b[p:end])
+			}
 			if err != nil {
 				return nil, 0, err
 			}
@@ -125,10 +130,14 @@ func unmarshalSingleFlowspecNLRI(b []byte) (*NLRI, int, error) {
 		p += l
 	}
 
-	// Calculating hash of all recovered spec
+	// Calculating hash of all recovered spec, namespaced by address family to
+	// prevent IPv4 and IPv6 rules with identical spec sets from colliding on the publish key.
 	sp, err := json.Marshal(fs.Spec)
 	if err != nil {
 		return nil, 0, err
+	}
+	if ipv6 {
+		sp = append([]byte("afi=2;"), sp...)
 	}
 	s := md5.Sum(sp)
 	fs.SpecHash = hex.EncodeToString(s[:])
@@ -136,9 +145,9 @@ func unmarshalSingleFlowspecNLRI(b []byte) (*NLRI, int, error) {
 	return fs, end, nil
 }
 
-// UnmarshalFlowspecNLRI creates an instance of Flowspec NLRI from a slice of bytes.
+// UnmarshalFlowspecNLRI creates an instance of IPv4 Flowspec NLRI from a slice of bytes.
 // It parses only the first NLRI in the slice and logs a warning if trailing data
-// exists. Use UnmarshalAllFlowspecNLRI to parse multiple NLRIs per RFC 8955 Section 4.
+// exists. Use UnmarshalAllFlowspecNLRI for multi-NLRI support (RFC 8955 Section 4).
 func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 	if glog.V(5) {
 		glog.Infof("Flowspec NLRI Raw: %s", tools.MessageHex(b))
@@ -146,21 +155,48 @@ func UnmarshalFlowspecNLRI(b []byte) (*NLRI, error) {
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
-	fs, consumed, err := unmarshalSingleFlowspecNLRI(b)
+	fs, consumed, err := unmarshalSingleFlowspecNLRI(b, false)
 	if err != nil {
 		return nil, err
 	}
-	if consumed < len(b) && glog.V(5) {
-		glog.Infof("UnmarshalFlowspecNLRI: %d trailing bytes ignored (multiple NLRIs per RFC 8955 Section 4), use UnmarshalAllFlowspecNLRI", len(b)-consumed)
+	if consumed < len(b) {
+		glog.Warningf("UnmarshalFlowspecNLRI: %d trailing bytes ignored (multiple NLRIs), use UnmarshalAllFlowspecNLRI", len(b)-consumed)
 	}
 	return fs, nil
 }
 
-// UnmarshalAllFlowspecNLRI parses one or more Flowspec NLRIs from a byte slice
-// as specified in RFC 8955 Section 4. The NLRI field of MP_REACH_NLRI or
-// MP_UNREACH_NLRI may contain multiple concatenated Flow Specifications,
-// each with its own length prefix.
+// UnmarshalIPv6FlowspecNLRI creates an instance of IPv6 Flowspec NLRI from a slice of bytes.
+// Uses RFC 8956 prefix encoding with offset field. Parses only the first NLRI.
+func UnmarshalIPv6FlowspecNLRI(b []byte) (*NLRI, error) {
+	if glog.V(5) {
+		glog.Infof("Flowspec IPv6 NLRI Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
+	}
+	fs, consumed, err := unmarshalSingleFlowspecNLRI(b, true)
+	if err != nil {
+		return nil, err
+	}
+	if consumed < len(b) {
+		glog.Warningf("UnmarshalIPv6FlowspecNLRI: %d trailing bytes ignored (multiple NLRIs), use UnmarshalAllIPv6FlowspecNLRI", len(b)-consumed)
+	}
+	return fs, nil
+}
+
+// UnmarshalAllFlowspecNLRI parses one or more IPv4 Flowspec NLRIs from a byte slice
+// as specified in RFC 8955 Section 4.
 func UnmarshalAllFlowspecNLRI(b []byte) ([]*NLRI, error) {
+	return unmarshalAllFlowspecNLRIWithAF(b, false)
+}
+
+// UnmarshalAllIPv6FlowspecNLRI parses one or more IPv6 Flowspec NLRIs from a byte slice
+// as specified in RFC 8956 Section 3. IPv6 prefix types use an additional offset field.
+func UnmarshalAllIPv6FlowspecNLRI(b []byte) ([]*NLRI, error) {
+	return unmarshalAllFlowspecNLRIWithAF(b, true)
+}
+
+func unmarshalAllFlowspecNLRIWithAF(b []byte, ipv6 bool) ([]*NLRI, error) {
 	if glog.V(5) {
 		glog.Infof("Flowspec NLRI Raw: %s", tools.MessageHex(b))
 	}
@@ -170,7 +206,7 @@ func UnmarshalAllFlowspecNLRI(b []byte) ([]*NLRI, error) {
 	var result []*NLRI
 	p := 0
 	for p < len(b) {
-		fs, consumed, err := unmarshalSingleFlowspecNLRI(b[p:])
+		fs, consumed, err := unmarshalSingleFlowspecNLRI(b[p:], ipv6)
 		if err != nil {
 			return nil, fmt.Errorf("NLRI at offset %d: %w", p, err)
 		}
@@ -251,9 +287,12 @@ func (o *Operator) UnmarshalJSON(b []byte) error {
 }
 
 // PrefixSpec defines a structure of Flowspec Type 1 and Type 2 (Destination/Source Prefix) spec.
+// For IPv4 FlowSpec (RFC 8955), Offset is always 0.
+// For IPv6 FlowSpec (RFC 8956 Section 3), Offset specifies how many leading prefix bits to ignore.
 type PrefixSpec struct {
 	SpecType     uint8  `json:"type"`
 	PrefixLength uint8  `json:"prefix_len"`
+	Offset       uint8  `json:"prefix_offset,omitempty"`
 	Prefix       []byte `json:"prefix"`
 }
 
@@ -281,6 +320,39 @@ func makePrefixSpec(b []byte) (Spec, int, error) {
 	return s, p, nil
 }
 
+// makeIPv6PrefixSpec parses an IPv6 FlowSpec prefix filter (RFC 8956 Section 3).
+// Format: Type(1) + PrefixLength(1) + Offset(1) + Prefix(ceil((PrefixLength-Offset)/8))
+func makeIPv6PrefixSpec(b []byte) (Spec, int, error) {
+	if len(b) < 3 {
+		return nil, 0, fmt.Errorf("not enough bytes for IPv6 prefix spec: need 3, have %d", len(b))
+	}
+	s := &PrefixSpec{}
+	p := 0
+	s.SpecType = b[p]
+	p++
+	s.PrefixLength = b[p]
+	p++
+	s.Offset = b[p]
+	p++
+	// RFC 8956 Section 3: prefix bytes encode (PrefixLength - Offset) significant bits
+	bits := int(s.PrefixLength) - int(s.Offset)
+	if bits < 0 {
+		return nil, 0, fmt.Errorf("IPv6 prefix offset %d exceeds prefix length %d", s.Offset, s.PrefixLength)
+	}
+	l := bits / 8
+	if bits%8 != 0 {
+		l++
+	}
+	if p+l > len(b) {
+		return nil, 0, fmt.Errorf("not enough bytes for IPv6 prefix: need %d, have %d", l, len(b)-p)
+	}
+	s.Prefix = make([]byte, l)
+	copy(s.Prefix, b[p:p+l])
+	p += l
+
+	return s, p, nil
+}
+
 // UnmarshalJSON unmarshals a slice of bytes into a new FlowSPec PrefixSpec
 func (t *PrefixSpec) UnmarshalJSON(b []byte) error {
 	// Use type alias to avoid infinite recursion
@@ -297,15 +369,17 @@ func (t *PrefixSpec) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// MarshalJSON returns a binary representation of FlowSPec PrefixSpec
+// MarshalJSON returns a binary representation of FlowSPec PrefixSpec.
 func (t *PrefixSpec) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		SpecType     uint8  `json:"type"`
 		PrefixLength uint8  `json:"prefix_len"`
+		Offset       uint8  `json:"prefix_offset,omitempty"`
 		Prefix       []byte `json:"prefix"`
 	}{
 		SpecType:     t.SpecType,
 		PrefixLength: t.PrefixLength,
+		Offset:       t.Offset,
 		Prefix:       t.Prefix,
 	})
 }

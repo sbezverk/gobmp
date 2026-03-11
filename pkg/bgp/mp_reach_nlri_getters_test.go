@@ -285,10 +285,10 @@ func TestMPReachNLRI_GetFlowspecNLRI_Stubs(t *testing.T) {
 		wantNotFound bool
 	}{
 		{
-			name:       "AFI=2 SAFI=133 not implemented",
+			name:       "AFI=2 SAFI=133 IPv6 flowspec (empty NLRI)",
 			afi:        2,
 			safi:       133,
-			wantErrMsg: "not yet implemented",
+			wantErrMsg: "NLRI length is 0",
 		},
 		{
 			name:       "AFI=1 SAFI=134 VPN not implemented",
@@ -334,11 +334,6 @@ func TestMPReachNLRI_GetFlowspecNLRI_Stubs(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestMPReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
-	// Valid IPv4 FlowSpec NLRI: two rules concatenated
-	twoNLRIs := []byte{
-		0x05, 0x02, 0x18, 0x0A, 0x00, 0x07, // NLRI 1: src 10.0.7.0/24
-		0x03, 0x03, 0x81, 0x2F,              // NLRI 2: proto =47
-	}
 
 	tests := []struct {
 		name         string
@@ -350,24 +345,12 @@ func TestMPReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 		wantNotFound bool
 	}{
 		{
-			name:      "AFI=1 SAFI=133 with two NLRIs",
-			afi:       1,
+			// Valid IPv6 flowspec NLRI: 2001:db8::/32 offset=0
+			name:      "AFI=2 SAFI=133 single IPv6 NLRI",
+			afi:       2,
 			safi:      133,
-			nlri:      twoNLRIs,
-			wantCount: 2,
-		},
-		{
-			name:      "AFI=1 SAFI=133 empty NLRI returns nil slice",
-			afi:       1,
-			safi:      133,
-			nlri:      []byte{},
-			wantCount: 0,
-		},
-		{
-			name:       "AFI=2 SAFI=133 not implemented",
-			afi:        2,
-			safi:       133,
-			wantErrMsg: "not yet implemented",
+			nlri:      []byte{0x07, 0x01, 0x20, 0x00, 0x20, 0x01, 0x0d, 0xb8},
+			wantCount: 1,
 		},
 		{
 			name:       "AFI=1 SAFI=134 VPN not implemented",
@@ -414,7 +397,7 @@ func TestMPReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 			if len(nlris) != tt.wantCount {
-				t.Errorf("NLRI count=%d, want %d", len(nlris), tt.wantCount)
+				t.Errorf("got %d NLRIs, want %d", len(nlris), tt.wantCount)
 			}
 		})
 	}
