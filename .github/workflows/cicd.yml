@@ -169,6 +169,23 @@ jobs:
         continue-on-error: true
       - name: starts unicast v4 integration test on a single node kafka with cEOS
         run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_ceos.yml up --detach
+      - name: wait for cEOS management plane to be ready
+        run: |
+          echo "Waiting for cEOS management plane (up to 15 min)..."
+          for i in $(seq 1 90); do
+            state=$(docker inspect --format='{{.State.Status}}' ceos-1 2>/dev/null || echo "missing")
+            if [ "$state" != "running" ]; then
+              echo "cEOS container is not running (state=$state), aborting"
+              docker logs ceos-1 || true
+              exit 1
+            fi
+            if docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
+              echo "cEOS ready after $((i * 10))s"
+              break
+            fi
+            echo "cEOS not ready yet ($i/90, state=$state)..."
+            sleep 10
+          done
       - name: check connection to kafka and bmp session with cEOS router
         id: session_3
         run: ./build/monitor_container.sh gobmp ceos-1
@@ -191,6 +208,23 @@ jobs:
         run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_ceos.yml down
       - name: starts unicast v4 integration test on a multinode kafka with cEOS
         run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka_ceos.yml up --detach
+      - name: wait for cEOS management plane to be ready (multinode)
+        run: |
+          echo "Waiting for cEOS management plane (up to 15 min)..."
+          for i in $(seq 1 90); do
+            state=$(docker inspect --format='{{.State.Status}}' ceos-1 2>/dev/null || echo "missing")
+            if [ "$state" != "running" ]; then
+              echo "cEOS container is not running (state=$state), aborting"
+              docker logs ceos-1 || true
+              exit 1
+            fi
+            if docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
+              echo "cEOS ready after $((i * 10))s"
+              break
+            fi
+            echo "cEOS not ready yet ($i/90, state=$state)..."
+            sleep 10
+          done
       - name: check connection to kafka and bmp session with cEOS router (multinode)
         id: session_4
         run: ./build/monitor_container.sh gobmp ceos-1
