@@ -338,6 +338,38 @@ func TestFlowspecUnmarshalJSON_PrefixOffset(t *testing.T) {
 	}
 }
 
+// TestFlowspecUnmarshalJSON_PrefixOffset_NonNumber verifies that a non-numeric prefix_offset returns an error.
+func TestFlowspecUnmarshalJSON_PrefixOffset_NonNumber(t *testing.T) {
+	input := buildFlowspecJSON(t, []map[string]interface{}{
+		{
+			"type":          float64(1),
+			"prefix_len":    float64(48),
+			"prefix_offset": "not-a-number",
+			"prefix":        "abc",
+		},
+	})
+	fs := &Flowspec{}
+	if err := fs.UnmarshalJSON(input); err == nil {
+		t.Error("expected error for non-numeric prefix_offset, got nil")
+	}
+}
+
+// TestFlowspecUnmarshalJSON_PrefixOffset_Fractional verifies that a fractional prefix_offset returns an error.
+func TestFlowspecUnmarshalJSON_PrefixOffset_Fractional(t *testing.T) {
+	input := buildFlowspecJSON(t, []map[string]interface{}{
+		{
+			"type":          float64(1),
+			"prefix_len":    float64(48),
+			"prefix_offset": float64(16.9),
+			"prefix":        "abc",
+		},
+	})
+	fs := &Flowspec{}
+	if err := fs.UnmarshalJSON(input); err == nil {
+		t.Error("expected error for fractional prefix_offset, got nil")
+	}
+}
+
 // buildFlowspecJSON builds a minimal Flowspec JSON payload with the given specs.
 func buildFlowspecJSON(t *testing.T, specs []map[string]interface{}) []byte {
 	t.Helper()

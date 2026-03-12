@@ -404,7 +404,7 @@ func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 			wantErrMsg: "not yet implemented",
 		},
 		{
-			name:         "unknown SAFI returns NLRINotFoundError",
+			name:         "non-flowspec SAFI returns NLRINotFoundError",
 			afi:          1,
 			safi:         1,
 			wantNotFound: true,

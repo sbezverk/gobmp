@@ -3,6 +3,7 @@ package message
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -182,7 +183,13 @@ func makePrefixSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 		s.PrefixLength = uint8(p.(float64))
 	}
 	if p, ok := spec["prefix_offset"]; ok {
-		v := p.(float64)
+		v, ok := p.(float64)
+		if !ok {
+			return nil, fmt.Errorf("prefix_offset must be a number, got %T", p)
+		}
+		if v != math.Trunc(v) {
+			return nil, fmt.Errorf("prefix_offset must be an integer, got %v", v)
+		}
 		if v < 0 || v > 255 {
 			return nil, fmt.Errorf("prefix_offset %v out of range [0, 255]", v)
 		}
