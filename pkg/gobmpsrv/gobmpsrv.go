@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/golang/glog"
@@ -164,14 +165,25 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	if tcpAddr, ok := client.RemoteAddr().(*net.TCPAddr); ok && tcpAddr.IP != nil {
 		speakerIP = tcpAddr.IP.String()
 	} else {
+		var host string
 		var err error
-		speakerIP, _, err = net.SplitHostPort(client.RemoteAddr().String())
+		host, _, err = net.SplitHostPort(client.RemoteAddr().String())
 		if err != nil {
 			addrStr := client.RemoteAddr().String()
 			if ip := net.ParseIP(addrStr); ip != nil {
 				speakerIP = ip.String()
 			} else {
 				glog.Warningf("failed to extract plain IP from remote address %q: %+v", addrStr, err)
+			}
+		} else {
+			// Strip zone identifier from IPv6 link-local addresses (e.g. fe80::1%eth0).
+			if h, _, ok := strings.Cut(host, "%"); ok {
+				host = h
+			}
+			if ip := net.ParseIP(host); ip != nil {
+				speakerIP = ip.String()
+			} else {
+				glog.Warningf("failed to normalize speaker IP from remote address %q", client.RemoteAddr().String())
 			}
 		}
 	}
