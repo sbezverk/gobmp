@@ -179,13 +179,24 @@ jobs:
               docker logs ceos-1 || true
               exit 1
             fi
-            if docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
+            if docker exec ceos-1 FastCli -p 15 -c "show version" 2>&1; then
               echo "cEOS ready after $((i * 10))s"
               break
             fi
             echo "cEOS not ready yet ($i/90, state=$state)..."
+            if (( i % 5 == 0 )); then
+              echo "--- cEOS processes ---"
+              docker exec ceos-1 ps aux 2>/dev/null | head -30 || true
+              echo "--- cEOS recent logs (last 20 lines) ---"
+              docker logs --tail 20 ceos-1 2>&1 || true
+            fi
             sleep 10
           done
+          if ! docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
+            echo "cEOS management plane did not come up within 15 minutes"
+            docker logs ceos-1 || true
+            exit 1
+          fi
       - name: check connection to kafka and bmp session with cEOS router
         id: session_3
         run: ./build/monitor_container.sh gobmp ceos-1
@@ -218,13 +229,24 @@ jobs:
               docker logs ceos-1 || true
               exit 1
             fi
-            if docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
+            if docker exec ceos-1 FastCli -p 15 -c "show version" 2>&1; then
               echo "cEOS ready after $((i * 10))s"
               break
             fi
             echo "cEOS not ready yet ($i/90, state=$state)..."
+            if (( i % 5 == 0 )); then
+              echo "--- cEOS processes ---"
+              docker exec ceos-1 ps aux 2>/dev/null | head -30 || true
+              echo "--- cEOS recent logs (last 20 lines) ---"
+              docker logs --tail 20 ceos-1 2>&1 || true
+            fi
             sleep 10
           done
+          if ! docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
+            echo "cEOS management plane did not come up within 15 minutes"
+            docker logs ceos-1 || true
+            exit 1
+          fi
       - name: check connection to kafka and bmp session with cEOS router (multinode)
         id: session_4
         run: ./build/monitor_container.sh gobmp ceos-1
