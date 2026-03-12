@@ -179,7 +179,7 @@ jobs:
               docker logs ceos-1 || true
               exit 1
             fi
-            if docker exec ceos-1 FastCli -p 15 -c "show version" 2>&1; then
+            if docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
               echo "cEOS ready after $((i * 10))s"
               break
             fi
@@ -229,7 +229,7 @@ jobs:
               docker logs ceos-1 || true
               exit 1
             fi
-            if docker exec ceos-1 FastCli -p 15 -c "show version" 2>&1; then
+            if docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
               echo "cEOS ready after $((i * 10))s"
               break
             fi
