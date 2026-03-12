@@ -73,7 +73,16 @@ services:
     - NET_ADMIN
     - SYS_ADMIN
     - SYS_RESOURCE
-    command: /sbin/init
+    command:
+    - /sbin/init
+    - systemd.setenv=CEOS=1
+    - systemd.setenv=EOS_PLATFORM=ceoslab
+    - systemd.setenv=container=docker
+    - systemd.setenv=ETBA=1
+    - systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1
+    - systemd.setenv=INTFTYPE=eth
+    - systemd.setenv=MAPETH0=1
+    - systemd.setenv=MGMT_INTF=eth0
     container_name: ceos-1
     environment:
       CEOS: 1
@@ -83,6 +92,7 @@ services:
       INTFTYPE: eth
       ETBA: 1
       SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT: 1
+      MAPETH0: 1
     image: sbezverk/ceos-lab-4.35.2f:cicd
     privileged: true
     networks:
@@ -102,7 +112,16 @@ services:
     - NET_ADMIN
     - SYS_ADMIN
     - SYS_RESOURCE
-    command: /sbin/init
+    command:
+    - /sbin/init
+    - systemd.setenv=CEOS=1
+    - systemd.setenv=EOS_PLATFORM=ceoslab
+    - systemd.setenv=container=docker
+    - systemd.setenv=ETBA=1
+    - systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1
+    - systemd.setenv=INTFTYPE=eth
+    - systemd.setenv=MAPETH0=1
+    - systemd.setenv=MGMT_INTF=eth0
     container_name: ceos-2
     environment:
       CEOS: 1
@@ -112,6 +131,7 @@ services:
       INTFTYPE: eth
       ETBA: 1
       SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT: 1
+      MAPETH0: 1
     image: sbezverk/ceos-lab-4.35.2f:cicd
     privileged: true
     networks:
