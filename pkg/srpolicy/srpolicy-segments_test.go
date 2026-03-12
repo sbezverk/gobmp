@@ -3365,8 +3365,6 @@ func TestUnmarshalSegmentListSTLV_TypeK_ErrorPaths(t *testing.T) {
 	}
 }
 
-
-
 func TestTypeKSegment_GetFlags(t *testing.T) {
 	seg := &typeKSegment{flags: &SegmentFlags{Vflag: true, Aflag: false, Sflag: true, Bflag: false}}
 	f := seg.GetFlags()
@@ -3421,7 +3419,7 @@ func TestTypeKSegment_UnmarshalJSONObj_ErrorPaths(t *testing.T) {
 	}
 }
 
-func TestUnmarshalSegmentListSTLV_TypeJ_Skip(t *testing.T) {
+func TestUnmarshalSegmentListSTLV_TypeJ_ValidAndErrorPaths(t *testing.T) {
 	// TypeJ payload: flags(1) + srAlg(1) + localIfID(4) + localIPv6(16) + remoteIfID(4) + remoteIPv6(16) = 42 bytes
 	payload42 := make([]byte, 42)
 	payload42[0] = 0x00 // flags
