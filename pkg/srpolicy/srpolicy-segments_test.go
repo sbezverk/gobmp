@@ -3064,3 +3064,19 @@ func TestSegmentList_UnmarshalJSON_TypeJ(t *testing.T) {
 		t.Errorf("GetType() = %v, want TypeJ", result.Segment[0].GetType())
 	}
 }
+
+func TestSegmentList_UnmarshalJSON_TypeJ_InvalidField(t *testing.T) {
+	// local_ipv6_address with wrong byte length triggers unmarshalJSONObj error
+	jsonData := `{"segments":[{"segment_type":15,"local_ipv6_address":"AAEC"}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeJ local_ipv6_address length, got nil")
+	}
+}
+
+func TestUnmarshalSegmentListSTLV_UnknownType(t *testing.T) {
+	// An unknown segment type byte should return an error
+	if _, err := UnmarshalSegmentListSTLV([]byte{0xFF}); err == nil {
+		t.Error("expected error for unknown segment type, got nil")
+	}
+}
