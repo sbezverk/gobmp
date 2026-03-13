@@ -64,7 +64,7 @@ if [[ ${found} == true ]]; then
 else
     echo "container ${cn} failed to establish bmp session with 10.1.1.3, check gobmp and ${router_cn} containers' logs..."
 	docker logs ${cid}
-	docker logs $(docker ps | grep ${router_cn} | awk '{ print $1 }')
+	docker logs "${router_cn}"
         exit 1
 fi 
 
