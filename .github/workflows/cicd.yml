@@ -177,6 +177,147 @@ jobs:
           exit 1
       - name: cleanup unicast v4 integration test on a multinode kafka
         run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka.yml down
+      - name: pulling cEOS container
+        run: docker pull sbezverk/ceos-lab-4.35.2f:cicd
+        continue-on-error: true
+      - name: starts unicast v4 integration test on a single node kafka with cEOS
+        run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_ceos.yml up --detach
+      - name: wait for cEOS management plane to be ready
+        run: |
+          echo "Waiting for cEOS management plane (up to 15 min)..."
+          for i in $(seq 1 90); do
+            state=$(docker inspect --format='{{.State.Status}}' ceos-1 2>/dev/null || echo "missing")
+            if [ "$state" != "running" ]; then
+              echo "cEOS container is not running (state=$state), aborting"
+              docker logs ceos-1 || true
+              exit 1
+            fi
+            if docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
+              echo "cEOS ready after $((i * 10))s"
+              break
+            fi
+            echo "cEOS not ready yet ($i/90, state=$state)..."
+            if (( i % 5 == 0 )); then
+              echo "--- cEOS processes ---"
+              docker exec ceos-1 ps aux 2>/dev/null | head -30 || true
+              echo "--- cEOS recent logs (last 20 lines) ---"
+              docker logs --tail 20 ceos-1 2>&1 || true
+            fi
+            sleep 10
+          done
+          if ! docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
+            echo "cEOS management plane did not come up within 15 minutes"
+            docker logs ceos-1 || true
+            exit 1
+          fi
+      - name: check connection to kafka and bmp session with cEOS router
+        id: session_3
+        run: ./build/monitor_container.sh gobmp ceos-1
+        continue-on-error: true
+      - name: wait for BGP session between ceos-1 and ceos-2
+        run: |
+          echo "Waiting for BGP session to establish (up to 5 min)..."
+          established=false
+          for i in $(seq 1 60); do
+            state=$(docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null | grep "10.1.1.10" | awk '{print $10}')
+            if [ "$state" = "Estab" ] || echo "$state" | grep -qE '^[0-9]+$'; then
+              echo "BGP session established after $((i * 5))s"
+              established=true
+              break
+            fi
+            echo "BGP not established yet ($i/60, state=$state)..."
+            sleep 5
+          done
+          if [ "$established" = false ]; then
+            echo "BGP session with 10.1.1.10 failed to establish after 300s"
+            docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null || true
+            exit 1
+          fi
+      - name: run validator for ipv4 unicast (cEOS single kafka)
+        id: validation_3
+        run: ./bin/validator --validate=true --kafka=127.0.0.1:9092 --msg-file=./testdata/validator/ipv4_unicast_ceos.msg
+        continue-on-error: true
+      - name: Check on failures (cEOS single kafka)
+        if: steps.session_3.outcome != 'success' || steps.validation_3.outcome != 'success'
+        run: |
+          docker ps -a
+          docker exec ceos-1 FastCli -p 15 -c "show ip bgp summ" || true
+          docker exec ceos-1 FastCli -p 15 -c "show ipv6 bgp summ" || true
+          docker exec ceos-1 FastCli -p 15 -c "show bgp monitoring" || true
+          docker logs gobmp
+          docker logs ceos-1
+          exit 1
+      - name: cleanup unicast v4 integration test on a single node kafka with cEOS
+        run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_ceos.yml down
+      - name: starts unicast v4 integration test on a multinode kafka with cEOS
+        run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka_ceos.yml up --detach
+      - name: wait for cEOS management plane to be ready (multinode)
+        run: |
+          echo "Waiting for cEOS management plane (up to 15 min)..."
+          for i in $(seq 1 90); do
+            state=$(docker inspect --format='{{.State.Status}}' ceos-1 2>/dev/null || echo "missing")
+            if [ "$state" != "running" ]; then
+              echo "cEOS container is not running (state=$state), aborting"
+              docker logs ceos-1 || true
+              exit 1
+            fi
+            if docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
+              echo "cEOS ready after $((i * 10))s"
+              break
+            fi
+            echo "cEOS not ready yet ($i/90, state=$state)..."
+            if (( i % 5 == 0 )); then
+              echo "--- cEOS processes ---"
+              docker exec ceos-1 ps aux 2>/dev/null | head -30 || true
+              echo "--- cEOS recent logs (last 20 lines) ---"
+              docker logs --tail 20 ceos-1 2>&1 || true
+            fi
+            sleep 10
+          done
+          if ! docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
+            echo "cEOS management plane did not come up within 15 minutes"
+            docker logs ceos-1 || true
+            exit 1
+          fi
+      - name: check connection to kafka and bmp session with cEOS router (multinode)
+        id: session_4
+        run: ./build/monitor_container.sh gobmp ceos-1
+        continue-on-error: true
+      - name: wait for BGP session between ceos-1 and ceos-2 (multinode)
+        run: |
+          echo "Waiting for BGP session to establish (up to 5 min)..."
+          established=false
+          for i in $(seq 1 60); do
+            state=$(docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null | grep "10.1.1.10" | awk '{print $10}')
+            if [ "$state" = "Estab" ] || echo "$state" | grep -qE '^[0-9]+$'; then
+              echo "BGP session established after $((i * 5))s"
+              established=true
+              break
+            fi
+            echo "BGP not established yet ($i/60, state=$state)..."
+            sleep 5
+          done
+          if [ "$established" = false ]; then
+            echo "BGP session with 10.1.1.10 failed to establish after 300s"
+            docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null || true
+            exit 1
+          fi
+      - name: run validator for ipv4 unicast (cEOS multinode kafka)
+        id: validation_4
+        run: ./bin/validator --validate=true --kafka=127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093,127.0.0.1:9094 --msg-file=./testdata/validator/ipv4_unicast_ceos.msg
+        continue-on-error: true
+      - name: Check on failures (cEOS multinode kafka)
+        if: steps.session_4.outcome != 'success' || steps.validation_4.outcome != 'success'
+        run: |
+          docker ps -a
+          docker exec ceos-1 FastCli -p 15 -c "show ip bgp summ" || true
+          docker exec ceos-1 FastCli -p 15 -c "show ipv6 bgp summ" || true
+          docker exec ceos-1 FastCli -p 15 -c "show bgp monitoring" || true
+          docker logs gobmp
+          docker logs ceos-1
+          exit 1
+      - name: cleanup unicast v4 integration test on a multinode kafka with cEOS
+        run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka_ceos.yml down
 
   # ==============================================================================
   # RFC Compliance Validation (BGP-LS RFC 7752 & RFC 9085)
