@@ -203,7 +203,7 @@ jobs:
         continue-on-error: true
       - name: run validator for ipv4 unicast (cEOS single kafka)
         id: validation_3
-        run: ./bin/validator --validate=true --kafka=127.0.0.1:9092 --msg-file=./testdata/validator/ipv4_unicast.msg
+        run: ./bin/validator --validate=true --kafka=127.0.0.1:9092 --msg-file=./testdata/validator/ipv4_unicast_ceos.msg
         continue-on-error: true
       - name: Check on failures (cEOS single kafka)
         if: steps.session_3.outcome != 'success' || steps.validation_3.outcome != 'success'
@@ -253,7 +253,7 @@ jobs:
         continue-on-error: true
       - name: run validator for ipv4 unicast (cEOS multinode kafka)
         id: validation_4
-        run: ./bin/validator --validate=true --kafka=127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093,127.0.0.1:9094 --msg-file=./testdata/validator/ipv4_unicast.msg
+        run: ./bin/validator --validate=true --kafka=127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093,127.0.0.1:9094 --msg-file=./testdata/validator/ipv4_unicast_ceos.msg
         continue-on-error: true
       - name: Check on failures (cEOS multinode kafka)
         if: steps.session_4.outcome != 'success' || steps.validation_4.outcome != 'success'
