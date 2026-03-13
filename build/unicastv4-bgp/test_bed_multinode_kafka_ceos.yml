@@ -44,10 +44,8 @@ services:
     networks:
       gobmp-ceos-1:
         ipv4_address: 10.1.1.5
-    volumes:
-      - ./zookeeper_hc.sh:/tmp/hc.sh
     healthcheck:
-      test: [ "CMD-SHELL", "/tmp/hc.sh" ]
+      test: [ "CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok" ]
       interval: 2s
       timeout: 5s
       retries: 5
