@@ -5,17 +5,17 @@ import (
 	"testing"
 )
 
-// TestWeight_UnmarshalSON_RoundTrip verifies Weight JSON round-trip preserves
+// TestWeight_UnmarshalJSON_RoundTrip verifies Weight JSON round-trip preserves
 // both flags and weight fields correctly.
-func TestWeight_UnmarshalSON_RoundTrip(t *testing.T) {
+func TestWeight_UnmarshalJSON_RoundTrip(t *testing.T) {
 	w := &Weight{Flags: 3, Weight: 200}
 	data, err := json.Marshal(w)
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
 	var got Weight
-	if err := got.UnmarshalSON(data); err != nil {
-		t.Fatalf("UnmarshalSON() error = %v", err)
+	if err := got.UnmarshalJSON(data); err != nil {
+		t.Fatalf("UnmarshalJSON() error = %v", err)
 	}
 	if got.Flags != 3 {
 		t.Errorf("Flags = %d, want 3", got.Flags)
@@ -25,11 +25,11 @@ func TestWeight_UnmarshalSON_RoundTrip(t *testing.T) {
 	}
 }
 
-// TestWeight_UnmarshalSON_BadWeight verifies UnmarshalSON returns an error
+// TestWeight_UnmarshalJSON_BadWeight verifies UnmarshalJSON returns an error
 // when the weight field contains an invalid value.
-func TestWeight_UnmarshalSON_BadWeight(t *testing.T) {
+func TestWeight_UnmarshalJSON_BadWeight(t *testing.T) {
 	var w Weight
-	if err := w.UnmarshalSON([]byte(`{"weight":"notanumber"}`)); err == nil {
+	if err := w.UnmarshalJSON([]byte(`{"weight":"notanumber"}`)); err == nil {
 		t.Error("expected error for bad weight value, got nil")
 	}
 }
