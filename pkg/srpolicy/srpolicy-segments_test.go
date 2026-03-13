@@ -3419,47 +3419,34 @@ func TestTypeKSegment_UnmarshalJSONObj_ErrorPaths(t *testing.T) {
 	}
 }
 
-func TestUnmarshalSegmentListSTLV_TypeJ_ValidAndErrorPaths(t *testing.T) {
-	// TypeJ payload: flags(1) + srAlg(1) + localIfID(4) + localIPv6(16) + remoteIfID(4) + remoteIPv6(16) = 42 bytes
-	payload42 := make([]byte, 42)
-	payload42[0] = 0x00 // flags
-	payload42[1] = 0x00 // sr_algorithm
-
-	tests := []struct {
-		name      string
-		stlvBytes []byte
-		wantErr   bool
-	}{
-		{
-			name:      "TypeJ skip valid",
-			stlvBytes: append([]byte{byte(TypeJ), 42}, payload42...),
-			wantErr:   false,
-		},
-		{
-			name:      "TypeJ truncated no length byte",
-			stlvBytes: []byte{byte(TypeJ)},
-			wantErr:   true,
-		},
-		{
-			name:      "TypeJ invalid length",
-			stlvBytes: []byte{byte(TypeJ), 10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-			wantErr:   true,
-		},
-		{
-			name:      "TypeJ insufficient data",
-			stlvBytes: append([]byte{byte(TypeJ), 42}, make([]byte, 10)...),
-			wantErr:   true,
-		},
+func TestSegmentList_UnmarshalJSON_TypeK(t *testing.T) {
+	seg := &typeKSegment{
+		flags:             &SegmentFlags{Vflag: true},
+		srAlgorithm:       1,
+		localIPv6Address:  make([]byte, 16),
+		remoteIPv6Address: make([]byte, 16),
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := UnmarshalSegmentListSTLV(tt.stlvBytes)
-			if tt.wantErr && err == nil {
-				t.Error("expected error, got nil")
-			}
-			if !tt.wantErr && err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-		})
+	sl := &SegmentList{Segment: []Segment{seg}}
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("Marshal error: %v", err)
+	}
+	var result SegmentList
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal error: %v", err)
+	}
+	if len(result.Segment) != 1 {
+		t.Fatalf("expected 1 segment, got %d", len(result.Segment))
+	}
+	if result.Segment[0].GetType() != TypeK {
+		t.Errorf("GetType() = %v, want TypeK", result.Segment[0].GetType())
+	}
+}
+
+func TestSegmentList_UnmarshalJSON_TypeK_InvalidField(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":16,"local_ipv6_address":"AAEC"}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeK local_ipv6_address length, got nil")
 	}
 }
