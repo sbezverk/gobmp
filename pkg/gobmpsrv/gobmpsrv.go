@@ -166,7 +166,6 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		speakerIP = tcpAddr.IP.String()
 	} else {
 		var host string
-		var err error
 		host, _, err = net.SplitHostPort(client.RemoteAddr().String())
 		if err != nil {
 			addrStr := client.RemoteAddr().String()
