@@ -55,7 +55,7 @@ func (w *Weight) UnmarshalSON(b []byte) error {
 		}
 	}
 	if b, ok := objmap["weight"]; ok {
-		if err := json.Unmarshal(b, &w.Flags); err != nil {
+		if err := json.Unmarshal(b, &w.Weight); err != nil {
 			return err
 		}
 	}
