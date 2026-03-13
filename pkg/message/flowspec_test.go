@@ -239,6 +239,24 @@ func TestFlowspecProducer_AddSingleNLRI(t *testing.T) {
 	if msgs[0].SpecHash == "" {
 		t.Error("SpecHash should not be empty for a real NLRI")
 	}
+	if msgs[0].Nexthop != "10.0.0.1" {
+		t.Errorf("Nexthop = %q, want %q", msgs[0].Nexthop, "10.0.0.1")
+	}
+	if msgs[0].PeerIP != "10.0.0.1" {
+		t.Errorf("PeerIP = %q, want %q", msgs[0].PeerIP, "10.0.0.1")
+	}
+	if msgs[0].RouterIP != "10.1.1.1" {
+		t.Errorf("RouterIP = %q, want %q", msgs[0].RouterIP, "10.1.1.1")
+	}
+	if !msgs[0].IsIPv4 {
+		t.Error("IsIPv4 should be true for IPv4 flowspec")
+	}
+	if !msgs[0].IsNexthopIPv4 {
+		t.Error("IsNexthopIPv4 should be true for IPv4 nexthop")
+	}
+	if msgs[0].OriginAS != 65000 {
+		t.Errorf("OriginAS = %d, want %d", msgs[0].OriginAS, 65000)
+	}
 }
 
 func TestFlowspecProducer_AddMultiNLRI(t *testing.T) {

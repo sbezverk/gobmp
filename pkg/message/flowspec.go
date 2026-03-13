@@ -140,7 +140,15 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 		}
 		o.Spec = make([]flowspec.Spec, 0)
 		for _, spec := range specs {
-			switch flowspec.SpecType(spec["type"].(float64)) {
+			rawType, ok := spec["type"]
+			if !ok {
+				return fmt.Errorf("spec entry missing 'type' field")
+			}
+			typeVal, ok := rawType.(float64)
+			if !ok {
+				return fmt.Errorf("spec type must be a number, got %T", rawType)
+			}
+			switch flowspec.SpecType(typeVal) {
 			case flowspec.Type1:
 				fallthrough
 			case flowspec.Type2:
@@ -165,7 +173,7 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 				}
 				o.Spec = append(o.Spec, s)
 			default:
-				glog.Errorf("Unknown type: %+v", spec["type"].(flowspec.SpecType))
+				glog.Errorf("Unknown type: %+v", typeVal)
 			}
 		}
 	}
@@ -177,10 +185,18 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 func makePrefixSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 	s := &flowspec.PrefixSpec{}
 	if p, ok := spec["type"]; ok {
-		s.SpecType = uint8(p.(float64))
+		v, ok := p.(float64)
+		if !ok {
+			return nil, fmt.Errorf("type must be a number, got %T", p)
+		}
+		s.SpecType = uint8(v)
 	}
 	if p, ok := spec["prefix_len"]; ok {
-		s.PrefixLength = uint8(p.(float64))
+		v, ok := p.(float64)
+		if !ok {
+			return nil, fmt.Errorf("prefix_len must be a number, got %T", p)
+		}
+		s.PrefixLength = uint8(v)
 	}
 	if p, ok := spec["prefix_offset"]; ok {
 		v, ok := p.(float64)
@@ -199,8 +215,12 @@ func makePrefixSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 		}
 	}
 	if p, ok := spec["prefix"]; ok {
-		s.Prefix = make([]byte, len(p.(string)))
-		copy(s.Prefix, []byte(p.(string)))
+		v, ok := p.(string)
+		if !ok {
+			return nil, fmt.Errorf("prefix must be a string, got %T", p)
+		}
+		s.Prefix = make([]byte, len(v))
+		copy(s.Prefix, []byte(v))
 	}
 
 	return s, nil

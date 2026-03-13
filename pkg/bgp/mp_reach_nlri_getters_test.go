@@ -345,6 +345,14 @@ func TestMPReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 		wantNotFound bool
 	}{
 		{
+			// Valid IPv4 flowspec NLRI: 10.0.0.0/8 destination prefix
+			name:      "AFI=1 SAFI=133 single IPv4 NLRI",
+			afi:       1,
+			safi:      133,
+			nlri:      []byte{0x03, 0x01, 0x08, 0x0a},
+			wantCount: 1,
+		},
+		{
 			// Valid IPv6 flowspec NLRI: 2001:db8::/32 offset=0
 			name:      "AFI=2 SAFI=133 single IPv6 NLRI",
 			afi:       2,
