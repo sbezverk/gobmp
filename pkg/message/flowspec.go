@@ -3,6 +3,7 @@ package message
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -10,8 +11,8 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 )
 
-// flowspec processes MP_REACH/UNREACH NLRI for IPv4 FlowSpec (AFI 1, SAFI 133) and generates Flowspec messages.
-// Per RFC 8955 Section 4, the NLRI field may contain multiple Flow Specifications.
+// flowspec processes MP_REACH/UNREACH NLRI for AFI 1/2 SAFI 133 and generates Flowspec messages.
+// Per RFC 8955 §4 and RFC 8956 §3, the NLRI field may contain multiple Flow Specifications.
 func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*Flowspec, error) {
 	var operation string
 	switch op {
@@ -28,7 +29,7 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		return nil, err
 	}
 
-	// RFC 8955: empty MP_UNREACH means withdraw all flowspec routes
+	// RFC 8955/8956: empty MP_UNREACH means withdraw all flowspec routes
 	if len(allNLRI) == 0 && operation == "del" {
 		fs := p.buildFlowspecMessage(operation, nlri, ph, update, nil)
 		return []*Flowspec{fs}, nil
@@ -57,8 +58,13 @@ func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *b
 		fs.SpecHash = fsnlri.GetSpecHash()
 		fs.Spec = fsnlri.Spec
 	} else {
-		// Withdraw-all: peer-scoped key to avoid cross-peer collisions on compacted topics
-		fs.SpecHash = fmt.Sprintf("withdraw-all:%s:%s", ph.GetPeerAddrString(), ph.GetPeerDistinguisherString())
+		// Withdraw-all: AFI-aware peer-scoped key to avoid IPv4/IPv6 collisions
+		// and cross-peer collisions when splitAF is disabled.
+		if nlri.IsIPv6NLRI() {
+			fs.SpecHash = fmt.Sprintf("ipv6:withdraw-all:%s:%s", ph.GetPeerAddrString(), ph.GetPeerDistinguisherString())
+		} else {
+			fs.SpecHash = fmt.Sprintf("withdraw-all:%s:%s", ph.GetPeerAddrString(), ph.GetPeerDistinguisherString())
+		}
 	}
 
 	if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
@@ -134,7 +140,15 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 		}
 		o.Spec = make([]flowspec.Spec, 0)
 		for _, spec := range specs {
-			switch flowspec.SpecType(spec["type"].(float64)) {
+			rawType, ok := spec["type"]
+			if !ok {
+				return fmt.Errorf("spec entry missing 'type' field")
+			}
+			typeVal, ok := rawType.(float64)
+			if !ok {
+				return fmt.Errorf("spec type must be a number, got %T", rawType)
+			}
+			switch flowspec.SpecType(typeVal) {
 			case flowspec.Type1:
 				fallthrough
 			case flowspec.Type2:
@@ -159,7 +173,7 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 				}
 				o.Spec = append(o.Spec, s)
 			default:
-				glog.Errorf("Unknown type: %+v", spec["type"].(flowspec.SpecType))
+				glog.Errorf("Unknown type: %+v", typeVal)
 			}
 		}
 	}
@@ -171,14 +185,42 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 func makePrefixSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 	s := &flowspec.PrefixSpec{}
 	if p, ok := spec["type"]; ok {
-		s.SpecType = uint8(p.(float64))
+		v, ok := p.(float64)
+		if !ok {
+			return nil, fmt.Errorf("type must be a number, got %T", p)
+		}
+		s.SpecType = uint8(v)
 	}
 	if p, ok := spec["prefix_len"]; ok {
-		s.PrefixLength = uint8(p.(float64))
+		v, ok := p.(float64)
+		if !ok {
+			return nil, fmt.Errorf("prefix_len must be a number, got %T", p)
+		}
+		s.PrefixLength = uint8(v)
+	}
+	if p, ok := spec["prefix_offset"]; ok {
+		v, ok := p.(float64)
+		if !ok {
+			return nil, fmt.Errorf("prefix_offset must be a number, got %T", p)
+		}
+		if v != math.Trunc(v) {
+			return nil, fmt.Errorf("prefix_offset must be an integer, got %v", v)
+		}
+		if v < 0 || v > 255 {
+			return nil, fmt.Errorf("prefix_offset %v out of range [0, 255]", v)
+		}
+		s.Offset = uint8(v)
+		if s.Offset > s.PrefixLength {
+			return nil, fmt.Errorf("prefix_offset %d exceeds prefix_len %d", s.Offset, s.PrefixLength)
+		}
 	}
 	if p, ok := spec["prefix"]; ok {
-		s.Prefix = make([]byte, len(p.(string)))
-		copy(s.Prefix, []byte(p.(string)))
+		v, ok := p.(string)
+		if !ok {
+			return nil, fmt.Errorf("prefix must be a string, got %T", p)
+		}
+		s.Prefix = make([]byte, len(v))
+		copy(s.Prefix, []byte(v))
 	}
 
 	return s, nil

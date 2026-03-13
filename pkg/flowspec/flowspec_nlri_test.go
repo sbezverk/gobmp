@@ -2,6 +2,7 @@ package flowspec
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -64,6 +65,39 @@ func TestUnmarshalFlowspecNLRI(t *testing.T) {
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Logf("Diffs: %+v", deep.Equal(tt.expect, got))
 				t.Fatalf("expected NLRI %+v does not match marshaled NLRI: %+v", tt.expect, got)
+			}
+		})
+	}
+}
+
+// TestIPv6PrefixSpec_ErrorPaths validates the two error branches in makeIPv6PrefixSpec.
+func TestIPv6PrefixSpec_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []byte
+		wantErr string
+	}{
+		{
+			// offset(32) > prefix_len(16): bits = 16-32 = -16
+			name:    "offset exceeds prefix length",
+			input:   []byte{0x03, 0x01, 0x10, 0x20},
+			wantErr: "exceeds prefix length",
+		},
+		{
+			// prefix_len=64, offset=0: need 8 bytes of prefix, only 2 provided
+			name:    "not enough bytes for prefix",
+			input:   []byte{0x05, 0x01, 0x40, 0x00, 0xAA, 0xBB},
+			wantErr: "not enough bytes for IPv6 prefix",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalAllIPv6FlowspecNLRI(tt.input)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("error %q does not contain %q", err.Error(), tt.wantErr)
 			}
 		})
 	}

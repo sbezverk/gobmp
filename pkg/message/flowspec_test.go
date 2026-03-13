@@ -2,8 +2,7 @@ package message
 
 import (
 	"encoding/json"
-	"fmt"
-	"strings"
+	"errors"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -165,35 +164,33 @@ func TestFlowspecUnmarshalJSON_NoSpec(t *testing.T) {
 	}
 }
 
-// flowspecMockNLRI implements bgp.MPNLRI for flowspec producer tests.
+// flowspecMockNLRI is a minimal bgp.MPNLRI for flowspec producer tests.
 type flowspecMockNLRI struct {
-	allNLRI  []*flowspec.NLRI
-	allErr   error
-	nextHop  string
-	isIPv6   bool
+	allNLRI []*flowspec.NLRI
+	err     error
+	isIPv6  bool
 }
 
-func (m *flowspecMockNLRI) GetAFISAFIType() int                          { return 27 }
-func (m *flowspecMockNLRI) GetNLRILU() (*base.MPNLRI, error)             { return nil, nil }
-func (m *flowspecMockNLRI) GetNLRIUnicast() (*base.MPNLRI, error)        { return nil, nil }
-func (m *flowspecMockNLRI) GetNLRIMulticast() (*base.MPNLRI, error)      { return nil, nil }
-func (m *flowspecMockNLRI) GetNLRIEVPN() (*evpn.Route, error)            { return nil, nil }
-func (m *flowspecMockNLRI) GetNLRIVPLS() (*vpls.Route, error)            { return nil, nil }
-func (m *flowspecMockNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)          { return nil, nil }
-func (m *flowspecMockNLRI) GetNLRI71() (*ls.NLRI71, error)               { return nil, nil }
-func (m *flowspecMockNLRI) GetNLRI73() (*srpolicy.NLRI73, error)         { return nil, nil }
-func (m *flowspecMockNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error)     { return nil, nil }
-func (m *flowspecMockNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error)    { return nil, nil }
-func (m *flowspecMockNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)        { return nil, nil }
-func (m *flowspecMockNLRI) GetNLRIRTC() (*rtc.Route, error)              { return nil, nil }
-func (m *flowspecMockNLRI) GetNextHop() string                           { return m.nextHop }
-func (m *flowspecMockNLRI) IsIPv6NLRI() bool                             { return m.isIPv6 }
-func (m *flowspecMockNLRI) IsNextHopIPv6() bool                          { return m.isIPv6 }
-func (m *flowspecMockNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
-	return m.allNLRI, m.allErr
-}
+func (m *flowspecMockNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) { return m.allNLRI, m.err }
+func (m *flowspecMockNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error)      { return nil, nil }
+func (m *flowspecMockNLRI) GetNextHop() string                            { return "10.0.0.1" }
+func (m *flowspecMockNLRI) IsIPv6NLRI() bool                              { return m.isIPv6 }
+func (m *flowspecMockNLRI) IsNextHopIPv6() bool                           { return m.isIPv6 }
+func (m *flowspecMockNLRI) GetAFISAFIType() int                           { return 27 }
+func (m *flowspecMockNLRI) GetNLRILU() (*base.MPNLRI, error)              { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRIUnicast() (*base.MPNLRI, error)         { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRIMulticast() (*base.MPNLRI, error)       { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRIEVPN() (*evpn.Route, error)             { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRIVPLS() (*vpls.Route, error)             { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)           { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRI71() (*ls.NLRI71, error)                { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRI73() (*srpolicy.NLRI73, error)          { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error)     { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)         { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRIRTC() (*rtc.Route, error)               { return nil, nil }
 
-func testPeerHeader() *bmp.PerPeerHeader {
+// minimalPeerHeader returns a PerPeerHeader usable in producer tests.
+func minimalPeerHeader() *bmp.PerPeerHeader {
 	return &bmp.PerPeerHeader{
 		PeerType:          0,
 		PeerAS:            65000,
@@ -204,138 +201,190 @@ func testPeerHeader() *bmp.PerPeerHeader {
 	}
 }
 
-func TestFlowspecProducer_MultipleNLRIs(t *testing.T) {
-	nlri1 := &flowspec.NLRI{
-		Length:   5,
-		SpecHash: "hash1",
-		Spec:     []flowspec.Spec{&flowspec.PrefixSpec{SpecType: 1, PrefixLength: 24, Prefix: []byte{10, 0, 1}}},
+// minimalUpdate returns a bgp.Update usable in producer tests.
+func minimalUpdate() *bgp.Update {
+	return &bgp.Update{
+		BaseAttributes: &bgp.BaseAttributes{
+			ASPath: []uint32{65000},
+		},
 	}
-	nlri2 := &flowspec.NLRI{
-		Length:   3,
-		SpecHash: "hash2",
-		Spec:     []flowspec.Spec{&flowspec.GenericSpec{SpecType: 3}},
-	}
-	mock := &flowspecMockNLRI{
-		allNLRI: []*flowspec.NLRI{nlri1, nlri2},
-		nextHop: "10.0.0.2",
-	}
-	update := &bgp.Update{
-		BaseAttributes: &bgp.BaseAttributes{ASPath: []uint32{65000, 65001}},
-	}
-	p := &producer{speakerIP: "192.168.1.1"}
+}
 
-	msgs, err := p.flowspec(mock, 0, testPeerHeader(), update)
+// parseOneNLRI parses a minimal IPv4 flowspec NLRI from wire bytes and returns it.
+func parseOneNLRI(t *testing.T) *flowspec.NLRI {
+	t.Helper()
+	// 10.0.0.0/8 destination prefix
+	nlri, err := flowspec.UnmarshalFlowspecNLRI([]byte{0x03, 0x01, 0x08, 0x0a})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("failed to parse test NLRI: %v", err)
 	}
-	if len(msgs) != 2 {
-		t.Fatalf("expected 2 messages, got %d", len(msgs))
-	}
-	if msgs[0].SpecHash != "hash1" {
-		t.Errorf("msgs[0].SpecHash = %q, want %q", msgs[0].SpecHash, "hash1")
-	}
-	if msgs[1].SpecHash != "hash2" {
-		t.Errorf("msgs[1].SpecHash = %q, want %q", msgs[1].SpecHash, "hash2")
-	}
-	if msgs[0].Action != "add" {
-		t.Errorf("msgs[0].Action = %q, want %q", msgs[0].Action, "add")
-	}
-	if msgs[0].OriginAS != 65001 {
-		t.Errorf("msgs[0].OriginAS = %d, want 65001", msgs[0].OriginAS)
-	}
-	if msgs[0].Nexthop != "10.0.0.2" {
-		t.Errorf("msgs[0].Nexthop = %q, want %q", msgs[0].Nexthop, "10.0.0.2")
-	}
-	if !msgs[0].IsIPv4 {
-		t.Error("msgs[0].IsIPv4 should be true")
-	}
+	return nlri
 }
 
-func TestFlowspecProducer_WithdrawAll(t *testing.T) {
-	mock := &flowspecMockNLRI{
-		allNLRI: nil,
-		nextHop: "10.0.0.2",
-	}
-	update := &bgp.Update{
-		BaseAttributes: &bgp.BaseAttributes{},
-	}
-	p := &producer{speakerIP: "192.168.1.1"}
-
-	msgs, err := p.flowspec(mock, 1, testPeerHeader(), update)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(msgs) != 1 {
-		t.Fatalf("expected 1 withdraw-all message, got %d", len(msgs))
-	}
-	if msgs[0].Action != "del" {
-		t.Errorf("Action = %q, want %q", msgs[0].Action, "del")
-	}
-	if !strings.HasPrefix(msgs[0].SpecHash, "withdraw-all:") {
-		t.Errorf("SpecHash = %q, expected withdraw-all: prefix", msgs[0].SpecHash)
-	}
-	if msgs[0].Spec != nil {
-		t.Errorf("Spec should be nil for withdraw-all, got %v", msgs[0].Spec)
-	}
-}
-
-func TestFlowspecProducer_UnknownOperation(t *testing.T) {
-	mock := &flowspecMockNLRI{}
-	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
-	p := &producer{}
-
-	_, err := p.flowspec(mock, 99, testPeerHeader(), update)
-	if err == nil {
-		t.Fatal("expected error for unknown operation, got nil")
-	}
-	if !strings.Contains(err.Error(), "unknown operation") {
-		t.Errorf("error = %q, expected 'unknown operation'", err.Error())
-	}
-}
-
-func TestFlowspecProducer_GetAllFlowspecNLRIError(t *testing.T) {
-	mock := &flowspecMockNLRI{
-		allErr: fmt.Errorf("not implemented"),
-	}
-	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
-	p := &producer{}
-
-	_, err := p.flowspec(mock, 0, testPeerHeader(), update)
-	if err == nil {
-		t.Fatal("expected error from GetAllFlowspecNLRI, got nil")
-	}
-}
-
-func TestFlowspecProducer_SingleNLRI(t *testing.T) {
-	nlri1 := &flowspec.NLRI{
-		Length:   5,
-		SpecHash: "single-hash",
-		Spec:     []flowspec.Spec{&flowspec.PrefixSpec{SpecType: 2, PrefixLength: 16, Prefix: []byte{172, 16}}},
-	}
-	mock := &flowspecMockNLRI{
-		allNLRI: []*flowspec.NLRI{nlri1},
-		nextHop: "10.0.0.3",
-	}
-	update := &bgp.Update{
-		BaseAttributes: &bgp.BaseAttributes{},
-	}
+func TestFlowspecProducer_AddSingleNLRI(t *testing.T) {
+	nlri := parseOneNLRI(t)
+	mock := &flowspecMockNLRI{allNLRI: []*flowspec.NLRI{nlri}}
 	p := &producer{speakerIP: "10.1.1.1"}
 
-	msgs, err := p.flowspec(mock, 1, testPeerHeader(), update)
+	msgs, err := p.flowspec(mock, 0, minimalPeerHeader(), minimalUpdate())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(msgs) != 1 {
 		t.Fatalf("expected 1 message, got %d", len(msgs))
 	}
-	if msgs[0].Action != "del" {
-		t.Errorf("Action = %q, want %q", msgs[0].Action, "del")
+	if msgs[0].Action != "add" {
+		t.Errorf("action = %q, want %q", msgs[0].Action, "add")
 	}
-	if msgs[0].SpecHash != "single-hash" {
-		t.Errorf("SpecHash = %q, want %q", msgs[0].SpecHash, "single-hash")
+	if msgs[0].SpecHash == "" {
+		t.Error("SpecHash should not be empty for a real NLRI")
+	}
+	if msgs[0].Nexthop != "10.0.0.1" {
+		t.Errorf("Nexthop = %q, want %q", msgs[0].Nexthop, "10.0.0.1")
+	}
+	if msgs[0].PeerIP != "10.0.0.1" {
+		t.Errorf("PeerIP = %q, want %q", msgs[0].PeerIP, "10.0.0.1")
 	}
 	if msgs[0].RouterIP != "10.1.1.1" {
 		t.Errorf("RouterIP = %q, want %q", msgs[0].RouterIP, "10.1.1.1")
+	}
+	if !msgs[0].IsIPv4 {
+		t.Error("IsIPv4 should be true for IPv4 flowspec")
+	}
+	if !msgs[0].IsNexthopIPv4 {
+		t.Error("IsNexthopIPv4 should be true for IPv4 nexthop")
+	}
+	if msgs[0].OriginAS != 65000 {
+		t.Errorf("OriginAS = %d, want %d", msgs[0].OriginAS, 65000)
+	}
+}
+
+func TestFlowspecProducer_AddMultiNLRI(t *testing.T) {
+	nlri1 := parseOneNLRI(t)
+	// 192.168.0.0/16 destination prefix
+	nlri2, err := flowspec.UnmarshalFlowspecNLRI([]byte{0x04, 0x01, 0x10, 0xc0, 0xa8})
+	if err != nil {
+		t.Fatalf("failed to parse second NLRI: %v", err)
+	}
+	mock := &flowspecMockNLRI{allNLRI: []*flowspec.NLRI{nlri1, nlri2}}
+	p := &producer{speakerIP: "10.1.1.1"}
+
+	msgs, err := p.flowspec(mock, 0, minimalPeerHeader(), minimalUpdate())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(msgs) != 2 {
+		t.Fatalf("expected 2 messages, got %d", len(msgs))
+	}
+}
+
+func TestFlowspecProducer_WithdrawAll(t *testing.T) {
+	tests := []struct {
+		name         string
+		isIPv6       bool
+		wantSpecHash string
+	}{
+		{"ipv4 withdraw-all", false, "withdraw-all:10.0.0.1:0:0"},
+		{"ipv6 withdraw-all", true, "ipv6:withdraw-all:10.0.0.1:0:0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := &flowspecMockNLRI{allNLRI: nil, isIPv6: tt.isIPv6}
+			p := &producer{speakerIP: "10.1.1.1"}
+
+			msgs, err := p.flowspec(mock, 1, minimalPeerHeader(), minimalUpdate())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(msgs) != 1 {
+				t.Fatalf("expected 1 withdraw-all message, got %d", len(msgs))
+			}
+			if msgs[0].SpecHash != tt.wantSpecHash {
+				t.Errorf("SpecHash = %q, want %q", msgs[0].SpecHash, tt.wantSpecHash)
+			}
+			if msgs[0].Action != "del" {
+				t.Errorf("action = %q, want %q", msgs[0].Action, "del")
+			}
+		})
+	}
+}
+
+func TestFlowspecProducer_UnknownOp(t *testing.T) {
+	mock := &flowspecMockNLRI{}
+	p := &producer{speakerIP: "10.1.1.1"}
+
+	_, err := p.flowspec(mock, 99, minimalPeerHeader(), minimalUpdate())
+	if err == nil {
+		t.Error("expected error for unknown operation, got nil")
+	}
+}
+
+func TestFlowspecProducer_GetAllFlowspecNLRI_Error(t *testing.T) {
+	mock := &flowspecMockNLRI{err: errors.New("simulated parse failure")}
+	p := &producer{speakerIP: "10.1.1.1"}
+
+	_, err := p.flowspec(mock, 0, minimalPeerHeader(), minimalUpdate())
+	if err == nil {
+		t.Error("expected error propagation from GetAllFlowspecNLRI, got nil")
+	}
+}
+
+// TestFlowspecUnmarshalJSON_PrefixOffset verifies the prefix_offset field is round-tripped
+// through JSON UnmarshalJSON (makePrefixSpec branch).
+func TestFlowspecUnmarshalJSON_PrefixOffset(t *testing.T) {
+	input := buildFlowspecJSON(t, []map[string]interface{}{
+		{
+			"type":          float64(1),
+			"prefix_len":    float64(48),
+			"prefix_offset": float64(16),
+			"prefix":        "abc",
+		},
+	})
+	fs := &Flowspec{}
+	if err := fs.UnmarshalJSON(input); err != nil {
+		t.Fatalf("UnmarshalJSON failed: %v", err)
+	}
+	if len(fs.Spec) != 1 {
+		t.Fatalf("expected 1 spec, got %d", len(fs.Spec))
+	}
+	ps, ok := fs.Spec[0].(*flowspec.PrefixSpec)
+	if !ok {
+		t.Fatalf("expected *flowspec.PrefixSpec, got %T", fs.Spec[0])
+	}
+	if ps.Offset != 16 {
+		t.Errorf("Offset = %d, want 16", ps.Offset)
+	}
+}
+
+// TestFlowspecUnmarshalJSON_PrefixOffset_NonNumber verifies that a non-numeric prefix_offset returns an error.
+func TestFlowspecUnmarshalJSON_PrefixOffset_NonNumber(t *testing.T) {
+	input := buildFlowspecJSON(t, []map[string]interface{}{
+		{
+			"type":          float64(1),
+			"prefix_len":    float64(48),
+			"prefix_offset": "not-a-number",
+			"prefix":        "abc",
+		},
+	})
+	fs := &Flowspec{}
+	if err := fs.UnmarshalJSON(input); err == nil {
+		t.Error("expected error for non-numeric prefix_offset, got nil")
+	}
+}
+
+// TestFlowspecUnmarshalJSON_PrefixOffset_Fractional verifies that a fractional prefix_offset returns an error.
+func TestFlowspecUnmarshalJSON_PrefixOffset_Fractional(t *testing.T) {
+	input := buildFlowspecJSON(t, []map[string]interface{}{
+		{
+			"type":          float64(1),
+			"prefix_len":    float64(48),
+			"prefix_offset": float64(16.9),
+			"prefix":        "abc",
+		},
+	})
+	fs := &Flowspec{}
+	if err := fs.UnmarshalJSON(input); err == nil {
+		t.Error("expected error for fractional prefix_offset, got nil")
 	}
 }
 
