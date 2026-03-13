@@ -3450,3 +3450,837 @@ func TestSegmentList_UnmarshalJSON_TypeK_InvalidField(t *testing.T) {
 		t.Error("expected error for invalid TypeK local_ipv6_address length, got nil")
 	}
 }
+
+// =============================================================================
+// SegmentList JSON round-trip tests for Types C, D, E, G, H, I
+// These exercise SegmentList.UnmarshalJSON case branches not covered by
+// the existing TypeA/TypeB/TypeF/TypeJ/TypeK tests.
+// =============================================================================
+
+// TestSegmentList_JSON_TypeC tests SegmentList JSON round-trip with a Type C segment.
+func TestSegmentList_JSON_TypeC(t *testing.T) {
+	ipv4 := []byte{10, 0, 0, 1}
+	sidVal := uint32(1000)
+	sl := &SegmentList{
+		Weight: &Weight{Flags: 0, Weight: 50},
+		Segment: []Segment{
+			&typeCSegment{
+				flags:       NewSegmentFlags(0x80),
+				srAlgorithm: 0x01,
+				ipv4Address: ipv4,
+				sid:         &sidVal,
+			},
+		},
+	}
+
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var result SegmentList
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	if result.Weight == nil || result.Weight.Weight != 50 {
+		t.Errorf("Weight not preserved")
+	}
+	if len(result.Segment) != 1 {
+		t.Fatalf("segment count = %d, want 1", len(result.Segment))
+	}
+	seg := result.Segment[0]
+	if seg.GetType() != TypeC {
+		t.Errorf("segment type = %v, want TypeC", seg.GetType())
+	}
+	typeCSeg, ok := seg.(TypeCSegment)
+	if !ok {
+		t.Fatal("segment does not implement TypeCSegment")
+	}
+	gotIPv4 := typeCSeg.GetIPv4Address()
+	for i, b := range ipv4 {
+		if gotIPv4[i] != b {
+			t.Errorf("IPv4[%d] = %d, want %d", i, gotIPv4[i], b)
+		}
+	}
+	if typeCSeg.GetSRAlgorithm() != 0x01 {
+		t.Errorf("SRAlgorithm = %d, want 1", typeCSeg.GetSRAlgorithm())
+	}
+	gotSID, hasSID := typeCSeg.GetSID()
+	if !hasSID || gotSID != 1000 {
+		t.Errorf("SID = %d (has=%v), want 1000", gotSID, hasSID)
+	}
+	flags := seg.GetFlags()
+	if flags == nil || !flags.Vflag {
+		t.Error("V-flag not preserved")
+	}
+}
+
+// TestSegmentList_JSON_TypeD tests SegmentList JSON round-trip with a Type D segment.
+func TestSegmentList_JSON_TypeD(t *testing.T) {
+	ipv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	sidVal := uint32(2000)
+	sl := &SegmentList{
+		Weight: &Weight{Flags: 0, Weight: 75},
+		Segment: []Segment{
+			&typeDSegment{
+				flags:       NewSegmentFlags(0xC0), // V+A flags
+				srAlgorithm: 0x02,
+				ipv6Address: ipv6,
+				sid:         &sidVal,
+			},
+		},
+	}
+
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var result SegmentList
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	if len(result.Segment) != 1 {
+		t.Fatalf("segment count = %d, want 1", len(result.Segment))
+	}
+	seg := result.Segment[0]
+	if seg.GetType() != TypeD {
+		t.Errorf("segment type = %v, want TypeD", seg.GetType())
+	}
+	typeDSeg, ok := seg.(TypeDSegment)
+	if !ok {
+		t.Fatal("segment does not implement TypeDSegment")
+	}
+	gotIPv6 := typeDSeg.GetIPv6Address()
+	for i, b := range ipv6 {
+		if gotIPv6[i] != b {
+			t.Errorf("IPv6[%d] = %02x, want %02x", i, gotIPv6[i], b)
+		}
+	}
+	if typeDSeg.GetSRAlgorithm() != 0x02 {
+		t.Errorf("SRAlgorithm = %d, want 2", typeDSeg.GetSRAlgorithm())
+	}
+	gotSID, hasSID := typeDSeg.GetSID()
+	if !hasSID || gotSID != 2000 {
+		t.Errorf("SID = %d (has=%v), want 2000", gotSID, hasSID)
+	}
+	flags := seg.GetFlags()
+	if flags == nil || !flags.Vflag || !flags.Aflag {
+		t.Error("V-flag or A-flag not preserved")
+	}
+}
+
+// TestSegmentList_JSON_TypeE tests SegmentList JSON round-trip with a Type E segment.
+func TestSegmentList_JSON_TypeE(t *testing.T) {
+	ipv4 := []byte{192, 168, 1, 1}
+	sidVal := uint32(3000)
+	sl := &SegmentList{
+		Weight: &Weight{Flags: 0, Weight: 60},
+		Segment: []Segment{
+			&typeESegment{
+				flags:            NewSegmentFlags(0x80),
+				localInterfaceID: 42,
+				ipv4Address:      ipv4,
+				sid:              &sidVal,
+			},
+		},
+	}
+
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var result SegmentList
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	if len(result.Segment) != 1 {
+		t.Fatalf("segment count = %d, want 1", len(result.Segment))
+	}
+	seg := result.Segment[0]
+	if seg.GetType() != TypeE {
+		t.Errorf("segment type = %v, want TypeE", seg.GetType())
+	}
+	typeESeg, ok := seg.(TypeESegment)
+	if !ok {
+		t.Fatal("segment does not implement TypeESegment")
+	}
+	gotIPv4 := typeESeg.GetIPv4Address()
+	for i, b := range ipv4 {
+		if gotIPv4[i] != b {
+			t.Errorf("IPv4[%d] = %d, want %d", i, gotIPv4[i], b)
+		}
+	}
+	if typeESeg.GetLocalInterfaceID() != 42 {
+		t.Errorf("LocalInterfaceID = %d, want 42", typeESeg.GetLocalInterfaceID())
+	}
+	gotSID, hasSID := typeESeg.GetSID()
+	if !hasSID || gotSID != 3000 {
+		t.Errorf("SID = %d (has=%v), want 3000", gotSID, hasSID)
+	}
+	if !seg.GetFlags().Vflag {
+		t.Error("V-flag not preserved")
+	}
+}
+
+// TestSegmentList_JSON_TypeG tests SegmentList JSON round-trip with a Type G segment.
+func TestSegmentList_JSON_TypeG(t *testing.T) {
+	localIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	remoteIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+	sidVal := uint32(5000)
+	sl := &SegmentList{
+		Weight: &Weight{Flags: 0, Weight: 80},
+		Segment: []Segment{
+			&typeGSegment{
+				flags:             NewSegmentFlags(0xE0), // V+A+S flags
+				localInterfaceID:  10,
+				localIPv6Address:  localIPv6,
+				remoteInterfaceID: 20,
+				remoteIPv6Address: remoteIPv6,
+				sid:               &sidVal,
+			},
+		},
+	}
+
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var result SegmentList
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	if len(result.Segment) != 1 {
+		t.Fatalf("segment count = %d, want 1", len(result.Segment))
+	}
+	seg := result.Segment[0]
+	if seg.GetType() != TypeG {
+		t.Errorf("segment type = %v, want TypeG", seg.GetType())
+	}
+	typeGSeg, ok := seg.(TypeGSegment)
+	if !ok {
+		t.Fatal("segment does not implement TypeGSegment")
+	}
+	gotLocal := typeGSeg.GetLocalIPv6Address()
+	for i, b := range localIPv6 {
+		if gotLocal[i] != b {
+			t.Errorf("LocalIPv6[%d] = %02x, want %02x", i, gotLocal[i], b)
+		}
+	}
+	gotRemote := typeGSeg.GetRemoteIPv6Address()
+	for i, b := range remoteIPv6 {
+		if gotRemote[i] != b {
+			t.Errorf("RemoteIPv6[%d] = %02x, want %02x", i, gotRemote[i], b)
+		}
+	}
+	if typeGSeg.GetLocalInterfaceID() != 10 {
+		t.Errorf("LocalInterfaceID = %d, want 10", typeGSeg.GetLocalInterfaceID())
+	}
+	if typeGSeg.GetRemoteInterfaceID() != 20 {
+		t.Errorf("RemoteInterfaceID = %d, want 20", typeGSeg.GetRemoteInterfaceID())
+	}
+	gotSID, hasSID := typeGSeg.GetSID()
+	if !hasSID || gotSID != 5000 {
+		t.Errorf("SID = %d (has=%v), want 5000", gotSID, hasSID)
+	}
+	flags := seg.GetFlags()
+	if !flags.Vflag || !flags.Aflag || !flags.Sflag {
+		t.Error("V/A/S flags not preserved")
+	}
+}
+
+// TestSegmentList_JSON_TypeH tests SegmentList JSON round-trip with a Type H segment.
+func TestSegmentList_JSON_TypeH(t *testing.T) {
+	localIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	remoteIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+	sidVal := uint32(100000)
+	sl := &SegmentList{
+		Weight: &Weight{Flags: 0, Weight: 90},
+		Segment: []Segment{
+			&typeHSegment{
+				flags:             NewSegmentFlags(0xF0), // all flags
+				localIPv6Address:  localIPv6,
+				remoteIPv6Address: remoteIPv6,
+				sid:               &sidVal,
+			},
+		},
+	}
+
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var result SegmentList
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	if len(result.Segment) != 1 {
+		t.Fatalf("segment count = %d, want 1", len(result.Segment))
+	}
+	seg := result.Segment[0]
+	if seg.GetType() != TypeH {
+		t.Errorf("segment type = %v, want TypeH", seg.GetType())
+	}
+	typeHSeg, ok := seg.(TypeHSegment)
+	if !ok {
+		t.Fatal("segment does not implement TypeHSegment")
+	}
+	gotLocal := typeHSeg.GetLocalIPv6Address()
+	for i, b := range localIPv6 {
+		if gotLocal[i] != b {
+			t.Errorf("LocalIPv6[%d] = %02x, want %02x", i, gotLocal[i], b)
+		}
+	}
+	gotRemote := typeHSeg.GetRemoteIPv6Address()
+	for i, b := range remoteIPv6 {
+		if gotRemote[i] != b {
+			t.Errorf("RemoteIPv6[%d] = %02x, want %02x", i, gotRemote[i], b)
+		}
+	}
+	gotSID, hasSID := typeHSeg.GetSID()
+	if !hasSID || gotSID != 100000 {
+		t.Errorf("SID = %d (has=%v), want 100000", gotSID, hasSID)
+	}
+	flags := seg.GetFlags()
+	if !flags.Vflag || !flags.Aflag || !flags.Sflag || !flags.Bflag {
+		t.Error("flags not preserved")
+	}
+}
+
+// TestSegmentList_JSON_TypeI tests SegmentList JSON round-trip with a Type I segment.
+func TestSegmentList_JSON_TypeI(t *testing.T) {
+	ipv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	srv6SID := []byte{0x20, 0x01, 0x0d, 0xb8, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	sl := &SegmentList{
+		Weight: &Weight{Flags: 0, Weight: 70},
+		Segment: []Segment{
+			&typeISegment{
+				flags:           NewSegmentFlags(0x80),
+				srAlgorithm:     1,
+				ipv6NodeAddress: ipv6,
+				srv6SID:         srv6SID,
+			},
+		},
+	}
+
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var result SegmentList
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	if len(result.Segment) != 1 {
+		t.Fatalf("segment count = %d, want 1", len(result.Segment))
+	}
+	seg := result.Segment[0]
+	if seg.GetType() != TypeI {
+		t.Errorf("segment type = %v, want TypeI", seg.GetType())
+	}
+	typeISeg, ok := seg.(TypeISegment)
+	if !ok {
+		t.Fatal("segment does not implement TypeISegment")
+	}
+	gotIPv6 := typeISeg.GetIPv6NodeAddress()
+	for i, b := range ipv6 {
+		if gotIPv6[i] != b {
+			t.Errorf("IPv6NodeAddress[%d] = %02x, want %02x", i, gotIPv6[i], b)
+		}
+	}
+	if typeISeg.GetSRAlgorithm() != 1 {
+		t.Errorf("SRAlgorithm = %d, want 1", typeISeg.GetSRAlgorithm())
+	}
+	gotSID, hasSID := typeISeg.GetSRv6SID()
+	if !hasSID {
+		t.Fatal("GetSRv6SID() hasSID = false, want true")
+	}
+	for i, b := range srv6SID {
+		if gotSID[i] != b {
+			t.Errorf("SRv6SID[%d] = %02x, want %02x", i, gotSID[i], b)
+		}
+	}
+	if !seg.GetFlags().Vflag {
+		t.Error("V-flag not preserved")
+	}
+}
+
+// TestSegmentList_UnmarshalJSON_UnknownType tests that SegmentList.UnmarshalJSON
+// returns an error for an unknown segment type.
+func TestSegmentList_UnmarshalJSON_UnknownType(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":99}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for unknown segment type, got nil")
+	}
+}
+
+// TestSegmentList_UnmarshalJSON_BadSegments tests that SegmentList.UnmarshalJSON
+// returns an error when the "segments" field is not a valid array of objects.
+func TestSegmentList_UnmarshalJSON_BadSegments(t *testing.T) {
+	jsonData := `{"segments":"not_an_array"}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for non-array segments, got nil")
+	}
+}
+
+// TestSegmentList_UnmarshalJSON_BadSegmentType tests that SegmentList.UnmarshalJSON
+// returns an error when segment_type is not a valid integer.
+func TestSegmentList_UnmarshalJSON_BadSegmentType(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":"not_a_number"}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for non-integer segment_type, got nil")
+	}
+}
+
+// TestSegmentList_UnmarshalJSON_BadWeight tests that SegmentList.UnmarshalJSON
+// returns an error when weight_subtlv is not a valid object.
+func TestSegmentList_UnmarshalJSON_BadWeight(t *testing.T) {
+	jsonData := `{"weight_subtlv":"not_an_object"}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid weight_subtlv, got nil")
+	}
+}
+
+// TestSegmentList_UnmarshalJSON_MalformedJSON tests that SegmentList.UnmarshalJSON
+// returns an error for completely invalid JSON.
+func TestSegmentList_UnmarshalJSON_MalformedJSON(t *testing.T) {
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(`{invalid`), &sl); err == nil {
+		t.Error("expected error for invalid JSON, got nil")
+	}
+}
+
+// TestSegmentList_JSON_TypeC_InvalidField tests error propagation through SegmentList
+// when a TypeC segment has an invalid field value.
+func TestSegmentList_JSON_TypeC_InvalidField(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":3,"ipv4_address":[1,2,3,4,5]}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeC ipv4_address length, got nil")
+	}
+}
+
+// TestSegmentList_JSON_TypeD_InvalidField tests error propagation through SegmentList
+// when a TypeD segment has an invalid field value.
+func TestSegmentList_JSON_TypeD_InvalidField(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":4,"ipv6_address":[1,2,3]}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeD ipv6_address length, got nil")
+	}
+}
+
+// TestSegmentList_JSON_TypeE_InvalidField tests error propagation through SegmentList
+// when a TypeE segment has an invalid field value.
+func TestSegmentList_JSON_TypeE_InvalidField(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":5,"ipv4_address":[1,2,3,4,5]}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeE ipv4_address length, got nil")
+	}
+}
+
+// TestSegmentList_JSON_TypeG_InvalidField tests error propagation through SegmentList
+// when a TypeG segment has an invalid field value.
+func TestSegmentList_JSON_TypeG_InvalidField(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":7,"local_ipv6_address":"AAEC"}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeG local_ipv6_address length, got nil")
+	}
+}
+
+// TestSegmentList_JSON_TypeH_InvalidField tests error propagation through SegmentList
+// when a TypeH segment has an invalid field value.
+func TestSegmentList_JSON_TypeH_InvalidField(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":8,"local_ipv6_address":"AAEC"}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeH local_ipv6_address length, got nil")
+	}
+}
+
+// TestSegmentList_JSON_TypeI_InvalidField tests error propagation through SegmentList
+// when a TypeI segment has an invalid field value.
+func TestSegmentList_JSON_TypeI_InvalidField(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":14,"ipv6_node_address":"AAEC"}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeI ipv6_node_address length, got nil")
+	}
+}
+
+// TestSegmentList_JSON_TypeA_InvalidField tests error propagation through SegmentList
+// when a TypeA segment has an invalid field value.
+func TestSegmentList_JSON_TypeA_InvalidField(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":1,"flags":"bad"}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeA flags, got nil")
+	}
+}
+
+// TestSegmentList_JSON_TypeB_InvalidField tests error propagation through SegmentList
+// when a TypeB segment has an invalid field value.
+func TestSegmentList_JSON_TypeB_InvalidField(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":13,"srv6_sid":"AAEC"}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeB srv6_sid length, got nil")
+	}
+}
+
+// TestSegmentList_JSON_TypeF_InvalidField tests error propagation through SegmentList
+// when a TypeF segment has an invalid field value.
+func TestSegmentList_JSON_TypeF_InvalidField(t *testing.T) {
+	jsonData := `{"segments":[{"segment_type":6,"local_ipv4_address":[1,2,3,4,5]}]}`
+	var sl SegmentList
+	if err := json.Unmarshal([]byte(jsonData), &sl); err == nil {
+		t.Error("expected error for invalid TypeF local_ipv4_address length, got nil")
+	}
+}
+
+// =============================================================================
+// UnmarshalSegmentListSTLV error path tests
+// =============================================================================
+
+// TestUnmarshalSegmentListSTLV_Weight_ErrorPaths tests Weight STLV error paths.
+func TestUnmarshalSegmentListSTLV_Weight_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "Weight truncated missing length byte",
+			input: []byte{0x09}, // Weight type = 9, no length
+		},
+		{
+			name:  "Weight invalid length",
+			input: []byte{0x09, 0x04, 0x00, 0x00, 0x00, 0x00}, // length=4, need 6
+		},
+		{
+			name:  "Weight insufficient data",
+			input: []byte{0x09, 0x06, 0x00, 0x00}, // length=6 but only 2 bytes of data
+		},
+		{
+			name: "Duplicate Weight",
+			input: []byte{
+				0x09, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, // first Weight
+				0x09, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC8, // second Weight (duplicate)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.input); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_TypeA_ErrorPaths tests Type A STLV error paths.
+func TestUnmarshalSegmentListSTLV_TypeA_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "TypeA truncated missing length byte",
+			input: []byte{0x01}, // Type A = 1
+		},
+		{
+			name:  "TypeA invalid length",
+			input: []byte{0x01, 0x04, 0x00, 0x00, 0x00, 0x00}, // length=4, need 6
+		},
+		{
+			name:  "TypeA insufficient data",
+			input: []byte{0x01, 0x06, 0x00, 0x00}, // length=6 but only 2 bytes of data
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.input); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_TypeB_ErrorPaths tests Type B STLV error paths.
+func TestUnmarshalSegmentListSTLV_TypeB_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "TypeB truncated missing length byte",
+			input: []byte{0x0D}, // Type B = 13
+		},
+		{
+			name:  "TypeB invalid length",
+			input: []byte{0x0D, 0x04, 0x00, 0x00, 0x00, 0x00}, // length=4, need 18
+		},
+		{
+			name:  "TypeB insufficient data",
+			input: []byte{0x0D, 0x12, 0x00, 0x00}, // length=18 but only 2 bytes of data
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.input); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_TypeC_ErrorPaths tests Type C STLV error paths.
+func TestUnmarshalSegmentListSTLV_TypeC_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "TypeC truncated missing length byte",
+			input: []byte{0x03},
+		},
+		{
+			name:  "TypeC invalid length",
+			input: []byte{0x03, 0x04, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name:  "TypeC insufficient data",
+			input: []byte{0x03, 0x06, 0x00, 0x00},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.input); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_TypeD_ErrorPaths tests Type D STLV error paths.
+func TestUnmarshalSegmentListSTLV_TypeD_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "TypeD truncated missing length byte",
+			input: []byte{0x04},
+		},
+		{
+			name:  "TypeD invalid length",
+			input: []byte{0x04, 0x04, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name:  "TypeD insufficient data",
+			input: []byte{0x04, 0x12, 0x00, 0x00},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.input); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_TypeE_ErrorPaths tests Type E STLV error paths.
+func TestUnmarshalSegmentListSTLV_TypeE_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "TypeE truncated missing length byte",
+			input: []byte{0x05},
+		},
+		{
+			name:  "TypeE invalid length",
+			input: []byte{0x05, 0x04, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name:  "TypeE insufficient data",
+			input: []byte{0x05, 0x0A, 0x00, 0x00},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.input); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_TypeF_ErrorPaths tests Type F STLV error paths.
+func TestUnmarshalSegmentListSTLV_TypeF_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "TypeF truncated missing length byte",
+			input: []byte{0x06},
+		},
+		{
+			name:  "TypeF invalid length",
+			input: []byte{0x06, 0x04, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name:  "TypeF insufficient data",
+			input: []byte{0x06, 0x0A, 0x00, 0x00},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.input); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_TypeG_ErrorPaths tests Type G STLV error paths.
+func TestUnmarshalSegmentListSTLV_TypeG_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "TypeG truncated missing length byte",
+			input: []byte{0x07},
+		},
+		{
+			name:  "TypeG invalid length",
+			input: []byte{0x07, 0x04, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name:  "TypeG insufficient data",
+			input: []byte{0x07, 0x2A, 0x00, 0x00},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.input); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_TypeH_ErrorPaths tests Type H STLV error paths.
+func TestUnmarshalSegmentListSTLV_TypeH_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "TypeH truncated missing length byte",
+			input: []byte{0x08},
+		},
+		{
+			name:  "TypeH invalid length",
+			input: []byte{0x08, 0x04, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name:  "TypeH insufficient data",
+			input: []byte{0x08, 0x22, 0x00, 0x00},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.input); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_TypeI_ErrorPaths tests Type I STLV error paths.
+func TestUnmarshalSegmentListSTLV_TypeI_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "TypeI truncated missing length byte",
+			input: []byte{byte(TypeI)},
+		},
+		{
+			name:  "TypeI invalid length",
+			input: []byte{byte(TypeI), 0x04, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name:  "TypeI insufficient data",
+			input: []byte{byte(TypeI), 22, 0x00, 0x00},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalSegmentListSTLV(tt.input); err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_Weight_Valid tests the Weight STLV happy path.
+func TestUnmarshalSegmentListSTLV_Weight_Valid(t *testing.T) {
+	input := []byte{
+		0x09, 0x06, // Weight type=9, length=6
+		0x00,                   // Flags
+		0x00,                   // Reserved
+		0x00, 0x00, 0x00, 0x64, // Weight = 100
+	}
+	sl, err := UnmarshalSegmentListSTLV(input)
+	if err != nil {
+		t.Fatalf("UnmarshalSegmentListSTLV() error = %v", err)
+	}
+	if sl.Weight == nil {
+		t.Fatal("Weight is nil")
+	}
+	if sl.Weight.Weight != 100 {
+		t.Errorf("Weight = %d, want 100", sl.Weight.Weight)
+	}
+}
+
+// TestUnmarshalSegmentListSTLV_TypeA_Valid tests the Type A STLV happy path.
+func TestUnmarshalSegmentListSTLV_TypeA_Valid(t *testing.T) {
+	input := []byte{
+		0x01, 0x06, // Type A, length=6
+		0x80,                   // Flags (V flag)
+		0x00,                   // Reserved
+		0x00, 0x10, 0x01, 0x40, // Label=16, TC=0, S=true, TTL=64
+	}
+	sl, err := UnmarshalSegmentListSTLV(input)
+	if err != nil {
+		t.Fatalf("UnmarshalSegmentListSTLV() error = %v", err)
+	}
+	if len(sl.Segment) != 1 {
+		t.Fatalf("Segment count = %d, want 1", len(sl.Segment))
+	}
+	if sl.Segment[0].GetType() != TypeA {
+		t.Errorf("GetType() = %v, want TypeA", sl.Segment[0].GetType())
+	}
+}
