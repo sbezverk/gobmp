@@ -1,6 +1,4 @@
 networks:
-  a-mgmt:
-    internal: true
   gobmp-ceos-1:
     ipam:
       config:
@@ -195,7 +193,6 @@ services:
     image: sbezverk/ceos-lab-4.35.2f:cicd
     privileged: true
     networks:
-      a-mgmt: null
       gobmp-ceos-1:
         ipv4_address: 10.1.1.3
     stdin_open: true
@@ -234,7 +231,6 @@ services:
     image: sbezverk/ceos-lab-4.35.2f:cicd
     privileged: true
     networks:
-      a-mgmt: null
       gobmp-ceos-1:
         ipv4_address: 10.1.1.10
     stdin_open: true
