@@ -12,6 +12,9 @@ import (
 type Config struct {
 	// EnableRawMode when true produces RAW BMP messages without parsing
 	EnableRawMode bool
+	// SpeakerIP is the BMP speaker's IP from the TCP connection.
+	// Set on all bmp.Message values for consistent router identity across message types.
+	SpeakerIP string
 }
 
 // parser holds parser state and configuration.
@@ -209,6 +212,7 @@ func (p *parser) parsingWorker(b []byte) {
 		}
 		pos += msgLen - bmp.CommonHeaderLength
 		if p.producerQueue != nil && bmpMsg.Payload != nil {
+			bmpMsg.SpeakerIP = p.config.SpeakerIP
 			// Use a stop-aware send: if shutdown is signalled while we are
 			// blocked waiting for the producer to drain, we exit immediately
 			// rather than deadlocking.
@@ -246,8 +250,9 @@ func (p *parser) sendRawMessage(b []byte) {
 	// Send the raw message
 	if p.producerQueue != nil {
 		select {
-		case p.producerQueue <- bmp.Message{PeerHeader: peerHeader, Payload: rm}:
+		case p.producerQueue <- bmp.Message{PeerHeader: peerHeader, Payload: rm, SpeakerIP: p.config.SpeakerIP}:
 		case <-p.stop:
+			return
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/golang/glog"
@@ -156,11 +157,42 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	// Starting messages producer per client with dedicated work queue
 	go prod.Producer(producerQueue, prodStop)
 
+	// Extract speaker IP from the TCP connection. Set on all BMP messages
+	// to provide a consistent router identity regardless of message type.
+	// Type-assert to *net.TCPAddr to get a clean IP string free of
+	// ports, brackets, and IPv6 zone identifiers.
+	var speakerIP string
+	if tcpAddr, ok := client.RemoteAddr().(*net.TCPAddr); ok && tcpAddr.IP != nil {
+		speakerIP = tcpAddr.IP.String()
+	} else {
+		var host string
+		host, _, err = net.SplitHostPort(client.RemoteAddr().String())
+		if err != nil {
+			addrStr := client.RemoteAddr().String()
+			if ip := net.ParseIP(addrStr); ip != nil {
+				speakerIP = ip.String()
+			} else {
+				glog.Warningf("failed to extract plain IP from remote address %q: %+v", addrStr, err)
+			}
+		} else {
+			// Strip zone identifier from IPv6 link-local addresses (e.g. fe80::1%eth0).
+			if h, _, ok := strings.Cut(host, "%"); ok {
+				host = h
+			}
+			if ip := net.ParseIP(host); ip != nil {
+				speakerIP = ip.String()
+			} else {
+				glog.Warningf("failed to normalize speaker IP from remote address %q", client.RemoteAddr().String())
+			}
+		}
+	}
+
 	parserQueue := make(chan []byte)
 	parsStop := make(chan struct{})
 	// Starting parser per client with dedicated work queue
 	parserConfig := &parser.Config{
 		EnableRawMode: srv.bmpRaw,
+		SpeakerIP:     speakerIP,
 	}
 	p := parser.NewParser(parserQueue, producerQueue, parsStop, parserConfig)
 	go p.Start()
