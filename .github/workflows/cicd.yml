@@ -201,6 +201,18 @@ jobs:
         id: session_3
         run: ./build/monitor_container.sh gobmp ceos-1
         continue-on-error: true
+      - name: wait for BGP session between ceos-1 and ceos-2
+        run: |
+          echo "Waiting for BGP session to establish (up to 5 min)..."
+          for i in $(seq 1 60); do
+            state=$(docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null | grep "10.1.1.10" | awk '{print $10}')
+            if [ "$state" = "Estab" ] || echo "$state" | grep -qE '^[0-9]+$'; then
+              echo "BGP session established after $((i * 5))s"
+              break
+            fi
+            echo "BGP not established yet ($i/60, state=$state)..."
+            sleep 5
+          done
       - name: run validator for ipv4 unicast (cEOS single kafka)
         id: validation_3
         run: ./bin/validator --validate=true --kafka=127.0.0.1:9092 --msg-file=./testdata/validator/ipv4_unicast_ceos.msg
@@ -251,6 +263,18 @@ jobs:
         id: session_4
         run: ./build/monitor_container.sh gobmp ceos-1
         continue-on-error: true
+      - name: wait for BGP session between ceos-1 and ceos-2 (multinode)
+        run: |
+          echo "Waiting for BGP session to establish (up to 5 min)..."
+          for i in $(seq 1 60); do
+            state=$(docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null | grep "10.1.1.10" | awk '{print $10}')
+            if [ "$state" = "Estab" ] || echo "$state" | grep -qE '^[0-9]+$'; then
+              echo "BGP session established after $((i * 5))s"
+              break
+            fi
+            echo "BGP not established yet ($i/60, state=$state)..."
+            sleep 5
+          done
       - name: run validator for ipv4 unicast (cEOS multinode kafka)
         id: validation_4
         run: ./bin/validator --validate=true --kafka=127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093,127.0.0.1:9094 --msg-file=./testdata/validator/ipv4_unicast_ceos.msg
