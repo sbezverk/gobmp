@@ -501,27 +501,87 @@ func TestHeaderWriter(t *testing.T) {
 	})
 }
 
-// TestProduceRawMessage_SpeakerIPFallback tests that SpeakerIP is used when PeerHeader is nil.
+// TestProduceRawMessage_SpeakerIPFallback verifies the router IP and router hash
+// fields in the OpenBMP header for both the SpeakerIP-only and PeerHeader-only paths.
 func TestProduceRawMessage_SpeakerIPFallback(t *testing.T) {
-	mockPub := &mockPublisherRAW{}
-	p := &producer{
-		publisher: mockPub,
-		adminHash: "test-hash",
+	adminID := "test-collector"
+	collectorHash := md5.Sum([]byte(adminID))
+	adminHash := hex.EncodeToString(collectorHash[:])
+
+	peerHeader := &bmp.PerPeerHeader{
+		PeerAS:            65001,
+		PeerAddress:       []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1},
+		PeerBGPID:         []byte{10, 0, 0, 1},
+		PeerDistinguisher: make([]byte, 8),
+		PeerTimestamp:     make([]byte, 8),
 	}
 
-	rawMsg := &bmp.RawMessage{
-		Msg: []byte{0x01, 0x02, 0x03},
+	tests := []struct {
+		name           string
+		speakerIP      string
+		peerHeader     *bmp.PerPeerHeader
+		expectedRouter string // IP string used as router identity
+	}{
+		{
+			name:           "SpeakerIP set and PeerHeader nil",
+			speakerIP:      "192.0.2.1",
+			peerHeader:     nil,
+			expectedRouter: "192.0.2.1",
+		},
+		{
+			name:           "SpeakerIP empty and PeerHeader set",
+			speakerIP:      "",
+			peerHeader:     peerHeader,
+			expectedRouter: peerHeader.GetPeerAddrString(),
+		},
 	}
 
-	msg := bmp.Message{
-		PeerHeader: nil,
-		SpeakerIP:  "192.0.2.1",
-		Payload:    rawMsg,
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockPub := &mockPublisherRAW{}
+			p := &producer{
+				publisher:        mockPub,
+				adminHash:        adminHash,
+				collectorAdminID: adminID,
+			}
 
-	p.produceRawMessage(msg)
+			rawData := []byte{0x01, 0x02, 0x03}
+			msg := bmp.Message{
+				PeerHeader: tt.peerHeader,
+				SpeakerIP:  tt.speakerIP,
+				Payload:    &bmp.RawMessage{Msg: rawData},
+			}
 
-	if !mockPub.publishCalled {
-		t.Error("PublishMessage should be called when SpeakerIP is set and PeerHeader is nil")
+			p.produceRawMessage(msg)
+
+			if !mockPub.publishCalled {
+				t.Fatal("PublishMessage was not called")
+			}
+
+			output := mockPub.lastMessage
+			minLen := 78 + len(adminID) + len(rawData)
+			if len(output) < minLen {
+				t.Fatalf("Message too short: got %d bytes, want at least %d", len(output), minLen)
+			}
+
+			// Router hash sits at offset 40 + len(adminID), 16 bytes
+			routerHashOffset := 40 + len(adminID)
+			expectedRouterHash := md5.Sum([]byte(tt.expectedRouter))
+			gotHash := output[routerHashOffset : routerHashOffset+16]
+			if !bytes.Equal(gotHash, expectedRouterHash[:]) {
+				t.Errorf("Router hash mismatch\n  got:  %x\n  want: %x", gotHash, expectedRouterHash[:])
+			}
+
+			// Router IP sits at offset routerHashOffset + 16, 16 bytes
+			routerIPOffset := routerHashOffset + 16
+			expectedRouterIP, err := encodeIPToBytes(tt.expectedRouter)
+			if err != nil {
+				t.Fatalf("encodeIPToBytes(%q) failed: %v", tt.expectedRouter, err)
+			}
+			gotIP := output[routerIPOffset : routerIPOffset+16]
+			if !bytes.Equal(gotIP, expectedRouterIP[:]) {
+				t.Errorf("Router IP mismatch\n  got:  %x\n  want: %x", gotIP, expectedRouterIP[:])
+			}
+		})
 	}
 }
