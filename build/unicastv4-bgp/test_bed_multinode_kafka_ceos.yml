@@ -18,7 +18,6 @@ services:
       [
         "/gobmp",
         "--source-port=5000",
-        "--intercept=false",
         "--split-af=true",
         "--v=9",
         "--kafka-server=kafka-1:9091,kafka-2:9092,kafka-3:9093,kafka-4:9094"
