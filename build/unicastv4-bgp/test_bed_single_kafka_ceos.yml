@@ -1,3 +1,15 @@
+# cEOS integration test topology — single Kafka broker
+#
+# IMPORTANT: cEOS containers use a SINGLE Docker network (gobmp-ceos-1).
+# Do NOT add a second network (e.g. a-mgmt). Docker Compose assigns
+# networks to eth interfaces in non-deterministic order. With MAPETH0=1
+# and INTFTYPE=eth, cEOS maps eth0->Management0, eth1->Ethernet1. If two
+# networks are attached, eth0/eth1 can swap, causing Management0 (where
+# data IPs are configured) to connect to the wrong network.
+#
+# The startup configs use Management0 (not Ethernet1) for data IPs to
+# match the single-network, single-interface (eth0) setup.
+
 networks:
   gobmp-ceos-1:
     ipam:

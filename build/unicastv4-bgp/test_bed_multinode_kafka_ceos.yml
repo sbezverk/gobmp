@@ -1,3 +1,8 @@
+# cEOS integration test topology — multinode Kafka cluster
+#
+# IMPORTANT: cEOS containers use a SINGLE Docker network (gobmp-ceos-1).
+# Do NOT add a second network. See test_bed_single_kafka_ceos.yml for details.
+
 networks:
   gobmp-ceos-1:
     ipam:
