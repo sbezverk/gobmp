@@ -118,6 +118,10 @@ func (p *parser) parsingWorker(b []byte) {
 			perPerHeaderLen = bmp.PerPeerHeaderLength
 			rm, err := bmp.UnmarshalBMPRouteMonitorMessage(b[pos+perPerHeaderLen : pos+msgLen-bmp.CommonHeaderLength])
 			if err != nil {
+				if errors.Is(err, bmp.ErrNotAnUpdate) {
+					glog.V(5).Infof("skipping non-Update BGP message in route monitor: %+v", err)
+					break
+				}
 				glog.Errorf("fail to recover BMP Route Monitoring with error: %+v", err)
 				if glog.V(5) {
 					glog.Infof("common header content: %+v", ch)

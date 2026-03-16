@@ -2,12 +2,18 @@ package bmp
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/tools"
 )
+
+// ErrNotAnUpdate is returned when a BMP Route Monitor message contains a
+// non-Update BGP message type. Callers should skip the message and continue
+// processing the stream rather than terminating the connection.
+var ErrNotAnUpdate = errors.New("route monitor: BGP message is not an UPDATE")
 
 // RouteMonitor defines a structure of BMP Route Monitoring message
 type RouteMonitor struct {
@@ -29,7 +35,7 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 	p += 16
 	// Validate BGP message length field
 	bgpLen := binary.BigEndian.Uint16(b[p : p+2])
-	if int(bgpLen) < 19 || int(bgpLen) > len(b) {
+	if int(bgpLen) < 19 || int(bgpLen) != len(b) {
 		return nil, fmt.Errorf("invalid BGP message length %d (buffer %d bytes)", bgpLen, len(b))
 	}
 	p += 2
@@ -43,7 +49,7 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 		}
 		rm.Update = u
 	default:
-		return nil, fmt.Errorf("unexpected BGP message type %d in route monitor (expected 2/Update)", t)
+		return nil, fmt.Errorf("%w: got type %d", ErrNotAnUpdate, t)
 	}
 
 	return &rm, nil

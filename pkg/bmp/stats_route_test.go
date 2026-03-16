@@ -2,6 +2,7 @@ package bmp
 
 import (
 	"encoding/binary"
+	"errors"
 	"testing"
 )
 
@@ -151,6 +152,16 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 			input:   makeBody(2, 19),
 			wantErr: true,
 		},
+		{
+			name:    "bgpLen understated (claims 19 but buffer is 25)",
+			input:   append(makeBody(2, 19), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+			wantErr: true,
+		},
+		{
+			name:    "bgpLen too small (claims 10)",
+			input:   makeBody(2, 10),
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -160,5 +171,47 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 				t.Fatalf("UnmarshalBMPRouteMonitorMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestRouteMonitor_ErrNotAnUpdate(t *testing.T) {
+	makeBody := func(msgType byte, length uint16) []byte {
+		b := make([]byte, 16+2+1)
+		for i := 0; i < 16; i++ {
+			b[i] = 0xFF
+		}
+		binary.BigEndian.PutUint16(b[16:], length)
+		b[18] = msgType
+		return b
+	}
+	_, err := UnmarshalBMPRouteMonitorMessage(makeBody(4, 19))
+	if err == nil {
+		t.Fatal("expected error for KEEPALIVE type")
+	}
+	if !errors.Is(err, ErrNotAnUpdate) {
+		t.Errorf("error %v does not wrap ErrNotAnUpdate", err)
+	}
+}
+
+func TestGetPeerAddrString_ShortAddress(t *testing.T) {
+	p := &PerPeerHeader{
+		PeerAddress: []byte{10, 0, 0, 1},
+	}
+	got := p.GetPeerAddrString()
+	if got != "" {
+		t.Errorf("got %q, want empty string for short address", got)
+	}
+}
+
+func TestGetPeerAddrString_ValidIPv4(t *testing.T) {
+	addr := make([]byte, 16)
+	addr[12], addr[13], addr[14], addr[15] = 10, 0, 0, 1
+	p := &PerPeerHeader{
+		PeerType:    PeerType0,
+		PeerAddress: addr,
+	}
+	got := p.GetPeerAddrString()
+	if got != "10.0.0.1" {
+		t.Errorf("got %q, want '10.0.0.1'", got)
 	}
 }
