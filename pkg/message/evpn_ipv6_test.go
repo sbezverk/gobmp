@@ -126,3 +126,83 @@ func TestEvpnIPv6Address(t *testing.T) {
 		t.Errorf("IPLength = %d, want 128", prfxs[0].IPLength)
 	}
 }
+
+func buildEVPNType5IPv4Wire() []byte {
+	// EVPN Type 5 IPv4: RD(8)+ESI(10)+EthTag(4)+IPLen(1)+IPv4(4)+GW(4)+Label(3) = 34
+	wire := make([]byte, 34)
+	off := 0
+	binary.BigEndian.PutUint16(wire[off:], 0)
+	off += 2
+	binary.BigEndian.PutUint16(wire[off:], 0)
+	off += 2
+	binary.BigEndian.PutUint32(wire[off:], 100)
+	off += 4
+	off += 10 // ESI
+	off += 4  // EthTag
+	wire[off] = 24
+	off++
+	copy(wire[off:], []byte{10, 0, 0, 0}) // IP
+	off += 4
+	copy(wire[off:], []byte{10, 0, 0, 1}) // GW
+	off += 4
+	label := uint32(100)<<4 | 1
+	wire[off] = byte(label >> 16)
+	wire[off+1] = byte(label >> 8)
+	wire[off+2] = byte(label)
+
+	nlriWire := make([]byte, 2+len(wire))
+	nlriWire[0] = 5
+	nlriWire[1] = 34
+	copy(nlriWire[2:], wire)
+	return nlriWire
+}
+
+func TestEvpnIPv4Address(t *testing.T) {
+	prod := &producer{
+		speakerHash: "test-hash",
+		speakerIP:   "10.0.0.1",
+		publisher:   &mockPublisher{},
+	}
+
+	route, err := evpn.UnmarshalEVPNNLRI(buildEVPNType5IPv4Wire())
+	if err != nil {
+		t.Fatalf("UnmarshalEVPNNLRI() error: %v", err)
+	}
+
+	nlri := &evpnMockNLRI{
+		route:   route,
+		nextHop: "10.0.0.1",
+		isIPv6:  false,
+	}
+
+	ph := &bmp.PerPeerHeader{
+		PeerAS:            65001,
+		PeerType:          0,
+		PeerBGPID:         make([]byte, 4),
+		PeerAddress:       make([]byte, 16),
+		PeerDistinguisher: make([]byte, 8),
+		PeerTimestamp:     make([]byte, 8),
+	}
+
+	update := &bgp.Update{
+		BaseAttributes: &bgp.BaseAttributes{},
+	}
+
+	prfxs, err := prod.evpn(nlri, 0, ph, update)
+	if err != nil {
+		t.Fatalf("evpn() error: %v", err)
+	}
+	if len(prfxs) != 1 {
+		t.Fatalf("got %d prefixes, want 1", len(prfxs))
+	}
+	// Verify IPv4 stays in dotted-quad form, not IPv6-mapped
+	if prfxs[0].IPAddress != "10.0.0.0" {
+		t.Errorf("IPAddress = %q, want '10.0.0.0'", prfxs[0].IPAddress)
+	}
+	if prfxs[0].GWAddress != "10.0.0.1" {
+		t.Errorf("GWAddress = %q, want '10.0.0.1'", prfxs[0].GWAddress)
+	}
+	if prfxs[0].IPLength != 24 {
+		t.Errorf("IPLength = %d, want 24", prfxs[0].IPLength)
+	}
+}
