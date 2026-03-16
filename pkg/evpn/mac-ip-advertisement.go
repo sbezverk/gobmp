@@ -1,6 +1,10 @@
 package evpn
 
-import "github.com/sbezverk/gobmp/pkg/base"
+import (
+	"fmt"
+
+	"github.com/sbezverk/gobmp/pkg/base"
+)
 
 // MACIPAdvertisement defines a structure of Route type 2
 // (MAC IP Advertisement route)
@@ -56,8 +60,11 @@ func (t *MACIPAdvertisement) getLabel() []*base.Label {
 	return t.Label
 }
 
-// UnmarshalEVPNMACIPAdvertisement instantiates new instance of a Ethernet Auto Discovery route type object
+// UnmarshalEVPNMACIPAdvertisement instantiates new instance of a MAC/IP Advertisement route type object
 func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
+	if len(b) < 24 {
+		return nil, fmt.Errorf("EVPN Type 2 too short: need at least 24 bytes, got %d", len(b))
+	}
 	var err error
 	t := MACIPAdvertisement{}
 	p := 0
@@ -92,7 +99,7 @@ func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
 		copy(t.IPAddr, b[p:p+l])
 		p += l
 	}
-	for i := 0; p < len(b); i++ {
+	for p+3 <= len(b) {
 		l, err := base.MakeLabel(b[p : p+3])
 		if err != nil {
 			return nil, err

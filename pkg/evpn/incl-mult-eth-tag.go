@@ -1,6 +1,10 @@
 package evpn
 
-import "github.com/sbezverk/gobmp/pkg/base"
+import (
+	"fmt"
+
+	"github.com/sbezverk/gobmp/pkg/base"
+)
 
 // InclusiveMulticastEthTag defines a structure of Route type 3
 // (Inclusive Multicast Ethernet Tag Route type)
@@ -53,6 +57,9 @@ func (t *InclusiveMulticastEthTag) getLabel() []*base.Label {
 
 // UnmarshalEVPNInclusiveMulticastEthTag instantiates new instance of an Inclusive Multicast Ethernet Tag Route type object
 func UnmarshalEVPNInclusiveMulticastEthTag(b []byte) (*InclusiveMulticastEthTag, error) {
+	if len(b) < 13 {
+		return nil, fmt.Errorf("EVPN Type 3 too short: need at least 13 bytes, got %d", len(b))
+	}
 	var err error
 	t := InclusiveMulticastEthTag{}
 	p := 0
