@@ -90,8 +90,10 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		if id := link.LocalNode.GetBGPRouterID(); len(id) >= 4 {
 			msg.BGPRouterID = net.IP(id).To4().String()
 		}
-		if id := link.RemoteNode.GetBGPRouterID(); len(id) >= 4 {
-			msg.BGPRemoteRouterID = net.IP(id).To4().String()
+		if link.RemoteNode != nil {
+			if id := link.RemoteNode.GetBGPRouterID(); len(id) >= 4 {
+				msg.BGPRemoteRouterID = net.IP(id).To4().String()
+			}
 		}
 		msg.MemberAS = link.LocalNode.GetConfedMemberASN()
 	case base.Direct, base.Static, base.RSVPTE, base.SR:

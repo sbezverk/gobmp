@@ -240,6 +240,44 @@ func TestUnmarshalRTCNLRI(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "Valid - Partial Origin AS (length 16 bits)",
+			input: []byte{
+				0x10,       // Length: 16 bits (2 bytes of Origin AS)
+				0x00, 0x01, // First 2 bytes of Origin AS
+			},
+			want: &Route{
+				NLRI: []*NLRI{
+					{
+						Length: 16,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid - Multi-NLRI with partial then full",
+			input: []byte{
+				0x10,       // NLRI 1: length 16 bits
+				0xFD, 0xE8, // 2 bytes of partial Origin AS
+				0x60,                   // NLRI 2: length 96 bits (full)
+				0x00, 0x00, 0xFD, 0xE8, // Origin AS: 65000
+				0x00, 0x02, // Type: 0x00, SubType: 0x02
+				0x00, 0x64, // AS: 100
+				0x00, 0x00, 0x00, 0x01, // Value: 1
+			},
+			want: &Route{
+				NLRI: []*NLRI{
+					{Length: 16},
+					{
+						Length:      96,
+						OriginAS:    65000,
+						RouteTarget: []byte{0x00, 0x02, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01},
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

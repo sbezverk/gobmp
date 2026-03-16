@@ -76,11 +76,15 @@ func UnmarshalRTCNLRI(b []byte) (*Route, error) {
 		if nlri.Length >= 32 {
 			nlri.OriginAS = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
+		} else if nlri.Length > 0 {
+			// Length 1-31: partial Origin AS prefix, skip data bytes
+			p += byteLen
 		}
 
 		// Parse Route Target Extended Community (up to 8 bytes) if length > 32 bits
 		if nlri.Length > 32 {
 			rtLen := byteLen - 4
+			// Only validate when a full 8-byte RT is present
 			if rtLen == 8 {
 				if err := validateRouteTarget(b[p : p+8]); err != nil {
 					return nil, fmt.Errorf("invalid Route Target at offset %d: %w", p, err)
