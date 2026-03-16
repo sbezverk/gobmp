@@ -45,19 +45,25 @@ func (w *headerWriter) writeString(s string) {
 // produceRawMessage produces RAW BMP messages in OpenBMP binary format v1.7
 // Binary format specification from OpenBMP v2-beta (Constant.h and Encapsulator.cpp)
 func (p *producer) produceRawMessage(msg bmp.Message) {
-	if msg.PeerHeader == nil {
-		glog.Errorf("peer header is nil, cannot produce RAW message")
-		return
-	}
-
 	rm, ok := msg.Payload.(*bmp.RawMessage)
 	if !ok {
 		glog.Errorf("invalid payload type for RAW message: %T", msg.Payload)
 		return
 	}
 
-	// Get router IP from peer header
-	routerIPStr := msg.PeerHeader.GetPeerAddrString()
+	// Use SpeakerIP (TCP source = BMP speaker) as the router identity for all
+	// RAW messages so downstream consumers get a consistent router hash across
+	// Initiation, Termination, and peer-bearing message types. Fall back to the
+	// peer header address only when SpeakerIP was not populated.
+	var routerIPStr string
+	if msg.SpeakerIP != "" {
+		routerIPStr = msg.SpeakerIP
+	} else if msg.PeerHeader != nil {
+		routerIPStr = msg.PeerHeader.GetPeerAddrString()
+	} else {
+		glog.Errorf("no router IP available, cannot produce RAW message: PeerHeader nil=%t, SpeakerIP=%q", msg.PeerHeader == nil, msg.SpeakerIP)
+		return
+	}
 	routerIPBytes, err := encodeIPToBytes(routerIPStr)
 	if err != nil {
 		glog.Errorf("failed to encode router IP: %v", err)
