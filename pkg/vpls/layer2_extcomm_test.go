@@ -118,15 +118,23 @@ func TestParseLayer2InfoExtComm(t *testing.T) {
 			},
 		},
 		{
-			name: "Invalid - non-zero reserved field",
+			name: "Non-zero reserved field accepted per robustness principle",
 			input: []byte{
 				0x80, 0x0a,
 				0x04,
 				0x01,
 				0x05, 0xdc,
-				0x00, 0x01, // Reserved != 0
+				0x00, 0x01, // Reserved != 0, accepted with warning
 			},
-			wantErr: true,
+			wantErr: false,
+			verify: func(t *testing.T, ec *Layer2InfoExtComm) {
+				if ec.EncapType != 0x04 {
+					t.Errorf("EncapType = %d, want 4", ec.EncapType)
+				}
+				if ec.MTU != 1500 {
+					t.Errorf("MTU = %d, want 1500", ec.MTU)
+				}
+			},
 		},
 		{
 			name:    "Invalid - too short",

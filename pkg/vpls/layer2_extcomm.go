@@ -3,6 +3,8 @@ package vpls
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/golang/glog"
 )
 
 // Layer2InfoExtComm represents Layer2 Info Extended Community (Type 0x800A)
@@ -103,10 +105,10 @@ func ParseLayer2InfoExtComm(b []byte) (*Layer2InfoExtComm, error) {
 	// Bytes 4-5: Layer-2 MTU (2 bytes, big endian)
 	extComm.MTU = binary.BigEndian.Uint16(b[4:6])
 
-	// Bytes 6-7: Reserved (must be 0 per RFC)
+	// Bytes 6-7: Reserved (should be 0 per RFC, but accept non-zero per robustness principle)
 	reserved := binary.BigEndian.Uint16(b[6:8])
 	if reserved != 0 {
-		return nil, fmt.Errorf("reserved field must be 0, got 0x%04x", reserved)
+		glog.Warningf("Layer2 Info Extended Community reserved field is non-zero: 0x%04x", reserved)
 	}
 
 	return extComm, nil

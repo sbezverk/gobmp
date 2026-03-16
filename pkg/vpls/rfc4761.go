@@ -86,6 +86,9 @@ func (n *NLRI) GetLabelRange() (uint32, uint32) {
 	if n.RFCType != "RFC4761" || n.LabelBase == nil || n.VEBlockSize == nil {
 		return 0, 0
 	}
+	if *n.VEBlockSize == 0 {
+		return 0, 0
+	}
 
 	labelStart := *n.LabelBase
 	labelEnd := labelStart + uint32(*n.VEBlockSize) - 1

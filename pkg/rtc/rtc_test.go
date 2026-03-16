@@ -170,22 +170,22 @@ func TestUnmarshalRTCNLRI(t *testing.T) {
 			errMsg:  "incomplete",
 		},
 		{
-			name: "Invalid - Length not 0, 32, or 96 (RFC violation)",
+			name: "Invalid - Length 24 with insufficient data",
 			input: []byte{
-				0x18, // Length: 24 bits (RFC 4684 only allows 0, 32, or 96)
+				0x18, // Length: 24 bits, but no data bytes follow
 			},
 			want:    nil,
 			wantErr: true,
-			errMsg:  "valid: 0, 32, or 96",
+			errMsg:  "incomplete NLRI",
 		},
 		{
-			name: "Invalid - Length not 0, 32, or 96",
+			name: "Invalid - Length 64 with insufficient data",
 			input: []byte{
-				0x40, // Length: 64 bits (not valid per RFC 4684)
+				0x40, // Length: 64 bits, but no data bytes follow
 			},
 			want:    nil,
 			wantErr: true,
-			errMsg:  "valid: 0, 32, or 96",
+			errMsg:  "incomplete NLRI",
 		},
 		{
 			name: "Invalid - Wrong Extended Community SubType",

@@ -52,24 +52,50 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 	m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()
 	for _, tlv := range StatsMsg.StatsTLV {
 		switch tlv.InformationType {
-		case 0:
-			m.PrefixesRejectedInbound = binary.BigEndian.Uint32(tlv.Information)
-		case 1:
-			m.DuplicatePrefixs = binary.BigEndian.Uint32(tlv.Information)
-		case 2:
-			m.DuplicateWithDraws = binary.BigEndian.Uint32(tlv.Information)
-		case 3:
-			m.InvalidatedDueCluster = binary.BigEndian.Uint32(tlv.Information)
-		case 4:
-			m.InvalidatedDueAspath = binary.BigEndian.Uint32(tlv.Information)
-		case 5:
-			m.InvalidatedDueOriginatorId = binary.BigEndian.Uint32(tlv.Information)
-		case 6:
-			m.InvalidatedAsConfed = binary.BigEndian.Uint32(tlv.Information)
-		case 7:
-			m.AdjRIBsIn = binary.BigEndian.Uint64(tlv.Information)
-		case 8:
-			m.LocalRib = binary.BigEndian.Uint64(tlv.Information)
+		case 0, 1, 2, 3, 4, 5, 6, 11, 12, 13:
+			if len(tlv.Information) < 4 {
+				glog.Warningf("stats type %d: need 4 bytes, got %d", tlv.InformationType, len(tlv.Information))
+				continue
+			}
+			v := binary.BigEndian.Uint32(tlv.Information)
+			switch tlv.InformationType {
+			case 0:
+				m.PrefixesRejectedInbound = v
+			case 1:
+				m.DuplicatePrefixs = v
+			case 2:
+				m.DuplicateWithDraws = v
+			case 3:
+				m.InvalidatedDueCluster = v
+			case 4:
+				m.InvalidatedDueAspath = v
+			case 5:
+				m.InvalidatedDueOriginatorId = v
+			case 6:
+				m.InvalidatedAsConfed = v
+			case 11:
+				m.UpdatesAsWithdraw = v
+			case 12:
+				m.PrefixesAsWithdraw = v
+			case 13:
+				m.DuplicateUpdates = v
+			}
+		case 7, 8, 14, 15:
+			if len(tlv.Information) < 8 {
+				glog.Warningf("stats type %d: need 8 bytes, got %d", tlv.InformationType, len(tlv.Information))
+				continue
+			}
+			v := binary.BigEndian.Uint64(tlv.Information)
+			switch tlv.InformationType {
+			case 7:
+				m.AdjRIBsIn = v
+			case 8:
+				m.LocalRib = v
+			case 14:
+				m.PrePolicyAdjRIBOut = v
+			case 15:
+				m.PostPolicyAdjRIBOut = v
+			}
 		case 9:
 			stat, err := parseAFISAFIStat(tlv.Information)
 			if err != nil {
@@ -84,16 +110,6 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 				continue
 			}
 			m.PerAFILocRIB = append(m.PerAFILocRIB, stat)
-		case 11:
-			m.UpdatesAsWithdraw = binary.BigEndian.Uint32(tlv.Information)
-		case 12:
-			m.PrefixesAsWithdraw = binary.BigEndian.Uint32(tlv.Information)
-		case 13:
-			m.DuplicateUpdates = binary.BigEndian.Uint32(tlv.Information)
-		case 14:
-			m.PrePolicyAdjRIBOut = binary.BigEndian.Uint64(tlv.Information)
-		case 15:
-			m.PostPolicyAdjRIBOut = binary.BigEndian.Uint64(tlv.Information)
 		case 16:
 			stat, err := parseAFISAFIStat(tlv.Information)
 			if err != nil {

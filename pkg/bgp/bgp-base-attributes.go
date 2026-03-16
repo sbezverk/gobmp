@@ -371,10 +371,16 @@ func isASPath4(b []byte) (bool, error) {
 
 // unmarshalAttrNextHop returns the value of Next Hop attribute
 func unmarshalAttrNextHop(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
 	if len(b) == 4 {
 		return net.IP(b).To4().String()
 	}
-	return net.IP(b).To16().String()
+	if ip := net.IP(b).To16(); ip != nil {
+		return ip.String()
+	}
+	return ""
 }
 
 // unmarshalAttrMED returns the value of MED attribute

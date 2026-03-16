@@ -60,36 +60,35 @@ func UnmarshalRTCNLRI(b []byte) (*Route, error) {
 		nlri.Length = b[p]
 		p++
 
-		// RFC 4684: length can be 0 (wildcard), 32 (AS only), or 96 (AS + RT)
-		// Validate length before checking available bytes
-		if nlri.Length != 0 && nlri.Length != 32 && nlri.Length != 96 {
-			return nil, fmt.Errorf("invalid NLRI length %d bits (valid: 0, 32, or 96)", nlri.Length)
+		// RFC 4684 Section 4: length is 0-96 bits.
+		// 0 = wildcard, 32 = Origin AS only, 33-96 = partial/full RT.
+		if nlri.Length > 96 {
+			return nil, fmt.Errorf("invalid NLRI length %d bits (max 96)", nlri.Length)
+		}
+
+		// Calculate byte length of remaining NLRI data
+		byteLen := int(nlri.Length+7) / 8
+		if p+byteLen > len(b) {
+			return nil, fmt.Errorf("incomplete NLRI at offset %d: need %d bytes, have %d", p, byteLen, len(b)-p)
 		}
 
 		// Parse Origin AS (4 bytes) if length >= 32 bits
 		if nlri.Length >= 32 {
-			if p+4 > len(b) {
-				return nil, fmt.Errorf("incomplete Origin AS at offset %d", p)
-			}
 			nlri.OriginAS = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 		}
 
-		// Parse Route Target Extended Community (8 bytes) if length == 96 bits
-		if nlri.Length == 96 {
-			if p+8 > len(b) {
-				return nil, fmt.Errorf("incomplete Route Target at offset %d", p)
+		// Parse Route Target Extended Community (up to 8 bytes) if length > 32 bits
+		if nlri.Length > 32 {
+			rtLen := byteLen - 4
+			if rtLen == 8 {
+				if err := validateRouteTarget(b[p : p+8]); err != nil {
+					return nil, fmt.Errorf("invalid Route Target at offset %d: %w", p, err)
+				}
 			}
-
-			// Validate Route Target Extended Community
-			if err := validateRouteTarget(b[p : p+8]); err != nil {
-				return nil, fmt.Errorf("invalid Route Target at offset %d: %w", p, err)
-			}
-
-			// Store raw 8 bytes
-			nlri.RouteTarget = make([]byte, 8)
-			copy(nlri.RouteTarget, b[p:p+8])
-			p += 8
+			nlri.RouteTarget = make([]byte, rtLen)
+			copy(nlri.RouteTarget, b[p:p+rtLen])
+			p += rtLen
 		}
 
 		r.NLRI = append(r.NLRI, nlri)

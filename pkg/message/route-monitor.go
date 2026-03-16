@@ -49,6 +49,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			p.GetAddPathCapability(msg.PeerHeader.GetTableKey()))
 		if err != nil {
 			glog.Errorf("failed to process MP_REACH_NLRI with error: %+v", err)
+			return
 		}
 		p.processMPUpdate(nlri, AddPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 	case 15:
@@ -58,6 +59,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 			p.GetAddPathCapability(msg.PeerHeader.GetTableKey()))
 		if err != nil {
 			glog.Errorf("failed to process MP_UNREACH_NLRI with error: %+v", err)
+			return
 		}
 		p.processMPUpdate(nlri, DelPrefix, msg.PeerHeader, routeMonitorMsg.Update)
 	default:

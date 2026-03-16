@@ -370,6 +370,9 @@ func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
 			eol = true
 		}
 	}
+	if !eol {
+		return nil, fmt.Errorf("operator/value sequence ended at offset %d without EOL bit set", p)
+	}
 
 	return opvals, nil
 }
