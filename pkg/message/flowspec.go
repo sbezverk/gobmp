@@ -148,6 +148,9 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 			if !ok {
 				return fmt.Errorf("spec type must be a number, got %T", rawType)
 			}
+			if typeVal != math.Trunc(typeVal) || typeVal < 0 || typeVal > 255 {
+				return fmt.Errorf("spec type must be an integer in [0, 255], got %v", typeVal)
+			}
 			switch flowspec.SpecType(typeVal) {
 			case flowspec.Type1:
 				fallthrough
@@ -189,12 +192,24 @@ func makePrefixSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 		if !ok {
 			return nil, fmt.Errorf("type must be a number, got %T", p)
 		}
+		if v != math.Trunc(v) {
+			return nil, fmt.Errorf("type must be an integer, got %v", v)
+		}
+		if v < 0 || v > 255 {
+			return nil, fmt.Errorf("type %v out of range [0, 255]", v)
+		}
 		s.SpecType = uint8(v)
 	}
 	if p, ok := spec["prefix_len"]; ok {
 		v, ok := p.(float64)
 		if !ok {
 			return nil, fmt.Errorf("prefix_len must be a number, got %T", p)
+		}
+		if v != math.Trunc(v) {
+			return nil, fmt.Errorf("prefix_len must be an integer, got %v", v)
+		}
+		if v < 0 || v > 255 {
+			return nil, fmt.Errorf("prefix_len %v out of range [0, 255]", v)
 		}
 		s.PrefixLength = uint8(v)
 	}
@@ -230,7 +245,11 @@ func makeGenericSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 	s := &flowspec.GenericSpec{}
 	var err error
 	if p, ok := spec["type"]; ok {
-		s.SpecType = uint8(p.(float64))
+		v, ok := p.(float64)
+		if !ok {
+			return nil, fmt.Errorf("type must be a number, got %T", p)
+		}
+		s.SpecType = uint8(v)
 	}
 	pairs, ok := spec["op_val_pairs"].([]interface{})
 	if !ok {
