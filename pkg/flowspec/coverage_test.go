@@ -2,6 +2,7 @@ package flowspec
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -240,6 +241,19 @@ func TestUnmarshalOpVal_TruncatedValue(t *testing.T) {
 	_, err := UnmarshalOpVal([]byte{0x03, 0x10})
 	if err == nil {
 		t.Error("expected error for truncated OpVal value bytes, got nil")
+	}
+}
+
+// TestUnmarshalOpVal_MissingEOL covers the error when OpVal sequence ends without EOL bit.
+func TestUnmarshalOpVal_MissingEOL(t *testing.T) {
+	// Type byte (0x03) + operator 0x01 (EQ bit, no EOL, length=1) + value 0x05
+	// Operator 0x01: EOL=0, AND=0, length=1, LT=0, GT=0, EQ=1
+	_, err := UnmarshalOpVal([]byte{0x03, 0x01, 0x05})
+	if err == nil {
+		t.Error("expected error for missing EOL bit, got nil")
+	}
+	if err != nil && !strings.Contains(err.Error(), "without EOL bit") {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }
 

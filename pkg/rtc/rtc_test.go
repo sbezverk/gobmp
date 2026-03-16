@@ -213,6 +213,33 @@ func TestUnmarshalRTCNLRI(t *testing.T) {
 			wantErr: true,
 			errMsg:  "unsupported Route Target type",
 		},
+		{
+			name: "Invalid - Length exceeds 96",
+			input: []byte{
+				0x68, // Length: 104 bits (> 96 max)
+			},
+			want:    nil,
+			wantErr: true,
+			errMsg:  "max 96",
+		},
+		{
+			name: "Valid - Intermediate length 48 bits (partial RT)",
+			input: []byte{
+				0x30,                   // Length: 48 bits (4 AS + 2 partial RT)
+				0x00, 0x00, 0xFD, 0xE8, // Origin AS: 65000
+				0x00, 0x02, // First 2 bytes of RT
+			},
+			want: &Route{
+				NLRI: []*NLRI{
+					{
+						Length:      48,
+						OriginAS:    65000,
+						RouteTarget: []byte{0x00, 0x02},
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
