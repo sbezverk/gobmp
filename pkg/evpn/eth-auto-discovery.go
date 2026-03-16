@@ -59,7 +59,7 @@ func (t *EthAutoDiscovery) getLabel() []*base.Label {
 // UnmarshalEVPNEthAutoDiscovery instantiates new instance of a Ethernet Auto Discovery route type object
 func UnmarshalEVPNEthAutoDiscovery(b []byte) (*EthAutoDiscovery, error) {
 	if len(b) < 22 {
-		return nil, fmt.Errorf("EVPN Type 1 too short: need at least 22 bytes, got %d", len(b))
+		return nil, fmt.Errorf("EVPN Type 1: need at least 22 bytes, have %d", len(b))
 	}
 	var err error
 	t := EthAutoDiscovery{}
@@ -87,6 +87,9 @@ func UnmarshalEVPNEthAutoDiscovery(b []byte) (*EthAutoDiscovery, error) {
 		t.Label = append(t.Label, l)
 		p += 3
 		bos = l.BoS
+	}
+	if p != len(b) {
+		return nil, fmt.Errorf("EVPN Type 1: %d trailing bytes after label stack", len(b)-p)
 	}
 
 	return &t, nil

@@ -59,7 +59,7 @@ func (t *EthernetSegment) getLabel() []*base.Label {
 // UnmarshalEVPNEthernetSegment instantiates new instance of an Ethernet Segment Route object
 func UnmarshalEVPNEthernetSegment(b []byte) (*EthernetSegment, error) {
 	if len(b) < 19 {
-		return nil, fmt.Errorf("EVPN Type 4 too short: need at least 19 bytes, got %d", len(b))
+		return nil, fmt.Errorf("EVPN Type 4: need at least 19 bytes, have %d", len(b))
 	}
 	var err error
 	t := EthernetSegment{}

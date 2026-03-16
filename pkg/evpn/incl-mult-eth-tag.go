@@ -58,7 +58,7 @@ func (t *InclusiveMulticastEthTag) getLabel() []*base.Label {
 // UnmarshalEVPNInclusiveMulticastEthTag instantiates new instance of an Inclusive Multicast Ethernet Tag Route type object
 func UnmarshalEVPNInclusiveMulticastEthTag(b []byte) (*InclusiveMulticastEthTag, error) {
 	if len(b) < 13 {
-		return nil, fmt.Errorf("EVPN Type 3 too short: need at least 13 bytes, got %d", len(b))
+		return nil, fmt.Errorf("EVPN Type 3: need at least 13 bytes, have %d", len(b))
 	}
 	var err error
 	t := InclusiveMulticastEthTag{}
