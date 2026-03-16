@@ -297,8 +297,6 @@ func TestBindingSID_JSON(t *testing.T) {
 				return
 			}
 
-			t.Logf("Marshaled JSON: %s", string(data))
-
 			// Test Unmarshal
 			var result BindingSID
 			if err := json.Unmarshal(data, &result); err != nil {

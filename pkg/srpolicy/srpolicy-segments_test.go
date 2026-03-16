@@ -3523,6 +3523,9 @@ func TestSegmentList_JSON_TypeC(t *testing.T) {
 		t.Fatal("segment does not implement TypeCSegment")
 	}
 	gotIPv4 := typeCSeg.GetIPv4Address()
+	if len(gotIPv4) != len(ipv4) {
+		t.Fatalf("IPv4 address length = %d, want %d", len(gotIPv4), len(ipv4))
+	}
 	for i, b := range ipv4 {
 		if gotIPv4[i] != b {
 			t.Errorf("IPv4[%d] = %d, want %d", i, gotIPv4[i], b)
@@ -3579,6 +3582,9 @@ func TestSegmentList_JSON_TypeD(t *testing.T) {
 		t.Fatal("segment does not implement TypeDSegment")
 	}
 	gotIPv6 := typeDSeg.GetIPv6Address()
+	if len(gotIPv6) != len(ipv6) {
+		t.Fatalf("IPv6 address length = %d, want %d", len(gotIPv6), len(ipv6))
+	}
 	for i, b := range ipv6 {
 		if gotIPv6[i] != b {
 			t.Errorf("IPv6[%d] = %02x, want %02x", i, gotIPv6[i], b)
@@ -3635,6 +3641,9 @@ func TestSegmentList_JSON_TypeE(t *testing.T) {
 		t.Fatal("segment does not implement TypeESegment")
 	}
 	gotIPv4 := typeESeg.GetIPv4Address()
+	if len(gotIPv4) != len(ipv4) {
+		t.Fatalf("IPv4 address length = %d, want %d", len(gotIPv4), len(ipv4))
+	}
 	for i, b := range ipv4 {
 		if gotIPv4[i] != b {
 			t.Errorf("IPv4[%d] = %d, want %d", i, gotIPv4[i], b)
@@ -3818,6 +3827,9 @@ func TestSegmentList_JSON_TypeI(t *testing.T) {
 		t.Fatal("segment does not implement TypeISegment")
 	}
 	gotIPv6 := typeISeg.GetIPv6NodeAddress()
+	if len(gotIPv6) != len(ipv6) {
+		t.Fatalf("IPv6 node address length = %d, want %d", len(gotIPv6), len(ipv6))
+	}
 	for i, b := range ipv6 {
 		if gotIPv6[i] != b {
 			t.Errorf("IPv6NodeAddress[%d] = %02x, want %02x", i, gotIPv6[i], b)
