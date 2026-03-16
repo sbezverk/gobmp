@@ -10,7 +10,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Request Copilot Review
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             try {
