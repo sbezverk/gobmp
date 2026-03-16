@@ -1,6 +1,7 @@
 package bmp
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -19,27 +20,30 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 		glog.Infof("BMP Route Monitor Message Raw: %s length: %d", tools.MessageHex(b), len(b))
 	}
 	rm := RouteMonitor{}
-	// 16 bytes marker + 2 bytes update length + 1 byte of type
+	// 16 bytes marker + 2 bytes length + 1 byte type
 	if len(b) < 19 {
-		return nil, fmt.Errorf("malformed route monitor message")
+		return nil, fmt.Errorf("malformed route monitor message: need at least 19 bytes, got %d", len(b))
 	}
 	p := 0
 	// Skip 16 bytes of a marker
 	p += 16
-	// Skip 2 bytes of the update length
+	// Validate BGP message length field
+	bgpLen := binary.BigEndian.Uint16(b[p : p+2])
+	if int(bgpLen) < 19 || int(bgpLen) > len(b) {
+		return nil, fmt.Errorf("invalid BGP message length %d (buffer %d bytes)", bgpLen, len(b))
+	}
 	p += 2
-	// Getting update type, currently only type 2 is processed
 	t := b[p]
 	p++
 	switch t {
 	case 2:
-		// Update type
 		u, err := bgp.UnmarshalBGPUpdate(b[p:])
 		if err != nil {
 			return nil, err
 		}
 		rm.Update = u
 	default:
+		return nil, fmt.Errorf("unexpected BGP message type %d in route monitor (expected 2/Update)", t)
 	}
 
 	return &rm, nil

@@ -58,7 +58,7 @@ func makeExtCommunity(b []byte) (*ExtCommunity, error) {
 		st := uint8(b[p])
 		ext.SubType = &st
 		l = 6
-		p += 3
+		p++
 	}
 	ext.Value = make([]byte, l)
 	copy(ext.Value, b[p:])
@@ -262,21 +262,33 @@ func getSubType(m map[uint8]string, subType uint8) string {
 
 // Transitive Two-Octet AS-Specific Extended Community
 func type0(subType uint8, value []byte) string {
+	if len(value) < 6 {
+		return fmt.Sprintf("invalid-type0-length=%d", len(value))
+	}
 	return getSubType(transAS2SubTypes, subType) + fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:]))
 }
 
 // Transitive IPv4 Specific Extended Community
 func type1(subType uint8, value []byte) string {
+	if len(value) < 6 {
+		return fmt.Sprintf("invalid-type1-length=%d", len(value))
+	}
 	return getSubType(transIPv4SubTypes, subType) + fmt.Sprintf("%s:%d", net.IP(value[0:4]).To4().String(), binary.BigEndian.Uint16(value[4:]))
 }
 
 // Transitive Four-Octet AS-Specific Extended Community
 func type2(subType uint8, value []byte) string {
+	if len(value) < 6 {
+		return fmt.Sprintf("invalid-type2-length=%d", len(value))
+	}
 	return getSubType(transAS4SubTypes, subType) + fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(value[0:4]), binary.BigEndian.Uint16(value[4:]))
 }
 
 // Transitive Opaque Extended Community
 func type3(subType uint8, value []byte) string {
+	if len(value) < 4 {
+		return fmt.Sprintf("invalid-type3-length=%d", len(value))
+	}
 	var s string
 	switch subType {
 	case 0xb:
@@ -291,6 +303,9 @@ func type3(subType uint8, value []byte) string {
 
 // EVPN Extended Community
 func type6(subType uint8, value []byte) string {
+	if len(value) < 6 {
+		return fmt.Sprintf("invalid-type6-length=%d", len(value))
+	}
 	var s string
 	switch subType {
 	case 0x01:

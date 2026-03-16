@@ -135,14 +135,14 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "non-update type (type=1 OPEN) — no error, no update decoded",
+			name:    "non-update type (type=1 OPEN) — error, unexpected type",
 			input:   makeBody(1, 19),
-			wantErr: false,
+			wantErr: true,
 		},
 		{
-			name:    "non-update type (type=3 NOTIFICATION) — no error",
+			name:    "non-update type (type=3 NOTIFICATION) — error, unexpected type",
 			input:   makeBody(3, 19),
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			// type=2 UPDATE with nothing after the type byte — BGP layer rejects it

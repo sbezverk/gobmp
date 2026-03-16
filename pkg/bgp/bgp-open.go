@@ -52,29 +52,26 @@ func (o *OpenMessage) AddPathCapability() map[int]bool {
 	if !ok {
 		return m
 	}
-	if len(v) == 0 || len(v) > 1 {
-		glog.Errorf("invalid length %d of AddPath capability", len(v))
+	if len(v) == 0 {
+		glog.Errorf("empty AddPath capability")
 		return m
 	}
-	if glog.V(6) {
-		glog.Infof("AddPath Capability Raw: %s", tools.MessageHex(v[0].Value))
-	}
-	// Check for Capability data consistency
-	if len(v[0].Value)%4 != 0 {
-		glog.Errorf("invalid length of AddPath capability %d", len(v[0].Value))
-		return m
-	}
-	for p := 0; p < len(v[0].Value); p += 4 {
-		afi := binary.BigEndian.Uint16(v[0].Value[p : p+2])
-		safi := v[0].Value[p+2]
-		// Check if last byte == 3 (Send/Receive) AddPath, if not, ignoring entry
-		flag := false
-		if v[0].Value[p+3] == 3 {
-			flag = true
-		}
-		m[NLRIMessageType(afi, safi)] = flag
+	for _, tlv := range v {
 		if glog.V(6) {
-			glog.Infof("AddPath Capability for AFI/SAFI: %d/%d is %t", afi, safi, flag)
+			glog.Infof("AddPath Capability Raw: %s", tools.MessageHex(tlv.Value))
+		}
+		if len(tlv.Value)%4 != 0 {
+			glog.Errorf("invalid length of AddPath capability %d", len(tlv.Value))
+			continue
+		}
+		for p := 0; p < len(tlv.Value); p += 4 {
+			afi := binary.BigEndian.Uint16(tlv.Value[p : p+2])
+			safi := tlv.Value[p+2]
+			flag := tlv.Value[p+3] == 3
+			m[NLRIMessageType(afi, safi)] = flag
+			if glog.V(6) {
+				glog.Infof("AddPath Capability for AFI/SAFI: %d/%d is %t", afi, safi, flag)
+			}
 		}
 	}
 

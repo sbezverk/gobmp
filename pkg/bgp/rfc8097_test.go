@@ -238,10 +238,11 @@ func TestRFC8097_FullExtCommunityParsing(t *testing.T) {
 			expected: "ov-state=valid",
 		},
 		{
-			name: "Wire format - state in b[7] maps to value[3]",
-			// State at b[7]=0x01, but value[5] is always 0 from zero-padding
+			name: "Wire format - state in b[7] maps to value[5]",
+			// Type=0x43, SubType=0x00, then 6 value bytes: b[2..7]
+			// State at b[7]=0x01 -> value[5]=0x01 -> "not-found"
 			raw:      []byte{0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
-			expected: "ov-state=valid",
+			expected: "ov-state=not-found",
 		},
 	}
 
@@ -276,23 +277,22 @@ func TestRFC8097_MakeExtCommunity_ValueLayout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("makeExtCommunity() error: %v", err)
 	}
-	// Type 0x43 & 0x3f == 3 -> case 3: p starts at 1, p += 3 -> p = 4
-	// Value = b[4:] zero-padded to 6 bytes = [0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x00]
+	// Type 0x43 & 0x3f == 3 -> case 3: p starts at 1, SubType at b[1], p++ -> p = 2
+	// Value = b[2:] = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]
 	if len(ec.Value) != 6 {
 		t.Fatalf("Value length = %d, want 6", len(ec.Value))
 	}
-	if ec.Value[0] != 0xCC {
-		t.Errorf("Value[0] = 0x%02x, want 0xCC", ec.Value[0])
+	if ec.Value[0] != 0xAA {
+		t.Errorf("Value[0] = 0x%02x, want 0xAA", ec.Value[0])
 	}
-	if ec.Value[3] != 0xFF {
-		t.Errorf("Value[3] = 0x%02x, want 0xFF", ec.Value[3])
+	if ec.Value[3] != 0xDD {
+		t.Errorf("Value[3] = 0x%02x, want 0xDD", ec.Value[3])
 	}
-	// value[4] and value[5] are zero-padded
-	if ec.Value[4] != 0x00 {
-		t.Errorf("Value[4] = 0x%02x, want 0x00 (zero-padded)", ec.Value[4])
+	if ec.Value[4] != 0xEE {
+		t.Errorf("Value[4] = 0x%02x, want 0xEE", ec.Value[4])
 	}
-	if ec.Value[5] != 0x00 {
-		t.Errorf("Value[5] = 0x%02x, want 0x00 (zero-padded)", ec.Value[5])
+	if ec.Value[5] != 0xFF {
+		t.Errorf("Value[5] = 0x%02x, want 0xFF", ec.Value[5])
 	}
 }
 
