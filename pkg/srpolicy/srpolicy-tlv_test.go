@@ -118,22 +118,24 @@ func TestUnmarshalSRPolicyTLV(t *testing.T) {
 			if got == nil {
 				t.Fatalf("processed TLV is nil")
 			}
-			//			if !reflect.DeepEqual(tt.expect, got) {
+			if len(got.SegmentList) != len(tt.expect.SegmentList) {
+				t.Fatalf("SegmentList length = %d, want %d", len(got.SegmentList), len(tt.expect.SegmentList))
+			}
 			for i := 0; i < len(got.SegmentList); i++ {
-				t.Logf("Weight got: %+v Weight expect: %+v", *got.SegmentList[i].Weight, tt.expect.SegmentList[i].Weight)
+				if diff := deep.Equal(got.SegmentList[i].Weight, tt.expect.SegmentList[i].Weight); diff != nil {
+					t.Errorf("SegmentList[%d].Weight mismatch: %v", i, diff)
+				}
+				if len(got.SegmentList[i].Segment) != len(tt.expect.SegmentList[i].Segment) {
+					t.Fatalf("SegmentList[%d].Segment length = %d, want %d", i, len(got.SegmentList[i].Segment), len(tt.expect.SegmentList[i].Segment))
+				}
 				for y := 0; y < len(got.SegmentList[i].Segment); y++ {
-					t.Logf("Flags got: %+v Flags expect: %+v", *got.SegmentList[i].Segment[y].GetFlags(),
-						tt.expect.SegmentList[i].Segment[y].GetFlags())
-					t.Logf("Type got: %d Type expect: %d", got.SegmentList[i].Segment[y].GetType(),
-						tt.expect.SegmentList[i].Segment[y].GetType())
-					t.Logf("Interface diff: %+v", deep.Equal(got.SegmentList[i].Segment[y], tt.expect.SegmentList[i].Segment[y]))
 					g := got.SegmentList[i].Segment[y].(*typeASegment)
 					e := tt.expect.SegmentList[i].Segment[y]
-					t.Logf("Structure diff: %+v", deep.Equal(g, e))
+					if diff := deep.Equal(g, e); diff != nil {
+						t.Errorf("SegmentList[%d].Segment[%d] mismatch: %v", i, y, diff)
+					}
 				}
 			}
-			//			t.Fatalf("Expected TLV: %+v does not match to the processed TLV: %+v", *tt.expect, *got)
-			//			}
 		})
 	}
 }

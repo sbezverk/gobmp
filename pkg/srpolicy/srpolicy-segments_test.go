@@ -3040,9 +3040,34 @@ func TestSegmentList_UnmarshalJSON_TypeJ_InvalidField(t *testing.T) {
 }
 
 func TestUnmarshalSegmentListSTLV_UnknownType(t *testing.T) {
-	// An unknown segment type byte should return an error
-	if _, err := UnmarshalSegmentListSTLV([]byte{0xFF}); err == nil {
-		t.Error("expected error for unknown segment type, got nil")
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "type 0x00",
+			input: []byte{0x00, 0x02, 0x00, 0x00},
+		},
+		{
+			name:  "type 0x02 (undefined between A and C)",
+			input: []byte{0x02, 0x02, 0x00, 0x00},
+		},
+		{
+			name:  "type 0xFF single byte",
+			input: []byte{0xFF},
+		},
+		{
+			name:  "type 0xFF with length and data",
+			input: []byte{0xFF, 0x02, 0x00, 0x00},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalSegmentListSTLV(tt.input)
+			if err == nil {
+				t.Error("expected error for unknown segment type, got nil")
+			}
+		})
 	}
 }
 
@@ -4284,3 +4309,142 @@ func TestUnmarshalSegmentListSTLV_TypeA_Valid(t *testing.T) {
 		t.Errorf("GetType() = %v, want TypeA", sl.Segment[0].GetType())
 	}
 }
+
+// ============================================================================
+// Type A Segment Tests (MPLS Label)
+// ============================================================================
+
+func TestUnmarshalTypeASegment_Valid(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     []byte
+		wantLabel uint32
+		wantTC    byte
+		wantS     bool
+		wantTTL   byte
+		wantVflag bool
+	}{
+		{
+			name: "Standard label",
+			input: []byte{
+				0x00,                   // Flags: none
+				0x00,                   // Reserved
+				0x00, 0x06, 0x41, 0x40, // Label=100, TC=0, S=true, TTL=64
+			},
+			wantLabel: 100,
+			wantTC:    0,
+			wantS:     true,
+			wantTTL:   64,
+		},
+		{
+			name: "Label 0 (explicit null)",
+			input: []byte{
+				0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+			},
+			wantLabel: 0,
+			wantTC:    0,
+			wantS:     false,
+			wantTTL:   0,
+		},
+		{
+			name: "Label 3 (implicit null)",
+			input: []byte{
+				0x00, 0x00,
+				0x00, 0x00, 0x30, 0x00, // uint32=0x00003000, >>12 = 3
+			},
+			wantLabel: 3,
+		},
+		{
+			name: "Max label (1048575)",
+			input: []byte{
+				0x00, 0x00,
+				0xFF, 0xFF, 0xF0, 0x00, // Label=1048575, TC=0, S=false, TTL=0
+			},
+			wantLabel: 1048575,
+			wantTC:    0,
+			wantS:     false,
+			wantTTL:   0,
+		},
+		{
+			name: "V flag set with TC and TTL",
+			input: []byte{
+				0x80, 0x00, // Flags: V=true
+				0x00, 0x06, 0x4F, 0xFF, // Label=100, TC=7, S=true, TTL=255
+			},
+			wantLabel: 100,
+			wantTC:    7,
+			wantS:     true,
+			wantTTL:   255,
+			wantVflag: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			seg, err := UnmarshalTypeASegment(tt.input)
+			if err != nil {
+				t.Fatalf("UnmarshalTypeASegment() error = %v", err)
+			}
+			ta, ok := seg.(TypeASegment)
+			if !ok {
+				t.Fatal("segment does not implement TypeASegment")
+			}
+			if ta.GetLabel() != tt.wantLabel {
+				t.Errorf("GetLabel() = %d, want %d", ta.GetLabel(), tt.wantLabel)
+			}
+			if ta.GetTC() != tt.wantTC {
+				t.Errorf("GetTC() = %d, want %d", ta.GetTC(), tt.wantTC)
+			}
+			if ta.GetS() != tt.wantS {
+				t.Errorf("GetS() = %v, want %v", ta.GetS(), tt.wantS)
+			}
+			if ta.GetTTL() != tt.wantTTL {
+				t.Errorf("GetTTL() = %d, want %d", ta.GetTTL(), tt.wantTTL)
+			}
+			if seg.GetFlags().Vflag != tt.wantVflag {
+				t.Errorf("Vflag = %v, want %v", seg.GetFlags().Vflag, tt.wantVflag)
+			}
+		})
+	}
+}
+
+func TestUnmarshalTypeASegment_InvalidLength(t *testing.T) {
+	for _, l := range []int{0, 1, 5, 7, 10} {
+		b := make([]byte, l)
+		_, err := UnmarshalTypeASegment(b)
+		if err == nil {
+			t.Errorf("UnmarshalTypeASegment(len=%d) expected error, got nil", l)
+		}
+	}
+}
+
+func TestTypeASegment_JSONRoundTrip(t *testing.T) {
+	input := []byte{
+		0x80, 0x00, // Flags: V=true
+		0x00, 0x06, 0x41, 0x40, // Label=100, TC=0, S=true, TTL=64
+	}
+	seg, err := UnmarshalTypeASegment(input)
+	if err != nil {
+		t.Fatalf("UnmarshalTypeASegment() error = %v", err)
+	}
+	data, err := json.Marshal(seg)
+	if err != nil {
+		t.Fatalf("MarshalJSON() error = %v", err)
+	}
+	var sl SegmentList
+	wrapped := `{"segments":[` + string(data) + `]}`
+	if err := json.Unmarshal([]byte(wrapped), &sl); err != nil {
+		t.Fatalf("UnmarshalJSON() error = %v", err)
+	}
+	if len(sl.Segment) != 1 {
+		t.Fatalf("Segment count = %d, want 1", len(sl.Segment))
+	}
+	ta, ok := sl.Segment[0].(TypeASegment)
+	if !ok {
+		t.Fatal("round-tripped segment does not implement TypeASegment")
+	}
+	if ta.GetLabel() != 100 {
+		t.Errorf("round-trip GetLabel() = %d, want 100", ta.GetLabel())
+	}
+}
+

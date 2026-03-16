@@ -130,8 +130,21 @@ func TestGetFlags_AllTypes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unmarshal failed: %v", err)
 			}
-			if seg.GetFlags() == nil {
-				t.Error("GetFlags() returned nil, want non-nil SegmentFlags")
+			flags := seg.GetFlags()
+			if flags == nil {
+				t.Fatal("GetFlags() returned nil, want non-nil SegmentFlags")
+			}
+			if flags.Vflag {
+				t.Error("GetFlags().Vflag = true, want false for zero-flags input")
+			}
+			if flags.Aflag {
+				t.Error("GetFlags().Aflag = true, want false for zero-flags input")
+			}
+			if flags.Sflag {
+				t.Error("GetFlags().Sflag = true, want false for zero-flags input")
+			}
+			if flags.Bflag {
+				t.Error("GetFlags().Bflag = true, want false for zero-flags input")
 			}
 		})
 	}

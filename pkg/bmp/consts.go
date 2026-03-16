@@ -78,6 +78,14 @@ const (
 	BMPRawMsg = 255
 )
 
+// Peer Up Informational TLV types per RFC 9069
+const (
+	// PeerUpTLVVRFTableName identifies a VRF/Table Name Informational TLV (type 3)
+	PeerUpTLVVRFTableName = 3
+	// PeerUpTLVAdminLabel identifies an Administrative Label Informational TLV (type 4)
+	PeerUpTLVAdminLabel = 4
+)
+
 // Termination message reason codes per RFC 7854 §10.7
 const (
 	// TermReasonAdminClosed indicates the session was administratively closed and may be re-initiated

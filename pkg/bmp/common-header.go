@@ -25,6 +25,7 @@ func (c *CommonHeader) IntMessageLength() (int, error) {
 	}
 	return int(c.MessageLength), nil
 }
+
 // UnmarshalCommonHeader processes Common Header and returns BMPCommonHeader object
 func UnmarshalCommonHeader(b []byte) (*CommonHeader, error) {
 	if glog.V(6) {
@@ -39,6 +40,9 @@ func UnmarshalCommonHeader(b []byte) (*CommonHeader, error) {
 	}
 	ch.Version = b[0]
 	ch.MessageLength = binary.BigEndian.Uint32(b[1:5])
+	if ch.MessageLength < uint32(CommonHeaderLength) {
+		return nil, fmt.Errorf("bmp: message length %d is less than minimum %d", ch.MessageLength, CommonHeaderLength)
+	}
 	ch.MessageType = b[5]
 	// *  Type = 0: Route Monitoring
 	// *  Type = 1: Statistics Report
@@ -62,7 +66,7 @@ func UnmarshalCommonHeader(b []byte) (*CommonHeader, error) {
 func (c *CommonHeader) Serialize() ([]byte, error) {
 	b := make([]byte, CommonHeaderLength)
 	b[0] = c.Version
-	binary.BigEndian.PutUint32(b[1:], uint32(c.MessageLength))
+	binary.BigEndian.PutUint32(b[1:], c.MessageLength)
 	b[5] = c.MessageType
 	return b, nil
 }

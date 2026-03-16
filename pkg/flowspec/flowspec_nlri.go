@@ -79,6 +79,9 @@ func unmarshalSingleFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, int, error) {
 		fs.Length = uint16(b[p])
 		p++
 	}
+	if fs.Length == 0 {
+		return nil, 0, fmt.Errorf("invalid zero-length Flowspec NLRI")
+	}
 	end := p + int(fs.Length)
 	if end > len(b) {
 		return nil, 0, fmt.Errorf("not enough bytes to unmarshal flowspec NLRI: need %d bytes, have %d", fs.Length, len(b)-p)
