@@ -70,3 +70,21 @@ func TestUnmarshalEVPNIPPrefix_TooShort(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
+
+func TestUnmarshalEVPNIPPrefix_MissingLabel(t *testing.T) {
+	// Valid IPv4 prefix data (31 bytes) but no label bytes
+	// RD(8) + ESI(10) + EthTag(4) + IPLen(1) + IP(4) + GW(4) = 31
+	b := make([]byte, 31)
+	// Set RD type to 0 (valid)
+	b[0] = 0x00
+	b[1] = 0x00
+	// IPAddrLength at offset 22
+	b[22] = 24
+	_, err := UnmarshalEVPNIPPrefix(b, 34)
+	if err == nil {
+		t.Fatal("expected error for missing label bytes")
+	}
+	if !strings.Contains(err.Error(), "not enough bytes for label") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
