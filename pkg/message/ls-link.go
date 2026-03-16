@@ -88,11 +88,15 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	case base.BGP:
 		msg.AreaID = strconv.Itoa(int(link.LocalNode.GetASN()))
 		if id := link.LocalNode.GetBGPRouterID(); len(id) >= 4 {
-			msg.BGPRouterID = net.IP(id).To4().String()
+			if v4 := net.IP(id).To4(); v4 != nil {
+				msg.BGPRouterID = v4.String()
+			}
 		}
 		if link.RemoteNode != nil {
 			if id := link.RemoteNode.GetBGPRouterID(); len(id) >= 4 {
-				msg.BGPRemoteRouterID = net.IP(id).To4().String()
+				if v4 := net.IP(id).To4(); v4 != nil {
+					msg.BGPRemoteRouterID = v4.String()
+				}
 			}
 		}
 		msg.MemberAS = link.LocalNode.GetConfedMemberASN()
