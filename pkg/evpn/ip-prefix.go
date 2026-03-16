@@ -84,6 +84,9 @@ func UnmarshalEVPNIPPrefix(b []byte, length int) (*IPPrefix, error) {
 	p++
 	switch length {
 	case 34:
+		if len(b) < 34 {
+			return nil, fmt.Errorf("EVPN Type 5 IPv4 too short: need 34 bytes, got %d", len(b))
+		}
 		t.IPAddr = make([]byte, 4)
 		copy(t.IPAddr, b[p:p+4])
 		p += 4
@@ -91,6 +94,9 @@ func UnmarshalEVPNIPPrefix(b []byte, length int) (*IPPrefix, error) {
 		copy(t.GWIPAddr, b[p:p+4])
 		p += 4
 	case 58:
+		if len(b) < 58 {
+			return nil, fmt.Errorf("EVPN Type 5 IPv6 too short: need 58 bytes, got %d", len(b))
+		}
 		t.IPAddr = make([]byte, 16)
 		copy(t.IPAddr, b[p:p+16])
 		p += 16

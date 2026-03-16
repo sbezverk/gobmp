@@ -17,7 +17,7 @@ type EthAutoDiscovery struct {
 
 // GetRouteTypeSpec returns the instance of a Ethernet Auto Discovery route type object
 func (t *EthAutoDiscovery) GetRouteTypeSpec() interface{} {
-	return &t
+	return t
 }
 
 func (t *EthAutoDiscovery) getRD() string {
