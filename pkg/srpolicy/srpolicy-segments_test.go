@@ -804,7 +804,7 @@ func TestUnmarshalSegmentListSTLV_TypeC(t *testing.T) {
 
 			ipv4 := typeCSeg.GetIPv4Address()
 			if len(ipv4) != 4 {
-				t.Errorf("IPv4 address length = %d, want 4", len(ipv4))
+				t.Fatalf("IPv4 address length = %d, want 4", len(ipv4))
 			}
 
 			for i, b := range tt.wantIPv4 {
@@ -1159,7 +1159,7 @@ func TestUnmarshalSegmentListSTLV_TypeD(t *testing.T) {
 
 			ipv6 := typeDSeg.GetIPv6Address()
 			if len(ipv6) != 16 {
-				t.Errorf("IPv6 address length = %d, want 16", len(ipv6))
+				t.Fatalf("IPv6 address length = %d, want 16", len(ipv6))
 			}
 
 			for i, b := range tt.wantIPv6 {
@@ -1244,7 +1244,7 @@ func TestTypeESegment_JSON(t *testing.T) {
 
 			// Verify IPv4 address
 			if len(decoded.ipv4Address) != len(tt.segment.ipv4Address) {
-				t.Errorf("IPv4 address length = %d, want %d", len(decoded.ipv4Address), len(tt.segment.ipv4Address))
+				t.Fatalf("IPv4 address length = %d, want %d", len(decoded.ipv4Address), len(tt.segment.ipv4Address))
 			}
 			for i := range tt.segment.ipv4Address {
 				if decoded.ipv4Address[i] != tt.segment.ipv4Address[i] {
@@ -1339,7 +1339,7 @@ func TestUnmarshalSegmentListSTLV_TypeE(t *testing.T) {
 
 			ipv4 := typeESeg.GetIPv4Address()
 			if len(ipv4) != 4 {
-				t.Errorf("IPv4 address length = %d, want 4", len(ipv4))
+				t.Fatalf("IPv4 address length = %d, want 4", len(ipv4))
 			}
 
 			for i, b := range tt.wantIPv4 {
