@@ -2,7 +2,7 @@
 
 cn=$1
 router_cn=${2:-xr-1}
-cid=$(docker ps | grep ${cn} | awk '{ print $1 }')
+cid=$(docker ps --filter "name=^/${cn}$" --format '{{.ID}}')
 
 if [[ ${cid} == "" ]]; then
         echo "no container ${cn} detected"
