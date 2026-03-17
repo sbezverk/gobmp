@@ -60,6 +60,36 @@ func TestEVPNTypeBoundsChecks(t *testing.T) {
 			_, e := UnmarshalEVPNMACIPAdvertisement(b)
 			return e
 		}, "truncated"},
+		{"Type 2 IP truncated", func() error {
+			// Header + MAC(0) + IPAddrLength=128 but no IP bytes
+			b := make([]byte, 24)
+			b[22] = 0  // MACAddrLength=0
+			b[23] = 128 // IPAddrLength=128 (16 bytes needed)
+			_, e := UnmarshalEVPNMACIPAdvertisement(b)
+			return e
+		}, "truncated"},
+		{"Type 1 trailing bytes", func() error {
+			// Valid Type 1 with label + 1 extra byte
+			b := make([]byte, 26)
+			b[24] = 0x00 // label byte 1
+			b[25] = 0x01 // label BoS=1 (bottom of stack) - wait, need 3 bytes for label
+			// Actually need: 22 header + 3 label + 1 trailing = 26
+			b2 := make([]byte, 26)
+			b2[24] = 0x01 // label BoS bit set in last nibble
+			_, e := UnmarshalEVPNEthAutoDiscovery(b2)
+			return e
+		}, "trailing"},
+		{"Type 2 trailing bytes", func() error {
+			// Header(24) + MAC(0) + IPLen(0) + label(3) + 1 trailing
+			b := make([]byte, 28)
+			b[22] = 0  // MACAddrLength=0
+			b[23] = 0  // IPAddrLength=0
+			b[24] = 0  // label byte 1
+			b[25] = 0  // label byte 2
+			b[26] = 1  // label byte 3 with BoS
+			_, e := UnmarshalEVPNMACIPAdvertisement(b)
+			return e
+		}, "trailing"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

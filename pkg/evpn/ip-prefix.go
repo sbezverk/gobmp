@@ -107,7 +107,7 @@ func UnmarshalEVPNIPPrefix(b []byte, length int) (*IPPrefix, error) {
 		return nil, fmt.Errorf("unknown evpn ip prefix, length:%d should be 34 for IPv4 or 58 for IPv6", length)
 	}
 	if p+3 > len(b) {
-		return nil, fmt.Errorf("EVPN Type 5: not enough bytes for label at offset %d", p)
+		return nil, fmt.Errorf("EVPN Type 5: label truncated at offset %d: need 3 bytes, have %d", p, len(b)-p)
 	}
 	l, err := base.MakeLabel(b[p : p+3])
 	if err != nil {

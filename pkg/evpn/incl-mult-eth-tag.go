@@ -76,7 +76,7 @@ func UnmarshalEVPNInclusiveMulticastEthTag(b []byte) (*InclusiveMulticastEthTag,
 	l := int(t.IPAddrLength / 8)
 	if t.IPAddrLength != 0 {
 		if p+l > len(b) {
-			return nil, fmt.Errorf("EVPN Type 3: IP address truncated at offset %d, need %d bytes", p, l)
+			return nil, fmt.Errorf("EVPN Type 3: IP address truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
 		}
 		t.IPAddr = make([]byte, l)
 		copy(t.IPAddr, b[p:p+l])
