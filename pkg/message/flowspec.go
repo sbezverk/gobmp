@@ -265,30 +265,66 @@ func makeGenericSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 func makeOpValPair(src []interface{}) ([]*flowspec.OpVal, error) {
 	ovp := make([]*flowspec.OpVal, len(src))
 	for i, s := range src {
-		o := &flowspec.OpVal{}
-		if p, ok := s.(map[string]interface{})["value"]; ok {
-			o.Val = make([]byte, len(p.(string)))
-			copy(o.Val, []byte(p.(string)))
+		m, ok := s.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("op_val_pairs[%d]: expected object, got %T", i, s)
 		}
-		if p, ok := s.(map[string]interface{})["operator"]; ok {
+		o := &flowspec.OpVal{}
+		if p, ok := m["value"]; ok {
+			v, ok := p.(string)
+			if !ok {
+				return nil, fmt.Errorf("op_val_pairs[%d].value: expected string, got %T", i, p)
+			}
+			o.Val = make([]byte, len(v))
+			copy(o.Val, []byte(v))
+		}
+		if p, ok := m["operator"]; ok {
+			opMap, ok := p.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("op_val_pairs[%d].operator: expected object, got %T", i, p)
+			}
 			op := &flowspec.Operator{}
-			if e, ok := p.(map[string]interface{})["value_length"]; ok {
-				op.Length = uint8(e.(float64))
+			if e, ok := opMap["value_length"]; ok {
+				v, ok := e.(float64)
+				if !ok {
+					return nil, fmt.Errorf("op_val_pairs[%d].operator.value_length: expected number, got %T", i, e)
+				}
+				op.Length = uint8(v)
 			}
-			if e, ok := p.(map[string]interface{})["end_of_list_bit"]; ok {
-				op.EOLBit = e.(bool)
+			if e, ok := opMap["end_of_list_bit"]; ok {
+				v, ok := e.(bool)
+				if !ok {
+					return nil, fmt.Errorf("op_val_pairs[%d].operator.end_of_list_bit: expected bool, got %T", i, e)
+				}
+				op.EOLBit = v
 			}
-			if e, ok := p.(map[string]interface{})["and_bit"]; ok {
-				op.ANDBit = e.(bool)
+			if e, ok := opMap["and_bit"]; ok {
+				v, ok := e.(bool)
+				if !ok {
+					return nil, fmt.Errorf("op_val_pairs[%d].operator.and_bit: expected bool, got %T", i, e)
+				}
+				op.ANDBit = v
 			}
-			if e, ok := p.(map[string]interface{})["less_than"]; ok {
-				op.LTBit = e.(bool)
+			if e, ok := opMap["less_than"]; ok {
+				v, ok := e.(bool)
+				if !ok {
+					return nil, fmt.Errorf("op_val_pairs[%d].operator.less_than: expected bool, got %T", i, e)
+				}
+				op.LTBit = v
 			}
-			if e, ok := p.(map[string]interface{})["greater_than"]; ok {
-				op.GTBit = e.(bool)
+			if e, ok := opMap["greater_than"]; ok {
+				v, ok := e.(bool)
+				if !ok {
+					return nil, fmt.Errorf("op_val_pairs[%d].operator.greater_than: expected bool, got %T", i, e)
+				}
+				op.GTBit = v
 			}
-			if e, ok := p.(map[string]interface{})["equal"]; ok {
-				op.EQBit = e.(bool)
+			if e, ok := opMap["equal"]; ok {
+				v, ok := e.(bool)
+				if !ok {
+					return nil, fmt.Errorf("op_val_pairs[%d].operator.equal: expected bool, got %T", i, e)
+				}
+				op.EQBit = v
 			}
 			o.Op = op
 		}
