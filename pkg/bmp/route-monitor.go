@@ -28,7 +28,7 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 	rm := RouteMonitor{}
 	// 16 bytes marker + 2 bytes length + 1 byte type
 	if len(b) < 19 {
-		return nil, fmt.Errorf("malformed route monitor message: need at least 19 bytes, got %d", len(b))
+		return nil, fmt.Errorf("route monitor message too short: need 19 bytes, have %d", len(b))
 	}
 	p := 0
 	// Skip 16 bytes of a marker
@@ -36,7 +36,7 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 	// Validate BGP message length field
 	bgpLen := binary.BigEndian.Uint16(b[p : p+2])
 	if int(bgpLen) < 19 || int(bgpLen) != len(b) {
-		return nil, fmt.Errorf("invalid BGP message length %d (buffer %d bytes)", bgpLen, len(b))
+		return nil, fmt.Errorf("invalid BGP message length: need %d bytes, have %d", bgpLen, len(b))
 	}
 	p += 2
 	t := b[p]
