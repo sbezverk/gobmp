@@ -35,8 +35,11 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 	p += 16
 	// Validate BGP message length field
 	bgpLen := binary.BigEndian.Uint16(b[p : p+2])
-	if int(bgpLen) < 19 || int(bgpLen) != len(b) {
-		return nil, fmt.Errorf("invalid BGP message length: need %d bytes, have %d", bgpLen, len(b))
+	if int(bgpLen) < 19 {
+		return nil, fmt.Errorf("invalid BGP message length %d: must be >= 19", bgpLen)
+	}
+	if int(bgpLen) != len(b) {
+		return nil, fmt.Errorf("BGP message length mismatch: header says %d bytes, have %d", bgpLen, len(b))
 	}
 	p += 2
 	t := b[p]
