@@ -31,7 +31,7 @@ func TestFlowspecUnmarshalJSON_PrefixSpec(t *testing.T) {
 				{
 					"type":       float64(tt.specType),
 					"prefix_len": float64(24),
-					"prefix":     "abc",
+					"prefix":     "YWJj",
 				},
 			})
 			fs := &Flowspec{}
@@ -83,7 +83,7 @@ func TestFlowspecUnmarshalJSON_GenericSpec(t *testing.T) {
 								"end_of_list_bit": true,
 								"equal":           true,
 							},
-							"value": "\x06",
+							"value": "Bg==",
 						},
 					},
 				},
@@ -123,7 +123,7 @@ func TestFlowspecUnmarshalJSON_MultipleSpecs(t *testing.T) {
 		{
 			"type":       float64(1),
 			"prefix_len": float64(24),
-			"prefix":     "abc",
+			"prefix":     "YWJj",
 		},
 		{
 			"type": float64(3),
@@ -133,7 +133,7 @@ func TestFlowspecUnmarshalJSON_MultipleSpecs(t *testing.T) {
 						"value_length":    float64(1),
 						"end_of_list_bit": true,
 					},
-					"value": "\x11",
+					"value": "EQ==",
 				},
 			},
 		},
@@ -337,7 +337,7 @@ func TestFlowspecUnmarshalJSON_PrefixOffset(t *testing.T) {
 			"type":          float64(1),
 			"prefix_len":    float64(48),
 			"prefix_offset": float64(16),
-			"prefix":        "abc",
+			"prefix":        "YWJj",
 		},
 	})
 	fs := &Flowspec{}
@@ -363,7 +363,7 @@ func TestFlowspecUnmarshalJSON_PrefixOffset_NonNumber(t *testing.T) {
 			"type":          float64(1),
 			"prefix_len":    float64(48),
 			"prefix_offset": "not-a-number",
-			"prefix":        "abc",
+			"prefix":        "YWJj",
 		},
 	})
 	fs := &Flowspec{}
@@ -379,7 +379,7 @@ func TestFlowspecUnmarshalJSON_PrefixOffset_Fractional(t *testing.T) {
 			"type":          float64(1),
 			"prefix_len":    float64(48),
 			"prefix_offset": float64(16.9),
-			"prefix":        "abc",
+			"prefix":        "YWJj",
 		},
 	})
 	fs := &Flowspec{}

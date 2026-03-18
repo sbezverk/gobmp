@@ -1,6 +1,7 @@
 package message
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -234,8 +235,11 @@ func makePrefixSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 		if !ok {
 			return nil, fmt.Errorf("prefix must be a string, got %T", p)
 		}
-		s.Prefix = make([]byte, len(v))
-		copy(s.Prefix, []byte(v))
+		decoded, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return nil, fmt.Errorf("prefix: invalid base64: %w", err)
+		}
+		s.Prefix = decoded
 	}
 
 	return s, nil
@@ -275,8 +279,11 @@ func makeOpValPair(src []interface{}) ([]*flowspec.OpVal, error) {
 			if !ok {
 				return nil, fmt.Errorf("op_val_pairs[%d].value: expected string, got %T", i, p)
 			}
-			o.Val = make([]byte, len(v))
-			copy(o.Val, []byte(v))
+			decoded, err := base64.StdEncoding.DecodeString(v)
+			if err != nil {
+				return nil, fmt.Errorf("op_val_pairs[%d].value: invalid base64: %w", i, err)
+			}
+			o.Val = decoded
 		}
 		if p, ok := m["operator"]; ok {
 			opMap, ok := p.(map[string]interface{})
