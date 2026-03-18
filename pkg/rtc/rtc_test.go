@@ -256,6 +256,25 @@ func TestUnmarshalRTCNLRI(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "Valid - Non-byte-aligned RT prefix (Length=89 bits)",
+			input: []byte{
+				0x59,                   // Length: 89 bits (4 AS + 7.125 partial RT)
+				0x00, 0x00, 0xFD, 0xE8, // Origin AS: 65000
+				0x00, 0x02, 0x00, 0x64, // 8 bytes RT data (ceil((89-32)/8)=8, but only 57 bits valid)
+				0x00, 0x00, 0x00, 0x01,
+			},
+			want: &Route{
+				NLRI: []*NLRI{
+					{
+						Length:      89,
+						OriginAS:    65000,
+						RouteTarget: []byte{0x00, 0x02, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "Valid - Multi-NLRI with partial then full",
 			input: []byte{
 				0x10,       // NLRI 1: length 16 bits

@@ -85,7 +85,7 @@ func UnmarshalRTCNLRI(b []byte) (*Route, error) {
 		if nlri.Length > 32 {
 			rtLen := byteLen - 4
 			// Only validate when a full 8-byte RT is present
-			if rtLen == 8 {
+			if nlri.Length-32 == 64 {
 				if err := validateRouteTarget(b[p : p+8]); err != nil {
 					return nil, fmt.Errorf("invalid Route Target at offset %d: %w", p, err)
 				}
