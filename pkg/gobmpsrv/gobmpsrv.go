@@ -230,7 +230,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 			return
 		}
 		msgLen := totalLen - bmp.CommonHeaderLength
-		if msgLen < 0 || msgLen > maxBMPMessagePayload {
+		if msgLen > maxBMPMessagePayload {
 			glog.Errorf("invalid message length %d from client %+v, closing connection", header.MessageLength, client.RemoteAddr())
 			return
 		}

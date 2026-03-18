@@ -3702,12 +3702,18 @@ func TestSegmentList_JSON_TypeG(t *testing.T) {
 		t.Fatal("segment does not implement TypeGSegment")
 	}
 	gotLocal := typeGSeg.GetLocalIPv6Address()
+	if len(gotLocal) != 16 {
+		t.Fatalf("LocalIPv6 length = %d, want 16", len(gotLocal))
+	}
 	for i, b := range localIPv6 {
 		if gotLocal[i] != b {
 			t.Errorf("LocalIPv6[%d] = %02x, want %02x", i, gotLocal[i], b)
 		}
 	}
 	gotRemote := typeGSeg.GetRemoteIPv6Address()
+	if len(gotRemote) != 16 {
+		t.Fatalf("RemoteIPv6 length = %d, want 16", len(gotRemote))
+	}
 	for i, b := range remoteIPv6 {
 		if gotRemote[i] != b {
 			t.Errorf("RemoteIPv6[%d] = %02x, want %02x", i, gotRemote[i], b)
@@ -3768,12 +3774,18 @@ func TestSegmentList_JSON_TypeH(t *testing.T) {
 		t.Fatal("segment does not implement TypeHSegment")
 	}
 	gotLocal := typeHSeg.GetLocalIPv6Address()
+	if len(gotLocal) != 16 {
+		t.Fatalf("LocalIPv6 length = %d, want 16", len(gotLocal))
+	}
 	for i, b := range localIPv6 {
 		if gotLocal[i] != b {
 			t.Errorf("LocalIPv6[%d] = %02x, want %02x", i, gotLocal[i], b)
 		}
 	}
 	gotRemote := typeHSeg.GetRemoteIPv6Address()
+	if len(gotRemote) != 16 {
+		t.Fatalf("RemoteIPv6 length = %d, want 16", len(gotRemote))
+	}
 	for i, b := range remoteIPv6 {
 		if gotRemote[i] != b {
 			t.Errorf("RemoteIPv6[%d] = %02x, want %02x", i, gotRemote[i], b)
@@ -3841,6 +3853,9 @@ func TestSegmentList_JSON_TypeI(t *testing.T) {
 	gotSID, hasSID := typeISeg.GetSRv6SID()
 	if !hasSID {
 		t.Fatal("GetSRv6SID() hasSID = false, want true")
+	}
+	if len(gotSID) != 16 {
+		t.Fatalf("SRv6SID length = %d, want 16", len(gotSID))
 	}
 	for i, b := range srv6SID {
 		if gotSID[i] != b {
