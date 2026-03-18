@@ -95,7 +95,7 @@ func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
 		p += l
 	}
 	if p >= len(b) {
-		return nil, fmt.Errorf("EVPN Type 2: truncated before IP address length at offset %d", p)
+		return nil, fmt.Errorf("EVPN Type 2: truncated before IP address length at offset %d: need 1 byte, have %d", p, len(b)-p)
 	}
 	t.IPAddrLength = b[p]
 	p++

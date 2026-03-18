@@ -69,14 +69,10 @@ func TestEVPNTypeBoundsChecks(t *testing.T) {
 			return e
 		}, "truncated"},
 		{"Type 1 trailing bytes", func() error {
-			// Valid Type 1 with label + 1 extra byte
+			// 22 header + 3 label + 1 trailing = 26
 			b := make([]byte, 26)
-			b[24] = 0x00 // label byte 1
-			b[25] = 0x01 // label BoS=1 (bottom of stack) - wait, need 3 bytes for label
-			// Actually need: 22 header + 3 label + 1 trailing = 26
-			b2 := make([]byte, 26)
-			b2[24] = 0x01 // label BoS bit set in last nibble
-			_, e := UnmarshalEVPNEthAutoDiscovery(b2)
+			b[24] = 0x01 // label BoS bit set in last nibble
+			_, e := UnmarshalEVPNEthAutoDiscovery(b)
 			return e
 		}, "trailing"},
 		{"Type 2 trailing bytes", func() error {
