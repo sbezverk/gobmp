@@ -267,19 +267,19 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 		safi         uint8
 		wantErrMsg   string // substring expected in error string; "" means no error or NLRINotFoundError
 		wantNotFound bool
-		wantNoErr    bool // true means nil error expected (e.g. withdraw-all)
 	}{
 		{
-			name:      "AFI=1 SAFI=133 empty withdrawn (withdraw-all)",
-			afi:       1,
-			safi:      133,
-			wantNoErr: true,
+			name:         "AFI=1 SAFI=133 empty withdrawn (withdraw-all)",
+			afi:          1,
+			safi:         133,
+			wantNotFound: false,
+			wantErrMsg:   "",
 		},
 		{
-			name:       "AFI=2 SAFI=133 not implemented",
+			name:       "AFI=2 SAFI=133 IPv6 flowspec empty withdraw-all",
 			afi:        2,
 			safi:       133,
-			wantErrMsg: "not yet implemented",
+			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (withdraw-all)
 		},
 		{
 			name:       "SAFI=134 AFI=1 VPN not implemented",
@@ -309,7 +309,7 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 				addPath:            map[int]bool{},
 			}
 			_, err := mp.GetFlowspecNLRI()
-			if tt.wantNoErr {
+			if tt.wantErrMsg == "" && !tt.wantNotFound {
 				if err != nil {
 					t.Fatalf("expected no error, got %v", err)
 				}
@@ -334,42 +334,68 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 	}
 }
 
-// TestMPUnReachNLRI_GetAllFlowspecNLRI tests all branches of GetAllFlowspecNLRI.
-func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
-	twoNLRIs := []byte{
-		0x05, 0x02, 0x18, 0x0A, 0x00, 0x07,
-		0x03, 0x03, 0x81, 0x2F,
+// TestMPUnReachNLRI_GetFlowspecNLRI_IPv6WithData verifies the IPv6 flowspec parse path
+// with actual wire-format data (non-empty WithdrawnRoutes, AFI=2, SAFI=133).
+func TestMPUnReachNLRI_GetFlowspecNLRI_IPv6WithData(t *testing.T) {
+	// 2001:db8::/32 destination prefix, offset=0
+	mp := &MPUnReachNLRI{
+		AddressFamilyID:    2,
+		SubAddressFamilyID: 133,
+		WithdrawnRoutes:    []byte{0x07, 0x01, 0x20, 0x00, 0x20, 0x01, 0x0d, 0xb8},
+		addPath:            map[int]bool{},
 	}
+	nlri, err := mp.GetFlowspecNLRI()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if nlri == nil {
+		t.Fatal("expected non-nil NLRI for IPv6 flowspec withdrawal")
+	}
+}
 
+// TestMPUnReachNLRI_GetAllFlowspecNLRI covers all branching paths of GetAllFlowspecNLRI.
+func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 	tests := []struct {
 		name         string
 		afi          uint16
 		safi         uint8
-		withdrawn    []byte
+		routes       []byte
 		wantCount    int
-		wantNil      bool
+		wantNilSlice bool
 		wantErrMsg   string
 		wantNotFound bool
 	}{
 		{
-			name:      "AFI=1 SAFI=133 with two NLRIs",
+			// IPv4 single NLRI: 10.0.0.0/8
+			name:      "AFI=1 SAFI=133 single IPv4 NLRI",
 			afi:       1,
 			safi:      133,
-			withdrawn: twoNLRIs,
-			wantCount: 2,
+			routes:    []byte{0x03, 0x01, 0x08, 0x0a},
+			wantCount: 1,
 		},
 		{
-			name:      "AFI=1 SAFI=133 empty withdrawn (withdraw-all)",
-			afi:       1,
+			// IPv6 single NLRI: 2001:db8::/32 offset=0
+			name:      "AFI=2 SAFI=133 single IPv6 NLRI",
+			afi:       2,
 			safi:      133,
-			withdrawn: []byte{},
-			wantNil:   true,
+			routes:    []byte{0x07, 0x01, 0x20, 0x00, 0x20, 0x01, 0x0d, 0xb8},
+			wantCount: 1,
 		},
 		{
-			name:       "AFI=2 SAFI=133 not implemented",
-			afi:        2,
-			safi:       133,
-			wantErrMsg: "not yet implemented",
+			// RFC 8955 §4: empty MP_UNREACH_NLRI is a withdraw-all signal.
+			name:         "AFI=1 SAFI=133 withdraw-all (empty routes)",
+			afi:          1,
+			safi:         133,
+			routes:       []byte{},
+			wantNilSlice: true,
+		},
+		{
+			// RFC 8956 §3: empty MP_UNREACH_NLRI is a withdraw-all signal.
+			name:         "AFI=2 SAFI=133 withdraw-all (empty routes)",
+			afi:          2,
+			safi:         133,
+			routes:       []byte{},
+			wantNilSlice: true,
 		},
 		{
 			name:       "SAFI=134 VPN not implemented",
@@ -378,9 +404,9 @@ func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 			wantErrMsg: "not yet implemented",
 		},
 		{
-			name:         "unknown SAFI returns NLRINotFoundError",
+			name:         "non-flowspec SAFI returns NLRINotFoundError",
 			afi:          1,
-			safi:         200,
+			safi:         1,
 			wantNotFound: true,
 		},
 	}
@@ -389,7 +415,7 @@ func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 			mp := &MPUnReachNLRI{
 				AddressFamilyID:    tt.afi,
 				SubAddressFamilyID: tt.safi,
-				WithdrawnRoutes:    tt.withdrawn,
+				WithdrawnRoutes:    tt.routes,
 				addPath:            map[int]bool{},
 			}
 			nlris, err := mp.GetAllFlowspecNLRI()
@@ -415,14 +441,14 @@ func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if tt.wantNil {
+			if tt.wantNilSlice {
 				if nlris != nil {
-					t.Errorf("expected nil slice for withdraw-all, got %d NLRIs", len(nlris))
+					t.Errorf("expected nil slice for withdraw-all, got %v", nlris)
 				}
 				return
 			}
 			if len(nlris) != tt.wantCount {
-				t.Errorf("NLRI count=%d, want %d", len(nlris), tt.wantCount)
+				t.Errorf("got %d NLRIs, want %d", len(nlris), tt.wantCount)
 			}
 		})
 	}

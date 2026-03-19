@@ -688,7 +688,7 @@ func TestRFC8955_ErrorCases(t *testing.T) {
 				10, 0, 1, // Prefix
 			},
 			wantErr: true,
-			errMsg:  "invalid length",
+			errMsg:  "not enough bytes to unmarshal flowspec NLRI",
 		},
 	}
 
