@@ -54,7 +54,7 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 		switch tlv.InformationType {
 		case 0, 1, 2, 3, 4, 5, 6, 11, 12, 13:
 			if len(tlv.Information) < 4 {
-				glog.Warningf("stats type %d: need 4 bytes, got %d", tlv.InformationType, len(tlv.Information))
+				glog.Warningf("stats type %d from peer %s (router %s): need 4 bytes, got %d", tlv.InformationType, m.RemoteIP, m.RouterIP, len(tlv.Information))
 				continue
 			}
 			v := binary.BigEndian.Uint32(tlv.Information)
@@ -82,7 +82,7 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 			}
 		case 7, 8, 14, 15:
 			if len(tlv.Information) < 8 {
-				glog.Warningf("stats type %d: need 8 bytes, got %d", tlv.InformationType, len(tlv.Information))
+				glog.Warningf("stats type %d from peer %s (router %s): need 8 bytes, got %d", tlv.InformationType, m.RemoteIP, m.RouterIP, len(tlv.Information))
 				continue
 			}
 			v := binary.BigEndian.Uint64(tlv.Information)
@@ -99,28 +99,28 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 		case 9:
 			stat, err := parseAFISAFIStat(tlv.Information)
 			if err != nil {
-				glog.Warningf("failed to parse Type 9 (Per-AFI Adj-RIB-In): %v", err)
+				glog.Warningf("failed to parse Type 9 (Per-AFI Adj-RIB-In) from peer %s (router %s): %v", m.RemoteIP, m.RouterIP, err)
 				continue
 			}
 			m.PerAFIAdjRIBsIn = append(m.PerAFIAdjRIBsIn, stat)
 		case 10:
 			stat, err := parseAFISAFIStat(tlv.Information)
 			if err != nil {
-				glog.Warningf("failed to parse Type 10 (Per-AFI Loc-RIB): %v", err)
+				glog.Warningf("failed to parse Type 10 (Per-AFI Loc-RIB) from peer %s (router %s): %v", m.RemoteIP, m.RouterIP, err)
 				continue
 			}
 			m.PerAFILocRIB = append(m.PerAFILocRIB, stat)
 		case 16:
 			stat, err := parseAFISAFIStat(tlv.Information)
 			if err != nil {
-				glog.Warningf("failed to parse Type 16 (Per-AFI Pre-policy): %v", err)
+				glog.Warningf("failed to parse Type 16 (Per-AFI Pre-policy) from peer %s (router %s): %v", m.RemoteIP, m.RouterIP, err)
 				continue
 			}
 			m.PerAFIPrePolicyAdjRIBOut = append(m.PerAFIPrePolicyAdjRIBOut, stat)
 		case 17:
 			stat, err := parseAFISAFIStat(tlv.Information)
 			if err != nil {
-				glog.Warningf("failed to parse Type 17 (Per-AFI Post-policy): %v", err)
+				glog.Warningf("failed to parse Type 17 (Per-AFI Post-policy) from peer %s (router %s): %v", m.RemoteIP, m.RouterIP, err)
 				continue
 			}
 			m.PerAFIPostPolicyAdjRIBOut = append(m.PerAFIPostPolicyAdjRIBOut, stat)

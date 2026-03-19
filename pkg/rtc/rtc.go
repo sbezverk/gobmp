@@ -63,7 +63,7 @@ func UnmarshalRTCNLRI(b []byte) (*Route, error) {
 		// RFC 4684 Section 4: length is 0-96 bits.
 		// 0 = wildcard, 32 = Origin AS only, 33-96 = partial/full RT.
 		if nlri.Length > 96 {
-			return nil, fmt.Errorf("invalid NLRI length %d bits (max 96)", nlri.Length)
+			return nil, fmt.Errorf("invalid NLRI length %d bits at offset %d (max 96)", nlri.Length, p-1)
 		}
 
 		// Calculate byte length of remaining NLRI data
