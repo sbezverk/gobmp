@@ -219,12 +219,10 @@ func TestRFC8097_Type43_ReservedBytesIgnored(t *testing.T) {
 //	Byte 7: Validation State (0=valid, 1=not-found, 2=invalid)
 //
 // makeExtCommunity for type 0x43 (& 0x3f == 3) reads SubType from b[1],
-// then advances p by 3 (skipping bytes 2-3), so Value = b[4:] padded to 6 bytes.
-// Value becomes [b[4], b[5], b[6], b[7], 0, 0]. type43 reads state from
-// value[5] which is always 0. The state byte at b[7] maps to value[3].
-// This means the direct type43() function receives state at value[5],
-// while wire-format parsing places b[7] at value[3].
-// The test validates the actual makeExtCommunity -> String() behavior.
+// then advances p by 1, so Value = b[2:] copied into a 6-byte slice.
+// Value becomes [b[2], b[3], b[4], b[5], b[6], b[7]]. type43 reads state
+// from value[5] which corresponds to b[7] -- the RFC 8097 validation state
+// byte. The test validates the actual makeExtCommunity -> String() behavior.
 func TestRFC8097_FullExtCommunityParsing(t *testing.T) {
 	tests := []struct {
 		name     string

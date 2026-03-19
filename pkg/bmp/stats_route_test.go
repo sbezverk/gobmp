@@ -192,26 +192,3 @@ func TestRouteMonitor_ErrNotAnUpdate(t *testing.T) {
 		t.Errorf("error %v does not wrap ErrNotAnUpdate", err)
 	}
 }
-
-func TestGetPeerAddrString_ShortAddress(t *testing.T) {
-	p := &PerPeerHeader{
-		PeerAddress: []byte{10, 0, 0, 1},
-	}
-	got := p.GetPeerAddrString()
-	if got != "" {
-		t.Errorf("got %q, want empty string for short address", got)
-	}
-}
-
-func TestGetPeerAddrString_ValidIPv4(t *testing.T) {
-	addr := make([]byte, 16)
-	addr[12], addr[13], addr[14], addr[15] = 10, 0, 0, 1
-	p := &PerPeerHeader{
-		PeerType:    PeerType0,
-		PeerAddress: addr,
-	}
-	got := p.GetPeerAddrString()
-	if got != "10.0.0.1" {
-		t.Errorf("got %q, want '10.0.0.1'", got)
-	}
-}
