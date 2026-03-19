@@ -1,6 +1,10 @@
 package evpn
 
-import "github.com/sbezverk/gobmp/pkg/base"
+import (
+	"fmt"
+
+	"github.com/sbezverk/gobmp/pkg/base"
+)
 
 // MACIPAdvertisement defines a structure of Route type 2
 // (MAC IP Advertisement route)
@@ -56,8 +60,11 @@ func (t *MACIPAdvertisement) getLabel() []*base.Label {
 	return t.Label
 }
 
-// UnmarshalEVPNMACIPAdvertisement instantiates new instance of a Ethernet Auto Discovery route type object
+// UnmarshalEVPNMACIPAdvertisement instantiates new instance of a MAC/IP Advertisement route type object
 func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
+	if len(b) < 24 {
+		return nil, fmt.Errorf("EVPN Type 2: need at least 24 bytes, have %d", len(b))
+	}
 	var err error
 	t := MACIPAdvertisement{}
 	p := 0
@@ -78,27 +85,39 @@ func UnmarshalEVPNMACIPAdvertisement(b []byte) (*MACIPAdvertisement, error) {
 	p++
 	l := int(t.MACAddrLength / 8)
 	if l != 0 {
+		if p+l > len(b) {
+			return nil, fmt.Errorf("EVPN Type 2: MAC address truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+		}
 		t.MACAddr, err = MakeMACAddress(b[p : p+l])
 		if err != nil {
 			return nil, err
 		}
 		p += l
 	}
+	if p >= len(b) {
+		return nil, fmt.Errorf("EVPN Type 2: truncated before IP address length at offset %d: need 1 byte, have %d", p, len(b)-p)
+	}
 	t.IPAddrLength = b[p]
 	p++
 	l = int(t.IPAddrLength / 8)
 	if t.IPAddrLength != 0 {
+		if p+l > len(b) {
+			return nil, fmt.Errorf("EVPN Type 2: IP address truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+		}
 		t.IPAddr = make([]byte, l)
 		copy(t.IPAddr, b[p:p+l])
 		p += l
 	}
-	for i := 0; p < len(b); i++ {
+	for p+3 <= len(b) {
 		l, err := base.MakeLabel(b[p : p+3])
 		if err != nil {
 			return nil, err
 		}
 		t.Label = append(t.Label, l)
 		p += 3
+	}
+	if p != len(b) {
+		return nil, fmt.Errorf("EVPN Type 2: %d trailing bytes after label stack", len(b)-p)
 	}
 
 	return &t, nil

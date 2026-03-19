@@ -97,6 +97,9 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 		Route: make([]*NLRI, 0),
 	}
 	for p := 0; p < len(b); {
+		if p+2 > len(b) {
+			return nil, fmt.Errorf("incomplete EVPN NLRI at offset %d: need 2 bytes for type+length, have %d", p, len(b)-p)
+		}
 		var err error
 		n := &NLRI{}
 		n.RouteType = b[p]
@@ -109,7 +112,7 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 			return nil, fmt.Errorf("invalid EVPN NLRI length: length cannot be zero")
 		}
 		if p+l > len(b) {
-			return nil, fmt.Errorf("invalid EVPN NLRI length: need %d bytes at offset %d, have %d total", l, p, len(b))
+			return nil, fmt.Errorf("invalid EVPN NLRI length at offset %d: need %d bytes, have %d", p, l, len(b)-p)
 		}
 		switch n.RouteType {
 		case 1:

@@ -61,6 +61,9 @@ func (t *IPPrefix) getLabel() []*base.Label {
 
 // UnmarshalEVPNIPPrefix instantiates IP Prefix route type object
 func UnmarshalEVPNIPPrefix(b []byte, length int) (*IPPrefix, error) {
+	if len(b) < 23 {
+		return nil, fmt.Errorf("EVPN Type 5: need at least 23 bytes, have %d", len(b))
+	}
 	var err error
 	t := IPPrefix{}
 	p := 0
@@ -81,6 +84,9 @@ func UnmarshalEVPNIPPrefix(b []byte, length int) (*IPPrefix, error) {
 	p++
 	switch length {
 	case 34:
+		if len(b) < 34 {
+			return nil, fmt.Errorf("EVPN Type 5 IPv4: need 34 bytes, have %d", len(b))
+		}
 		t.IPAddr = make([]byte, 4)
 		copy(t.IPAddr, b[p:p+4])
 		p += 4
@@ -88,6 +94,9 @@ func UnmarshalEVPNIPPrefix(b []byte, length int) (*IPPrefix, error) {
 		copy(t.GWIPAddr, b[p:p+4])
 		p += 4
 	case 58:
+		if len(b) < 58 {
+			return nil, fmt.Errorf("EVPN Type 5 IPv6: need 58 bytes, have %d", len(b))
+		}
 		t.IPAddr = make([]byte, 16)
 		copy(t.IPAddr, b[p:p+16])
 		p += 16
@@ -97,7 +106,10 @@ func UnmarshalEVPNIPPrefix(b []byte, length int) (*IPPrefix, error) {
 	default:
 		return nil, fmt.Errorf("unknown evpn ip prefix, length:%d should be 34 for IPv4 or 58 for IPv6", length)
 	}
-	l, err := base.MakeLabel(b[p:])
+	if p+3 > len(b) {
+		return nil, fmt.Errorf("EVPN Type 5: label truncated at offset %d: need 3 bytes, have %d", p, len(b)-p)
+	}
+	l, err := base.MakeLabel(b[p : p+3])
 	if err != nil {
 		return nil, err
 	}

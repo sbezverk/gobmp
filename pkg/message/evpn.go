@@ -64,7 +64,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			esi := e.GetEVPNESI()
 			if esi != nil {
 				for i := 0; i < ESILength; i++ {
-					prfx.ESI += fmt.Sprintf("%02d", esi[i])
+					prfx.ESI += fmt.Sprintf("%02x", esi[i])
 					if i < ESILength-1 {
 						prfx.ESI += ":"
 					}
@@ -75,7 +75,6 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 				prfx.IPLength = *ip
 				gw := e.GetEVPNGWAddr()
 				addr := e.GetEVPNIPAddr()
-				// IPv4 should have IPLength set to 32
 				if prfx.IPLength <= 32 {
 					if addr != nil {
 						prfx.IPAddress = net.IP(addr).To4().String()
@@ -83,9 +82,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 					if gw != nil {
 						prfx.GWAddress = net.IP(gw).To4().String()
 					}
-				}
-				// Processing IPv6 IP and GW
-				if prfx.IPLength <= 128 {
+				} else if prfx.IPLength <= 128 {
 					if addr != nil {
 						prfx.IPAddress = net.IP(addr).To16().String()
 					}

@@ -1,6 +1,10 @@
 package evpn
 
-import "github.com/sbezverk/gobmp/pkg/base"
+import (
+	"fmt"
+
+	"github.com/sbezverk/gobmp/pkg/base"
+)
 
 // EthAutoDiscovery defines a structure of Route type 1
 // (Ethernet Auto Discovery route type)
@@ -13,7 +17,7 @@ type EthAutoDiscovery struct {
 
 // GetRouteTypeSpec returns the instance of a Ethernet Auto Discovery route type object
 func (t *EthAutoDiscovery) GetRouteTypeSpec() interface{} {
-	return &t
+	return t
 }
 
 func (t *EthAutoDiscovery) getRD() string {
@@ -54,6 +58,9 @@ func (t *EthAutoDiscovery) getLabel() []*base.Label {
 
 // UnmarshalEVPNEthAutoDiscovery instantiates new instance of a Ethernet Auto Discovery route type object
 func UnmarshalEVPNEthAutoDiscovery(b []byte) (*EthAutoDiscovery, error) {
+	if len(b) < 22 {
+		return nil, fmt.Errorf("EVPN Type 1: need at least 22 bytes, have %d", len(b))
+	}
 	var err error
 	t := EthAutoDiscovery{}
 	p := 0
@@ -72,14 +79,17 @@ func UnmarshalEVPNEthAutoDiscovery(b []byte) (*EthAutoDiscovery, error) {
 	p += 4
 	bos := false
 	// Loop through labels until hit Bottom of the stack or reach the end of slice
-	for !bos && p < len(b) {
-		l, err := base.MakeLabel(b[p:])
+	for !bos && p+3 <= len(b) {
+		l, err := base.MakeLabel(b[p : p+3])
 		if err != nil {
 			return nil, err
 		}
 		t.Label = append(t.Label, l)
 		p += 3
 		bos = l.BoS
+	}
+	if p != len(b) {
+		return nil, fmt.Errorf("EVPN Type 1: %d trailing bytes after label stack", len(b)-p)
 	}
 
 	return &t, nil

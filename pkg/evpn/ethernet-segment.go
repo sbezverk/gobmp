@@ -1,6 +1,10 @@
 package evpn
 
-import "github.com/sbezverk/gobmp/pkg/base"
+import (
+	"fmt"
+
+	"github.com/sbezverk/gobmp/pkg/base"
+)
 
 // EthernetSegment defines a structure of Route type 4
 // (Ethernet Segment Route)
@@ -54,6 +58,9 @@ func (t *EthernetSegment) getLabel() []*base.Label {
 
 // UnmarshalEVPNEthernetSegment instantiates new instance of an Ethernet Segment Route object
 func UnmarshalEVPNEthernetSegment(b []byte) (*EthernetSegment, error) {
+	if len(b) < 19 {
+		return nil, fmt.Errorf("EVPN Type 4: need at least 19 bytes, have %d", len(b))
+	}
 	var err error
 	t := EthernetSegment{}
 	p := 0
@@ -71,6 +78,9 @@ func UnmarshalEVPNEthernetSegment(b []byte) (*EthernetSegment, error) {
 	p++
 	l := int(t.IPAddrLength / 8)
 	if t.IPAddrLength != 0 {
+		if p+l > len(b) {
+			return nil, fmt.Errorf("EVPN Type 4: IP address truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+		}
 		t.IPAddr = make([]byte, l)
 		copy(t.IPAddr, b[p:p+l])
 	}
