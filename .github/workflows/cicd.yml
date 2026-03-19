@@ -206,7 +206,7 @@ jobs:
           echo "Waiting for BGP session to establish (up to 5 min)..."
           established=false
           for i in $(seq 1 60); do
-            state=$(docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null | grep "10.1.1.10" | awk '{print $10}')
+            state=$(docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null | grep "10.1.1.10" | awk '{print $10}' || true)
             if [ "$state" = "Estab" ] || echo "$state" | grep -qE '^[0-9]+$'; then
               echo "BGP session established after $((i * 5))s"
               established=true
@@ -275,7 +275,7 @@ jobs:
           echo "Waiting for BGP session to establish (up to 5 min)..."
           established=false
           for i in $(seq 1 60); do
-            state=$(docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null | grep "10.1.1.10" | awk '{print $10}')
+            state=$(docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null | grep "10.1.1.10" | awk '{print $10}' || true)
             if [ "$state" = "Estab" ] || echo "$state" | grep -qE '^[0-9]+$'; then
               echo "BGP session established after $((i * 5))s"
               established=true
