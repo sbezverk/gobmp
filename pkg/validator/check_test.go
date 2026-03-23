@@ -286,10 +286,7 @@ func TestStore_SkipsEORMessage(t *testing.T) {
 	eorJSON, _ := json.Marshal(eor)
 	topicChan <- eorJSON
 	waitDeadline := time.Now().Add(1 * time.Second)
-	for {
-		if len(topicChan) == 0 {
-			break
-		}
+	for len(topicChan) != 0 {
 		if time.Now().After(waitDeadline) {
 			t.Fatal("timed out waiting for EOR message to be consumed")
 		}
