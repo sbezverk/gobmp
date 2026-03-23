@@ -483,21 +483,20 @@ func unmarshalAttrLgCommunity(b []byte) []string {
 func unmarshalAttrAS4Path(b []byte) []uint32 {
 	path := make([]uint32, 0)
 	for p := 0; p < len(b); {
-		// Segment type byte
-		if p+1 > len(b) {
+		if p+2 > len(b) {
+			glog.Errorf("AS4_PATH truncated at segment header: offset %d, len %d", p, len(b))
 			break
 		}
+		// Segment type byte
 		p++
 		// Length of path segment in number of 4-byte ASes
-		if p+1 > len(b) {
-			break
-		}
 		l := int(b[p])
 		p++
+		if p+l*4 > len(b) {
+			glog.Errorf("AS4_PATH truncated: segment needs %d bytes, have %d", l*4, len(b)-p)
+			break
+		}
 		for n := 0; n < l; n++ {
-			if p+4 > len(b) {
-				return path
-			}
 			as := binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 			path = append(path, as)

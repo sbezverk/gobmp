@@ -123,6 +123,9 @@ func (p *PerPeerHeader) GetPeerBGPIDString() string {
 
 // GetPeerAddrString returns a string representation of Peer address
 func (p *PerPeerHeader) GetPeerAddrString() string {
+	if len(p.PeerAddress) < 16 {
+		return ""
+	}
 	if p.PeerType != PeerType3 && p.flagV {
 		// IPv6 specific conversions
 		return net.IP(p.PeerAddress).To16().String()

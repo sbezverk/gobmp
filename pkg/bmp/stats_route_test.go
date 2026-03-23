@@ -2,6 +2,7 @@ package bmp
 
 import (
 	"encoding/binary"
+	"errors"
 	"testing"
 )
 
@@ -135,20 +136,30 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "non-update type (type=1 OPEN) — no error, no update decoded",
+			name:    "non-update type (type=1 OPEN) — error, unexpected type",
 			input:   makeBody(1, 19),
-			wantErr: false,
+			wantErr: true,
 		},
 		{
-			name:    "non-update type (type=3 NOTIFICATION) — no error",
+			name:    "non-update type (type=3 NOTIFICATION) — error, unexpected type",
 			input:   makeBody(3, 19),
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			// type=2 UPDATE with nothing after the type byte — BGP layer rejects it
 			// because there are not enough bytes for the Withdrawn Routes Length field.
 			name:    "update type with empty payload errors from BGP layer",
 			input:   makeBody(2, 19),
+			wantErr: true,
+		},
+		{
+			name:    "bgpLen understated (claims 19 but buffer is 25)",
+			input:   append(makeBody(2, 19), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+			wantErr: true,
+		},
+		{
+			name:    "bgpLen too small (claims 10)",
+			input:   makeBody(2, 10),
 			wantErr: true,
 		},
 	}
@@ -160,5 +171,24 @@ func TestUnmarshalBMPRouteMonitorMessage(t *testing.T) {
 				t.Fatalf("UnmarshalBMPRouteMonitorMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestRouteMonitor_ErrNotAnUpdate(t *testing.T) {
+	makeBody := func(msgType byte, length uint16) []byte {
+		b := make([]byte, 16+2+1)
+		for i := 0; i < 16; i++ {
+			b[i] = 0xFF
+		}
+		binary.BigEndian.PutUint16(b[16:], length)
+		b[18] = msgType
+		return b
+	}
+	_, err := UnmarshalBMPRouteMonitorMessage(makeBody(4, 19))
+	if err == nil {
+		t.Fatal("expected error for KEEPALIVE type")
+	}
+	if !errors.Is(err, ErrNotAnUpdate) {
+		t.Errorf("error %v does not wrap ErrNotAnUpdate", err)
 	}
 }
