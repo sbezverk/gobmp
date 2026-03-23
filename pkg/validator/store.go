@@ -30,7 +30,7 @@ func (sm *StoredMessage) Marshal() []byte {
 func (sm *StoredMessage) Unmarshal(b []byte) error {
 	nsm := &StoredMessage{}
 	if len(b) < 8 {
-		return fmt.Errorf("not enough bytes to unmarshal StoreMessage")
+		return fmt.Errorf("not enough bytes to unmarshal StoredMessage, need at least 8 bytes for topic type and length, got %d", len(b))
 	}
 	p := 0
 	msgType := binary.BigEndian.Uint32(b[:4])
@@ -39,7 +39,7 @@ func (sm *StoredMessage) Unmarshal(b []byte) error {
 	msgLen := binary.BigEndian.Uint32(b[p : p+4])
 	p += 4
 	if p+int(msgLen) > len(b) {
-		return fmt.Errorf("not enough bytes to unmarshal the message part of StoreMessage")
+		return fmt.Errorf("not enough bytes to unmarshal the message part of StoredMessage, need %d bytes, got %d", msgLen, len(b)-p)
 	}
 	nsm.Len = msgLen
 	nsm.Message = make([]byte, nsm.Len)
@@ -88,15 +88,25 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, workersErrChan 
 			if u.IsEOR {
 				continue
 			}
-			errCh := make(chan error)
-			s.msgCh <- &message{
+			errCh := make(chan error, 1)
+			select {
+			case s.msgCh <- &message{
 				topicType: topic.TopicType,
 				msg:       msg,
 				errCh:     errCh,
+			}:
+			case <-s.stopCh:
+				return
 			}
-			err := <-errCh
-			if err != nil {
-				workersErrChan <- err
+			select {
+			case err := <-errCh:
+				if err != nil {
+					select {
+					case workersErrChan <- err:
+					case <-s.stopCh:
+					}
+				}
+			case <-s.stopCh:
 				return
 			}
 		}
@@ -117,7 +127,7 @@ func Store(topics []*kafka.TopicDescriptor, f *os.File, stopCh chan struct{}, er
 	go s.manager()
 	defer close(s.stopCh)
 
-	workersErrChan := make(chan error)
+	workersErrChan := make(chan error, len(topics))
 	for _, topic := range topics {
 		switch topic.TopicType {
 		case bmp.UnicastPrefixV4Msg:

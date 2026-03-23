@@ -13,24 +13,22 @@ import (
 	bmp_message "github.com/sbezverk/gobmp/pkg/message"
 )
 
-func buildMessgesMap(b []byte) (map[int][][]byte, error) {
+func buildMessagesMap(b []byte) (map[int][][]byte, error) {
 	m := make(map[int][][]byte)
 	for p := 0; p < len(b); {
 		if p+8 > len(b) {
-			return nil, fmt.Errorf("invalid length of byte array")
+			return nil, fmt.Errorf("invalid length of byte array, need at least 8 bytes for message type and length, got %d", len(b)-p)
 		}
 		mt := binary.BigEndian.Uint32(b[p : p+4])
-		// Validate message type is in expected range
-		// Standard BMP message types: 0-6 (RFC 7854)
-		// Internal gobmp message types: 7-116
-		if mt > 116 {
-			return nil, fmt.Errorf("invalid message type: %d (expected 0-116)", mt)
+		// Validate message type is in expected range (0 to bmp.BMPRawMsg)
+		if mt > bmp.BMPRawMsg {
+			return nil, fmt.Errorf("invalid message type: %d (expected 0-%d)", mt, bmp.BMPRawMsg)
 		}
 		p += 4
 		ml := binary.BigEndian.Uint32(b[p : p+4])
 		p += 4
 		if p+int(ml) > len(b) {
-			return nil, fmt.Errorf("corrupted data")
+			return nil, fmt.Errorf("corrupted data, expected %d bytes, but only %d bytes available", ml, len(b)-p)
 		}
 		msgs, ok := m[int(mt)]
 		if !ok {
@@ -126,7 +124,7 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 }
 
 func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errCh chan error) {
-	msgs, err := buildMessgesMap(b)
+	msgs, err := buildMessagesMap(b)
 	if err != nil {
 		errCh <- err
 		return
@@ -134,13 +132,15 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 	c := &check{
 		stopCh: make(chan struct{}),
 	}
-	doneCh := make(chan struct{})
-	workersErrChan := make(chan error)
+	doneCh := make(chan struct{}, len(topics))
+	workersErrChan := make(chan error, len(topics))
+	totalWorkers := 0
 	for _, topic := range topics {
 		topicMsgs, ok := msgs[topic.TopicType]
 		if !ok {
-			// Ddid not find corresponding to the topic type test messages
-			errCh <- fmt.Errorf("no test messages for topic type: %d were found the tests data", topic.TopicType)
+			// Did not find corresponding to the topic type test messages
+			errCh <- fmt.Errorf("no test messages for topic type: %d were found in the test data", topic.TopicType)
+			close(c.stopCh)
 			return
 		}
 		switch topic.TopicType {
@@ -150,22 +150,30 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 			fallthrough
 		case bmp.UnicastPrefixV6Msg:
 			go c.checkUnicastWorker(topicMsgs, topic, doneCh, workersErrChan)
+			totalWorkers++
 		}
 	}
-	total := len(topics)
+	if totalWorkers == 0 {
+		errCh <- fmt.Errorf("no workers were started, likely due to unsupported topic types")
+		return
+	}
 	done := 0
-	select {
-	case <-stopCh:
-		return
-	case err := <-workersErrChan:
-		errCh <- err
-		return
-	case <-doneCh:
-		done++
-		if done >= total {
-			errCh <- nil
+	for {
+		select {
+		case <-stopCh:
+			close(c.stopCh)
 			return
+		case err := <-workersErrChan:
+			close(c.stopCh)
+			errCh <- err
+			return
+		case <-doneCh:
+			done++
+			if done >= totalWorkers {
+				close(c.stopCh)
+				errCh <- nil
+				return
+			}
 		}
 	}
-	errCh <- nil
 }

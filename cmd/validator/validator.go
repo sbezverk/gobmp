@@ -65,8 +65,8 @@ func run() int {
 	stopCh := make(chan struct{})
 
 	topics := make([]*kafka.TopicDescriptor, 0)
-	tests := strings.Split(testCase, ",")
-	for _, test := range tests {
+	tests := strings.SplitSeq(testCase, ",")
+	for test := range tests {
 		switch test {
 		case "u4":
 			topics = append(topics, &kafka.TopicDescriptor{
@@ -75,11 +75,15 @@ func run() int {
 				TopicChan: make(chan []byte),
 			})
 		case "vpls":
-			topics = append(topics, &kafka.TopicDescriptor{
-				TopicName: kafka.WithTopicPrefix(kafkaTopicPrefix, kafka.VPLSMessageTopic),
-				TopicType: bmp.VPLSMsg,
-				TopicChan: make(chan []byte),
-			})
+			// TODO: re-enable vpls test case when the support for vpls messages is added to the validator
+			// topics = append(topics, &kafka.TopicDescriptor{
+			// 	TopicName: kafka.WithTopicPrefix(kafkaTopicPrefix, kafka.VPLSMessageTopic),
+			// 	TopicType: bmp.VPLSMsg,
+			// 	TopicChan: make(chan []byte),
+			// })
+			// _ = topics
+			glog.Errorf("vpls test case is not supported yet, exiting\n")
+			return 1
 		default:
 			glog.Errorf("Unsupported or invalid test case %s", test)
 			return 1
