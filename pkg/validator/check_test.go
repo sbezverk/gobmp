@@ -155,8 +155,12 @@ func TestStore_StopCh_Returns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(f.Name())
-	defer f.Close()
+	defer func() {
+		_ = os.Remove(f.Name())
+	}()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	stopCh := make(chan struct{})
 	errCh := make(chan error, 1)
@@ -181,8 +185,12 @@ func TestStore_WritesUnicastMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(f.Name())
-	defer f.Close()
+	defer func() {
+		_ = os.Remove(f.Name())
+	}()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	u := &bmp_message.UnicastPrefix{
 		Prefix:    "172.16.0.0",
@@ -237,8 +245,12 @@ func TestStore_SkipsEORMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(f.Name())
-	defer f.Close()
+	defer func() {
+		_ = os.Remove(f.Name())
+	}()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	topicChan := make(chan []byte, 1)
 	topics := []*kafka.TopicDescriptor{

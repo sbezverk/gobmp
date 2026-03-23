@@ -81,6 +81,7 @@ func run() int {
 				TopicType: bmp.VPLSMsg,
 				TopicChan: make(chan []byte),
 			})
+			_ = topics
 			fmt.Fprintf(os.Stderr, "vpls test case is not supported yet, exiting\n")
 			return 1
 		default:
