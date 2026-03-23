@@ -138,8 +138,8 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 	for _, topic := range topics {
 		topicMsgs, ok := msgs[topic.TopicType]
 		if !ok {
-			// Ddid not find corresponding to the topic type test messages
-			errCh <- fmt.Errorf("no test messages for topic type: %d were found the tests data", topic.TopicType)
+			// Did not find corresponding to the topic type test messages
+			errCh <- fmt.Errorf("no test messages for topic type: %d were found in the test data", topic.TopicType)
 			return
 		}
 		switch topic.TopicType {
@@ -151,6 +151,10 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 			go c.checkUnicastWorker(topicMsgs, topic, doneCh, workersErrChan)
 			totalWorkers++
 		}
+	}
+	if totalWorkers == 0 {
+		errCh <- fmt.Errorf("no workers were started, likely due to unsupported topic types")
+		return
 	}
 	done := 0
 	for {
