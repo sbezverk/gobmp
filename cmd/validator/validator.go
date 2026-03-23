@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -65,8 +66,8 @@ func run() int {
 	stopCh := make(chan struct{})
 
 	topics := make([]*kafka.TopicDescriptor, 0)
-	tests := strings.Split(testCase, ",")
-	for _, test := range tests {
+	tests := strings.SplitSeq(testCase, ",")
+	for test := range tests {
 		switch test {
 		case "u4":
 			topics = append(topics, &kafka.TopicDescriptor{
@@ -80,6 +81,8 @@ func run() int {
 				TopicType: bmp.VPLSMsg,
 				TopicChan: make(chan []byte),
 			})
+			fmt.Fprintf(os.Stderr, "vpls test case is not supported yet, exiting\n")
+			return 1
 		default:
 			glog.Errorf("Unsupported or invalid test case %s", test)
 			return 1

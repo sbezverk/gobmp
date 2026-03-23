@@ -13,7 +13,7 @@ import (
 	bmp_message "github.com/sbezverk/gobmp/pkg/message"
 )
 
-func buildMessgesMap(b []byte) (map[int][][]byte, error) {
+func buildMessagesMap(b []byte) (map[int][][]byte, error) {
 	m := make(map[int][][]byte)
 	for p := 0; p < len(b); {
 		if p+8 > len(b) {
@@ -126,7 +126,7 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 }
 
 func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errCh chan error) {
-	msgs, err := buildMessgesMap(b)
+	msgs, err := buildMessagesMap(b)
 	if err != nil {
 		errCh <- err
 		return
@@ -134,7 +134,7 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 	c := &check{
 		stopCh: make(chan struct{}),
 	}
-	doneCh := make(chan struct{})
+	doneCh := make(chan struct{}, len(topics))
 	workersErrChan := make(chan error)
 	for _, topic := range topics {
 		topicMsgs, ok := msgs[topic.TopicType]
@@ -154,18 +154,20 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 	}
 	total := len(topics)
 	done := 0
-	select {
-	case <-stopCh:
-		return
-	case err := <-workersErrChan:
-		errCh <- err
-		return
-	case <-doneCh:
-		done++
-		if done >= total {
-			errCh <- nil
+	for {
+		select {
+		case <-stopCh:
+			close(c.stopCh)
 			return
+		case err := <-workersErrChan:
+			errCh <- err
+			return
+		case <-doneCh:
+			done++
+			if done >= total {
+				errCh <- nil
+				return
+			}
 		}
 	}
-	errCh <- nil
 }

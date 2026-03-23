@@ -89,10 +89,14 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, workersErrChan 
 				continue
 			}
 			errCh := make(chan error)
-			s.msgCh <- &message{
+			select {
+			case s.msgCh <- &message{
 				topicType: topic.TopicType,
 				msg:       msg,
 				errCh:     errCh,
+			}:
+			case <-s.stopCh:
+				return
 			}
 			err := <-errCh
 			if err != nil {
