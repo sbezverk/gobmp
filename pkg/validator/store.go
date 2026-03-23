@@ -101,8 +101,10 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, workersErrChan 
 			select {
 			case err := <-errCh:
 				if err != nil {
-					workersErrChan <- err
-					return
+					select {
+					case workersErrChan <- err:
+					case <-s.stopCh:
+					}
 				}
 			case <-s.stopCh:
 				return
@@ -125,7 +127,7 @@ func Store(topics []*kafka.TopicDescriptor, f *os.File, stopCh chan struct{}, er
 	go s.manager()
 	defer close(s.stopCh)
 
-	workersErrChan := make(chan error)
+	workersErrChan := make(chan error, len(topics))
 	for _, topic := range topics {
 		switch topic.TopicType {
 		case bmp.UnicastPrefixV4Msg:

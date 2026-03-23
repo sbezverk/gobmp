@@ -140,6 +140,7 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 		if !ok {
 			// Did not find corresponding to the topic type test messages
 			errCh <- fmt.Errorf("no test messages for topic type: %d were found in the test data", topic.TopicType)
+			close(c.stopCh)
 			return
 		}
 		switch topic.TopicType {
