@@ -135,7 +135,7 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 		stopCh: make(chan struct{}),
 	}
 	doneCh := make(chan struct{}, len(topics))
-	workersErrChan := make(chan error)
+	workersErrChan := make(chan error, len(topics))
 	for _, topic := range topics {
 		topicMsgs, ok := msgs[topic.TopicType]
 		if !ok {
@@ -160,11 +160,13 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 			close(c.stopCh)
 			return
 		case err := <-workersErrChan:
+			close(c.stopCh)
 			errCh <- err
 			return
 		case <-doneCh:
 			done++
 			if done >= total {
+				close(c.stopCh)
 				errCh <- nil
 				return
 			}

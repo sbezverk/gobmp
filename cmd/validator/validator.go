@@ -76,12 +76,13 @@ func run() int {
 				TopicChan: make(chan []byte),
 			})
 		case "vpls":
-			topics = append(topics, &kafka.TopicDescriptor{
-				TopicName: kafka.WithTopicPrefix(kafkaTopicPrefix, kafka.VPLSMessageTopic),
-				TopicType: bmp.VPLSMsg,
-				TopicChan: make(chan []byte),
-			})
-			_ = topics
+			// TODO: re-enable vpls test case when the support for vpls messages is added to the validator
+			// topics = append(topics, &kafka.TopicDescriptor{
+			// 	TopicName: kafka.WithTopicPrefix(kafkaTopicPrefix, kafka.VPLSMessageTopic),
+			// 	TopicType: bmp.VPLSMsg,
+			// 	TopicChan: make(chan []byte),
+			// })
+			// _ = topics
 			fmt.Fprintf(os.Stderr, "vpls test case is not supported yet, exiting\n")
 			return 1
 		default:

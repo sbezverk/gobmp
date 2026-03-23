@@ -222,7 +222,20 @@ func TestStore_WritesUnicastMessage(t *testing.T) {
 
 	topicChan <- msgJSON
 	// Give the worker + manager time to process and write the message.
-	time.Sleep(200 * time.Millisecond)
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		info, err := f.Stat()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Size() > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timed out waiting for Store to write message")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	close(stopCh)
 
 	select {
@@ -272,7 +285,16 @@ func TestStore_SkipsEORMessage(t *testing.T) {
 	eor := &bmp_message.UnicastPrefix{IsEOR: true}
 	eorJSON, _ := json.Marshal(eor)
 	topicChan <- eorJSON
-	time.Sleep(100 * time.Millisecond)
+	waitDeadline := time.Now().Add(1 * time.Second)
+	for {
+		if len(topicChan) == 0 {
+			break
+		}
+		if time.Now().After(waitDeadline) {
+			t.Fatal("timed out waiting for EOR message to be consumed")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	close(stopCh)
 
 	select {
