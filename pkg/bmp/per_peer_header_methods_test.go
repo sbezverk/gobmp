@@ -82,6 +82,13 @@ func TestGetPeerAddrString(t *testing.T) {
 			want: "2001:db8::1",
 		},
 		{
+			name:     "short PeerAddress returns empty string",
+			peerType: PeerType0,
+			flagV:    false,
+			addr:     []byte{10, 1, 2, 3}, // only 4 bytes, less than 16
+			want:     "",
+		},
+		{
 			name:     "PeerType3 (Loc-RIB) always IPv4 regardless of address",
 			peerType: PeerType3,
 			flagV:    false,

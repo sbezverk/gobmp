@@ -207,6 +207,44 @@ func TestParsingWorkerStatsReportTooShortForCount(t *testing.T) {
 	}
 }
 
+// TestParsingWorkerNonUpdateSkipped verifies that a RouteMonitor containing a
+// non-UPDATE BGP message (e.g. OPEN, type 1) is skipped via ErrNotAnUpdate,
+// and a subsequent valid message in the same buffer is still processed.
+func TestParsingWorkerNonUpdateSkipped(t *testing.T) {
+	// Build a RouteMonitor with a BGP OPEN (type 1) instead of UPDATE (type 2).
+	bgpMsg := make([]byte, 19)
+	for i := 0; i < 16; i++ {
+		bgpMsg[i] = 0xFF // BGP marker
+	}
+	binary.BigEndian.PutUint16(bgpMsg[16:18], 19) // BGP length
+	bgpMsg[18] = 1                                // type 1 = OPEN (not UPDATE)
+
+	emptyPPH := make([]byte, bmp.PerPeerHeaderLength)
+	rmLen := bmp.CommonHeaderLength + bmp.PerPeerHeaderLength + len(bgpMsg)
+	rmMsg := make([]byte, rmLen)
+	rmMsg[0] = 3 // BMP version
+	binary.BigEndian.PutUint32(rmMsg[1:5], uint32(rmLen))
+	rmMsg[5] = bmp.RouteMonitorMsg
+	copy(rmMsg[6:], emptyPPH)
+	copy(rmMsg[6+bmp.PerPeerHeaderLength:], bgpMsg)
+
+	// Follow with a valid PeerDown so we can verify the worker continues.
+	validMsg := buildPeerDownMsg(emptyPPH, 5, nil)
+	input := append(rmMsg, validMsg...)
+
+	producerQueue := make(chan bmp.Message, 10)
+	p := &parser{producerQueue: producerQueue, config: &Config{}}
+	p.parsingWorker(input)
+	msgs := collectMessages(producerQueue)
+
+	if len(msgs) != 1 {
+		t.Fatalf("expected 1 message (PeerDown after skipped non-Update RouteMonitor), got %d", len(msgs))
+	}
+	if _, ok := msgs[0].Payload.(*bmp.PeerDownMessage); !ok {
+		t.Fatalf("payload type = %T, want *bmp.PeerDownMessage", msgs[0].Payload)
+	}
+}
+
 func TestParsingWorker(t *testing.T) {
 	tests := []struct {
 		name  string
