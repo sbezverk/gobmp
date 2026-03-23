@@ -90,11 +90,12 @@ func TestBuildMessagesMap_TruncatedHeader(t *testing.T) {
 
 func TestBuildMessagesMap_InvalidTypeTooHigh(t *testing.T) {
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint32(b[:4], 200) // type 200 > 116
+	invalidType := uint32(bmp.BMPRawMsg) + 1 // type greater than the maximum allowed BMP message type
+	binary.BigEndian.PutUint32(b[:4], invalidType)
 	binary.BigEndian.PutUint32(b[4:8], 0)
 	_, err := buildMessagesMap(b)
 	if err == nil {
-		t.Error("expected error for message type > 116, got nil")
+		t.Error("expected error for message type > ", bmp.BMPRawMsg, ", got nil")
 	}
 }
 
