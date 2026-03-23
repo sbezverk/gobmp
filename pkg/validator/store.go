@@ -88,7 +88,7 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, workersErrChan 
 			if u.IsEOR {
 				continue
 			}
-			errCh := make(chan error)
+			errCh := make(chan error, 1)
 			select {
 			case s.msgCh <- &message{
 				topicType: topic.TopicType,
@@ -98,9 +98,13 @@ func (s *store) storeUnicastWorker(topic *kafka.TopicDescriptor, workersErrChan 
 			case <-s.stopCh:
 				return
 			}
-			err := <-errCh
-			if err != nil {
-				workersErrChan <- err
+			select {
+			case err := <-errCh:
+				if err != nil {
+					workersErrChan <- err
+					return
+				}
+			case <-s.stopCh:
 				return
 			}
 		}
