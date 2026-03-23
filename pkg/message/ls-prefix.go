@@ -57,6 +57,9 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	msg.IGPRouterID = prfx.GetLocalIGPRouterID()
 	msg.MTID = prfx.Prefix.GetPrefixMTID()
 	route := prfx.Prefix.GetPrefixIPReachability(ipv4)
+	if route == nil {
+		return nil, fmt.Errorf("no IP reachability TLV for prefix NLRI (ipv4=%v)", ipv4)
+	}
 	msg.PrefixLen = int32(route.Length)
 	pr := route.Prefix
 	if !ipv4 {
