@@ -17,7 +17,7 @@ func buildMessagesMap(b []byte) (map[int][][]byte, error) {
 	m := make(map[int][][]byte)
 	for p := 0; p < len(b); {
 		if p+8 > len(b) {
-			return nil, fmt.Errorf("invalid length of byte array")
+			return nil, fmt.Errorf("invalid length of byte array, need at least 8 bytes for message type and length, got %d", len(b)-p)
 		}
 		mt := binary.BigEndian.Uint32(b[p : p+4])
 		// Validate message type is in expected range (0 to bmp.BMPRawMsg)
@@ -28,7 +28,7 @@ func buildMessagesMap(b []byte) (map[int][][]byte, error) {
 		ml := binary.BigEndian.Uint32(b[p : p+4])
 		p += 4
 		if p+int(ml) > len(b) {
-			return nil, fmt.Errorf("corrupted data")
+			return nil, fmt.Errorf("corrupted data, expected %d bytes, but only %d bytes available", ml, len(b)-p)
 		}
 		msgs, ok := m[int(mt)]
 		if !ok {

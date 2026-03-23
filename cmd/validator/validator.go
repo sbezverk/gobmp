@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -83,7 +82,7 @@ func run() int {
 			// 	TopicChan: make(chan []byte),
 			// })
 			// _ = topics
-			fmt.Fprintf(os.Stderr, "vpls test case is not supported yet, exiting\n")
+			glog.Errorf("vpls test case is not supported yet, exiting\n")
 			return 1
 		default:
 			glog.Errorf("Unsupported or invalid test case %s", test)
