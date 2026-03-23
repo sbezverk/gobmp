@@ -30,7 +30,7 @@ func (sm *StoredMessage) Marshal() []byte {
 func (sm *StoredMessage) Unmarshal(b []byte) error {
 	nsm := &StoredMessage{}
 	if len(b) < 8 {
-		return fmt.Errorf("not enough bytes to unmarshal StoreMessage, need at least 8 bytes for topic type and length, got %d", len(b))
+		return fmt.Errorf("not enough bytes to unmarshal StoredMessage, need at least 8 bytes for topic type and length, got %d", len(b))
 	}
 	p := 0
 	msgType := binary.BigEndian.Uint32(b[:4])
@@ -39,7 +39,7 @@ func (sm *StoredMessage) Unmarshal(b []byte) error {
 	msgLen := binary.BigEndian.Uint32(b[p : p+4])
 	p += 4
 	if p+int(msgLen) > len(b) {
-		return fmt.Errorf("not enough bytes to unmarshal the message part of StoreMessage, need %d bytes, got %d", msgLen, len(b)-p)
+		return fmt.Errorf("not enough bytes to unmarshal the message part of StoredMessage, need %d bytes, got %d", msgLen, len(b)-p)
 	}
 	nsm.Len = msgLen
 	nsm.Message = make([]byte, nsm.Len)
