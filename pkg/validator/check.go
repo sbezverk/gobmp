@@ -20,11 +20,9 @@ func buildMessagesMap(b []byte) (map[int][][]byte, error) {
 			return nil, fmt.Errorf("invalid length of byte array")
 		}
 		mt := binary.BigEndian.Uint32(b[p : p+4])
-		// Validate message type is in expected range
-		// Standard BMP message types: 0-6 (RFC 7854)
-		// Internal gobmp message types: 7-116
-		if mt > 116 {
-			return nil, fmt.Errorf("invalid message type: %d (expected 0-116)", mt)
+		// Validate message type is in expected range (0 to bmp.BMPRawMsg)
+		if mt > bmp.BMPRawMsg {
+			return nil, fmt.Errorf("invalid message type: %d (expected 0-%d)", mt, bmp.BMPRawMsg)
 		}
 		p += 4
 		ml := binary.BigEndian.Uint32(b[p : p+4])
@@ -136,6 +134,7 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 	}
 	doneCh := make(chan struct{}, len(topics))
 	workersErrChan := make(chan error, len(topics))
+	totalWorkers := 0
 	for _, topic := range topics {
 		topicMsgs, ok := msgs[topic.TopicType]
 		if !ok {
@@ -150,9 +149,9 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 			fallthrough
 		case bmp.UnicastPrefixV6Msg:
 			go c.checkUnicastWorker(topicMsgs, topic, doneCh, workersErrChan)
+			totalWorkers++
 		}
 	}
-	total := len(topics)
 	done := 0
 	for {
 		select {
@@ -165,7 +164,7 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 			return
 		case <-doneCh:
 			done++
-			if done >= total {
+			if done >= totalWorkers {
 				close(c.stopCh)
 				errCh <- nil
 				return
