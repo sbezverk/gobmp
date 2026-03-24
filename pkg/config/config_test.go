@@ -50,8 +50,8 @@ speakers_list:
 	if cfg.NATSConfig.NatsSrv != "nats://localhost:4222" {
 		t.Errorf("NATSConfig.NatsSrv = %q, want nats://localhost:4222", cfg.NATSConfig.NatsSrv)
 	}
-	if !cfg.SplitAF {
-		t.Error("SplitAF = false, want true")
+	if cfg.SplitAF == nil || !*cfg.SplitAF {
+		t.Error("SplitAF = nil or false, want *true")
 	}
 	if cfg.BmpListenPort != 5000 {
 		t.Errorf("BmpListenPort = %d, want 5000", cfg.BmpListenPort)
@@ -85,8 +85,8 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	if cfg.BmpListenPort != 0 {
 		t.Errorf("BmpListenPort = %d, want 0", cfg.BmpListenPort)
 	}
-	if cfg.SplitAF {
-		t.Error("SplitAF = true, want false")
+	if cfg.SplitAF != nil {
+		t.Errorf("SplitAF = %v, want nil (unset)", *cfg.SplitAF)
 	}
 	if cfg.ActiveMode {
 		t.Error("ActiveMode = true, want false")

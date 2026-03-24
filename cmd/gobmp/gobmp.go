@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -45,6 +46,7 @@ const (
 	defaultBmpRaw             = false
 	defaultMsgFile            = ""
 	defaultAdminID            = ""
+	defaultPublisherType      = config.PublisherTypeUnknown
 )
 
 func init() {
@@ -68,10 +70,8 @@ func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
 
-	configLoaded := true
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
-		configLoaded = false
 		if err == config.ErrNoConfig {
 			cfg = &config.Config{}
 		} else {
@@ -79,7 +79,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	applyConfigDefaults(cfg, configLoaded)
+	applyConfigDefaults(cfg)
 	applyConfigOverrides(cfg)
 
 	// Starting performance collecting http server if required
@@ -117,10 +117,13 @@ func main() {
 			os.Exit(1)
 		}
 	case config.PublisherTypeKafka:
+		if cfg.KafkaConfig == nil {
+			cfg.KafkaConfig = &config.KafkaConfig{}
+		}
 		kConfig := &kafka.Config{
-			ServerAddress:        kafkaSrv,
-			TopicRetentionTimeMs: kafkaTpRetnTimeMs,
-			TopicPrefix:          kafkaTopicPrefix,
+			ServerAddress:        cfg.KafkaConfig.KafkaSrv,
+			TopicRetentionTimeMs: strconv.Itoa(cfg.KafkaConfig.KafkaTpRetnTimeMs),
+			TopicPrefix:          cfg.KafkaConfig.KafkaTopicPrefix,
 		}
 		cfg.Publisher, err = kafka.NewKafkaPublisher(kConfig)
 		if err != nil {
@@ -132,68 +135,6 @@ func main() {
 		glog.Errorf("invalid publisher type: %d", cfg.PublisherType)
 		os.Exit(1)
 	}
-
-	// var publisher pub.Publisher
-	// switch strings.ToLower(dump) {
-	// case "file":
-	// 	publisher, err = filer.NewFiler(file)
-	// 	if err != nil {
-	// 		glog.Errorf("failed to initialize file publisher with error: %+v", err)
-	// 		os.Exit(1)
-	// 	}
-	// 	glog.V(5).Infof("file publisher has been successfully initialized.")
-	// case "console":
-	// 	publisher = dumper.NewDumper()
-	// 	glog.V(5).Infof("console publisher has been successfully initialized.")
-	// case "nats":
-	// 	publisher, err = nats.NewPublisher(natsSrv)
-	// 	if err != nil {
-	// 		glog.Errorf("failed to initialize NATS publisher with error: %+v", err)
-	// 		os.Exit(1)
-	// 	}
-	// 	glog.V(5).Infof("NATS publisher has been successfully initialized.")
-	// default:
-	// 	kConfig := &kafka.Config{
-	// 		ServerAddress:        kafkaSrv,
-	// 		TopicRetentionTimeMs: kafkaTpRetnTimeMs,
-	// 		TopicPrefix:          kafkaTopicPrefix,
-	// 	}
-	// 	publisher, err = kafka.NewKafkaPublisher(kConfig)
-	// 	if err != nil {
-	// 		glog.Errorf("failed to initialize Kafka publisher with error: %+v", err)
-	// 		os.Exit(1)
-	// 	}
-	// 	glog.V(5).Infof("Kafka publisher has been successfully initialized.")
-	// }
-
-	// Initializing bmp server
-	// interceptFlag, err := strconv.ParseBool(intercept)
-	// if err != nil {
-	// 	glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
-	// 	os.Exit(1)
-	// }
-	// splitAFFlag, err := strconv.ParseBool(splitAF)
-	// if err != nil {
-	// 	glog.Errorf("failed to parse to bool the value of the intercept flag with error: %+v", err)
-	// 	os.Exit(1)
-	// }
-	// bmpRawFlag, err := strconv.ParseBool(bmpRaw)
-	// if err != nil {
-	// 	glog.Errorf("failed to parse to bool the value of the bmp-raw flag with error: %+v", err)
-	// 	os.Exit(1)
-	// }
-
-	// Set default admin ID to hostname if not provided
-	// collectorAdminID := adminID
-	// if collectorAdminID == "" {
-	// 	hostname, err := os.Hostname()
-	// 	if err != nil {
-	// 		glog.Warningf("failed to get hostname, using 'gobmp-collector' as admin ID: %+v", err)
-	// 		collectorAdminID = "gobmp-collector"
-	// 	} else {
-	// 		collectorAdminID = hostname
-	// 	}
-	// }
 
 	bmpSrv, err := gobmpsrv.NewBMPServer(cfg)
 	if err != nil {
@@ -210,7 +151,10 @@ func main() {
 	os.Exit(0)
 }
 
-func applyConfigDefaults(cfg *config.Config, configLoaded bool) {
+func applyConfigDefaults(cfg *config.Config) {
+	if cfg.PublisherType == 0 {
+		cfg.PublisherType = defaultPublisherType
+	}
 	if cfg.BmpListenPort == 0 {
 		cfg.BmpListenPort = defaultSourcePort
 	}
@@ -234,11 +178,12 @@ func applyConfigDefaults(cfg *config.Config, configLoaded bool) {
 			cfg.KafkaConfig.KafkaTpRetnTimeMs = v
 		}
 	}
-	// SplitAF defaults to true. Since bool zero-value is false, we can only safely
-	// apply the default when no config file was loaded — otherwise we cannot distinguish
-	// "not set in YAML" from "explicitly set to false".
-	if !configLoaded && !cfg.SplitAF {
-		cfg.SplitAF = defaultSplitAF
+	// SplitAF is *bool so nil means "not set in YAML". Apply the default (true)
+	// only when the pointer is nil; an explicit split_af: false in YAML yields
+	// &false and is left untouched.
+	if cfg.SplitAF == nil {
+		v := defaultSplitAF
+		cfg.SplitAF = &v
 	}
 }
 
@@ -249,13 +194,24 @@ func applyConfigOverrides(cfg *config.Config) {
 	// create the relevant section without requiring the full block in YAML.
 	flag.Visit(func(f *flag.Flag) {
 		switch f.Name {
+		case "dump":
+			// Map the legacy --dump string to the structured PublisherType so
+			// users can select the publisher purely via CLI without a config file.
+			switch strings.ToLower(dump) {
+			case "file", "console":
+				cfg.PublisherType = config.PublisherTypeDump
+			case "nats":
+				cfg.PublisherType = config.PublisherTypeNATS
+			case "kafka":
+				cfg.PublisherType = config.PublisherTypeKafka
+			}
 		case "source-port":
 			cfg.BmpListenPort = srcPort
 		case "performance-port":
 			cfg.PerformancePort = perfPort
 		case "split-af":
 			if v, err := strconv.ParseBool(splitAF); err == nil {
-				cfg.SplitAF = v
+				cfg.SplitAF = &v
 			}
 		case "nats-server":
 			if cfg.NATSConfig == nil {
@@ -301,4 +257,15 @@ func applyConfigOverrides(cfg *config.Config) {
 			}
 		}
 	})
+	// Infer publisher type from explicit server-URL flags when --dump was not
+	// provided. This preserves backward-compatible behaviour: passing
+	// --nats-server or --kafka-server alone is enough to select that publisher.
+	if cfg.PublisherType == config.PublisherTypeUnknown {
+		switch {
+		case cfg.NATSConfig != nil && cfg.NATSConfig.NatsSrv != "":
+			cfg.PublisherType = config.PublisherTypeNATS
+		case cfg.KafkaConfig != nil && cfg.KafkaConfig.KafkaSrv != "":
+			cfg.PublisherType = config.PublisherTypeKafka
+		}
+	}
 }

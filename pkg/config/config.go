@@ -19,9 +19,10 @@ var ErrNoConfig = errors.New("no config file provided")
 type PublisherType int
 
 const (
-	PublisherTypeDump PublisherType = iota
+	PublisherTypeDump PublisherType = iota + 1
 	PublisherTypeNATS
 	PublisherTypeKafka
+	PublisherTypeUnknown = -1
 )
 
 type DumpConfig struct {
@@ -50,7 +51,7 @@ type Config struct {
 	DumpConfig         *DumpConfig   `yaml:"dump_config"`
 	BmpRaw             bool          `yaml:"bmp_raw"`
 	AdminID            string        `yaml:"admin_id"`
-	SplitAF            bool          `yaml:"split_af"`
+	SplitAF            *bool         `yaml:"split_af"`
 	BmpListenPort      int           `yaml:"bmp_listen_port"`
 	CollectPerformance bool          `yaml:"collect_performance"`
 	PerformancePort    int           `yaml:"performance_port"`
@@ -78,15 +79,23 @@ func LoadConfig(path string) (*Config, error) {
 	if fi.Size() > MAX_CONFIG_FILE_SIZE {
 		return nil, fmt.Errorf("config file size exceeds the maximum allowed size of %d bytes", MAX_CONFIG_FILE_SIZE)
 	}
-	b := make([]byte, fi.Size())
-	n, err := io.ReadAtLeast(fd, b, int(fi.Size()))
+	size := int(fi.Size())
+	if size == 0 {
+		// Empty config file: treat as empty YAML document and load defaults.
+		if err := yaml.Unmarshal([]byte{}, cfg); err != nil {
+			return nil, err
+		}
+		return cfg, nil
+	}
+	b := make([]byte, size)
+	n, err := io.ReadAtLeast(fd, b, size)
 	if err != nil {
 		return nil, err
 	}
-	if n != int(fi.Size()) {
-		return nil, fmt.Errorf("expected to read %d bytes but read %d bytes", fi.Size(), n)
+	if n != size {
+		return nil, fmt.Errorf("expected to read %d bytes but read %d bytes", size, n)
 	}
-	if err := yaml.Unmarshal(b, &cfg); err != nil {
+	if err := yaml.Unmarshal(b, cfg); err != nil {
 		return nil, err
 	}
 

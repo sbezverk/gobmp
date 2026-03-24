@@ -269,6 +269,9 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 
 // NewBMPServer instantiates a new instance of BMP Server
 func NewBMPServer(cfg *config.Config) (BMPServer, error) {
+	if cfg == nil {
+		return nil, errors.New("config cannot be nil")
+	}
 	// func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, bmpRaw bool, adminID string) (BMPServer, error) {
 	incoming, err := net.Listen("tcp", ":"+strconv.Itoa(cfg.BmpListenPort))
 	if err != nil {
@@ -282,7 +285,7 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 		// intercept:       intercept,
 		publisher: cfg.Publisher,
 		incoming:  incoming,
-		splitAF:   cfg.SplitAF,
+		splitAF:   cfg.SplitAF != nil && *cfg.SplitAF,
 		bmpRaw:    cfg.BmpRaw,
 		adminID:   cfg.AdminID,
 	}
