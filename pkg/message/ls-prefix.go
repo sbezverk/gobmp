@@ -57,12 +57,19 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	msg.IGPRouterID = prfx.GetLocalIGPRouterID()
 	msg.MTID = prfx.Prefix.GetPrefixMTID()
 	route := prfx.Prefix.GetPrefixIPReachability(ipv4)
+	if route == nil {
+		return nil, fmt.Errorf("no IP reachability TLV for prefix NLRI (ipv4=%v)", ipv4)
+	}
 	msg.PrefixLen = int32(route.Length)
-	pr := prfx.Prefix.GetPrefixIPReachability(ipv4).Prefix
+	pr := route.Prefix
 	if !ipv4 {
-		msg.Prefix = net.IP(pr).To16().String()
+		if ip := net.IP(pr).To16(); ip != nil {
+			msg.Prefix = ip.String()
+		}
 	} else {
-		msg.Prefix = net.IP(pr).To4().String()
+		if ip := net.IP(pr).To4(); ip != nil {
+			msg.Prefix = ip.String()
+		}
 	}
 	switch prfx.ProtocolID {
 	case base.ISISL1:

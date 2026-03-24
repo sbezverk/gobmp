@@ -170,22 +170,22 @@ func TestUnmarshalRTCNLRI(t *testing.T) {
 			errMsg:  "incomplete",
 		},
 		{
-			name: "Invalid - Length not 0, 32, or 96 (RFC violation)",
+			name: "Invalid - Length 24 with insufficient data",
 			input: []byte{
-				0x18, // Length: 24 bits (RFC 4684 only allows 0, 32, or 96)
+				0x18, // Length: 24 bits, but no data bytes follow
 			},
 			want:    nil,
 			wantErr: true,
-			errMsg:  "valid: 0, 32, or 96",
+			errMsg:  "incomplete NLRI",
 		},
 		{
-			name: "Invalid - Length not 0, 32, or 96",
+			name: "Invalid - Length 64 with insufficient data",
 			input: []byte{
-				0x40, // Length: 64 bits (not valid per RFC 4684)
+				0x40, // Length: 64 bits, but no data bytes follow
 			},
 			want:    nil,
 			wantErr: true,
-			errMsg:  "valid: 0, 32, or 96",
+			errMsg:  "incomplete NLRI",
 		},
 		{
 			name: "Invalid - Wrong Extended Community SubType",
@@ -212,6 +212,90 @@ func TestUnmarshalRTCNLRI(t *testing.T) {
 			want:    nil,
 			wantErr: true,
 			errMsg:  "unsupported Route Target type",
+		},
+		{
+			name: "Invalid - Length exceeds 96",
+			input: []byte{
+				0x68, // Length: 104 bits (> 96 max)
+			},
+			want:    nil,
+			wantErr: true,
+			errMsg:  "max 96",
+		},
+		{
+			name: "Valid - Intermediate length 48 bits (partial RT)",
+			input: []byte{
+				0x30,                   // Length: 48 bits (4 AS + 2 partial RT)
+				0x00, 0x00, 0xFD, 0xE8, // Origin AS: 65000
+				0x00, 0x02, // First 2 bytes of RT
+			},
+			want: &Route{
+				NLRI: []*NLRI{
+					{
+						Length:      48,
+						OriginAS:    65000,
+						RouteTarget: []byte{0x00, 0x02},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid - Partial Origin AS (length 16 bits)",
+			input: []byte{
+				0x10,       // Length: 16 bits (2 bytes of Origin AS)
+				0x00, 0x01, // First 2 bytes of Origin AS
+			},
+			want: &Route{
+				NLRI: []*NLRI{
+					{
+						Length: 16,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid - Non-byte-aligned RT prefix (Length=89 bits)",
+			input: []byte{
+				0x59,                   // Length: 89 bits (4 AS + 7.125 partial RT)
+				0x00, 0x00, 0xFD, 0xE8, // Origin AS: 65000
+				0x00, 0x02, 0x00, 0x64, // 8 bytes RT data (ceil((89-32)/8)=8, but only 57 bits valid)
+				0x00, 0x00, 0x00, 0x01,
+			},
+			want: &Route{
+				NLRI: []*NLRI{
+					{
+						Length:      89,
+						OriginAS:    65000,
+						RouteTarget: []byte{0x00, 0x02, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid - Multi-NLRI with partial then full",
+			input: []byte{
+				0x10,       // NLRI 1: length 16 bits
+				0xFD, 0xE8, // 2 bytes of partial Origin AS
+				0x60,                   // NLRI 2: length 96 bits (full)
+				0x00, 0x00, 0xFD, 0xE8, // Origin AS: 65000
+				0x00, 0x02, // Type: 0x00, SubType: 0x02
+				0x00, 0x64, // AS: 100
+				0x00, 0x00, 0x00, 0x01, // Value: 1
+			},
+			want: &Route{
+				NLRI: []*NLRI{
+					{Length: 16},
+					{
+						Length:      96,
+						OriginAS:    65000,
+						RouteTarget: []byte{0x00, 0x02, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01},
+					},
+				},
+			},
+			wantErr: false,
 		},
 	}
 
