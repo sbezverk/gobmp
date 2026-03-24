@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/config"
 )
 
 // ---- test helpers -----------------------------------------------------------
@@ -116,7 +117,7 @@ func assertWorkerExits(t *testing.T, done <-chan struct{}) {
 // ---- NewBMPServer -----------------------------------------------------------
 
 func TestNewBMPServer_Success(t *testing.T) {
-	srv, err := NewBMPServer(0, 0, false, nil, false, false, "")
+	srv, err := NewBMPServer(&config.Config{})
 	if err != nil {
 		t.Fatalf("NewBMPServer: %v", err)
 	}
@@ -124,14 +125,14 @@ func TestNewBMPServer_Success(t *testing.T) {
 }
 
 func TestNewBMPServer_PortInUse(t *testing.T) {
-	srv1, err := NewBMPServer(0, 0, false, nil, false, false, "")
+	srv1, err := NewBMPServer(&config.Config{})
 	if err != nil {
 		t.Fatalf("first NewBMPServer: %v", err)
 	}
 	defer srv1.Stop()
 
 	port := srv1.(*bmpServer).incoming.Addr().(*net.TCPAddr).Port
-	_, err = NewBMPServer(port, 0, false, nil, false, false, "")
+	_, err = NewBMPServer(&config.Config{BmpListenPort: port})
 	if err == nil {
 		t.Fatal("expected error binding already-used port, got nil")
 	}
@@ -140,7 +141,7 @@ func TestNewBMPServer_PortInUse(t *testing.T) {
 // ---- Start / Stop lifecycle -------------------------------------------------
 
 func TestBMPServer_StartStop_NoHang(t *testing.T) {
-	srv, err := NewBMPServer(0, 0, false, newMockPublisher(), false, false, "")
+	srv, err := NewBMPServer(&config.Config{Publisher: newMockPublisher()})
 	if err != nil {
 		t.Fatalf("NewBMPServer: %v", err)
 	}
@@ -160,7 +161,7 @@ func TestBMPServer_StartStop_NoHang(t *testing.T) {
 
 func TestBMPServer_Stop_CallsPublisherStop(t *testing.T) {
 	pub := newMockPublisher()
-	srv, err := NewBMPServer(0, 0, false, pub, false, false, "")
+	srv, err := NewBMPServer(&config.Config{Publisher: pub})
 	if err != nil {
 		t.Fatalf("NewBMPServer: %v", err)
 	}
@@ -366,7 +367,7 @@ func TestBMPWorker_MultipleMessages(t *testing.T) {
 // srv.Stop() calls wg.Wait() internally, so a test-wide timeout on Stop()
 // is the implicit assertion that no workers leaked.
 func TestBMPServer_AcceptsMultipleClients(t *testing.T) {
-	srv, err := NewBMPServer(0, 0, false, newMockPublisher(), false, false, "")
+	srv, err := NewBMPServer(&config.Config{Publisher: newMockPublisher()})
 	if err != nil {
 		t.Fatalf("NewBMPServer: %v", err)
 	}

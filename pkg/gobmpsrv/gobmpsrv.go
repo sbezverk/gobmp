@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/config"
 	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/parser"
 	"github.com/sbezverk/gobmp/pkg/pub"
@@ -267,22 +268,23 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 }
 
 // NewBMPServer instantiates a new instance of BMP Server
-func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, bmpRaw bool, adminID string) (BMPServer, error) {
-	incoming, err := net.Listen("tcp", ":"+strconv.Itoa(sPort))
+func NewBMPServer(cfg *config.Config) (BMPServer, error) {
+	// func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, bmpRaw bool, adminID string) (BMPServer, error) {
+	incoming, err := net.Listen("tcp", ":"+strconv.Itoa(cfg.BmpListenPort))
 	if err != nil {
-		glog.Errorf("fail to setup listener on port %d with error: %+v", sPort, err)
+		glog.Errorf("fail to setup listener on port %d with error: %+v", cfg.BmpListenPort, err)
 		return nil, err
 	}
 	bmpSrv := bmpServer{
-		clients:         make(map[net.Conn]struct{}),
-		sourcePort:      sPort,
-		destinationPort: dPort,
-		intercept:       intercept,
-		publisher:       p,
-		incoming:        incoming,
-		splitAF:         splitAF,
-		bmpRaw:          bmpRaw,
-		adminID:         adminID,
+		clients:    make(map[net.Conn]struct{}),
+		sourcePort: cfg.BmpListenPort,
+		// destinationPort: dPort,
+		// intercept:       intercept,
+		publisher: cfg.Publisher,
+		incoming:  incoming,
+		splitAF:   cfg.SplitAF,
+		bmpRaw:    cfg.BmpRaw,
+		adminID:   cfg.AdminID,
 	}
 
 	return &bmpSrv, nil
