@@ -153,6 +153,19 @@ jobs:
           docker logs gobmp
           docker logs xr-1
           exit 1
+      - name: Collect container logs (single kafka)
+        if: always()
+        run: |
+          mkdir -p /tmp/logs/single-kafka
+          docker logs gobmp > /tmp/logs/single-kafka/gobmp.log 2>&1 || true
+          docker logs xr-1 > /tmp/logs/single-kafka/xr-1.log 2>&1 || true
+          docker logs kafka > /tmp/logs/single-kafka/kafka.log 2>&1 || true
+      - name: Upload single-kafka logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-single-kafka
+          path: /tmp/logs/single-kafka/
       - name: cleanup unicast v4 integration test on a single node kafka
         run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka.yml down
       - name: Add kafka host to /etc/hosts
@@ -175,6 +188,18 @@ jobs:
           docker logs gobmp
           docker logs xr-1
           exit 1
+      - name: Collect container logs (multinode kafka)
+        if: always()
+        run: |
+          mkdir -p /tmp/logs/multinode-kafka
+          docker logs gobmp > /tmp/logs/multinode-kafka/gobmp.log 2>&1 || true
+          docker logs xr-1 > /tmp/logs/multinode-kafka/xr-1.log 2>&1 || true
+      - name: Upload multinode-kafka logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-multinode-kafka
+          path: /tmp/logs/multinode-kafka/
       - name: cleanup unicast v4 integration test on a multinode kafka
         run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka.yml down
 
