@@ -255,7 +255,9 @@ func resetOverrideGlobals() {
 func TestApplyConfigOverrides_Dump_File(t *testing.T) {
 	resetOverrideGlobals()
 	dump = "file"
-	flag.Set("dump", "file")
+	if err := flag.Set("dump", "file"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
 
 	cfg := &config.Config{}
 	applyConfigOverrides(cfg)
@@ -268,7 +270,9 @@ func TestApplyConfigOverrides_Dump_File(t *testing.T) {
 func TestApplyConfigOverrides_Dump_Console(t *testing.T) {
 	resetOverrideGlobals()
 	dump = "console"
-	flag.Set("dump", "console")
+	if err := flag.Set("dump", "console"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
 
 	cfg := &config.Config{}
 	applyConfigOverrides(cfg)
@@ -281,7 +285,9 @@ func TestApplyConfigOverrides_Dump_Console(t *testing.T) {
 func TestApplyConfigOverrides_Dump_NATS(t *testing.T) {
 	resetOverrideGlobals()
 	dump = "nats"
-	flag.Set("dump", "nats")
+	if err := flag.Set("dump", "nats"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
 
 	cfg := &config.Config{}
 	applyConfigOverrides(cfg)
