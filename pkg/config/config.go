@@ -49,8 +49,6 @@ type Config struct {
 	KafkaConfig        *KafkaConfig  `yaml:"kafka_config"`
 	NATSConfig         *NATSConfig   `yaml:"nats_config"`
 	DumpConfig         *DumpConfig   `yaml:"dump_config"`
-	BmpRaw             bool          `yaml:"bmp_raw"`
-	AdminID            string        `yaml:"admin_id"`
 	SplitAF            *bool         `yaml:"split_af"`
 	BmpListenPort      int           `yaml:"bmp_listen_port"`
 	CollectPerformance bool          `yaml:"collect_performance"`

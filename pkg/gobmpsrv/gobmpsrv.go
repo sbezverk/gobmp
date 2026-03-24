@@ -285,9 +285,11 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 		// intercept:       intercept,
 		publisher: cfg.Publisher,
 		incoming:  incoming,
-		splitAF:   cfg.SplitAF != nil && *cfg.SplitAF,
-		bmpRaw:    cfg.BmpRaw,
-		adminID:   cfg.AdminID,
+		splitAF:   cfg.SplitAF == nil || *cfg.SplitAF, // nil means unset → default true
+	}
+	if cfg.PublisherType == config.PublisherTypeKafka && cfg.KafkaConfig != nil {
+		bmpSrv.bmpRaw = cfg.KafkaConfig.BmpRaw
+		bmpSrv.adminID = cfg.KafkaConfig.AdminID
 	}
 
 	return &bmpSrv, nil

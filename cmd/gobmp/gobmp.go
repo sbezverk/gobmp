@@ -58,7 +58,7 @@ func init() {
 	flag.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "Optional prefix prepended to all Kafka topic names (e.g. 'prod' -> 'prod.gobmp.parsed.peer')")
 	flag.StringVar(&natsSrv, "nats-server", "", "URL to access NATS server")
 	//	flag.StringVar(&intercept, "intercept", "false", "When intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
-	flag.StringVar(&splitAF, "split-af", "", "When set \"true\" (default) ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
+	flag.StringVar(&splitAF, "split-af", "", "When set \"true\" ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 0, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\", to standard output when \"dump=console\" or to NATS when \"dump=nats\"")
 	flag.StringVar(&file, "msg-file", "", "Full path anf file name to store messages when \"dump=file\"")
@@ -209,8 +209,15 @@ func applyConfigOverrides(cfg *config.Config) {
 			cfg.BmpListenPort = srcPort
 		case "performance-port":
 			cfg.PerformancePort = perfPort
+			cfg.CollectPerformance = true
 		case "split-af":
-			if v, err := strconv.ParseBool(splitAF); err == nil {
+			if splitAF == "" {
+				break
+			}
+			if v, err := strconv.ParseBool(splitAF); err != nil {
+				glog.Error("invalid value for --split-af: %q: %v\n", splitAF, err)
+				os.Exit(1)
+			} else {
 				cfg.SplitAF = &v
 			}
 		case "nats-server":
@@ -241,22 +248,35 @@ func applyConfigOverrides(cfg *config.Config) {
 			}
 			cfg.KafkaConfig.KafkaTopicPrefix = kafkaTopicPrefix
 		case "bmp-raw":
-			if v, err := strconv.ParseBool(bmpRaw); err == nil {
-				cfg.BmpRaw = v
+			if cfg.KafkaConfig == nil {
+				cfg.KafkaConfig = &config.KafkaConfig{}
+			}
+			if bmpRaw == "" {
+				break
+			}
+			if v, err := strconv.ParseBool(bmpRaw); err != nil {
+				glog.Error("invalid value for --bmp-raw: %q: %v\n", bmpRaw, err)
+				os.Exit(1)
+			} else {
+				cfg.KafkaConfig.BmpRaw = v
 			}
 		case "admin-id":
-			cfg.AdminID = adminID
-			if cfg.AdminID == "" {
+			if cfg.KafkaConfig == nil {
+				cfg.KafkaConfig = &config.KafkaConfig{}
+			}
+			cfg.KafkaConfig.AdminID = adminID
+			if cfg.KafkaConfig.AdminID == "" {
 				hostname, err := os.Hostname()
 				if err != nil {
 					glog.Warningf("failed to get hostname, using 'gobmp-collector' as admin ID: %+v", err)
-					cfg.AdminID = "gobmp-collector"
+					cfg.KafkaConfig.AdminID = "gobmp-collector"
 				} else {
-					cfg.AdminID = hostname
+					cfg.KafkaConfig.AdminID = hostname
 				}
 			}
 		}
 	})
+	// Double check so if publisher is kafka then AdminID is actually set
 	// Infer publisher type from explicit server-URL flags when --dump was not
 	// provided. This preserves backward-compatible behaviour: passing
 	// --nats-server or --kafka-server alone is enough to select that publisher.
@@ -266,6 +286,15 @@ func applyConfigOverrides(cfg *config.Config) {
 			cfg.PublisherType = config.PublisherTypeNATS
 		case cfg.KafkaConfig != nil && cfg.KafkaConfig.KafkaSrv != "":
 			cfg.PublisherType = config.PublisherTypeKafka
+		}
+	}
+	// Double check so if publisher is kafka then AdminID is actually set
+	if cfg.PublisherType == config.PublisherTypeKafka && cfg.KafkaConfig != nil && cfg.KafkaConfig.AdminID == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			cfg.KafkaConfig.AdminID = "gobmp-collector"
+		} else {
+			cfg.KafkaConfig.AdminID = hostname
 		}
 	}
 }

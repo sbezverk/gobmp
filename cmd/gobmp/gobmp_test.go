@@ -487,7 +487,7 @@ func TestApplyConfigOverrides_BmpRaw(t *testing.T) {
 	cfg := &config.Config{}
 	applyConfigOverrides(cfg)
 
-	if !cfg.BmpRaw {
+	if !cfg.KafkaConfig.BmpRaw {
 		t.Error("BmpRaw = false, want true")
 	}
 }
@@ -502,8 +502,8 @@ func TestApplyConfigOverrides_AdminID_Explicit(t *testing.T) {
 	cfg := &config.Config{}
 	applyConfigOverrides(cfg)
 
-	if cfg.AdminID != "my-collector" {
-		t.Errorf("AdminID = %q, want my-collector", cfg.AdminID)
+	if cfg.KafkaConfig.AdminID != "my-collector" {
+		t.Errorf("AdminID = %q, want my-collector", cfg.KafkaConfig.AdminID)
 	}
 }
 
@@ -520,11 +520,11 @@ func TestApplyConfigOverrides_AdminID_Empty_FallsBackToHostname(t *testing.T) {
 
 	// The fallback sets AdminID to the OS hostname (or "gobmp-collector" on error).
 	// We cannot predict the exact value, so assert it is non-empty.
-	if cfg.AdminID == "" {
+	if cfg.KafkaConfig.AdminID == "" {
 		t.Error("AdminID is empty after hostname fallback, want non-empty")
 	}
 	wantHostname, _ := os.Hostname()
-	if wantHostname != "" && cfg.AdminID != wantHostname {
-		t.Errorf("AdminID = %q, want hostname %q", cfg.AdminID, wantHostname)
+	if wantHostname != "" && cfg.KafkaConfig.AdminID != wantHostname {
+		t.Errorf("AdminID = %q, want hostname %q", cfg.KafkaConfig.AdminID, wantHostname)
 	}
 }
