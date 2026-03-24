@@ -28,13 +28,12 @@ var (
 	kafkaTpRetnTimeMs string // Kafka topic retention time in ms
 	kafkaTopicPrefix  string
 	natsSrv           string
-	// intercept         string
-	splitAF    string
-	dump       string
-	file       string
-	bmpRaw     string
-	adminID    string
-	configFile string
+	splitAF           string
+	dump              string
+	file              string
+	bmpRaw            string
+	adminID           string
+	configFile        string
 )
 
 const (

@@ -23,17 +23,16 @@ type BMPServer interface {
 }
 
 type bmpServer struct {
-	splitAF         bool
-	publisher       pub.Publisher
-	sourcePort      int
-	destinationPort int
-	incoming        net.Listener
-	wg              sync.WaitGroup        // tracks server() + in-flight bmpWorker goroutines
-	mu              sync.Mutex            // protects clients and closing
-	clients         map[net.Conn]struct{} // active bmpWorker connections
-	closing         bool                  // set to true in Stop() before iterating clients
-	bmpRaw          bool
-	adminID         string
+	splitAF    bool
+	publisher  pub.Publisher
+	sourcePort int
+	incoming   net.Listener
+	wg         sync.WaitGroup        // tracks server() + in-flight bmpWorker goroutines
+	mu         sync.Mutex            // protects clients and closing
+	clients    map[net.Conn]struct{} // active bmpWorker connections
+	closing    bool                  // set to true in Stop() before iterating clients
+	bmpRaw     bool
+	adminID    string
 }
 
 func (srv *bmpServer) Start() {
