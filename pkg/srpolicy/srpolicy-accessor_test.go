@@ -38,7 +38,7 @@ func TestWeight_UnmarshalJSON_BadWeight(t *testing.T) {
 // implemented segment type after a successful parse.
 func TestGetFlags_AllTypes(t *testing.T) {
 	tests := []struct {
-		name    string
+		name      string
 		unmarshal func() (Segment, error)
 	}{
 		{
@@ -101,7 +101,7 @@ func TestGetFlags_AllTypes(t *testing.T) {
 		{
 			name: "TypeI GetFlags",
 			unmarshal: func() (Segment, error) {
-				// flags(1) + reserved(1) + IPv6(16) + SRv6EndpointBehavior(4) = 22 bytes
+				// flags(1) + srAlgorithm(1) + IPv6(16) + SRv6EndpointBehavior(4) = 22 bytes
 				b := make([]byte, 22)
 				return UnmarshalTypeISegment(b)
 			},

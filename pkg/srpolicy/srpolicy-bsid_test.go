@@ -154,7 +154,7 @@ func TestLabelBSID_Methods(t *testing.T) {
 
 	bsidBytes := bsid.GetBSID()
 	if len(bsidBytes) != 4 {
-		t.Errorf("GetBSID() length = %v, want 4", len(bsidBytes))
+		t.Fatalf("GetBSID() length = %v, want 4", len(bsidBytes))
 	}
 	// Verify the uint32 encoding
 	expected := []byte{0x00, 0x01, 0x86, 0xA0} // 100000 in big-endian
@@ -214,7 +214,7 @@ func TestSRv6BSID_JSON(t *testing.T) {
 				t.Errorf("Unmarshal() flags = %v, want %v", result.flags, tt.bsid.flags)
 			}
 			if len(result.bsid) != len(tt.bsid.bsid) {
-				t.Errorf("Unmarshal() bsid length = %v, want %v", len(result.bsid), len(tt.bsid.bsid))
+				t.Fatalf("Unmarshal() bsid length = %v, want %v", len(result.bsid), len(tt.bsid.bsid))
 			}
 			for i := range result.bsid {
 				if result.bsid[i] != tt.bsid.bsid[i] {
@@ -310,6 +310,9 @@ func TestBindingSID_JSON(t *testing.T) {
 			}
 
 			// Verify BSID interface
+			if result.BSID == nil {
+				t.Fatalf("Unmarshal() result.BSID is nil, want non-nil")
+			}
 			if result.BSID.GetType() != tt.bsid.BSID.GetType() {
 				t.Errorf("Unmarshal() BSID type = %v, want %v", result.BSID.GetType(), tt.bsid.BSID.GetType())
 			}
