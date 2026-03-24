@@ -160,8 +160,8 @@ func TestApplyConfigDefaults_ZeroCfg(t *testing.T) {
 	if cfg.BmpListenPort != defaultSourcePort {
 		t.Errorf("BmpListenPort = %d, want %d", cfg.BmpListenPort, defaultSourcePort)
 	}
-	if cfg.PerformancePort != defaultPerfPort {
-		t.Errorf("PerformancePort = %d, want %d", cfg.PerformancePort, defaultPerfPort)
+	if cfg.PerformancePort != 0 {
+		t.Errorf("PerformancePort = %d, want 0", cfg.PerformancePort)
 	}
 	if cfg.DumpConfig == nil {
 		t.Fatal("DumpConfig is nil, want non-nil")
@@ -378,15 +378,30 @@ func TestApplyConfigOverrides_PerformancePort(t *testing.T) {
 	}
 }
 
-func TestApplyConfigOverrides_PerformancePort_Invalid(t *testing.T) {
+func TestApplyConfigOverrides_PerformancePort_Zero_Disables(t *testing.T) {
 	fs := newTestFlagSet()
 	if err := fs.Set("performance-port", "0"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
+	cfg := &config.Config{PerformancePort: 56767} // simulate YAML-configured port
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error for --performance-port=0: %v", err)
+	}
+	if cfg.PerformancePort != 0 {
+		t.Errorf("PerformancePort = %d, want 0 (disabled)", cfg.PerformancePort)
+	}
+}
+
+func TestApplyConfigOverrides_PerformancePort_Negative_Invalid(t *testing.T) {
+	fs := newTestFlagSet()
+	if err := fs.Set("performance-port", "-1"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+
 	cfg := &config.Config{}
 	if err := applyConfigOverrides(cfg, fs); err == nil {
-		t.Error("expected error for --performance-port=0, got nil")
+		t.Error("expected error for --performance-port=-1, got nil")
 	}
 }
 

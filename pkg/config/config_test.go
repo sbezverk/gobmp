@@ -28,7 +28,6 @@ nats_config:
   nats_srv: "nats://localhost:4222"
 split_af: true
 bmp_listen_port: 5000
-collect_performance: true
 performance_port: 56767
 active_mode: true
 speakers_list:
@@ -52,9 +51,6 @@ speakers_list:
 	}
 	if cfg.BmpListenPort != 5000 {
 		t.Errorf("BmpListenPort = %d, want 5000", cfg.BmpListenPort)
-	}
-	if !cfg.CollectPerformance {
-		t.Error("CollectPerformance = false, want true")
 	}
 	if cfg.PerformancePort != 56767 {
 		t.Errorf("PerformancePort = %d, want 56767", cfg.PerformancePort)

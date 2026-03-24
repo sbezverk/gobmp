@@ -37,14 +37,12 @@ var (
 )
 
 const (
-	defaultSourcePort         = 5000
-	defaultPerformanceCollect = false
-	defaultPerfPort           = 56767
-	defaultKafkaTpRetnTimeMs  = "900000" // 15 minutes in ms
-	defaultSplitAF            = true
-	defaultBmpRaw             = false
-	defaultMsgFile            = ""
-	defaultAdminID            = ""
+	defaultSourcePort        = 5000
+	defaultKafkaTpRetnTimeMs = "900000" // 15 minutes in ms
+	defaultSplitAF           = true
+	defaultBmpRaw            = false
+	defaultMsgFile           = ""
+	defaultAdminID           = ""
 )
 
 func init() {
@@ -82,7 +80,7 @@ func main() {
 	}
 
 	// Starting performance collecting http server if required
-	if cfg.CollectPerformance {
+	if cfg.PerformancePort > 0 {
 		go func() {
 			glog.Info(http.ListenAndServe(fmt.Sprintf(":%d", cfg.PerformancePort), nil))
 		}()
@@ -156,9 +154,8 @@ func applyConfigDefaults(cfg *config.Config) {
 	if cfg.BmpListenPort == 0 {
 		cfg.BmpListenPort = defaultSourcePort
 	}
-	if cfg.PerformancePort == 0 {
-		cfg.PerformancePort = defaultPerfPort
-	}
+	// PerformancePort > 0 enables pprof. No default port is applied here;
+	// the user must set an explicit port to opt in.
 	// DumpConfig: ensure sub-struct exists and apply file default.
 	if cfg.DumpConfig == nil {
 		cfg.DumpConfig = &config.DumpConfig{}
@@ -211,12 +208,12 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 		case "source-port":
 			cfg.BmpListenPort = srcPort
 		case "performance-port":
-			if perfPort <= 0 {
-				visitErr = fmt.Errorf("invalid value for --performance-port: %d: must be > 0", perfPort)
+			// Negative values are invalid. Zero explicitly disables pprof (port=0 → no listener).
+			if perfPort < 0 {
+				visitErr = fmt.Errorf("invalid value for --performance-port: %d: must be >= 0", perfPort)
 				return
 			}
 			cfg.PerformancePort = perfPort
-			cfg.CollectPerformance = true
 		case "split-af":
 			if splitAF == "" {
 				break

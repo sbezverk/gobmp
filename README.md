@@ -212,7 +212,7 @@ nats_config:
 bmp_listen_port: 5000        # TCP port for BMP sessions (default: 5000)
 
 # Performance monitoring (disabled when omitted or 0)
-performance_port: 56767      # pprof port; must be > 0 to enable collection
+performance_port: 56767      # pprof port; any value > 0 enables collection
 
 # BGP address-family handling
 split_af: true               # true = separate v4/v6 topics (default: true)
