@@ -24,7 +24,6 @@ type BMPServer interface {
 
 type bmpServer struct {
 	splitAF         bool
-	intercept       bool
 	publisher       pub.Publisher
 	sourcePort      int
 	destinationPort int
@@ -39,7 +38,7 @@ type bmpServer struct {
 
 func (srv *bmpServer) Start() {
 	// Starting bmp server server
-	glog.Infof("Starting gobmp server on %s, intercept mode: %t\n", srv.incoming.Addr().String(), srv.intercept)
+	glog.Infof("Starting gobmp server on %s\n", srv.incoming.Addr().String())
 	srv.wg.Add(1)
 	go srv.server()
 }
@@ -132,17 +131,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	defer func() {
 		_ = client.Close()
 	}()
-	var server net.Conn
 	var err error
-	if srv.intercept {
-		server, err = net.Dial("tcp", ":"+strconv.Itoa(srv.destinationPort))
-		if err != nil {
-			glog.Errorf("failed to connect to destination with error: %+v", err)
-			return
-		}
-		defer func() { _ = server.Close() }()
-		glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
-	}
 	prod := message.NewProducer(srv.publisher, srv.splitAF)
 
 	// Configure producer with admin ID for RAW message support
@@ -256,13 +245,6 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 			}
 			return
 		}
-		// Sending information to the server only in intercept mode
-		if srv.intercept {
-			if _, err := server.Write(fullMsg); err != nil {
-				glog.Errorf("fail to write to server %+v with error: %+v", server.RemoteAddr(), err)
-				return
-			}
-		}
 		parserQueue <- fullMsg
 	}
 }
@@ -272,7 +254,6 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 	if cfg == nil {
 		return nil, errors.New("config cannot be nil")
 	}
-	// func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, bmpRaw bool, adminID string) (BMPServer, error) {
 	incoming, err := net.Listen("tcp", ":"+strconv.Itoa(cfg.BmpListenPort))
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", cfg.BmpListenPort, err)
@@ -281,11 +262,9 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 	bmpSrv := bmpServer{
 		clients:    make(map[net.Conn]struct{}),
 		sourcePort: cfg.BmpListenPort,
-		// destinationPort: dPort,
-		// intercept:       intercept,
-		publisher: cfg.Publisher,
-		incoming:  incoming,
-		splitAF:   cfg.SplitAF == nil || *cfg.SplitAF, // nil means unset → default true
+		publisher:  cfg.Publisher,
+		incoming:   incoming,
+		splitAF:    cfg.SplitAF == nil || *cfg.SplitAF, // nil means unset → default true
 	}
 	if cfg.PublisherType == config.PublisherTypeKafka && cfg.KafkaConfig != nil {
 		bmpSrv.bmpRaw = cfg.KafkaConfig.BmpRaw

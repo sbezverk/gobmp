@@ -52,12 +52,10 @@ const (
 func init() {
 	flag.StringVar(&configFile, "config", "", "Path to YAML configuration file")
 	flag.IntVar(&srcPort, "source-port", defaultSourcePort, "port exposed to outside")
-	//	flag.IntVar(&dstPort, "destination-port", 5050, "port openBMP is listening")
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
 	flag.StringVar(&kafkaTpRetnTimeMs, "kafka-topic-retention-time-ms", defaultKafkaTpRetnTimeMs, "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
 	flag.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "Optional prefix prepended to all Kafka topic names (e.g. 'prod' -> 'prod.gobmp.parsed.peer')")
 	flag.StringVar(&natsSrv, "nats-server", "", "URL to access NATS server")
-	//	flag.StringVar(&intercept, "intercept", "false", "When intercept set \"true\", all incomming BMP messges will be copied to TCP port specified by destination-port, otherwise received BMP messages will be published to Kafka.")
 	flag.StringVar(&splitAF, "split-af", "", "When set \"true\" ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 0, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\", to standard output when \"dump=console\" or to NATS when \"dump=nats\"")
@@ -239,7 +237,10 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) {
 			if cfg.KafkaConfig == nil {
 				cfg.KafkaConfig = &config.KafkaConfig{}
 			}
-			if v, err := strconv.Atoi(kafkaTpRetnTimeMs); err == nil {
+			if v, err := strconv.Atoi(kafkaTpRetnTimeMs); err != nil {
+				glog.Errorf("invalid value for --kafka-topic-retention-time-ms: %q: %v", kafkaTpRetnTimeMs, err)
+				os.Exit(1)
+			} else {
 				cfg.KafkaConfig.KafkaTpRetnTimeMs = v
 			}
 		case "kafka-topic-prefix":

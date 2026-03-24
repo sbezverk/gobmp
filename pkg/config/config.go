@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	maxConfigFileSize = 1024 // 1 KB
+	maxConfigFileSize = 1024 * 1024 // 1 MB
 )
 
 var ErrNoConfig = errors.New("no config file provided")
