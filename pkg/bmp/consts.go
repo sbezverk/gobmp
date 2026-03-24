@@ -78,11 +78,11 @@ const (
 	BMPRawMsg = 255
 )
 
-// Peer Up Informational TLV types per RFC 9069
+// Peer Up Informational TLV types per RFC 9069 §4.4
 const (
-	// PeerUpTLVVRFTableName identifies a VRF/Table Name Informational TLV (type 3)
+	// PeerUpTLVVRFTableName identifies a VRF/Table Name Informational TLV (type 3) per RFC 9069 §4.4
 	PeerUpTLVVRFTableName = 3
-	// PeerUpTLVAdminLabel identifies an Administrative Label Informational TLV (type 4)
+	// PeerUpTLVAdminLabel identifies an Administrative Label Informational TLV (type 4) per RFC 9069 §4.4
 	PeerUpTLVAdminLabel = 4
 )
 

@@ -231,7 +231,8 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		}
 		msgLen := totalLen - bmp.CommonHeaderLength
 		if msgLen > maxBMPMessagePayload {
-			glog.Errorf("invalid message length %d from client %+v, closing connection", header.MessageLength, client.RemoteAddr())
+			glog.Errorf("BMP message too large from client %+v: totalLen=%d, payloadLen=%d, limit=%d; closing connection",
+				client.RemoteAddr(), totalLen, msgLen, maxBMPMessagePayload)
 			return
 		}
 		// A zero-length payload is valid only for Initiation and Termination,
