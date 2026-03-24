@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	MAX_CONFIG_FILE_SIZE = 1024 // 1 KB
+	maxConfigFileSize = 1024 // 1 KB
 )
 
 var ErrNoConfig = errors.New("no config file provided")
@@ -74,8 +74,8 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	if fi.Size() > MAX_CONFIG_FILE_SIZE {
-		return nil, fmt.Errorf("config file size exceeds the maximum allowed size of %d bytes", MAX_CONFIG_FILE_SIZE)
+	if fi.Size() > maxConfigFileSize {
+		return nil, fmt.Errorf("config file size exceeds the maximum allowed size of %d bytes", maxConfigFileSize)
 	}
 	size := int(fi.Size())
 	if size == 0 {

@@ -233,34 +233,35 @@ func TestApplyConfigDefaults_SplitAF_AlreadyTrue_NotChanged(t *testing.T) {
 
 // ---- applyConfigOverrides ---------------------------------------------------
 
-// resetOverrideGlobals zeros every global var that applyConfigOverrides reads.
-// This prevents flags marked as visited in an earlier test from applying
-// stale values to the cfg under test — flag.Visit cannot be "un-visited",
-// but zeroing the underlying global makes each visited case a no-op for fields
-// not under test.
-func resetOverrideGlobals() {
-	srcPort = 0
-	perfPort = 0
-	splitAF = ""
-	natsSrv = ""
-	file = ""
-	dump = ""
-	kafkaSrv = ""
-	kafkaTpRetnTimeMs = ""
-	kafkaTopicPrefix = ""
-	bmpRaw = ""
-	adminID = ""
+// newTestFlagSet returns a fresh FlagSet with all applyConfigOverrides flags
+// registered against the same module-level globals. Using a per-test FlagSet
+// eliminates cross-test contamination: each FlagSet tracks its own "visited"
+// set independently of flag.CommandLine, so flags set in one test can never
+// bleed into another.
+func newTestFlagSet() *flag.FlagSet {
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+	fs.IntVar(&srcPort, "source-port", defaultSourcePort, "")
+	fs.IntVar(&perfPort, "performance-port", 0, "")
+	fs.StringVar(&kafkaSrv, "kafka-server", "", "")
+	fs.StringVar(&kafkaTpRetnTimeMs, "kafka-topic-retention-time-ms", defaultKafkaTpRetnTimeMs, "")
+	fs.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "")
+	fs.StringVar(&natsSrv, "nats-server", "", "")
+	fs.StringVar(&splitAF, "split-af", "", "")
+	fs.StringVar(&dump, "dump", "", "")
+	fs.StringVar(&file, "msg-file", "", "")
+	fs.StringVar(&bmpRaw, "bmp-raw", "", "")
+	fs.StringVar(&adminID, "admin-id", "", "")
+	return fs
 }
 
 func TestApplyConfigOverrides_Dump_File(t *testing.T) {
-	resetOverrideGlobals()
-	dump = "file"
-	if err := flag.Set("dump", "file"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("dump", "file"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.PublisherType != config.PublisherTypeDump {
 		t.Errorf("PublisherType = %d, want PublisherTypeDump (%d)", cfg.PublisherType, config.PublisherTypeDump)
@@ -268,14 +269,13 @@ func TestApplyConfigOverrides_Dump_File(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_Dump_Console(t *testing.T) {
-	resetOverrideGlobals()
-	dump = "console"
-	if err := flag.Set("dump", "console"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("dump", "console"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.PublisherType != config.PublisherTypeDump {
 		t.Errorf("PublisherType = %d, want PublisherTypeDump (%d)", cfg.PublisherType, config.PublisherTypeDump)
@@ -283,14 +283,13 @@ func TestApplyConfigOverrides_Dump_Console(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_Dump_NATS(t *testing.T) {
-	resetOverrideGlobals()
-	dump = "nats"
-	if err := flag.Set("dump", "nats"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("dump", "nats"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.PublisherType != config.PublisherTypeNATS {
 		t.Errorf("PublisherType = %d, want PublisherTypeNATS (%d)", cfg.PublisherType, config.PublisherTypeNATS)
@@ -298,14 +297,13 @@ func TestApplyConfigOverrides_Dump_NATS(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_Dump_Kafka(t *testing.T) {
-	resetOverrideGlobals()
-	dump = "kafka"
-	if err := flag.Set("dump", "kafka"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("dump", "kafka"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.PublisherType != config.PublisherTypeKafka {
 		t.Errorf("PublisherType = %d, want PublisherTypeKafka (%d)", cfg.PublisherType, config.PublisherTypeKafka)
@@ -313,14 +311,13 @@ func TestApplyConfigOverrides_Dump_Kafka(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_NatsServer_InfersPublisherType(t *testing.T) {
-	resetOverrideGlobals()
-	natsSrv = "nats://127.0.0.1:4222"
-	if err := flag.Set("nats-server", "nats://127.0.0.1:4222"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("nats-server", "nats://127.0.0.1:4222"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{PublisherType: config.PublisherTypeUnknown}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.PublisherType != config.PublisherTypeNATS {
 		t.Errorf("PublisherType = %d, want PublisherTypeNATS (%d)", cfg.PublisherType, config.PublisherTypeNATS)
@@ -328,14 +325,13 @@ func TestApplyConfigOverrides_NatsServer_InfersPublisherType(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_KafkaServer_InfersPublisherType(t *testing.T) {
-	resetOverrideGlobals()
-	kafkaSrv = "kafka:9092"
-	if err := flag.Set("kafka-server", "kafka:9092"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("kafka-server", "kafka:9092"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{PublisherType: config.PublisherTypeUnknown}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.PublisherType != config.PublisherTypeKafka {
 		t.Errorf("PublisherType = %d, want PublisherTypeKafka (%d)", cfg.PublisherType, config.PublisherTypeKafka)
@@ -343,14 +339,13 @@ func TestApplyConfigOverrides_KafkaServer_InfersPublisherType(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_SourcePort(t *testing.T) {
-	resetOverrideGlobals()
-	srcPort = 9000
-	if err := flag.Set("source-port", "9000"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("source-port", "9000"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.BmpListenPort != 9000 {
 		t.Errorf("BmpListenPort = %d, want 9000", cfg.BmpListenPort)
@@ -358,14 +353,13 @@ func TestApplyConfigOverrides_SourcePort(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_PerformancePort(t *testing.T) {
-	resetOverrideGlobals()
-	perfPort = 8080
-	if err := flag.Set("performance-port", "8080"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("performance-port", "8080"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.PerformancePort != 8080 {
 		t.Errorf("PerformancePort = %d, want 8080", cfg.PerformancePort)
@@ -373,14 +367,13 @@ func TestApplyConfigOverrides_PerformancePort(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_SplitAF(t *testing.T) {
-	resetOverrideGlobals()
-	splitAF = "true"
-	if err := flag.Set("split-af", "true"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("split-af", "true"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.SplitAF == nil || !*cfg.SplitAF {
 		t.Error("SplitAF = nil or false, want *true")
@@ -388,14 +381,13 @@ func TestApplyConfigOverrides_SplitAF(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_NatsServer_LazyInit(t *testing.T) {
-	resetOverrideGlobals()
-	natsSrv = "nats://127.0.0.1:4222"
-	if err := flag.Set("nats-server", "nats://127.0.0.1:4222"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("nats-server", "nats://127.0.0.1:4222"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{} // NATSConfig starts nil
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.NATSConfig == nil {
 		t.Fatal("NATSConfig is nil, want non-nil (lazy init)")
@@ -406,14 +398,13 @@ func TestApplyConfigOverrides_NatsServer_LazyInit(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_MsgFile_LazyInit(t *testing.T) {
-	resetOverrideGlobals()
-	file = "/tmp/override.json"
-	if err := flag.Set("msg-file", "/tmp/override.json"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("msg-file", "/tmp/override.json"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{} // DumpConfig starts nil
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.DumpConfig == nil {
 		t.Fatal("DumpConfig is nil, want non-nil (lazy init)")
@@ -424,14 +415,13 @@ func TestApplyConfigOverrides_MsgFile_LazyInit(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_KafkaServer_LazyInit(t *testing.T) {
-	resetOverrideGlobals()
-	kafkaSrv = "kafka:9092"
-	if err := flag.Set("kafka-server", "kafka:9092"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("kafka-server", "kafka:9092"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{} // KafkaConfig starts nil
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.KafkaConfig == nil {
 		t.Fatal("KafkaConfig is nil, want non-nil (lazy init)")
@@ -442,14 +432,13 @@ func TestApplyConfigOverrides_KafkaServer_LazyInit(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_KafkaRetentionTime(t *testing.T) {
-	resetOverrideGlobals()
-	kafkaTpRetnTimeMs = "1800000"
-	if err := flag.Set("kafka-topic-retention-time-ms", "1800000"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("kafka-topic-retention-time-ms", "1800000"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.KafkaConfig == nil {
 		t.Fatal("KafkaConfig is nil, want non-nil")
@@ -460,14 +449,13 @@ func TestApplyConfigOverrides_KafkaRetentionTime(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_KafkaTopicPrefix(t *testing.T) {
-	resetOverrideGlobals()
-	kafkaTopicPrefix = "prod"
-	if err := flag.Set("kafka-topic-prefix", "prod"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("kafka-topic-prefix", "prod"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.KafkaConfig == nil {
 		t.Fatal("KafkaConfig is nil, want non-nil")
@@ -478,14 +466,13 @@ func TestApplyConfigOverrides_KafkaTopicPrefix(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_BmpRaw(t *testing.T) {
-	resetOverrideGlobals()
-	bmpRaw = "true"
-	if err := flag.Set("bmp-raw", "true"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("bmp-raw", "true"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if !cfg.KafkaConfig.BmpRaw {
 		t.Error("BmpRaw = false, want true")
@@ -493,14 +480,13 @@ func TestApplyConfigOverrides_BmpRaw(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_AdminID_Explicit(t *testing.T) {
-	resetOverrideGlobals()
-	adminID = "my-collector"
-	if err := flag.Set("admin-id", "my-collector"); err != nil {
+	fs := newTestFlagSet()
+	if err := fs.Set("admin-id", "my-collector"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	if cfg.KafkaConfig.AdminID != "my-collector" {
 		t.Errorf("AdminID = %q, want my-collector", cfg.KafkaConfig.AdminID)
@@ -508,15 +494,15 @@ func TestApplyConfigOverrides_AdminID_Explicit(t *testing.T) {
 }
 
 func TestApplyConfigOverrides_AdminID_Empty_FallsBackToHostname(t *testing.T) {
-	resetOverrideGlobals()
-	// adminID is already "" from reset; flag.Set marks "admin-id" as visited
-	// so the case executes and hits the hostname fallback branch.
-	if err := flag.Set("admin-id", ""); err != nil {
+	fs := newTestFlagSet()
+	// fs.Set marks "admin-id" as visited with an empty value so the case
+	// executes and hits the hostname fallback branch.
+	if err := fs.Set("admin-id", ""); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, fs)
 
 	// The fallback sets AdminID to the OS hostname (or "gobmp-collector" on error).
 	// We cannot predict the exact value, so assert it is non-empty.

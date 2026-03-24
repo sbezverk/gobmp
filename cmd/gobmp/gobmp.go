@@ -61,7 +61,7 @@ func init() {
 	flag.StringVar(&splitAF, "split-af", "", "When set \"true\" ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 0, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Dump resulting messages to file when \"dump=file\", to standard output when \"dump=console\" or to NATS when \"dump=nats\"")
-	flag.StringVar(&file, "msg-file", "", "Full path anf file name to store messages when \"dump=file\"")
+	flag.StringVar(&file, "msg-file", "", "Full path and file name to store messages when \"dump=file\"")
 	flag.StringVar(&bmpRaw, "bmp-raw", "", "When set \"true\", BMP messages are published in RAW format without parsing (OpenBMP compatibility mode)")
 	flag.StringVar(&adminID, "admin-id", "", "Collector admin ID for RAW messages (defaults to hostname). Used to generate collector hash for OpenBMP compatibility")
 }
@@ -80,7 +80,7 @@ func main() {
 		}
 	}
 	applyConfigDefaults(cfg)
-	applyConfigOverrides(cfg)
+	applyConfigOverrides(cfg, flag.CommandLine)
 
 	// Starting performance collecting http server if required
 	if cfg.CollectPerformance {
@@ -168,8 +168,8 @@ func applyConfigDefaults(cfg *config.Config) {
 	if cfg.DumpConfig.File == "" {
 		cfg.DumpConfig.File = defaultMsgFile
 	}
-	// KafkaConfig: ensure sub-struct exists and apply retention time default.
-	// Kafka is the default publisher so this is always initialised.
+	// This is initialized regardless of the selected publisher so YAML defaults
+	// and overrides are always available when Kafka is used.
 	if cfg.KafkaConfig == nil {
 		cfg.KafkaConfig = &config.KafkaConfig{}
 	}
@@ -187,12 +187,12 @@ func applyConfigDefaults(cfg *config.Config) {
 	}
 }
 
-func applyConfigOverrides(cfg *config.Config) {
-	// flag.Visit only visits flags explicitly set on the command line,
+func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) {
+	// fs.Visit only visits flags explicitly set on the command line,
 	// so CLI values safely take precedence over config file and defaults.
 	// Sub-structs are lazily initialised so a single CLI flag is enough to
 	// create the relevant section without requiring the full block in YAML.
-	flag.Visit(func(f *flag.Flag) {
+	fs.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "dump":
 			// Map the legacy --dump string to the structured PublisherType so
@@ -215,7 +215,7 @@ func applyConfigOverrides(cfg *config.Config) {
 				break
 			}
 			if v, err := strconv.ParseBool(splitAF); err != nil {
-				glog.Error("invalid value for --split-af: %q: %v\n", splitAF, err)
+				glog.Errorf("invalid value for --split-af: %q: %v", splitAF, err)
 				os.Exit(1)
 			} else {
 				cfg.SplitAF = &v
@@ -255,7 +255,7 @@ func applyConfigOverrides(cfg *config.Config) {
 				break
 			}
 			if v, err := strconv.ParseBool(bmpRaw); err != nil {
-				glog.Error("invalid value for --bmp-raw: %q: %v\n", bmpRaw, err)
+				glog.Errorf("invalid value for --bmp-raw: %q: %v", bmpRaw, err)
 				os.Exit(1)
 			} else {
 				cfg.KafkaConfig.BmpRaw = v

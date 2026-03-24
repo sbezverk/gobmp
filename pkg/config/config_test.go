@@ -118,7 +118,7 @@ func TestLoadConfig_FileNotFound(t *testing.T) {
 }
 
 func TestLoadConfig_FileTooLarge(t *testing.T) {
-	content := strings.Repeat("a", MAX_CONFIG_FILE_SIZE+1)
+	content := strings.Repeat("a", maxConfigFileSize+1)
 	path := writeTemp(t, content)
 	_, err := LoadConfig(path)
 	if err == nil {
@@ -128,10 +128,10 @@ func TestLoadConfig_FileTooLarge(t *testing.T) {
 
 func TestLoadConfig_ExactlyMaxSize(t *testing.T) {
 	base := "bmp_listen_port: 5000\n"
-	padLen := MAX_CONFIG_FILE_SIZE - len(base)
+	padLen := maxConfigFileSize - len(base)
 	content := base + "#" + strings.Repeat("x", padLen-1)
-	if len(content) != MAX_CONFIG_FILE_SIZE {
-		t.Fatalf("test setup: content length %d != %d", len(content), MAX_CONFIG_FILE_SIZE)
+	if len(content) != maxConfigFileSize {
+		t.Fatalf("test setup: content length %d != %d", len(content), maxConfigFileSize)
 	}
 	path := writeTemp(t, content)
 	cfg, err := LoadConfig(path)
