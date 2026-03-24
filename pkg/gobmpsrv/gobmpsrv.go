@@ -252,6 +252,9 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 	if cfg == nil {
 		return nil, errors.New("config cannot be nil")
 	}
+	if cfg.Publisher == nil {
+		return nil, errors.New("publisher cannot be nil")
+	}
 	incoming, err := net.Listen("tcp", ":"+strconv.Itoa(cfg.BmpListenPort))
 	if err != nil {
 		glog.Errorf("fail to setup listener on port %d with error: %+v", cfg.BmpListenPort, err)

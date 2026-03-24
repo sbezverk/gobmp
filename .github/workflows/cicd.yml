@@ -167,6 +167,7 @@ jobs:
           name: logs-single-kafka
           path: /tmp/logs/single-kafka/
       - name: cleanup unicast v4 integration test on a single node kafka
+        if: always()
         run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka.yml down
       - name: Add kafka host to /etc/hosts
         run: |
@@ -201,6 +202,7 @@ jobs:
           name: logs-multinode-kafka
           path: /tmp/logs/multinode-kafka/
       - name: cleanup unicast v4 integration test on a multinode kafka
+        if: always()
         run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka.yml down
 
   # ==============================================================================

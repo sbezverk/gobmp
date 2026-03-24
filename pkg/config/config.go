@@ -42,19 +42,19 @@ type KafkaConfig struct {
 }
 
 type Config struct {
-	// Computed fields
-	Publisher pub.Publisher `yaml:"-"`
+	// Computed fields — not persisted to YAML.
+	Publisher     pub.Publisher `yaml:"-"`
+	PublisherType PublisherType `yaml:"-"` // always inferred, never stored in YAML
 	// Fields from config file
-	PublisherType      PublisherType `yaml:"publisher_type"`
-	KafkaConfig        *KafkaConfig  `yaml:"kafka_config"`
-	NATSConfig         *NATSConfig   `yaml:"nats_config"`
-	DumpConfig         *DumpConfig   `yaml:"dump_config"`
-	SplitAF            *bool         `yaml:"split_af"`
-	BmpListenPort      int           `yaml:"bmp_listen_port"`
-	CollectPerformance bool          `yaml:"collect_performance"`
-	PerformancePort    int           `yaml:"performance_port"`
-	ActiveMode         bool          `yaml:"active_mode"`
-	SpeakersList       []string      `yaml:"speakers_list"`
+	KafkaConfig        *KafkaConfig `yaml:"kafka_config"`
+	NATSConfig         *NATSConfig  `yaml:"nats_config"`
+	DumpConfig         *DumpConfig  `yaml:"dump_config"`
+	SplitAF            *bool        `yaml:"split_af"`
+	BmpListenPort      int          `yaml:"bmp_listen_port"`
+	CollectPerformance bool         `yaml:"collect_performance"`
+	PerformancePort    int          `yaml:"performance_port"`
+	ActiveMode         bool         `yaml:"active_mode"`
+	SpeakersList       []string     `yaml:"speakers_list"`
 }
 
 func LoadConfig(path string) (*Config, error) {

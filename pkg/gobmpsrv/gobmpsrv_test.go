@@ -117,7 +117,7 @@ func assertWorkerExits(t *testing.T, done <-chan struct{}) {
 // ---- NewBMPServer -----------------------------------------------------------
 
 func TestNewBMPServer_Success(t *testing.T) {
-	srv, err := NewBMPServer(&config.Config{})
+	srv, err := NewBMPServer(&config.Config{Publisher: newMockPublisher()})
 	if err != nil {
 		t.Fatalf("NewBMPServer: %v", err)
 	}
@@ -125,14 +125,14 @@ func TestNewBMPServer_Success(t *testing.T) {
 }
 
 func TestNewBMPServer_PortInUse(t *testing.T) {
-	srv1, err := NewBMPServer(&config.Config{})
+	srv1, err := NewBMPServer(&config.Config{Publisher: newMockPublisher()})
 	if err != nil {
 		t.Fatalf("first NewBMPServer: %v", err)
 	}
 	defer srv1.Stop()
 
 	port := srv1.(*bmpServer).incoming.Addr().(*net.TCPAddr).Port
-	_, err = NewBMPServer(&config.Config{BmpListenPort: port})
+	_, err = NewBMPServer(&config.Config{Publisher: newMockPublisher(), BmpListenPort: port})
 	if err == nil {
 		t.Fatal("expected error binding already-used port, got nil")
 	}

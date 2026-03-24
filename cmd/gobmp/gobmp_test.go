@@ -154,8 +154,8 @@ func TestApplyConfigDefaults_ZeroCfg(t *testing.T) {
 	cfg := &config.Config{}
 	applyConfigDefaults(cfg)
 
-	if cfg.PublisherType != defaultPublisherType {
-		t.Errorf("PublisherType = %d, want %d", cfg.PublisherType, defaultPublisherType)
+	if cfg.PublisherType != config.PublisherTypeUnknown {
+		t.Errorf("PublisherType = %d, want PublisherTypeUnknown (%d)", cfg.PublisherType, config.PublisherTypeUnknown)
 	}
 	if cfg.BmpListenPort != defaultSourcePort {
 		t.Errorf("BmpListenPort = %d, want %d", cfg.BmpListenPort, defaultSourcePort)
@@ -194,7 +194,8 @@ func TestApplyConfigDefaults_SplitAF_ExplicitFalse_Preserved(t *testing.T) {
 
 func TestApplyConfigDefaults_PresetValues_NotOverwritten(t *testing.T) {
 	cfg := &config.Config{
-		PublisherType:   config.PublisherTypeNATS,
+		// PublisherType is intentionally absent: defaults always resets it to
+		// PublisherTypeUnknown — the actual type is inferred later.
 		BmpListenPort:   9999,
 		PerformancePort: 1234,
 		SplitAF:         boolPtr(false), // explicit false from YAML
@@ -203,8 +204,8 @@ func TestApplyConfigDefaults_PresetValues_NotOverwritten(t *testing.T) {
 	}
 	applyConfigDefaults(cfg)
 
-	if cfg.PublisherType != config.PublisherTypeNATS {
-		t.Errorf("PublisherType overwritten, got %d", cfg.PublisherType)
+	if cfg.PublisherType != config.PublisherTypeUnknown {
+		t.Errorf("PublisherType = %d, want PublisherTypeUnknown (defaults always resets it)", cfg.PublisherType)
 	}
 	if cfg.BmpListenPort != 9999 {
 		t.Errorf("BmpListenPort overwritten, got %d", cfg.BmpListenPort)
@@ -261,7 +262,9 @@ func TestApplyConfigOverrides_Dump_File(t *testing.T) {
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.PublisherType != config.PublisherTypeDump {
 		t.Errorf("PublisherType = %d, want PublisherTypeDump (%d)", cfg.PublisherType, config.PublisherTypeDump)
@@ -275,38 +278,24 @@ func TestApplyConfigOverrides_Dump_Console(t *testing.T) {
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.PublisherType != config.PublisherTypeDump {
 		t.Errorf("PublisherType = %d, want PublisherTypeDump (%d)", cfg.PublisherType, config.PublisherTypeDump)
 	}
 }
 
-func TestApplyConfigOverrides_Dump_NATS(t *testing.T) {
-	fs := newTestFlagSet()
-	if err := fs.Set("dump", "nats"); err != nil {
-		t.Fatalf("failed to set flag: %v", err)
-	}
-
-	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
-
-	if cfg.PublisherType != config.PublisherTypeNATS {
-		t.Errorf("PublisherType = %d, want PublisherTypeNATS (%d)", cfg.PublisherType, config.PublisherTypeNATS)
-	}
-}
-
-func TestApplyConfigOverrides_Dump_Kafka(t *testing.T) {
+func TestApplyConfigOverrides_Dump_Invalid(t *testing.T) {
 	fs := newTestFlagSet()
 	if err := fs.Set("dump", "kafka"); err != nil {
 		t.Fatalf("failed to set flag: %v", err)
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
-
-	if cfg.PublisherType != config.PublisherTypeKafka {
-		t.Errorf("PublisherType = %d, want PublisherTypeKafka (%d)", cfg.PublisherType, config.PublisherTypeKafka)
+	if err := applyConfigOverrides(cfg, fs); err == nil {
+		t.Error("expected error for invalid --dump value, got nil")
 	}
 }
 
@@ -317,7 +306,9 @@ func TestApplyConfigOverrides_NatsServer_InfersPublisherType(t *testing.T) {
 	}
 
 	cfg := &config.Config{PublisherType: config.PublisherTypeUnknown}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.PublisherType != config.PublisherTypeNATS {
 		t.Errorf("PublisherType = %d, want PublisherTypeNATS (%d)", cfg.PublisherType, config.PublisherTypeNATS)
@@ -331,10 +322,27 @@ func TestApplyConfigOverrides_KafkaServer_InfersPublisherType(t *testing.T) {
 	}
 
 	cfg := &config.Config{PublisherType: config.PublisherTypeUnknown}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.PublisherType != config.PublisherTypeKafka {
 		t.Errorf("PublisherType = %d, want PublisherTypeKafka (%d)", cfg.PublisherType, config.PublisherTypeKafka)
+	}
+}
+
+func TestApplyConfigOverrides_BothServers_WithoutDump_ReturnsError(t *testing.T) {
+	fs := newTestFlagSet()
+	if err := fs.Set("kafka-server", "kafka:9092"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+	if err := fs.Set("nats-server", "nats://127.0.0.1:4222"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+
+	cfg := &config.Config{PublisherType: config.PublisherTypeUnknown}
+	if err := applyConfigOverrides(cfg, fs); err == nil {
+		t.Error("expected error when both --kafka-server and --nats-server are set without --dump, got nil")
 	}
 }
 
@@ -345,7 +353,9 @@ func TestApplyConfigOverrides_SourcePort(t *testing.T) {
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.BmpListenPort != 9000 {
 		t.Errorf("BmpListenPort = %d, want 9000", cfg.BmpListenPort)
@@ -359,10 +369,24 @@ func TestApplyConfigOverrides_PerformancePort(t *testing.T) {
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.PerformancePort != 8080 {
 		t.Errorf("PerformancePort = %d, want 8080", cfg.PerformancePort)
+	}
+}
+
+func TestApplyConfigOverrides_PerformancePort_Invalid(t *testing.T) {
+	fs := newTestFlagSet()
+	if err := fs.Set("performance-port", "0"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+
+	cfg := &config.Config{}
+	if err := applyConfigOverrides(cfg, fs); err == nil {
+		t.Error("expected error for --performance-port=0, got nil")
 	}
 }
 
@@ -373,10 +397,24 @@ func TestApplyConfigOverrides_SplitAF(t *testing.T) {
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.SplitAF == nil || !*cfg.SplitAF {
 		t.Error("SplitAF = nil or false, want *true")
+	}
+}
+
+func TestApplyConfigOverrides_SplitAF_Invalid(t *testing.T) {
+	fs := newTestFlagSet()
+	if err := fs.Set("split-af", "notabool"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+
+	cfg := &config.Config{}
+	if err := applyConfigOverrides(cfg, fs); err == nil {
+		t.Error("expected error for invalid --split-af value, got nil")
 	}
 }
 
@@ -387,7 +425,9 @@ func TestApplyConfigOverrides_NatsServer_LazyInit(t *testing.T) {
 	}
 
 	cfg := &config.Config{} // NATSConfig starts nil
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.NATSConfig == nil {
 		t.Fatal("NATSConfig is nil, want non-nil (lazy init)")
@@ -404,7 +444,9 @@ func TestApplyConfigOverrides_MsgFile_LazyInit(t *testing.T) {
 	}
 
 	cfg := &config.Config{} // DumpConfig starts nil
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.DumpConfig == nil {
 		t.Fatal("DumpConfig is nil, want non-nil (lazy init)")
@@ -421,7 +463,9 @@ func TestApplyConfigOverrides_KafkaServer_LazyInit(t *testing.T) {
 	}
 
 	cfg := &config.Config{} // KafkaConfig starts nil
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.KafkaConfig == nil {
 		t.Fatal("KafkaConfig is nil, want non-nil (lazy init)")
@@ -438,7 +482,9 @@ func TestApplyConfigOverrides_KafkaRetentionTime(t *testing.T) {
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.KafkaConfig == nil {
 		t.Fatal("KafkaConfig is nil, want non-nil")
@@ -455,7 +501,9 @@ func TestApplyConfigOverrides_KafkaTopicPrefix(t *testing.T) {
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.KafkaConfig == nil {
 		t.Fatal("KafkaConfig is nil, want non-nil")
@@ -472,7 +520,9 @@ func TestApplyConfigOverrides_BmpRaw(t *testing.T) {
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if !cfg.KafkaConfig.BmpRaw {
 		t.Error("BmpRaw = false, want true")
@@ -486,7 +536,9 @@ func TestApplyConfigOverrides_AdminID_Explicit(t *testing.T) {
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if cfg.KafkaConfig.AdminID != "my-collector" {
 		t.Errorf("AdminID = %q, want my-collector", cfg.KafkaConfig.AdminID)
@@ -502,7 +554,9 @@ func TestApplyConfigOverrides_AdminID_Empty_FallsBackToHostname(t *testing.T) {
 	}
 
 	cfg := &config.Config{}
-	applyConfigOverrides(cfg, fs)
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	// The fallback sets AdminID to the OS hostname (or "gobmp-collector" on error).
 	// We cannot predict the exact value, so assert it is non-empty.

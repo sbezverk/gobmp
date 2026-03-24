@@ -24,7 +24,6 @@ func writeTemp(t *testing.T, content string) string {
 
 func TestLoadConfig_ValidFull(t *testing.T) {
 	yml := `
-publisher_type: 2
 nats_config:
   nats_srv: "nats://localhost:4222"
 split_af: true
@@ -41,9 +40,7 @@ speakers_list:
 	if err != nil {
 		t.Fatalf("LoadConfig() unexpected error: %v", err)
 	}
-	if cfg.PublisherType != 2 {
-		t.Errorf("PublisherType = %d, want 2", cfg.PublisherType)
-	}
+	// PublisherType is yaml:"-" — always zero after LoadConfig; inferred later.
 	if cfg.NATSConfig == nil {
 		t.Fatal("NATSConfig is nil, want non-nil")
 	}
@@ -79,9 +76,7 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadConfig() unexpected error: %v", err)
 	}
-	if cfg.PublisherType != 0 {
-		t.Errorf("PublisherType = %d, want 0", cfg.PublisherType)
-	}
+	// PublisherType is yaml:"-" — always zero after LoadConfig; inferred later.
 	if cfg.BmpListenPort != 0 {
 		t.Errorf("BmpListenPort = %d, want 0", cfg.BmpListenPort)
 	}
