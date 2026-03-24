@@ -67,7 +67,9 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer fd.Close()
+	defer func() {
+		_ = fd.Close()
+	}()
 
 	fi, err := os.Stat(path)
 	if err != nil {
