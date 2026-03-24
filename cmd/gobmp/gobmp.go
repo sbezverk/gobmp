@@ -138,7 +138,6 @@ func main() {
 		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
 		os.Exit(1)
 	}
-	// Starting Interceptor server
 	bmpSrv.Start()
 
 	stopCh := tools.SetupSignalHandler()

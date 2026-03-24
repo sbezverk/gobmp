@@ -160,14 +160,6 @@ kubectl get pods -l app=gobmp
   --admin-id=collector-01
 ```
 
-### Intercept Mode (Transparent Proxy)
-```bash
-./bin/gobmp --source-port=5000 \
-  --destination-port=5050 \
-  --intercept=true \
-  --kafka-server=kafka.example.com:9092
-```
-
 ---
 
 ## Configuration
@@ -184,13 +176,6 @@ kubectl get pods -l app=gobmp
 TCP port where goBMP listens for incoming BMP sessions from routers. This is the primary listening port that routers should connect to for sending BMP messages.
 
 ```
---destination-port={port}
-```
-**Default:** 5050
-
-Used only when `--intercept=true`. In intercept mode, goBMP receives BMP messages on `--source-port`, processes them, and forwards a copy to this destination port. This allows chaining goBMP instances or sending data to another BMP collector.
-
-```
 --performance-port={port}
 ```
 **Default:** 56767
@@ -200,23 +185,26 @@ Port for performance monitoring using Go's pprof endpoints. Useful for debugging
 ### Output and Publishing Configuration
 
 ```
---dump={file|console|nats}
+--dump={file|console|nats|kafka}
 ```
 **Default:** none (disabled)
 
 Controls where processed BMP messages are output:
-- `file`: Write JSON messages to a file (see `--msg-file`)
+- `file`: Write JSON messages to a file specified by `--msg-file`. **If `--msg-file` is not provided, output falls back to console (stdout).**
 - `console`: Print JSON messages to stdout
 - `nats`: Publish messages to NATS server (see `--nats-server`)
+- `kafka`: Publish messages to Kafka broker (see `--kafka-server`)
 
-Note: This is independent of Kafka publishing. You can use both simultaneously.
+Note: This flag selects the publisher type. Alternatively, specifying `--kafka-server` or `--nats-server` alone is sufficient to activate that publisher without needing `--dump`.
 
 ```
 --msg-file={path}
 ```
-**Default:** "/tmp/messages.json"
+**Default:** none (empty)
 
-Full path and filename for storing processed messages when `--dump=file` is used. Each message is written as a JSON object.
+Full path and filename for storing processed messages when `--dump=file` is used. Each message is written as a JSON object on its own line.
+
+> **Note:** If `--dump=file` is specified without `--msg-file`, goBMP falls back to console (stdout) output. To write to a file, always pair `--dump=file` with an explicit `--msg-file` path.
 
 ### Message Broker Configuration
 
@@ -253,18 +241,6 @@ Kafka topic retention time in milliseconds. Topics are created with this retenti
 NATS server URL for publishing messages. Example: `--nats-server=nats://nats.example.com:4222`
 
 ### BMP Processing Modes
-
-```
---intercept={true|false}
-```
-**Default:** false
-
-**Intercept mode:** When enabled, goBMP acts as a transparent proxy:
-1. Receives BMP messages on `--source-port`
-2. Processes and publishes them (to Kafka/file/console)
-3. Forwards a copy to `--destination-port`
-
-This allows inserting goBMP into an existing BMP pipeline without disrupting downstream collectors.
 
 ```
 --split-af={true|false}

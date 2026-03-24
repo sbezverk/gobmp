@@ -70,7 +70,7 @@ func LoadConfig(path string) (*Config, error) {
 		_ = fd.Close()
 	}()
 
-	fi, err := os.Stat(path)
+	fi, err := fd.Stat()
 	if err != nil {
 		return nil, err
 	}
@@ -86,12 +86,8 @@ func LoadConfig(path string) (*Config, error) {
 		return cfg, nil
 	}
 	b := make([]byte, size)
-	n, err := io.ReadAtLeast(fd, b, size)
-	if err != nil {
+	if _, err := io.ReadFull(fd, b); err != nil {
 		return nil, err
-	}
-	if n != size {
-		return nil, fmt.Errorf("expected to read %d bytes but read %d bytes", size, n)
 	}
 	if err := yaml.Unmarshal(b, cfg); err != nil {
 		return nil, err

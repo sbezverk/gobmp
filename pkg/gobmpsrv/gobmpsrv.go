@@ -23,20 +23,19 @@ type BMPServer interface {
 }
 
 type bmpServer struct {
-	splitAF    bool
-	publisher  pub.Publisher
-	sourcePort int
-	incoming   net.Listener
-	wg         sync.WaitGroup        // tracks server() + in-flight bmpWorker goroutines
-	mu         sync.Mutex            // protects clients and closing
-	clients    map[net.Conn]struct{} // active bmpWorker connections
-	closing    bool                  // set to true in Stop() before iterating clients
-	bmpRaw     bool
-	adminID    string
+	splitAF   bool
+	publisher pub.Publisher
+	incoming  net.Listener
+	wg        sync.WaitGroup        // tracks server() + in-flight bmpWorker goroutines
+	mu        sync.Mutex            // protects clients and closing
+	clients   map[net.Conn]struct{} // active bmpWorker connections
+	closing   bool                  // set to true in Stop() before iterating clients
+	bmpRaw    bool
+	adminID   string
 }
 
 func (srv *bmpServer) Start() {
-	// Starting bmp server server
+	// Starting bmp server
 	glog.Infof("Starting gobmp server on %s\n", srv.incoming.Addr().String())
 	srv.wg.Add(1)
 	go srv.server()
@@ -259,11 +258,10 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 		return nil, err
 	}
 	bmpSrv := bmpServer{
-		clients:    make(map[net.Conn]struct{}),
-		sourcePort: cfg.BmpListenPort,
-		publisher:  cfg.Publisher,
-		incoming:   incoming,
-		splitAF:    cfg.SplitAF == nil || *cfg.SplitAF, // nil means unset → default true
+		clients:   make(map[net.Conn]struct{}),
+		publisher: cfg.Publisher,
+		incoming:  incoming,
+		splitAF:   cfg.SplitAF == nil || *cfg.SplitAF, // nil means unset → default true
 	}
 	if cfg.PublisherType == config.PublisherTypeKafka && cfg.KafkaConfig != nil {
 		bmpSrv.bmpRaw = cfg.KafkaConfig.BmpRaw
