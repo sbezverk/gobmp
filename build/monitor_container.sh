@@ -1,7 +1,8 @@
 #!/usr/bin/bash
 
 cn=$1
-cid=$(docker ps | grep ${cn} | awk '{ print $1 }')
+router_cn=${2:-xr-1}
+cid=$(docker ps --filter "name=${cn}" --format '{{.ID}}' | head -1)
 
 if [[ ${cid} == "" ]]; then
         echo "no container ${cn} detected"
@@ -61,9 +62,9 @@ done
 if [[ ${found} == true ]]; then
         echo "bmp session with 10.1.1.3 came up"
 else
-    echo "container ${cn} failed to establish bmp session with 10.1.1.3, check gobmp and xr-1 containers' logs..."
+    echo "container ${cn} failed to establish bmp session with 10.1.1.3, check gobmp and ${router_cn} containers' logs..."
 	docker logs ${cid}
-	docker logs $(docker ps | grep xr-1 | awk '{ print $1 }') 
+	docker logs "${router_cn}"
         exit 1
 fi 
 
