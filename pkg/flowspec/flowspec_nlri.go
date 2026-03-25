@@ -424,6 +424,9 @@ func (o *OpVal) MarshalJSON() ([]byte, error) {
 // UnmarshalOpVal creates a slice of Operator/Value pairs
 func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
 	opvals := make([]*OpVal, 0)
+	if len(b) < 2 {
+		return nil, fmt.Errorf("input too short for operator/value sequence: need at least 2 bytes, got %d", len(b))
+	}
 	p := 0
 	// Skip type
 	p++
@@ -447,6 +450,9 @@ func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
 		if o.EOLBit {
 			eol = true
 		}
+	}
+	if !eol {
+		return nil, fmt.Errorf("operator/value sequence ended at offset %d without EOL bit set", p)
 	}
 
 	return opvals, nil

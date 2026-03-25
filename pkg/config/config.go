@@ -21,11 +21,24 @@ var ErrNoConfig = errors.New("no config file provided")
 type PublisherType int
 
 const (
-	PublisherTypeDump PublisherType = iota + 1
-	PublisherTypeNATS
-	PublisherTypeKafka
-	PublisherTypeUnknown = -1
+	PublisherTypeUnknown PublisherType = iota // 0 — zero value; a fresh Config{} is safe by default
+	PublisherTypeDump                         // 1
+	PublisherTypeNATS                         // 2
+	PublisherTypeKafka                        // 3
 )
+
+func (pt PublisherType) String() string {
+	switch pt {
+	case PublisherTypeDump:
+		return "Dump"
+	case PublisherTypeNATS:
+		return "NATS"
+	case PublisherTypeKafka:
+		return "Kafka"
+	default:
+		return "Unknown"
+	}
+}
 
 type DumpConfig struct {
 	File string `yaml:"file"`

@@ -1,32 +1,21 @@
+# cEOS integration test topology — multinode Kafka cluster
+#
+# IMPORTANT: cEOS containers use a SINGLE Docker network (gobmp-ceos-1).
+# Do NOT add a second network. See test_bed_single_kafka_ceos.yml for details.
+
 networks:
-  mgmt:
-    driver_opts:
-      com.docker.network.container_iface_prefix: xr-1
-    ipam:
-      config:
-      - subnet: 172.30.0.0/24
-  gobmp-xrd-1:
-    driver_opts:
-      com.docker.network.container_iface_prefix: xr-2
+  gobmp-ceos-1:
     ipam:
       config:
       - subnet: 10.1.1.0/24
-  xr-1-gi1-xr-2-gi0:
-    driver_opts:
-      com.docker.network.container_iface_prefix: xr-0
-      com.docker.network.driver.mtu: 9000
-    internal: true
-    name: xr-1-gi1-xr-2-gi0
+
 services:
   gobmp:
     image: localhost/gobmp:cicd
-    container_name: gobmp-multinode
-    hostname: gobmp-multinode
-    restart: on-failure
     expose:
       - 5000
     entrypoint:
-      [ 
+      [
         "/gobmp",
         "--source-port=5000",
         "--split-af=true",
@@ -36,13 +25,14 @@ services:
     cap_add:
     - NET_ADMIN
     networks:
-      gobmp-xrd-1:
+      gobmp-ceos-1:
         ipv4_address: 10.1.1.2
     depends_on:
       - kafka-1
       - kafka-2
       - kafka-3
       - kafka-4
+
   zookeeper:
     image: zookeeper:3.7.0
     restart: always
@@ -52,16 +42,15 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     networks:
-      gobmp-xrd-1:
+      gobmp-ceos-1:
         ipv4_address: 10.1.1.5
-    volumes:
-      - ./zookeeper_hc.sh:/tmp/hc.sh
     healthcheck:
-      test: [ "CMD-SHELL", "/tmp/hc.sh" ]
+      test: [ "CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok" ]
       interval: 2s
       timeout: 5s
       retries: 5
       start_period: 20s
+
   kafka-1:
     image: confluentinc/cp-kafka:7.3.1
     restart: always
@@ -82,7 +71,7 @@ services:
       KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9091"
       BOOTSTRAP_SERVERS: "kafka-1:9091,kafka-2:9092,kafka-3:9093,kafka-4:9094"
     networks:
-      gobmp-xrd-1:
+      gobmp-ceos-1:
         ipv4_address: 10.1.1.6
     healthcheck:
       test: ps augwwx | egrep [S]upportedKafka
@@ -90,6 +79,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
   kafka-2:
     image: confluentinc/cp-kafka:7.3.1
     restart: always
@@ -110,7 +100,7 @@ services:
       KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092"
       BOOTSTRAP_SERVERS: "kafka-1:9091,kafka-2:9092,kafka-3:9093,kafka-4:9094"
     networks:
-      gobmp-xrd-1:
+      gobmp-ceos-1:
         ipv4_address: 10.1.1.7
     healthcheck:
       test: ps augwwx | egrep [S]upportedKafka
@@ -118,6 +108,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
   kafka-3:
     image: confluentinc/cp-kafka:7.3.1
     restart: always
@@ -138,7 +129,7 @@ services:
       KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9093"
       BOOTSTRAP_SERVERS: "kafka-1:9091,kafka-2:9092,kafka-3:9093,kafka-4:9094"
     networks:
-      gobmp-xrd-1:
+      gobmp-ceos-1:
         ipv4_address: 10.1.1.8
     healthcheck:
       test: ps augwwx | egrep [S]upportedKafka
@@ -146,6 +137,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
   kafka-4:
     image: confluentinc/cp-kafka:7.3.1
     restart: always
@@ -166,7 +158,7 @@ services:
       KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9094"
       BOOTSTRAP_SERVERS: "kafka-1:9091,kafka-2:9092,kafka-3:9093,kafka-4:9094"
     networks:
-      gobmp-xrd-1:
+      gobmp-ceos-1:
         ipv4_address: 10.1.1.9
     healthcheck:
       test: ps augwwx | egrep [S]upportedKafka
@@ -174,104 +166,85 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-  xr-1:
+
+  ceos-1:
     cap_add:
-    - CHOWN
-    - DAC_OVERRIDE
-    - FSETID
-    - FOWNER
-    - MKNOD
-    - NET_RAW
-    - SETGID
-    - SETUID
-    - SETFCAP
-    - SETPCAP
-    - NET_BIND_SERVICE
-    - SYS_CHROOT
-    - KILL
-    - AUDIT_WRITE
-    - SYS_NICE
+    - NET_ADMIN
     - SYS_ADMIN
     - SYS_RESOURCE
-    - NET_ADMIN
-    - SYS_PTRACE
-    - IPC_LOCK
-    cap_drop:
-    - all
-    container_name: xr-1
-    devices:
-    - /dev/fuse
-    - /dev/net/tun
+    command:
+    - /sbin/init
+    - systemd.setenv=CEOS=1
+    - systemd.setenv=EOS_PLATFORM=ceoslab
+    - systemd.setenv=container=docker
+    - systemd.setenv=ETBA=1
+    - systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1
+    - systemd.setenv=INTFTYPE=eth
+    - systemd.setenv=MAPETH0=1
+    - systemd.setenv=MGMT_INTF=eth0
+    container_name: ceos-1
     environment:
-      XR_EVERY_BOOT_CONFIG: /etc/xrd/startup.cfg
-      XR_INTERFACES: linux:xr-20,xr_name=Gi0/0/0/0,chksum;linux:xr-00,xr_name=Gi0/0/0/1
-      XR_MGMT_INTERFACES: linux:xr-10,xr_name=Mg0/RP0/CPU0/0,chksum
-    image: sbezverk/xrd-control-plane:25.2.1
+      CEOS: 1
+      EOS_PLATFORM: ceoslab
+      container: docker
+      MGMT_INTF: eth0
+      INTFTYPE: eth
+      ETBA: 1
+      SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT: 1
+      MAPETH0: 1
+    image: sbezverk/ceos-lab-4.35.2f:cicd
+    privileged: true
     networks:
-      mgmt: null
-      gobmp-xrd-1:
+      gobmp-ceos-1:
         ipv4_address: 10.1.1.3
-      xr-1-gi1-xr-2-gi0: null
-    pids_limit: -1
-    security_opt:
-    - apparmor=unconfined
-    - label=disable
     stdin_open: true
     tty: true
     volumes:
-    - source: ./xrd-1_xrconf.cfg
-      target: /etc/xrd/startup.cfg
+    - source: ./ceos-1_startup.cfg
+      target: /mnt/flash/startup-config
       type: bind
-    - xr-1:/xr-storage/
-  xr-2:
+    - ceos-1:/mnt/flash/
+
+  ceos-2:
     cap_add:
-    - CHOWN
-    - DAC_OVERRIDE
-    - FSETID
-    - FOWNER
-    - MKNOD
-    - NET_RAW
-    - SETGID
-    - SETUID
-    - SETFCAP
-    - SETPCAP
-    - NET_BIND_SERVICE
-    - SYS_CHROOT
-    - KILL
-    - AUDIT_WRITE
-    - SYS_NICE
+    - NET_ADMIN
     - SYS_ADMIN
     - SYS_RESOURCE
-    - NET_ADMIN
-    - SYS_PTRACE
-    - IPC_LOCK
-    cap_drop:
-    - all
-    container_name: xr-2
-    devices:
-    - /dev/fuse
-    - /dev/net/tun
+    command:
+    - /sbin/init
+    - systemd.setenv=CEOS=1
+    - systemd.setenv=EOS_PLATFORM=ceoslab
+    - systemd.setenv=container=docker
+    - systemd.setenv=ETBA=1
+    - systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1
+    - systemd.setenv=INTFTYPE=eth
+    - systemd.setenv=MAPETH0=1
+    - systemd.setenv=MGMT_INTF=eth0
+    container_name: ceos-2
     environment:
-      XR_EVERY_BOOT_CONFIG: /etc/xrd/startup.cfg
-      XR_INTERFACES: linux:xr-00,xr_name=Gi0/0/0/0;linux:xr-30,xr_name=Gi0/0/0/1,chksum
-      XR_MGMT_INTERFACES: linux:xr-10,xr_name=Mg0/RP0/CPU0/0,chksum
-    image: sbezverk/xrd-control-plane:25.2.1
+      CEOS: 1
+      EOS_PLATFORM: ceoslab
+      container: docker
+      MGMT_INTF: eth0
+      INTFTYPE: eth
+      ETBA: 1
+      SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT: 1
+      MAPETH0: 1
+    image: sbezverk/ceos-lab-4.35.2f:cicd
+    privileged: true
     networks:
-      mgmt: null
-      xr-1-gi1-xr-2-gi0: null
-    pids_limit: -1
-    security_opt:
-    - apparmor=unconfined
-    - label=disable
+      gobmp-ceos-1:
+        ipv4_address: 10.1.1.10
     stdin_open: true
     tty: true
     volumes:
-    - source: ./xrd-2_xrconf.cfg
-      target: /etc/xrd/startup.cfg
+    - source: ./ceos-2_startup.cfg
+      target: /mnt/flash/startup-config
       type: bind
-    - xr-2:/xr-storage/
+    - ceos-2:/mnt/flash/
+
 volumes:
-  xr-1:
-    name: xr-1
-  xr-2:
-    name: xr-2
+  ceos-1:
+    name: ceos-1
+  ceos-2:
+    name: ceos-2
