@@ -169,16 +169,27 @@ func TestApplyConfigDefaults_ZeroCfg(t *testing.T) {
 	if cfg.DumpConfig.File != defaultMsgFile {
 		t.Errorf("DumpConfig.File = %q, want %q", cfg.DumpConfig.File, defaultMsgFile)
 	}
-	if cfg.KafkaConfig == nil {
-		t.Fatal("KafkaConfig is nil, want non-nil")
-	}
-	wantRetention := 900000
-	if cfg.KafkaConfig.KafkaTpRetnTimeMs != wantRetention {
-		t.Errorf("KafkaConfig.KafkaTpRetnTimeMs = %d, want %d", cfg.KafkaConfig.KafkaTpRetnTimeMs, wantRetention)
+	// KafkaConfig must remain nil for a zero config: applyConfigDefaults no
+	// longer unconditionally creates it so that nil retains its meaning of
+	// "Kafka was not configured" in the publisher inference logic.
+	if cfg.KafkaConfig != nil {
+		t.Error("KafkaConfig should be nil for a zero config; got non-nil")
 	}
 	// SplitAF nil → default true must be applied.
 	if cfg.SplitAF == nil || !*cfg.SplitAF {
 		t.Error("SplitAF = nil or false, want *true (default)")
+	}
+}
+
+func TestApplyConfigDefaults_KafkaConfig_RetentionDefault_Applied(t *testing.T) {
+	// When KafkaConfig is already present (e.g. from a YAML kafka_config block)
+	// applyConfigDefaults fills in the retention-time default if it is zero.
+	cfg := &config.Config{KafkaConfig: &config.KafkaConfig{}}
+	applyConfigDefaults(cfg)
+
+	wantRetention := 900000
+	if cfg.KafkaConfig.KafkaTpRetnTimeMs != wantRetention {
+		t.Errorf("KafkaTpRetnTimeMs = %d, want %d", cfg.KafkaConfig.KafkaTpRetnTimeMs, wantRetention)
 	}
 }
 
@@ -605,5 +616,45 @@ func TestApplyConfigOverrides_BmpRaw_Invalid(t *testing.T) {
 	cfg := &config.Config{}
 	if err := applyConfigOverrides(cfg, fs); err == nil {
 		t.Error("expected error for non-boolean --bmp-raw value, got nil")
+	}
+}
+
+func TestApplyConfigOverrides_BmpRaw_WithoutKafka_NoError(t *testing.T) {
+	// --bmp-raw without --kafka-server is not an error; a warning is logged.
+	// Verify applyConfigOverrides succeeds and the flag value is still stored.
+	fs := newTestFlagSet()
+	if err := fs.Set("bmp-raw", "true"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+	if err := fs.Set("dump", "console"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+
+	cfg := &config.Config{PublisherType: config.PublisherTypeUnknown}
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// BmpRaw is stored even though the publisher is not Kafka.
+	if cfg.KafkaConfig == nil || !cfg.KafkaConfig.BmpRaw {
+		t.Error("BmpRaw should be stored in KafkaConfig regardless of publisher selection")
+	}
+}
+
+func TestApplyConfigOverrides_AdminID_WithoutKafka_NoError(t *testing.T) {
+	// --admin-id without --kafka-server is not an error; a warning is logged.
+	fs := newTestFlagSet()
+	if err := fs.Set("admin-id", "my-collector"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+	if err := fs.Set("dump", "console"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+
+	cfg := &config.Config{PublisherType: config.PublisherTypeUnknown}
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.KafkaConfig == nil || cfg.KafkaConfig.AdminID != "my-collector" {
+		t.Error("AdminID should be stored in KafkaConfig regardless of publisher selection")
 	}
 }

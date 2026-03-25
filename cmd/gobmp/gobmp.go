@@ -58,6 +58,16 @@ func init() {
 	flag.StringVar(&adminID, "admin-id", "", "Collector admin ID for RAW messages (defaults to hostname). Used to generate collector hash for OpenBMP compatibility")
 }
 
+// fatal logs msg at error level, flushes glog's buffer, and exits with code 1.
+// os.Exit skips deferred calls, so glog's own deferred flush would never run;
+// calling glog.Flush() explicitly here ensures the error message is always
+// visible on stderr before the process terminates.
+func fatal(format string, args ...interface{}) {
+	glog.Errorf(format, args...)
+	glog.Flush()
+	os.Exit(1)
+}
+
 func main() {
 	flag.Parse()
 	_ = flag.Set("logtostderr", "true")
@@ -67,14 +77,12 @@ func main() {
 		if errors.Is(err, config.ErrNoConfig) {
 			cfg = &config.Config{}
 		} else {
-			glog.Errorf("failed to load config with error: %+v", err)
-			os.Exit(1)
+			fatal("failed to load config with error: %+v", err)
 		}
 	}
 	applyConfigDefaults(cfg)
 	if err := applyConfigOverrides(cfg, flag.CommandLine); err != nil {
-		glog.Errorf("configuration error: %v", err)
-		os.Exit(1)
+		fatal("configuration error: %v", err)
 	}
 
 	// Starting performance collecting http server if required
@@ -86,25 +94,17 @@ func main() {
 	// Initializing publisher
 	switch cfg.PublisherType {
 	case config.PublisherTypeDump:
-		// Make the --dump flag authoritative for console vs file selection.
-		dumpFlag := flag.Lookup("dump")
-		dumpMode := ""
-		if dumpFlag != nil {
-			dumpMode = strings.ToLower(dumpFlag.Value.String())
-		}
-		switch dumpMode {
+		// applyConfigOverrides only sets PublisherTypeDump when --dump is "console"
+		// or "file", so dumpMode is guaranteed to be one of those two values here.
+		switch strings.ToLower(dump) {
 		case "console":
-			// Explicitly requested console: ignore any configured file path.
 			cfg.Publisher = dumper.NewDumper()
 			glog.Infof("console publisher has been successfully initialized (dump=console).")
 		case "file":
-			// Explicitly requested file: prefer/require an explicit file path, but
-			// fall back to console if none is provided.
 			if cfg.DumpConfig != nil && cfg.DumpConfig.File != "" {
 				cfg.Publisher, err = filer.NewFiler(cfg.DumpConfig.File)
 				if err != nil {
-					glog.Errorf("failed to initialize file publisher with error: %+v", err)
-					os.Exit(1)
+					fatal("failed to initialize file publisher with error: %+v", err)
 				} else {
 					glog.Infof("file publisher has been successfully initialized (dump=file).")
 				}
@@ -113,34 +113,17 @@ func main() {
 				cfg.Publisher = dumper.NewDumper()
 				glog.Infof("console publisher has been successfully initialized (fallback from dump=file).")
 			}
-		default:
-			// Legacy/unspecified mode: preserve existing behavior where the presence
-			// of a dump file path controls file vs console selection.
-			if cfg.DumpConfig != nil && cfg.DumpConfig.File != "" {
-				cfg.Publisher, err = filer.NewFiler(cfg.DumpConfig.File)
-				if err != nil {
-					glog.Errorf("failed to initialize file publisher with error: %+v", err)
-					os.Exit(1)
-				} else {
-					glog.Infof("file publisher has been successfully initialized.")
-				}
-			} else {
-				cfg.Publisher = dumper.NewDumper()
-				glog.Infof("console publisher has been successfully initialized.")
-			}
 		}
 	case config.PublisherTypeNATS:
 		if cfg.NATSConfig != nil && cfg.NATSConfig.NatsSrv != "" {
 			cfg.Publisher, err = nats.NewPublisher(cfg.NATSConfig.NatsSrv)
 			if err != nil {
-				glog.Errorf("failed to initialize NATS publisher with error: %+v", err)
-				os.Exit(1)
+				fatal("failed to initialize NATS publisher with error: %+v", err)
 			} else {
 				glog.Infof("NATS publisher has been successfully initialized.")
 			}
 		} else {
-			glog.Error("NATS server URL is required for NATS publisher")
-			os.Exit(1)
+			fatal("NATS server URL is required for NATS publisher")
 		}
 	case config.PublisherTypeKafka:
 		if cfg.KafkaConfig == nil {
@@ -153,19 +136,16 @@ func main() {
 		}
 		cfg.Publisher, err = kafka.NewKafkaPublisher(kConfig)
 		if err != nil {
-			glog.Errorf("failed to initialize Kafka publisher with error: %+v", err)
-			os.Exit(1)
+			fatal("failed to initialize Kafka publisher with error: %+v", err)
 		}
 		glog.Infof("Kafka publisher has been successfully initialized.")
 	default:
-		glog.Errorf("no publisher configured: specify --kafka-server, --nats-server, or --dump")
-		os.Exit(1)
+		fatal("no publisher configured: specify --kafka-server, --nats-server, or --dump")
 	}
 
 	bmpSrv, err := gobmpsrv.NewBMPServer(cfg)
 	if err != nil {
-		glog.Errorf("failed to setup new gobmp server with error: %+v", err)
-		os.Exit(1)
+		fatal("failed to setup new gobmp server with error: %+v", err)
 	}
 	bmpSrv.Start()
 
@@ -173,7 +153,15 @@ func main() {
 	<-stopCh
 
 	bmpSrv.Stop()
-	os.Exit(0)
+}
+
+// defaultKafkaConfig returns a KafkaConfig pre-populated with the retention-
+// time default. Used when any Kafka CLI flag triggers lazy initialisation so
+// that --kafka-server alone (without --kafka-topic-retention-time-ms) still
+// gets the correct default.
+func defaultKafkaConfig() *config.KafkaConfig {
+	v, _ := strconv.Atoi(defaultKafkaTpRetnTimeMs)
+	return &config.KafkaConfig{KafkaTpRetnTimeMs: v}
 }
 
 func applyConfigDefaults(cfg *config.Config) {
@@ -192,12 +180,12 @@ func applyConfigDefaults(cfg *config.Config) {
 	if cfg.DumpConfig.File == "" {
 		cfg.DumpConfig.File = defaultMsgFile
 	}
-	// This is initialized regardless of the selected publisher so YAML defaults
-	// and overrides are always available when Kafka is used.
-	if cfg.KafkaConfig == nil {
-		cfg.KafkaConfig = &config.KafkaConfig{}
-	}
-	if cfg.KafkaConfig.KafkaTpRetnTimeMs == 0 {
+	// KafkaConfig is initialised only when it was already present (e.g. loaded
+	// from a YAML kafka_config block). For NATS-only or dump-only users the
+	// struct stays nil so the publisher inference nil check remains meaningful.
+	// When Kafka CLI flags are used, applyConfigOverrides lazily creates the
+	// struct and applies the retention-time default at that point.
+	if cfg.KafkaConfig != nil && cfg.KafkaConfig.KafkaTpRetnTimeMs == 0 {
 		if v, err := strconv.Atoi(defaultKafkaTpRetnTimeMs); err == nil {
 			cfg.KafkaConfig.KafkaTpRetnTimeMs = v
 		}
@@ -219,6 +207,7 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 	// visitErr captures the first error from inside the closure (fs.Visit
 	// does not support early termination, so we skip further cases once set).
 	var visitErr error
+	var bmpRawSet, adminIDSet bool
 	fs.Visit(func(f *flag.Flag) {
 		if visitErr != nil {
 			return
@@ -265,12 +254,12 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 			cfg.DumpConfig.File = file
 		case "kafka-server":
 			if cfg.KafkaConfig == nil {
-				cfg.KafkaConfig = &config.KafkaConfig{}
+				cfg.KafkaConfig = defaultKafkaConfig()
 			}
 			cfg.KafkaConfig.KafkaSrv = kafkaSrv
 		case "kafka-topic-retention-time-ms":
 			if cfg.KafkaConfig == nil {
-				cfg.KafkaConfig = &config.KafkaConfig{}
+				cfg.KafkaConfig = defaultKafkaConfig()
 			}
 			if v, err := strconv.Atoi(kafkaTpRetnTimeMs); err != nil {
 				visitErr = fmt.Errorf("invalid value for --kafka-topic-retention-time-ms: %q: %w", kafkaTpRetnTimeMs, err)
@@ -279,12 +268,12 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 			}
 		case "kafka-topic-prefix":
 			if cfg.KafkaConfig == nil {
-				cfg.KafkaConfig = &config.KafkaConfig{}
+				cfg.KafkaConfig = defaultKafkaConfig()
 			}
 			cfg.KafkaConfig.KafkaTopicPrefix = kafkaTopicPrefix
 		case "bmp-raw":
 			if cfg.KafkaConfig == nil {
-				cfg.KafkaConfig = &config.KafkaConfig{}
+				cfg.KafkaConfig = defaultKafkaConfig()
 			}
 			if bmpRaw == "" {
 				visitErr = errors.New("invalid empty value for --bmp-raw")
@@ -294,12 +283,14 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 				visitErr = fmt.Errorf("invalid value for --bmp-raw: %q: %w", bmpRaw, err)
 			} else {
 				cfg.KafkaConfig.BmpRaw = v
+				bmpRawSet = true
 			}
 		case "admin-id":
 			if cfg.KafkaConfig == nil {
-				cfg.KafkaConfig = &config.KafkaConfig{}
+				cfg.KafkaConfig = defaultKafkaConfig()
 			}
 			cfg.KafkaConfig.AdminID = adminID
+			adminIDSet = true
 			if cfg.KafkaConfig.AdminID == "" {
 				hostname, err := os.Hostname()
 				if err != nil {
@@ -339,6 +330,17 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 			cfg.KafkaConfig.AdminID = "gobmp-collector"
 		} else {
 			cfg.KafkaConfig.AdminID = hostname
+		}
+	}
+	// Warn when Kafka-specific flags were provided but Kafka is not the selected
+	// publisher. The flags are accepted (not an error) to avoid breaking
+	// scripted invocations, but the operator should know they have no effect.
+	if cfg.PublisherType != config.PublisherTypeKafka {
+		if bmpRawSet {
+			glog.Warningf("--bmp-raw is set but has no effect: it only applies to the Kafka publisher (current publisher: %v)", cfg.PublisherType)
+		}
+		if adminIDSet {
+			glog.Warningf("--admin-id is set but has no effect: it only applies to the Kafka publisher (current publisher: %v)", cfg.PublisherType)
 		}
 	}
 	return nil

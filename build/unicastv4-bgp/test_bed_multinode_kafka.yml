@@ -20,8 +20,8 @@ networks:
 services:
   gobmp:
     image: localhost/gobmp:cicd
-    container_name: gobmp
-    hostname: gobmp
+    container_name: gobmp-multinode
+    hostname: gobmp-multinode
     restart: on-failure
     expose:
       - 5000

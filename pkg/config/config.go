@@ -19,10 +19,10 @@ var ErrNoConfig = errors.New("no config file provided")
 type PublisherType int
 
 const (
-	PublisherTypeDump PublisherType = iota + 1
-	PublisherTypeNATS
-	PublisherTypeKafka
-	PublisherTypeUnknown = -1
+	PublisherTypeUnknown PublisherType = iota // 0 — zero value; a fresh Config{} is safe by default
+	PublisherTypeDump                         // 1
+	PublisherTypeNATS                         // 2
+	PublisherTypeKafka                        // 3
 )
 
 type DumpConfig struct {

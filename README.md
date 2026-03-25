@@ -28,6 +28,10 @@
   <a href="#deployment">Deployment</a>
 </p>
 
+> **⚠️ Upgrading from an older version?**
+> Publisher selection via `--dump=nats` and `--dump=kafka` has been removed.
+> See the [Migration Guide](#migration-guide) for required configuration changes.
+
 ---
 
 ## Overview
@@ -506,4 +510,46 @@ This project follows the licensing terms of the original repository.
 - **Pull Requests:** [GitHub PRs](https://github.com/sbezverk/gobmp/pulls)
 - **Documentation:** [BMP Protocol Details](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
 - **Message Schemas:** [types.go](https://github.com/sbezverk/gobmp/blob/master/pkg/message/types.go)
+
+---
+
+## Migration Guide
+
+### Publisher Selection: `--dump=nats` and `--dump=kafka` removed
+
+In previous versions the `--dump` flag accepted `nats` and `kafka` as values to select the message broker. These values are **no longer valid**. `--dump` is now restricted to `console` and `file` only.
+
+Kafka and NATS publishers are now selected by specifying their server address directly. This makes the configuration unambiguous and removes the need for a separate publisher-type selector.
+
+**Before (no longer works):**
+```bash
+# Old: selecting Kafka via --dump
+gobmp --source-port=5000 --dump=kafka --kafka-server=kafka.example.com:9092
+
+# Old: selecting NATS via --dump
+gobmp --source-port=5000 --dump=nats --nats-server=nats://nats.example.com:4222
+```
+
+**After (current):**
+```bash
+# New: Kafka publisher is activated by providing --kafka-server
+gobmp --source-port=5000 --kafka-server=kafka.example.com:9092
+
+# New: NATS publisher is activated by providing --nats-server
+gobmp --source-port=5000 --nats-server=nats://nats.example.com:4222
+```
+
+The same applies to YAML configuration files — there is no `publisher_type` field. The publisher is inferred automatically from whichever server block is populated:
+
+```yaml
+# Kafka (kafka_config.kafka_srv present → Kafka publisher selected automatically)
+kafka_config:
+  kafka_srv: "kafka.example.com:9092"
+
+# NATS (nats_config.nats_srv present → NATS publisher selected automatically)
+nats_config:
+  nats_srv: "nats://nats.example.com:4222"
+```
+
+> **Note:** Specifying both `--kafka-server` and `--nats-server` at the same time (or having both blocks populated in the config file without `--dump`) is now an explicit error.
 

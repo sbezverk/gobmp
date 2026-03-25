@@ -176,7 +176,7 @@ jobs:
         run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka.yml up --detach
       - name: check conection to kafka and bmp session with a router
         id: session_2
-        run: ./build/monitor_container.sh gobmp
+        run: ./build/monitor_container.sh gobmp-multinode
         continue-on-error: true
       - name: run validator for ipv4 unicast
         id: validation_2
@@ -186,14 +186,14 @@ jobs:
         if: steps.session_2.outcome != 'success' || steps.validation_2.outcome != 'success'
         run: |
           docker ps -a
-          docker logs gobmp
+          docker logs gobmp-multinode
           docker logs xr-1
           exit 1
       - name: Collect container logs (multinode kafka)
         if: always()
         run: |
           mkdir -p /tmp/logs/multinode-kafka
-          docker logs gobmp > /tmp/logs/multinode-kafka/gobmp.log 2>&1 || true
+          docker logs gobmp-multinode > /tmp/logs/multinode-kafka/gobmp.log 2>&1 || true
           docker logs xr-1 > /tmp/logs/multinode-kafka/xr-1.log 2>&1 || true
       - name: Upload multinode-kafka logs
         if: always()
