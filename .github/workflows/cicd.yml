@@ -135,7 +135,7 @@ jobs:
         run: docker images
       - name: starts unicast v4 integration test on a single node kafka
         run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka.yml up --detach
-      - name: check conection to kafka and bmp session with a router
+      - name: check connection to kafka and bmp session with a router
         id: session_1
         run: ./build/monitor_container.sh gobmp
         continue-on-error: true
@@ -174,7 +174,7 @@ jobs:
             sudo echo "127.0.0.1 kafka-1 kafka-2 kafka-3 kafka-4" | sudo tee -a /etc/hosts
       - name: starts unicast v4 integration test on a multinode kafka
         run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka.yml up --detach
-      - name: check conection to kafka and bmp session with a router
+      - name: check connection to kafka and bmp session with a router
         id: session_2
         run: ./build/monitor_container.sh gobmp-multinode
         continue-on-error: true

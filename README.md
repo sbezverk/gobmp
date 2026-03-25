@@ -506,6 +506,7 @@ This project follows the licensing terms of the original repository.
 
 ## Support & Resources
 
+- **Mailing List:** [gobmp@googlegroups.com](mailto:gobmp@googlegroups.com) — announcements, Q&A, and general discussion
 - **Issues:** [GitHub Issues](https://github.com/sbezverk/gobmp/issues)
 - **Pull Requests:** [GitHub PRs](https://github.com/sbezverk/gobmp/pulls)
 - **Documentation:** [BMP Protocol Details](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
