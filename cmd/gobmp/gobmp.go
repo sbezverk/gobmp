@@ -50,11 +50,11 @@ func init() {
 	flag.StringVar(&kafkaTpRetnTimeMs, "kafka-topic-retention-time-ms", defaultKafkaTpRetnTimeMs, "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
 	flag.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "Optional prefix prepended to all Kafka topic names (e.g. 'prod' -> 'prod.gobmp.parsed.peer')")
 	flag.StringVar(&natsSrv, "nats-server", "", "URL to access NATS server")
-	flag.StringVar(&splitAF, "split-af", "", "When set \"true\" ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
+	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 0, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Selects the dump publisher: 'console' prints JSON messages to stdout, 'file' writes them to the path set by --msg-file (falls back to console if --msg-file is omitted)")
 	flag.StringVar(&file, "msg-file", "", "Full path and file name to store messages when \"dump=file\"")
-	flag.StringVar(&bmpRaw, "bmp-raw", "", "When set \"true\", BMP messages are published in RAW format without parsing (OpenBMP compatibility mode)")
+	flag.StringVar(&bmpRaw, "bmp-raw", "false", "When set \"true\", BMP messages are published in RAW format without parsing (OpenBMP compatibility mode)")
 	flag.StringVar(&adminID, "admin-id", "", "Collector admin ID for RAW messages (defaults to hostname). Used to generate collector hash for OpenBMP compatibility")
 }
 
