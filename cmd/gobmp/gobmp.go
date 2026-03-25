@@ -293,7 +293,7 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 		hasKafka := cfg.KafkaConfig != nil && cfg.KafkaConfig.KafkaSrv != ""
 		switch {
 		case hasNATS && hasKafka:
-			return fmt.Errorf("ambiguous publisher: both --nats-server and --kafka-server provided; use --dump to select the desired publisher explicitly")
+			return fmt.Errorf("ambiguous publisher configuration: both NATS and Kafka are configured (via CLI flags and/or config file); configure only one publisher (NATS or Kafka)")
 		case hasNATS:
 			cfg.PublisherType = config.PublisherTypeNATS
 		case hasKafka:

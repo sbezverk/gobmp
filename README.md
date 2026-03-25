@@ -229,7 +229,9 @@ kafka_config:
 nats_config:
   nats_srv: "nats://host:port"  # required to activate NATS publisher
 
-# Dump publisher (console/file) is CLI-only via --dump; not configurable in YAML
+# Dump publisher configuration (console/file); requires --dump on the CLI to activate
+dump_config:
+  file: "/path/to/dump.json"    # dump destination file used when --dump is enabled
 
 # Active mode / speaker list (advanced)
 active_mode: false
