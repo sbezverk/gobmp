@@ -245,7 +245,8 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 			cfg.PerformancePort = perfPort
 		case "split-af":
 			if splitAF == "" {
-				break
+				visitErr = fmt.Errorf("invalid empty value for --split-af: must be 'true' or 'false'")
+				return
 			}
 			if v, err := strconv.ParseBool(splitAF); err != nil {
 				visitErr = fmt.Errorf("invalid value for --split-af: %q: %w", splitAF, err)
@@ -286,7 +287,8 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 				cfg.KafkaConfig = &config.KafkaConfig{}
 			}
 			if bmpRaw == "" {
-				break
+				visitErr = errors.New("invalid empty value for --bmp-raw")
+				return
 			}
 			if v, err := strconv.ParseBool(bmpRaw); err != nil {
 				visitErr = fmt.Errorf("invalid value for --bmp-raw: %q: %w", bmpRaw, err)
