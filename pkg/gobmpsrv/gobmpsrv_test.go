@@ -453,10 +453,10 @@ func wrapAddr(conn net.Conn, addr string) *mockConnWithAddr {
 	return &mockConnWithAddr{Conn: conn, remote: mockAddr{addr}}
 }
 
-// immediateReadErrorConn wraps a net.Conn but always returns net.ErrInvalid
-// on the first Read call. This exercises the non-clean header-read error path
-// in bmpWorker (i.e. the glog.Errorf branch that is skipped for EOF /
-// net.ErrClosed / io.ErrUnexpectedEOF).
+// immediateReadErrorConn wraps a net.Conn but always returns a non-nil,
+// non-clean error on every Read call. This exercises the glog.Errorf branch
+// in bmpWorker that is skipped for the clean-close errors (io.EOF,
+// net.ErrClosed, io.ErrUnexpectedEOF).
 type immediateReadErrorConn struct {
 	net.Conn
 }
