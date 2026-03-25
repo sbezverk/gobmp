@@ -40,9 +40,7 @@ const (
 	defaultSourcePort        = 5000
 	defaultKafkaTpRetnTimeMs = "900000" // 15 minutes in ms
 	defaultSplitAF           = true
-	defaultBmpRaw            = false
 	defaultMsgFile           = ""
-	defaultAdminID           = ""
 )
 
 func init() {
