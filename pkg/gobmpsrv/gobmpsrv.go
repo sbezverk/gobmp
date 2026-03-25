@@ -36,13 +36,13 @@ type bmpServer struct {
 
 func (srv *bmpServer) Start() {
 	// Starting bmp server
-	glog.Infof("Starting gobmp server on %s\n", srv.incoming.Addr().String())
+	glog.Infof("Starting gobmp server on %s", srv.incoming.Addr().String())
 	srv.wg.Add(1)
 	go srv.server()
 }
 
 func (srv *bmpServer) Stop() {
-	glog.Infof("Stopping gobmp server\n")
+	glog.Infof("Stopping gobmp server")
 	// 1. Stop accepting new connections.
 	_ = srv.incoming.Close()
 	// 2. Set the closing flag and close every active client connection atomically

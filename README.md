@@ -184,7 +184,7 @@ goBMP supports an optional YAML configuration file specified with `--config`. CL
 - `nats_config.nats_srv` present → NATS publisher
 - CLI `--dump` flag → Dump publisher (console or file)
 
-Providing both `kafka_config` and `nats_config` in the same config file (or CLI) is an error.
+Providing both `kafka_config` and `nats_config` in the same config file (or via CLI flags) is treated as an error only when goBMP must choose between Kafka and NATS (i.e., when `--dump` is not set). When `--dump=console` or `--dump=file` is used, any `kafka_config`/`nats_config` blocks are ignored.
 
 **Kafka example (`config.yaml`):**
 ```yaml

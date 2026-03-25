@@ -88,17 +88,48 @@ func main() {
 	// Initializing publisher
 	switch cfg.PublisherType {
 	case config.PublisherTypeDump:
-		if cfg.DumpConfig != nil && cfg.DumpConfig.File != "" {
-			cfg.Publisher, err = filer.NewFiler(cfg.DumpConfig.File)
-			if err != nil {
-				glog.Errorf("failed to initialize file publisher with error: %+v", err)
-				os.Exit(1)
-			} else {
-				glog.Infof("file publisher has been successfully initialized.")
-			}
-		} else {
+		// Make the --dump flag authoritative for console vs file selection.
+		dumpFlag := flag.Lookup("dump")
+		dumpMode := ""
+		if dumpFlag != nil {
+			dumpMode = dumpFlag.Value.String()
+		}
+		switch dumpMode {
+		case "console":
+			// Explicitly requested console: ignore any configured file path.
 			cfg.Publisher = dumper.NewDumper()
-			glog.Infof("console publisher has been successfully initialized.")
+			glog.Infof("console publisher has been successfully initialized (dump=console).")
+		case "file":
+			// Explicitly requested file: prefer/require an explicit file path, but
+			// fall back to console if none is provided.
+			if cfg.DumpConfig != nil && cfg.DumpConfig.File != "" {
+				cfg.Publisher, err = filer.NewFiler(cfg.DumpConfig.File)
+				if err != nil {
+					glog.Errorf("failed to initialize file publisher with error: %+v", err)
+					os.Exit(1)
+				} else {
+					glog.Infof("file publisher has been successfully initialized (dump=file).")
+				}
+			} else {
+				glog.Warningf("dump=file requested but no dump file configured; falling back to console publisher.")
+				cfg.Publisher = dumper.NewDumper()
+				glog.Infof("console publisher has been successfully initialized (fallback from dump=file).")
+			}
+		default:
+			// Legacy/unspecified mode: preserve existing behavior where the presence
+			// of a dump file path controls file vs console selection.
+			if cfg.DumpConfig != nil && cfg.DumpConfig.File != "" {
+				cfg.Publisher, err = filer.NewFiler(cfg.DumpConfig.File)
+				if err != nil {
+					glog.Errorf("failed to initialize file publisher with error: %+v", err)
+					os.Exit(1)
+				} else {
+					glog.Infof("file publisher has been successfully initialized.")
+				}
+			} else {
+				cfg.Publisher = dumper.NewDumper()
+				glog.Infof("console publisher has been successfully initialized.")
+			}
 		}
 	case config.PublisherTypeNATS:
 		if cfg.NATSConfig != nil && cfg.NATSConfig.NatsSrv != "" {
