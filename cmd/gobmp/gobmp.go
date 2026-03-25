@@ -337,10 +337,10 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 	// scripted invocations, but the operator should know they have no effect.
 	if cfg.PublisherType != config.PublisherTypeKafka {
 		if bmpRawSet {
-			glog.Warningf("--bmp-raw is set but has no effect: it only applies to the Kafka publisher (current publisher: %v)", cfg.PublisherType)
+			glog.Warningf("--bmp-raw is set but has no effect: it only applies to the Kafka publisher (current publisher: %s)", cfg.PublisherType.String())
 		}
 		if adminIDSet {
-			glog.Warningf("--admin-id is set but has no effect: it only applies to the Kafka publisher (current publisher: %v)", cfg.PublisherType)
+			glog.Warningf("--admin-id is set but has no effect: it only applies to the Kafka publisher (current publisher: %s)", cfg.PublisherType.String())
 		}
 	}
 	return nil

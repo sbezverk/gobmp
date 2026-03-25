@@ -25,6 +25,19 @@ const (
 	PublisherTypeKafka                        // 3
 )
 
+func (pt PublisherType) String() string {
+	switch pt {
+	case PublisherTypeDump:
+		return "Dump"
+	case PublisherTypeNATS:
+		return "NATS"
+	case PublisherTypeKafka:
+		return "Kafka"
+	default:
+		return "Unknown"
+	}
+}
+
 type DumpConfig struct {
 	File string `yaml:"file"`
 }
