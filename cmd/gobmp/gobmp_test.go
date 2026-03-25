@@ -583,3 +583,27 @@ func TestApplyConfigOverrides_AdminID_Empty_FallsBackToHostname(t *testing.T) {
 		t.Errorf("AdminID = %q, want hostname %q", cfg.KafkaConfig.AdminID, wantHostname)
 	}
 }
+
+func TestApplyConfigOverrides_KafkaRetentionTime_Invalid(t *testing.T) {
+	fs := newTestFlagSet()
+	if err := fs.Set("kafka-topic-retention-time-ms", "notanumber"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+
+	cfg := &config.Config{}
+	if err := applyConfigOverrides(cfg, fs); err == nil {
+		t.Error("expected error for non-numeric --kafka-topic-retention-time-ms, got nil")
+	}
+}
+
+func TestApplyConfigOverrides_BmpRaw_Invalid(t *testing.T) {
+	fs := newTestFlagSet()
+	if err := fs.Set("bmp-raw", "notabool"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+
+	cfg := &config.Config{}
+	if err := applyConfigOverrides(cfg, fs); err == nil {
+		t.Error("expected error for non-boolean --bmp-raw value, got nil")
+	}
+}
