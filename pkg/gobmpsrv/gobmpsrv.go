@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/config"
 	"github.com/sbezverk/gobmp/pkg/message"
 	"github.com/sbezverk/gobmp/pkg/parser"
 	"github.com/sbezverk/gobmp/pkg/pub"
@@ -22,29 +23,26 @@ type BMPServer interface {
 }
 
 type bmpServer struct {
-	splitAF         bool
-	intercept       bool
-	publisher       pub.Publisher
-	sourcePort      int
-	destinationPort int
-	incoming        net.Listener
-	wg              sync.WaitGroup        // tracks server() + in-flight bmpWorker goroutines
-	mu              sync.Mutex            // protects clients and closing
-	clients         map[net.Conn]struct{} // active bmpWorker connections
-	closing         bool                  // set to true in Stop() before iterating clients
-	bmpRaw          bool
-	adminID         string
+	splitAF   bool
+	publisher pub.Publisher
+	incoming  net.Listener
+	wg        sync.WaitGroup        // tracks server() + in-flight bmpWorker goroutines
+	mu        sync.Mutex            // protects clients and closing
+	clients   map[net.Conn]struct{} // active bmpWorker connections
+	closing   bool                  // set to true in Stop() before iterating clients
+	bmpRaw    bool
+	adminID   string
 }
 
 func (srv *bmpServer) Start() {
-	// Starting bmp server server
-	glog.Infof("Starting gobmp server on %s, intercept mode: %t\n", srv.incoming.Addr().String(), srv.intercept)
+	// Starting bmp server
+	glog.Infof("Starting gobmp server on %s", srv.incoming.Addr().String())
 	srv.wg.Add(1)
 	go srv.server()
 }
 
 func (srv *bmpServer) Stop() {
-	glog.Infof("Stopping gobmp server\n")
+	glog.Infof("Stopping gobmp server")
 	// 1. Stop accepting new connections.
 	_ = srv.incoming.Close()
 	// 2. Set the closing flag and close every active client connection atomically
@@ -131,17 +129,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	defer func() {
 		_ = client.Close()
 	}()
-	var server net.Conn
 	var err error
-	if srv.intercept {
-		server, err = net.Dial("tcp", ":"+strconv.Itoa(srv.destinationPort))
-		if err != nil {
-			glog.Errorf("failed to connect to destination with error: %+v", err)
-			return
-		}
-		defer func() { _ = server.Close() }()
-		glog.V(5).Infof("connection to destination server %v established, start intercepting", server.RemoteAddr())
-	}
 	prod := message.NewProducer(srv.publisher, srv.splitAF)
 
 	// Configure producer with admin ID for RAW message support
@@ -255,34 +243,32 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 			}
 			return
 		}
-		// Sending information to the server only in intercept mode
-		if srv.intercept {
-			if _, err := server.Write(fullMsg); err != nil {
-				glog.Errorf("fail to write to server %+v with error: %+v", server.RemoteAddr(), err)
-				return
-			}
-		}
 		parserQueue <- fullMsg
 	}
 }
 
 // NewBMPServer instantiates a new instance of BMP Server
-func NewBMPServer(sPort, dPort int, intercept bool, p pub.Publisher, splitAF bool, bmpRaw bool, adminID string) (BMPServer, error) {
-	incoming, err := net.Listen("tcp", ":"+strconv.Itoa(sPort))
+func NewBMPServer(cfg *config.Config) (BMPServer, error) {
+	if cfg == nil {
+		return nil, errors.New("config cannot be nil")
+	}
+	if cfg.Publisher == nil {
+		return nil, errors.New("publisher cannot be nil")
+	}
+	incoming, err := net.Listen("tcp", ":"+strconv.Itoa(cfg.BmpListenPort))
 	if err != nil {
-		glog.Errorf("fail to setup listener on port %d with error: %+v", sPort, err)
+		glog.Errorf("fail to setup listener on port %d with error: %+v", cfg.BmpListenPort, err)
 		return nil, err
 	}
 	bmpSrv := bmpServer{
-		clients:         make(map[net.Conn]struct{}),
-		sourcePort:      sPort,
-		destinationPort: dPort,
-		intercept:       intercept,
-		publisher:       p,
-		incoming:        incoming,
-		splitAF:         splitAF,
-		bmpRaw:          bmpRaw,
-		adminID:         adminID,
+		clients:   make(map[net.Conn]struct{}),
+		publisher: cfg.Publisher,
+		incoming:  incoming,
+		splitAF:   cfg.SplitAF == nil || *cfg.SplitAF, // nil means unset → default true
+	}
+	if cfg.PublisherType == config.PublisherTypeKafka && cfg.KafkaConfig != nil {
+		bmpSrv.bmpRaw = cfg.KafkaConfig.BmpRaw
+		bmpSrv.adminID = cfg.KafkaConfig.AdminID
 	}
 
 	return &bmpSrv, nil

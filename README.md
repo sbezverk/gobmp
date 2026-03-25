@@ -28,6 +28,10 @@
   <a href="#deployment">Deployment</a>
 </p>
 
+> **⚠️ Upgrading from an older version?**
+> Publisher selection via `--dump=nats` and `--dump=kafka` has been removed.
+> See the [Migration Guide](#migration-guide) for required configuration changes.
+
 ---
 
 ## Overview
@@ -152,6 +156,17 @@ kubectl get pods -l app=gobmp
   --split-af=true
 ```
 
+### NATS Publishing
+```bash
+./bin/gobmp --source-port=5000 \
+  --nats-server=nats://nats.example.com:4222
+```
+
+### Using a YAML Config File
+```bash
+./bin/gobmp --config=/etc/gobmp/config.yaml --v=3
+```
+
 ### OpenBMP Binary Format (RAW Mode)
 ```bash
 ./bin/gobmp --source-port=5000 \
@@ -160,21 +175,83 @@ kubectl get pods -l app=gobmp
   --admin-id=collector-01
 ```
 
-### Intercept Mode (Transparent Proxy)
-```bash
-./bin/gobmp --source-port=5000 \
-  --destination-port=5050 \
-  --intercept=true \
-  --kafka-server=kafka.example.com:9092
-```
-
 ---
 
 ## Configuration
 
+### YAML Configuration File
+
+goBMP supports an optional YAML configuration file specified with `--config`. CLI flags always take precedence over values in the file.
+
+**Publisher selection is automatic** — there is no `publisher_type` field. goBMP infers the publisher from whichever server block is populated:
+- `kafka_config.kafka_srv` present → Kafka publisher
+- `nats_config.nats_srv` present → NATS publisher
+- CLI `--dump` flag → Dump publisher (console or file)
+
+Providing both `kafka_config` and `nats_config` in the same config file (or via CLI flags) is treated as an error only when goBMP must choose between Kafka and NATS (i.e., when `--dump` is not set). When `--dump=console` or `--dump=file` is used, any `kafka_config`/`nats_config` blocks are ignored.
+
+**Kafka example (`config.yaml`):**
+```yaml
+bmp_listen_port: 5000
+split_af: true
+kafka_config:
+  kafka_srv: "kafka.example.com:9092"
+  kafka_tp_retn_time_ms: 900000
+  kafka_topic_prefix: "prod"
+  bmp_raw: false
+  admin_id: "collector-01"
+```
+
+**NATS example:**
+```yaml
+bmp_listen_port: 5000
+split_af: true
+nats_config:
+  nats_srv: "nats://nats.example.com:4222"
+```
+
+**All available fields:**
+```yaml
+# Listening
+bmp_listen_port: 5000        # TCP port for BMP sessions (default: 5000)
+
+# Performance monitoring (disabled when omitted or 0)
+performance_port: 56767      # pprof port; any value > 0 enables collection
+
+# BGP address-family handling
+split_af: true               # true = separate v4/v6 topics (default: true)
+
+# Kafka publisher (mutually exclusive with nats_config)
+kafka_config:
+  kafka_srv: "host:port"     # required to activate Kafka publisher
+  kafka_tp_retn_time_ms: 900000
+  kafka_topic_prefix: ""     # optional topic name prefix
+  bmp_raw: false             # OpenBMP RAW mode
+  admin_id: ""               # defaults to OS hostname
+
+# NATS publisher (mutually exclusive with kafka_config)
+nats_config:
+  nats_srv: "nats://host:port"  # required to activate NATS publisher
+
+# Dump publisher configuration (console/file); requires --dump on the CLI to activate
+dump_config:
+  file: "/path/to/dump.json"    # dump destination file used when --dump is enabled
+
+# Active mode / speaker list (advanced)
+active_mode: false
+speakers_list: []
+```
+
 ### Command-Line Parameters
 
 ### Network and Port Configuration
+
+```
+--config={path}
+```
+**Default:** none (disabled)
+
+Path to a YAML configuration file. All settings in the file can be overridden by the corresponding CLI flags. See [YAML Configuration File](#yaml-configuration-file) above for the full field reference.
 
 ```
 --source-port={port}
@@ -184,41 +261,39 @@ kubectl get pods -l app=gobmp
 TCP port where goBMP listens for incoming BMP sessions from routers. This is the primary listening port that routers should connect to for sending BMP messages.
 
 ```
---destination-port={port}
-```
-**Default:** 5050
-
-Used only when `--intercept=true`. In intercept mode, goBMP receives BMP messages on `--source-port`, processes them, and forwards a copy to this destination port. This allows chaining goBMP instances or sending data to another BMP collector.
-
-```
 --performance-port={port}
 ```
-**Default:** 56767
+**Default:** 0 (disabled)
 
-Port for performance monitoring using Go's pprof endpoints. Useful for debugging memory usage, CPU profiling, and goroutine analysis. Access via `http://localhost:56767/debug/pprof/`
+Port for performance monitoring using Go's pprof endpoints. Performance collection is **disabled by default** and must be explicitly enabled by specifying a port greater than 0. When enabled, pprof endpoints are available at `http://localhost:{port}/debug/pprof/`. Useful for debugging memory usage, CPU profiling, and goroutine analysis.
 
 ### Output and Publishing Configuration
 
+goBMP has three publisher types: **dump** (console or file), **kafka**, and **nats**.
+
 ```
---dump={file|console|nats}
+--dump={console|file}
 ```
 **Default:** none (disabled)
 
-Controls where processed BMP messages are output:
-- `file`: Write JSON messages to a file (see `--msg-file`)
+Activates the dump publisher:
 - `console`: Print JSON messages to stdout
-- `nats`: Publish messages to NATS server (see `--nats-server`)
+- `file`: Write JSON messages to the file specified by `--msg-file`. If `--msg-file` is not provided, output falls back to console (stdout).
 
-Note: This is independent of Kafka publishing. You can use both simultaneously.
+Kafka and NATS are separate publishers activated via `--kafka-server` and `--nats-server` respectively — do not use `--dump` to select them.
 
 ```
 --msg-file={path}
 ```
-**Default:** "/tmp/messages.json"
+**Default:** none (empty)
 
-Full path and filename for storing processed messages when `--dump=file` is used. Each message is written as a JSON object.
+Full path and filename for storing processed messages when `--dump=file` is used. Each message is written as a JSON object on its own line.
+
+> **Note:** If `--dump=file` is specified without `--msg-file`, goBMP falls back to console (stdout) output. To write to a file, always pair `--dump=file` with an explicit `--msg-file` path.
 
 ### Message Broker Configuration
+
+> **Publisher inference:** goBMP selects the publisher automatically based on which server flag or config block is populated. Specifying both `--kafka-server` and `--nats-server` at the same time is an error.
 
 ```
 --kafka-server={server:port}
@@ -253,18 +328,6 @@ Kafka topic retention time in milliseconds. Topics are created with this retenti
 NATS server URL for publishing messages. Example: `--nats-server=nats://nats.example.com:4222`
 
 ### BMP Processing Modes
-
-```
---intercept={true|false}
-```
-**Default:** false
-
-**Intercept mode:** When enabled, goBMP acts as a transparent proxy:
-1. Receives BMP messages on `--source-port`
-2. Processes and publishes them (to Kafka/file/console)
-3. Forwards a copy to `--destination-port`
-
-This allows inserting goBMP into an existing BMP pipeline without disrupting downstream collectors.
 
 ```
 --split-af={true|false}
@@ -443,8 +506,51 @@ This project follows the licensing terms of the original repository.
 
 ## Support & Resources
 
+- **Mailing List:** [gobmp@googlegroups.com](mailto:gobmp@googlegroups.com) — announcements, Q&A, and general discussion
 - **Issues:** [GitHub Issues](https://github.com/sbezverk/gobmp/issues)
 - **Pull Requests:** [GitHub PRs](https://github.com/sbezverk/gobmp/pulls)
 - **Documentation:** [BMP Protocol Details](https://github.com/sbezverk/gobmp/blob/master/BMP.md)
 - **Message Schemas:** [types.go](https://github.com/sbezverk/gobmp/blob/master/pkg/message/types.go)
+
+---
+
+## Migration Guide
+
+### Publisher Selection: `--dump=nats` and `--dump=kafka` removed
+
+In previous versions the `--dump` flag accepted `nats` and `kafka` as values to select the message broker. These values are **no longer valid**. `--dump` is now restricted to `console` and `file` only.
+
+Kafka and NATS publishers are now selected by specifying their server address directly. This makes the configuration unambiguous and removes the need for a separate publisher-type selector.
+
+**Before (no longer works):**
+```bash
+# Old: selecting Kafka via --dump
+gobmp --source-port=5000 --dump=kafka --kafka-server=kafka.example.com:9092
+
+# Old: selecting NATS via --dump
+gobmp --source-port=5000 --dump=nats --nats-server=nats://nats.example.com:4222
+```
+
+**After (current):**
+```bash
+# New: Kafka publisher is activated by providing --kafka-server
+gobmp --source-port=5000 --kafka-server=kafka.example.com:9092
+
+# New: NATS publisher is activated by providing --nats-server
+gobmp --source-port=5000 --nats-server=nats://nats.example.com:4222
+```
+
+The same applies to YAML configuration files — there is no `publisher_type` field. The publisher is inferred automatically from whichever server block is populated:
+
+```yaml
+# Kafka (kafka_config.kafka_srv present → Kafka publisher selected automatically)
+kafka_config:
+  kafka_srv: "kafka.example.com:9092"
+
+# NATS (nats_config.nats_srv present → NATS publisher selected automatically)
+nats_config:
+  nats_srv: "nats://nats.example.com:4222"
+```
+
+> **Note:** Specifying both `--kafka-server` and `--nats-server` at the same time (or having both blocks populated in the config file without `--dump`) is now an explicit error.
 

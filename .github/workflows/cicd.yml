@@ -135,7 +135,7 @@ jobs:
         run: docker images
       - name: starts unicast v4 integration test on a single node kafka
         run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka.yml up --detach
-      - name: check conection to kafka and bmp session with a router
+      - name: check connection to kafka and bmp session with a router
         id: session_1
         run: ./build/monitor_container.sh gobmp
         continue-on-error: true
@@ -153,16 +153,30 @@ jobs:
           docker logs gobmp
           docker logs xr-1
           exit 1
+      - name: Collect container logs (single kafka)
+        if: always()
+        run: |
+          mkdir -p /tmp/logs/single-kafka
+          docker logs gobmp > /tmp/logs/single-kafka/gobmp.log 2>&1 || true
+          docker logs xr-1 > /tmp/logs/single-kafka/xr-1.log 2>&1 || true
+          docker logs kafka > /tmp/logs/single-kafka/kafka.log 2>&1 || true
+      - name: Upload single-kafka logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-single-kafka
+          path: /tmp/logs/single-kafka/
       - name: cleanup unicast v4 integration test on a single node kafka
+        if: always()
         run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka.yml down
       - name: Add kafka host to /etc/hosts
         run: |
             sudo echo "127.0.0.1 kafka-1 kafka-2 kafka-3 kafka-4" | sudo tee -a /etc/hosts
       - name: starts unicast v4 integration test on a multinode kafka
         run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka.yml up --detach
-      - name: check conection to kafka and bmp session with a router
+      - name: check connection to kafka and bmp session with a router
         id: session_2
-        run: ./build/monitor_container.sh gobmp
+        run: ./build/monitor_container.sh gobmp-multinode
         continue-on-error: true
       - name: run validator for ipv4 unicast
         id: validation_2
@@ -172,10 +186,23 @@ jobs:
         if: steps.session_2.outcome != 'success' || steps.validation_2.outcome != 'success'
         run: |
           docker ps -a
-          docker logs gobmp
+          docker logs gobmp-multinode
           docker logs xr-1
           exit 1
+      - name: Collect container logs (multinode kafka)
+        if: always()
+        run: |
+          mkdir -p /tmp/logs/multinode-kafka
+          docker logs gobmp-multinode > /tmp/logs/multinode-kafka/gobmp.log 2>&1 || true
+          docker logs xr-1 > /tmp/logs/multinode-kafka/xr-1.log 2>&1 || true
+      - name: Upload multinode-kafka logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-multinode-kafka
+          path: /tmp/logs/multinode-kafka/
       - name: cleanup unicast v4 integration test on a multinode kafka
+        if: always()
         run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka.yml down
       - name: pulling cEOS container
         run: docker pull sbezverk/ceos-lab-4.35.2f:cicd
