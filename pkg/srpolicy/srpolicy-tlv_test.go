@@ -129,7 +129,10 @@ func TestUnmarshalSRPolicyTLV(t *testing.T) {
 					t.Fatalf("SegmentList[%d].Segment length = %d, want %d", i, len(got.SegmentList[i].Segment), len(tt.expect.SegmentList[i].Segment))
 				}
 				for y := 0; y < len(got.SegmentList[i].Segment); y++ {
-					g := got.SegmentList[i].Segment[y].(*typeASegment)
+					g, ok := got.SegmentList[i].Segment[y].(*typeASegment)
+					if !ok {
+						t.Fatalf("SegmentList[%d].Segment[%d] has type %T, want *typeASegment", i, y, got.SegmentList[i].Segment[y])
+					}
 					e := tt.expect.SegmentList[i].Segment[y]
 					if diff := deep.Equal(g, e); diff != nil {
 						t.Errorf("SegmentList[%d].Segment[%d] mismatch: %v", i, y, diff)
@@ -256,12 +259,12 @@ func TestUnmarshalSRPolicyTLV_ENLP(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15 (SR Policy)
 				0x00, 0x06, // Length: 6 bytes
-				0x0E,       // Sub-TLV Type: ENLP (14)
-				0x04,       // Sub-TLV Length: 4 bytes
-				0x01,       // Flags
-				0x00,       // Reserved
-				0x01,       // ENLP value
-				0x00,       // Reserved
+				0x0E, // Sub-TLV Type: ENLP (14)
+				0x04, // Sub-TLV Length: 4 bytes
+				0x01, // Flags
+				0x00, // Reserved
+				0x01, // ENLP value
+				0x00, // Reserved
 			},
 			wantFlags: 0x01,
 			wantENLP:  0x01,
@@ -272,12 +275,12 @@ func TestUnmarshalSRPolicyTLV_ENLP(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x06, // Length: 6 bytes
-				0x0E,       // Sub-TLV Type: ENLP (14)
-				0x04,       // Length: 4 bytes
-				0x00,       // Flags
-				0x00,       // Reserved
-				0x02,       // ENLP value: 2
-				0x00,       // Reserved
+				0x0E, // Sub-TLV Type: ENLP (14)
+				0x04, // Length: 4 bytes
+				0x00, // Flags
+				0x00, // Reserved
+				0x02, // ENLP value: 2
+				0x00, // Reserved
 			},
 			wantFlags: 0x00,
 			wantENLP:  0x02,
@@ -288,12 +291,12 @@ func TestUnmarshalSRPolicyTLV_ENLP(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x06, // Length: 6 bytes
-				0x0E,       // Sub-TLV Type: ENLP (14)
-				0x04,       // Length: 4 bytes
-				0x00,       // Flags
-				0x00,       // Reserved
-				0x00,       // ENLP value: 0
-				0x00,       // Reserved
+				0x0E, // Sub-TLV Type: ENLP (14)
+				0x04, // Length: 4 bytes
+				0x00, // Flags
+				0x00, // Reserved
+				0x00, // ENLP value: 0
+				0x00, // Reserved
 			},
 			wantFlags: 0x00,
 			wantENLP:  0x00,
@@ -333,18 +336,18 @@ func TestUnmarshalSRPolicyTLV_DuplicateENLP(t *testing.T) {
 	input := []byte{
 		0x00, 0x0F, // Tunnel Type: 15
 		0x00, 0x0C, // Length: 12 bytes (2 ENLP sub-TLVs)
-		0x0E,       // Sub-TLV Type: ENLP (14)
-		0x04,       // Length: 4 bytes
-		0x01,       // Flags
-		0x00,       // Reserved
-		0x01,       // ENLP value
-		0x00,       // Reserved
-		0x0E,       // Sub-TLV Type: ENLP (14) - DUPLICATE
-		0x04,       // Length: 4 bytes
-		0x01,       // Flags
-		0x00,       // Reserved
-		0x02,       // ENLP value
-		0x00,       // Reserved
+		0x0E, // Sub-TLV Type: ENLP (14)
+		0x04, // Length: 4 bytes
+		0x01, // Flags
+		0x00, // Reserved
+		0x01, // ENLP value
+		0x00, // Reserved
+		0x0E, // Sub-TLV Type: ENLP (14) - DUPLICATE
+		0x04, // Length: 4 bytes
+		0x01, // Flags
+		0x00, // Reserved
+		0x02, // ENLP value
+		0x00, // Reserved
 	}
 
 	_, err := UnmarshalSRPolicyTLV(input)
@@ -368,9 +371,9 @@ func TestUnmarshalSRPolicyTLV_Priority(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x03, // Length: 3 bytes
-				0x0F,       // Sub-TLV Type: Priority (15)
-				0x01,       // Length: 1 byte
-				0x64,       // Priority: 100
+				0x0F, // Sub-TLV Type: Priority (15)
+				0x01, // Length: 1 byte
+				0x64, // Priority: 100
 			},
 			wantPriority: 100,
 		},
@@ -379,9 +382,9 @@ func TestUnmarshalSRPolicyTLV_Priority(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x03, // Length: 3 bytes
-				0x0F,       // Sub-TLV Type: Priority (15)
-				0x01,       // Length: 1 byte
-				0x00,       // Priority: 0
+				0x0F, // Sub-TLV Type: Priority (15)
+				0x01, // Length: 1 byte
+				0x00, // Priority: 0
 			},
 			wantPriority: 0,
 		},
@@ -390,9 +393,9 @@ func TestUnmarshalSRPolicyTLV_Priority(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x03, // Length: 3 bytes
-				0x0F,       // Sub-TLV Type: Priority (15)
-				0x01,       // Length: 1 byte
-				0xFF,       // Priority: 255
+				0x0F, // Sub-TLV Type: Priority (15)
+				0x01, // Length: 1 byte
+				0xFF, // Priority: 255
 			},
 			wantPriority: 255,
 		},
@@ -428,8 +431,8 @@ func TestUnmarshalSRPolicyTLV_PathName(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x0E, // Length: 14 bytes
-				0x81,       // Sub-TLV Type: PathName (129)
-				0x0C,       // Length: 12 bytes
+				0x81, // Sub-TLV Type: PathName (129)
+				0x0C, // Length: 12 bytes
 				// "primary-path"
 				0x70, 0x72, 0x69, 0x6D, 0x61, 0x72, 0x79, 0x2D, 0x70, 0x61, 0x74, 0x68,
 			},
@@ -440,8 +443,8 @@ func TestUnmarshalSRPolicyTLV_PathName(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x08, // Length: 8 bytes
-				0x81,       // Sub-TLV Type: PathName (129)
-				0x06,       // Length: 6 bytes
+				0x81, // Sub-TLV Type: PathName (129)
+				0x06, // Length: 6 bytes
 				// "backup"
 				0x62, 0x61, 0x63, 0x6B, 0x75, 0x70,
 			},
@@ -452,9 +455,9 @@ func TestUnmarshalSRPolicyTLV_PathName(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x03, // Length: 3 bytes
-				0x81,       // Sub-TLV Type: PathName (129)
-				0x01,       // Length: 1 byte
-				0x41,       // "A"
+				0x81, // Sub-TLV Type: PathName (129)
+				0x01, // Length: 1 byte
+				0x41, // "A"
 			},
 			wantPathName: "A",
 		},
@@ -463,8 +466,8 @@ func TestUnmarshalSRPolicyTLV_PathName(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x02, // Length: 2 bytes
-				0x81,       // Sub-TLV Type: PathName (129)
-				0x00,       // Length: 0 bytes
+				0x81, // Sub-TLV Type: PathName (129)
+				0x00, // Length: 0 bytes
 			},
 			wantPathName: "",
 		},
@@ -500,8 +503,8 @@ func TestUnmarshalSRPolicyTLV_UnknownSubTLV(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x06, // Length: 6 bytes
-				0xC8,       // Sub-TLV Type: 200 (unknown)
-				0x04,       // Length: 4 bytes
+				0xC8,                   // Sub-TLV Type: 200 (unknown)
+				0x04,                   // Length: 4 bytes
 				0x01, 0x02, 0x03, 0x04, // Data
 			},
 			wantErr: false, // Should skip unknown sub-TLVs
@@ -511,8 +514,8 @@ func TestUnmarshalSRPolicyTLV_UnknownSubTLV(t *testing.T) {
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x02, // Length: 2 bytes
-				0x63,       // Sub-TLV Type: 99 (unknown)
-				0x00,       // Length: 0 bytes
+				0x63, // Sub-TLV Type: 99 (unknown)
+				0x00, // Length: 0 bytes
 			},
 			wantErr: false,
 		},
@@ -556,12 +559,12 @@ func TestUnmarshalSRPolicyTLV_MultipleSubTLVs(t *testing.T) {
 		0x01, 0x00, // noBSID
 
 		// ENLP sub-TLV
-		0x0E,             // Type: ENLP (14)
-		0x04,             // Length: 4 bytes
-		0x00,             // Flags
-		0x00,             // Reserved
-		0x01,             // ENLP value
-		0x00,             // Reserved
+		0x0E, // Type: ENLP (14)
+		0x04, // Length: 4 bytes
+		0x00, // Flags
+		0x00, // Reserved
+		0x01, // ENLP value
+		0x00, // Reserved
 
 		// Priority sub-TLV
 		0x0F, // Type: Priority (15)
@@ -569,8 +572,8 @@ func TestUnmarshalSRPolicyTLV_MultipleSubTLVs(t *testing.T) {
 		0x32, // Priority: 50
 
 		// PathName sub-TLV
-		0x81,       // Type: PathName (129)
-		0x04,       // Length: 4 bytes
+		0x81,                   // Type: PathName (129)
+		0x04,                   // Length: 4 bytes
 		0x6D, 0x61, 0x69, 0x6E, // "main"
 	}
 
