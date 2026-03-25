@@ -49,6 +49,7 @@ goBMP is a production-ready implementation of the BGP Monitoring Protocol ([RFC 
 - ✅ **OpenBMP Compatibility:** RAW mode publishes binary messages compatible with OpenBMP consumers
 - ✅ **Intercept Mode:** Transparent proxy mode for inserting into existing BMP pipelines
 - ✅ **Topic Flexibility:** Separate or combined topics for IPv4/IPv6 address families
+- ✅ **Active Mode:** Initiate outbound BMP sessions to routers — no inbound listener required
 - ✅ **Performance Monitoring:** Built-in pprof endpoints for profiling and debugging
 - ✅ **Kubernetes Native:** Ready-to-use deployment manifests included
 
@@ -233,9 +234,13 @@ nats_config:
 dump_config:
   file: "/path/to/dump.json"    # dump destination file used when --dump is enabled
 
-# Active mode / speaker list (advanced)
+# Active mode / speaker list
+# When active_mode is true, goBMP dials out to the listed speakers instead of
+# binding a listener. speakers_list must be non-empty; bmp_listen_port is ignored.
 active_mode: false
-speakers_list: []
+speakers_list:
+  - "192.0.2.1:57000"   # router-1
+  - "192.0.2.2:57000"   # router-2
 ```
 
 ### Command-Line Parameters

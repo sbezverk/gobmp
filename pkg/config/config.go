@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
+	"strconv"
 
 	"github.com/sbezverk/gobmp/pkg/pub"
 	"gopkg.in/yaml.v3"
@@ -91,6 +93,35 @@ func LoadConfig(path string) (*Config, error) {
 	if err := yaml.Unmarshal(b, cfg); err != nil {
 		return nil, err
 	}
+	if cfg.ActiveMode && len(cfg.SpeakersList) == 0 {
+		return nil, errors.New("active_mode is true but speakers_list is empty")
+	}
+	if err := validateSpeakersList(cfg.SpeakersList); err != nil {
+		return nil, err
+	}
 
 	return cfg, nil
+}
+
+func validateSpeakersList(speakers []string) error {
+	uniqueAddrs := make(map[string]bool)
+	for _, addr := range speakers {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return fmt.Errorf("invalid speaker address: %s", addr)
+		}
+		if net.ParseIP(host) == nil {
+			return fmt.Errorf("invalid speaker address: %s", addr)
+		}
+		p, err := strconv.Atoi(port)
+		if err != nil || p < 1 || p > 65535 {
+			return fmt.Errorf("invalid port in speaker address: %s", addr)
+		}
+		if _, exists := uniqueAddrs[addr]; exists {
+			return fmt.Errorf("duplicate speaker address: %s", addr)
+		}
+		uniqueAddrs[addr] = true
+	}
+
+	return nil
 }

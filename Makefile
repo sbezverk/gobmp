@@ -15,6 +15,14 @@ gobmp:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/gobmp compile-gobmp
 
+gobmp-mac-arm64:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/gobmp compile-gobmp-mac-arm64
+
+gobmp-mac-amd64:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/gobmp compile-gobmp-mac-amd64
+
 player:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/player compile-player
