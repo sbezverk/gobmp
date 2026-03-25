@@ -90,7 +90,7 @@ func main() {
 		dumpFlag := flag.Lookup("dump")
 		dumpMode := ""
 		if dumpFlag != nil {
-			dumpMode = dumpFlag.Value.String()
+			dumpMode = strings.ToLower(dumpFlag.Value.String())
 		}
 		switch dumpMode {
 		case "console":
