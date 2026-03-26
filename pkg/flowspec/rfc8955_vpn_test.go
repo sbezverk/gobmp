@@ -1,6 +1,7 @@
 package flowspec
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -321,5 +322,84 @@ func TestVPNFlowspecNLRI_HashDiffersFromNonVPN(t *testing.T) {
 
 	if nonVPN.SpecHash == vpn.SpecHash {
 		t.Error("VPN and non-VPN FlowSpec should have different SpecHash values")
+	}
+}
+
+// TestVPNFlowspecNLRI_ZeroLengthVPN validates error for zero-length VPN NLRI.
+func TestVPNFlowspecNLRI_ZeroLengthVPN(t *testing.T) {
+	input := []byte{0x00} // Length: 0
+	_, err := UnmarshalVPNFlowspecNLRI(input, false)
+	if err == nil {
+		t.Fatal("expected error for zero-length VPN NLRI")
+	}
+	if !strings.Contains(err.Error(), "zero-length") {
+		t.Errorf("error %q should mention zero-length", err.Error())
+	}
+}
+
+// TestVPNFlowspecNLRI_ExtendedLengthTooShort validates extended length header with only 1 byte.
+func TestVPNFlowspecNLRI_ExtendedLengthTooShort(t *testing.T) {
+	input := []byte{0xf0} // Extended length marker but only 1 byte
+	_, err := UnmarshalVPNFlowspecNLRI(input, false)
+	if err == nil {
+		t.Fatal("expected error for truncated extended length")
+	}
+}
+
+// TestVPNFlowspecNLRI_LengthExceedsBuffer validates length field larger than buffer.
+func TestVPNFlowspecNLRI_LengthExceedsBuffer(t *testing.T) {
+	input := []byte{0x20, 0x00, 0x00} // Length=32 but only 2 bytes follow
+	_, err := UnmarshalVPNFlowspecNLRI(input, false)
+	if err == nil {
+		t.Fatal("expected error for length exceeding buffer")
+	}
+}
+
+// TestVPNFlowspecNLRI_AllMultiError validates error in multi-NLRI returns offset.
+func TestVPNFlowspecNLRI_AllMultiError(t *testing.T) {
+	// First NLRI is valid, second is truncated
+	input := []byte{
+		// Valid NLRI 1
+		0x0b,
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+		0x01, 0x08, 0x0a,
+		// Truncated NLRI 2: length=20 but not enough bytes
+		0x14,
+		0x00, 0x00,
+	}
+	_, err := UnmarshalAllVPNFlowspecNLRI(input, false)
+	if err == nil {
+		t.Fatal("expected error for truncated second NLRI")
+	}
+	if !strings.Contains(err.Error(), "offset") {
+		t.Errorf("error %q should mention offset", err.Error())
+	}
+}
+
+// TestVPNFlowspecNLRI_JSON_RoundTrip validates JSON marshaling includes RD field.
+func TestVPNFlowspecNLRI_JSON_RoundTrip(t *testing.T) {
+	input := []byte{
+		0x0d, // Length: 13
+		0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8,
+		0x01, 0x18, 0x0a, 0x00, 0x01,
+	}
+	nlri, err := UnmarshalVPNFlowspecNLRI(input, false)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+
+	// Marshal to JSON
+	data, err := json.Marshal(nlri)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+
+	// Verify RD field is present in JSON
+	jsonStr := string(data)
+	if !strings.Contains(jsonStr, `"rd"`) {
+		t.Errorf("JSON %s should contain rd field", jsonStr)
+	}
+	if !strings.Contains(jsonStr, "100:200") {
+		t.Errorf("JSON %s should contain RD value 100:200", jsonStr)
 	}
 }

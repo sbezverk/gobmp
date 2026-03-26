@@ -2,6 +2,8 @@ package bgp
 
 import (
 	"testing"
+
+	"github.com/sbezverk/tools/sort"
 )
 
 // RFC 5701 — IPv6 Address Specific Extended Community (Path Attribute 25)
@@ -93,6 +95,41 @@ func TestRFC5701_IPv6ExtCommunity_InvalidLength(t *testing.T) {
 	if len(result) != 1 {
 		t.Errorf("expected 1 community from 21 bytes (one complete + 1 trailing), got %d", len(result))
 	}
+}
+
+// TestRFC5701_BaseAttributes_Equal_IPv6ExtCommunity validates Equal detects IPv6ExtCommunityList diffs.
+func TestRFC5701_BaseAttributes_Equal_IPv6ExtCommunity(t *testing.T) {
+	a := &BaseAttributes{
+		IPv6ExtCommunityList: []string{"rt=2001:db8::1:100"},
+	}
+	b := &BaseAttributes{
+		IPv6ExtCommunityList: []string{"rt=2001:db8::2:200"},
+	}
+	eq, diffs := a.Equal(b)
+	if eq {
+		t.Error("expected not equal for different IPv6ExtCommunityList")
+	}
+	found := false
+	for _, d := range diffs {
+		if d == "ipv6_ext_community_list mismatch" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected ipv6_ext_community_list mismatch in diffs, got %v", diffs)
+	}
+
+	// Same values should be equal
+	c := &BaseAttributes{
+		IPv6ExtCommunityList: []string{"rt=2001:db8::1:100"},
+	}
+	eq2, _ := a.Equal(c)
+	if !eq2 {
+		t.Error("expected equal for same IPv6ExtCommunityList")
+	}
+
+	// Suppress unused import
+	_ = sort.SortMergeComparableSlice([]string{})
 }
 
 // TestRFC5701_IPv6ExtCommunity_UnknownSubType validates handling of unknown sub-type.
