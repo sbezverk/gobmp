@@ -88,80 +88,78 @@ func TestFlowspecTrafficRemarking(t *testing.T) {
 	}
 }
 
-func TestLinkBandwidthTransitive(t *testing.T) {
+func TestLinkBandwidth(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  []byte
+		asn    uint16
+		bw     []byte // 4-byte IEEE 754 float32
 		expect string
 	}{
 		{
-			name: "transitive link-bw 1000 bytes/sec AS 65000",
-			// Type=0x00, SubType=0x04, GA=0xFDE8 (AS 65000), LA=0x447A0000 (1000.0 float32)
-			input:  []byte{0x00, 0x04, 0xFD, 0xE8, 0x44, 0x7A, 0x00, 0x00},
+			name:   "1000 bytes/sec AS 65000",
+			asn:    65000,
+			bw:     []byte{0x44, 0x7A, 0x00, 0x00}, // 1000.0
 			expect: "link-bw=1000.000000",
 		},
 		{
-			name: "transitive link-bw 0 bytes/sec AS 100",
-			// Type=0x00, SubType=0x04, GA=0x0064 (AS 100), LA=0x00000000 (0.0 float32)
-			input:  []byte{0x00, 0x04, 0x00, 0x64, 0x00, 0x00, 0x00, 0x00},
+			name:   "0 bytes/sec AS 100",
+			asn:    100,
+			bw:     []byte{0x00, 0x00, 0x00, 0x00}, // 0.0
 			expect: "link-bw=0.000000",
 		},
 		{
-			name: "transitive link-bw 1 byte/sec AS 23456 (AS_TRANS)",
-			// Type=0x00, SubType=0x04, GA=0x5BA0 (AS_TRANS 23456), LA=0x3F800000 (1.0 float32)
-			input:  []byte{0x00, 0x04, 0x5B, 0xA0, 0x3F, 0x80, 0x00, 0x00},
+			name:   "1 byte/sec AS 23456 (AS_TRANS)",
+			asn:    23456,
+			bw:     []byte{0x3F, 0x80, 0x00, 0x00}, // 1.0
 			expect: "link-bw=1.000000",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ext, err := makeExtCommunity(tt.input)
-			if err != nil {
-				t.Fatalf("makeExtCommunity() error = %v", err)
-			}
-			result := ext.String()
-			if result != tt.expect {
-				t.Errorf("got %s, want %s", result, tt.expect)
-			}
-		})
+	types := []struct {
+		name   string
+		typeByte byte
+	}{
+		{"transitive", 0x00},
+		{"non-transitive", 0x40},
+	}
+
+	for _, typ := range types {
+		for _, tt := range tests {
+			name := typ.name + " " + tt.name
+			input := []byte{typ.typeByte, 0x04, byte(tt.asn >> 8), byte(tt.asn)}
+			input = append(input, tt.bw...)
+			t.Run(name, func(t *testing.T) {
+				ext, err := makeExtCommunity(input)
+				if err != nil {
+					t.Fatalf("makeExtCommunity() error = %v", err)
+				}
+				result := ext.String()
+				if result != tt.expect {
+					t.Errorf("got %s, want %s", result, tt.expect)
+				}
+			})
+		}
 	}
 }
 
-func TestLinkBandwidthNonTransitive(t *testing.T) {
+func TestLinkBandwidthTruncatedValue(t *testing.T) {
+	type0LinkBW := func(v []byte) string { return type0(0x04, v) }
+	type40LinkBW := func(v []byte) string { return type40(0x04, v) }
+
 	tests := []struct {
 		name   string
-		input  []byte
+		fn     func([]byte) string
+		value  []byte
 		expect string
 	}{
-		{
-			name: "non-transitive link-bw 1000 bytes/sec AS 65000",
-			// Type=0x40, SubType=0x04, GA=0xFDE8 (AS 65000), LA=0x447A0000 (1000.0 float32)
-			input:  []byte{0x40, 0x04, 0xFD, 0xE8, 0x44, 0x7A, 0x00, 0x00},
-			expect: "link-bw=1000.000000",
-		},
-		{
-			name: "non-transitive link-bw 0 bytes/sec AS 100",
-			// Type=0x40, SubType=0x04, GA=0x0064 (AS 100), LA=0x00000000 (0.0 float32)
-			input:  []byte{0x40, 0x04, 0x00, 0x64, 0x00, 0x00, 0x00, 0x00},
-			expect: "link-bw=0.000000",
-		},
-		{
-			name: "non-transitive link-bw 1 byte/sec AS 23456",
-			// Type=0x40, SubType=0x04, GA=0x5BA0 (AS 23456), LA=0x3F800000 (1.0 float32)
-			input:  []byte{0x40, 0x04, 0x5B, 0xA0, 0x3F, 0x80, 0x00, 0x00},
-			expect: "link-bw=1.000000",
-		},
+		{"type0 empty value", type0LinkBW, nil, "invalid-type0-length=0"},
+		{"type0 3-byte value", type0LinkBW, []byte{0xFD, 0xE8, 0x44}, "invalid-type0-length=3"},
+		{"type40 empty value", type40LinkBW, nil, "invalid-type40-length=0"},
+		{"type40 3-byte value", type40LinkBW, []byte{0xFD, 0xE8, 0x44}, "invalid-type40-length=3"},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ext, err := makeExtCommunity(tt.input)
-			if err != nil {
-				t.Fatalf("makeExtCommunity() error = %v", err)
-			}
-			result := ext.String()
-			if result != tt.expect {
+			if result := tt.fn(tt.value); result != tt.expect {
 				t.Errorf("got %s, want %s", result, tt.expect)
 			}
 		})

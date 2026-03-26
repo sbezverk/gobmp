@@ -93,6 +93,7 @@ func UnmarshalBGPExtCommunity(b []byte) ([]ExtCommunity, error) {
 // Transitive Two-Octet AS-Specific Extended Community Sub-Types
 // 0x02	Route Target	[RFC4360]
 // 0x03	Route Origin	[RFC4360]
+// 0x04	Link Bandwidth Extended Community	[draft-ietf-idr-link-bandwidth]
 // 0x05	OSPF Domain Identifier	[RFC4577]
 // 0x08	BGP Data Collection	[RFC4384]
 // 0x09	Source AS	[RFC6514]
