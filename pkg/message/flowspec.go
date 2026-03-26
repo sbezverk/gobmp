@@ -58,6 +58,7 @@ func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *b
 	if fsnlri != nil {
 		fs.SpecHash = fsnlri.GetSpecHash()
 		fs.Spec = fsnlri.Spec
+		fs.RD = fsnlri.RD
 	} else {
 		// Withdraw-all: AFI-aware peer-scoped key to avoid IPv4/IPv6 collisions
 		// and cross-peer collisions when splitAF is disabled.
@@ -133,6 +134,11 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 	}
 	if err := json.Unmarshal(objmap["timestamp"], &o.Timestamp); err != nil {
 		return err
+	}
+	if r, ok := objmap["rd"]; ok {
+		if err := json.Unmarshal(r, &o.RD); err != nil {
+			return err
+		}
 	}
 	if s, ok := objmap["spec"]; ok {
 		var specs []map[string]interface{}

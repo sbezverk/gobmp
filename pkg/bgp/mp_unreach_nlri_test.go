@@ -282,16 +282,16 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (withdraw-all)
 		},
 		{
-			name:       "SAFI=134 AFI=1 VPN not implemented",
+			name:       "SAFI=134 AFI=1 VPN empty withdraw-all",
 			afi:        1,
 			safi:       134,
-			wantErrMsg: "not yet implemented",
+			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (withdraw-all)
 		},
 		{
-			name:       "SAFI=134 AFI=2 VPN not implemented",
+			name:       "SAFI=134 AFI=2 VPN empty withdraw-all",
 			afi:        2,
 			safi:       134,
-			wantErrMsg: "not yet implemented",
+			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (withdraw-all)
 		},
 		{
 			name:         "other SAFI returns NLRINotFoundError",
@@ -353,6 +353,31 @@ func TestMPUnReachNLRI_GetFlowspecNLRI_IPv6WithData(t *testing.T) {
 	}
 }
 
+// TestMPUnReachNLRI_GetFlowspecNLRI_VPNWithData verifies SAFI=134 VPN FlowSpec parse path
+// with actual wire-format data.
+func TestMPUnReachNLRI_GetFlowspecNLRI_VPNWithData(t *testing.T) {
+	mp := &MPUnReachNLRI{
+		AddressFamilyID:    1,
+		SubAddressFamilyID: 134,
+		WithdrawnRoutes: []byte{
+			0x0b,                                           // Length: 11
+			0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01, // RD 100:1
+			0x01, 0x08, 0x0a, // Type1 Dest 10.0.0.0/8
+		},
+		addPath: map[int]bool{},
+	}
+	nlri, err := mp.GetFlowspecNLRI()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if nlri == nil {
+		t.Fatal("expected non-nil NLRI for VPN flowspec withdrawal")
+	}
+	if nlri.RD != "100:1" {
+		t.Errorf("RD = %q, want %q", nlri.RD, "100:1")
+	}
+}
+
 // TestMPUnReachNLRI_GetAllFlowspecNLRI covers all branching paths of GetAllFlowspecNLRI.
 func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 	tests := []struct {
@@ -398,10 +423,22 @@ func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 			wantNilSlice: true,
 		},
 		{
-			name:       "SAFI=134 VPN not implemented",
-			afi:        1,
-			safi:       134,
-			wantErrMsg: "not yet implemented",
+			name:         "SAFI=134 VPN empty withdraw-all",
+			afi:          1,
+			safi:         134,
+			routes:       []byte{},
+			wantNilSlice: true,
+		},
+		{
+			name: "SAFI=134 VPN with real data",
+			afi:  1,
+			safi: 134,
+			routes: []byte{
+				0x0b,                                           // Length: 11
+				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01, // RD 100:1
+				0x01, 0x08, 0x0a, // Type1 Dest 10.0.0.0/8
+			},
+			wantCount: 1,
 		},
 		{
 			name:         "non-flowspec SAFI returns NLRINotFoundError",

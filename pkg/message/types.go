@@ -712,6 +712,7 @@ type Flowspec struct {
 	PathID         int32               `json:"path_id,omitempty"`
 	SpecHash       string              `json:"spec_hash,omitempty"`
 	Spec           []flowspec.Spec     `json:"spec,omitempty"`
+	RD             string              `json:"rd,omitempty"` // VPN FlowSpec Route Distinguisher (SAFI=134, RFC 8955 §6)
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
