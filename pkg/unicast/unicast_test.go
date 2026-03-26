@@ -349,3 +349,19 @@ func TestUnmarshalLUNLRI_NegativePrefixLength(t *testing.T) {
 		t.Fatal("expected error for negative prefix length, got nil")
 	}
 }
+
+// TestUnmarshalLUNLRI_PrefixLengthExceeds128 validates error for prefix length > 128 bits.
+func TestUnmarshalLUNLRI_PrefixLengthExceeds128(t *testing.T) {
+	// Length=0xFF(255 bits), Label(3)=0x000031 (BoS), prefix bits = 255-24 = 231 > 128
+	input := []byte{
+		0xFF,             // Length: 255 bits total
+		0x00, 0x00, 0x31, // Label: value=3, BoS=true
+	}
+	// Pad with enough bytes for the parser to attempt reading
+	padding := make([]byte, 32)
+	input = append(input, padding...)
+	_, err := UnmarshalLUNLRI(input, false)
+	if err == nil {
+		t.Fatal("expected error for prefix length exceeding 128 bits, got nil")
+	}
+}
