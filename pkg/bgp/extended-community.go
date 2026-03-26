@@ -235,7 +235,7 @@ var evpnSubTypes = map[uint8]string{
 }
 
 // Non-Transitive Two-Octet AS-Specific Extended Community Sub-Types
-// 0x04	Link Bandwidth Extended Community	[draft-ietf-idr-link-bandwidth-00]
+// 0x04	Link Bandwidth Extended Community	[draft-ietf-idr-link-bandwidth]
 // 0x80	Virtual-Network Identifier Extended Community	[draft-drao-bgp-l3vpn-virtual-network-overlays]
 var nonTransAS2SubTypes = map[uint8]string{
 	0x4:  ECPLinkBandwidth,
