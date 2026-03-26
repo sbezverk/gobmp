@@ -124,7 +124,9 @@ func TestLinkBandwidth(t *testing.T) {
 	}
 
 	for _, typ := range types {
+		typ := typ
 		for _, tt := range tests {
+			tt := tt
 			name := typ.name + " " + tt.name
 			input := []byte{typ.typeByte, 0x04, byte(tt.asn >> 8), byte(tt.asn)}
 			input = append(input, tt.bw...)
@@ -158,6 +160,7 @@ func TestLinkBandwidthTruncatedValue(t *testing.T) {
 		{"type40 3-byte value", type40LinkBW, []byte{0xFD, 0xE8, 0x44}, "invalid-type40-length=3"},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if result := tt.fn(tt.value); result != tt.expect {
 				t.Errorf("got %s, want %s", result, tt.expect)
