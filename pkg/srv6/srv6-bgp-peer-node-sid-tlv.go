@@ -40,6 +40,9 @@ func UnmarshalSRv6BGPPeerNodeSIDTLV(b []byte) (*BGPPeerNodeSID, error) {
 	if glog.V(6) {
 		glog.Infof("SRv6 BGP Peer Node SID TLV Raw: %s", tools.MessageHex(b))
 	}
+	if len(b) < 11 {
+		return nil, fmt.Errorf("SRv6 BGP Peer Node SID TLV too short: need 11 bytes, have %d", len(b))
+	}
 	bgp := BGPPeerNodeSID{}
 	p := 0
 	f, err := UnmarshalBGPPeerNodeFlags(b[p : p+1])

@@ -27,15 +27,24 @@ func UnmarshalSRv6SIDDescriptor(b []byte) (*SIDDescriptor, error) {
 	}
 	srd := SIDDescriptor{}
 	for p := 0; p < len(b); {
+		if p+4 > len(b) {
+			return nil, fmt.Errorf("SRv6 SID Descriptor truncated at offset %d: need 4 bytes for TLV header, have %d", p, len(b)-p)
+		}
 		t := binary.BigEndian.Uint16(b[p : p+2])
 		var l uint16
 		switch t {
 		case 518:
 			l = binary.BigEndian.Uint16(b[p+2 : p+4])
+			if p+4+int(l) > len(b) {
+				return nil, fmt.Errorf("SRv6 SID Descriptor value truncated at offset %d: need %d bytes, have %d", p+4, l, len(b)-p-4)
+			}
 			srd.SID = make([]byte, int(l))
 			copy(srd.SID, b[p+4:p+4+int(l)])
 		case 263:
 			l = binary.BigEndian.Uint16(b[p+2 : p+4])
+			if p+4+int(l) > len(b) {
+				return nil, fmt.Errorf("SRv6 SID Descriptor value truncated at offset %d: need %d bytes, have %d", p+4, l, len(b)-p-4)
+			}
 			mti, err := base.UnmarshalMultiTopologyIdentifierTLV(b[p+4 : p+4+int(l)])
 			if err != nil {
 				return nil, err

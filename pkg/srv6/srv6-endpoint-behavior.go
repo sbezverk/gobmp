@@ -2,6 +2,7 @@ package srv6
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
@@ -19,6 +20,9 @@ type EndpointBehavior struct {
 func UnmarshalSRv6EndpointBehaviorTLV(b []byte) (*EndpointBehavior, error) {
 	if glog.V(6) {
 		glog.Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) < 4 {
+		return nil, fmt.Errorf("SRv6 Endpoint Behavior TLV too short: need 4 bytes, have %d", len(b))
 	}
 	e := EndpointBehavior{}
 	p := 0
