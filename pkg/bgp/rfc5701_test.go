@@ -2,8 +2,6 @@ package bgp
 
 import (
 	"testing"
-
-	"github.com/sbezverk/tools/sort"
 )
 
 // RFC 5701 — IPv6 Address Specific Extended Community (Path Attribute 25)
@@ -128,8 +126,6 @@ func TestRFC5701_BaseAttributes_Equal_IPv6ExtCommunity(t *testing.T) {
 		t.Error("expected equal for same IPv6ExtCommunityList")
 	}
 
-	// Suppress unused import
-	_ = sort.SortMergeComparableSlice([]string{})
 }
 
 // TestRFC5701_IPv6ExtCommunity_UnknownSubType validates handling of unknown sub-type.
