@@ -24,7 +24,7 @@ func UnmarshalSRLocalBlockTLV(b []byte) ([]LocalBlockTLV, error) {
 	tlvs := make([]LocalBlockTLV, 0)
 	for p := 0; p < len(b); {
 		if p+7 > len(b) {
-			return nil, fmt.Errorf("SR Local Block sub-TLV truncated at offset %d: need 7 bytes, have %d", p, len(b)-p)
+			return nil, fmt.Errorf("sr local block sub-TLV truncated at offset %d: need 7 bytes, have %d", p, len(b)-p)
 		}
 		tlv := LocalBlockTLV{}
 		r := make([]byte, 4)
@@ -38,7 +38,7 @@ func UnmarshalSRLocalBlockTLV(b []byte) ([]LocalBlockTLV, error) {
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		if p+int(l) > len(b) {
-			return nil, fmt.Errorf("SR Local Block sub-TLV value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+			return nil, fmt.Errorf("sr local block sub-TLV value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
 		}
 		v := make([]byte, 4)
 		if l == 3 {

@@ -125,7 +125,7 @@ func UnmarshalAdjacencySIDTLV(b []byte, proto base.ProtoID) (*AdjacencySIDTLV, e
 		glog.Infof("Adjacency SID TLV Raw: %s for proto: %+v", tools.MessageHex(b), proto)
 	}
 	if len(b) < 2 {
-		return nil, fmt.Errorf("Adjacency SID TLV too short: need at least 2 bytes, have %d", len(b))
+		return nil, fmt.Errorf("adjacency SID TLV too short: need at least 2 bytes, have %d", len(b))
 	}
 	asid := AdjacencySIDTLV{}
 	p := 0

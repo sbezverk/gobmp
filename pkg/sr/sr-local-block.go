@@ -20,7 +20,7 @@ func UnmarshalSRLocalBlock(b []byte) (*LocalBlock, error) {
 		glog.Infof("SR Local BLock Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 2 {
-		return nil, fmt.Errorf("SR Local Block too short: need at least 2 bytes, have %d", len(b))
+		return nil, fmt.Errorf("sr local block too short: need at least 2 bytes, have %d", len(b))
 	}
 	lb := LocalBlock{}
 	p := 0
