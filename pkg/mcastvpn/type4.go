@@ -24,8 +24,12 @@ func UnmarshalType4(b []byte, ipv6 bool) (*Type4, error) {
 		ipLen = 16
 	}
 	minLen := 8 + ipLen // RD (8) + Originator IP (4 or 16)
+	ipVersion := "IPv4"
+	if ipv6 {
+		ipVersion = "IPv6"
+	}
 	if len(b) < minLen {
-		return nil, fmt.Errorf("invalid Type4 length: %d bytes (minimum %d for %s)", len(b), minLen, map[bool]string{true: "IPv6", false: "IPv4"}[ipv6])
+		return nil, fmt.Errorf("invalid Type4 length: %d bytes (minimum %d for %s)", len(b), minLen, ipVersion)
 	}
 	t := &Type4{}
 	routeKeyLen := len(b) - ipLen

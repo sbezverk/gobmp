@@ -493,7 +493,7 @@ func TestRFC6514_Type4_IPv4RouteKey(t *testing.T) {
 func TestRFC6514_Type4_TooShort(t *testing.T) {
 	_, err := UnmarshalType4(make([]byte, 3), false)
 	if err == nil {
-		t.Fatal("expected error for input shorter than 4 bytes")
+		t.Fatal("expected error for input shorter than minimum")
 	}
 }
 

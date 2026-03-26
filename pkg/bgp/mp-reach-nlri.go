@@ -234,6 +234,9 @@ func (mp *MPReachNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
 // GetNLRIMCASTVPN instantiates a MCAST-VPN NLRI structure based on passed slice
 func (mp *MPReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
 	if mp.SubAddressFamilyID == 5 {
+		if mp.AddressFamilyID != 1 && mp.AddressFamilyID != 2 {
+			return nil, fmt.Errorf("unsupported AFI %d for MCAST-VPN NLRI in MP_REACH_NLRI", mp.AddressFamilyID)
+		}
 		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.NLRI, mp.AddressFamilyID == 2)
 	}
 
@@ -243,6 +246,9 @@ func (mp *MPReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
 // GetNLRIMVPN instantiates Multicast VPN (SAFI 129) NLRI
 func (mp *MPReachNLRI) GetNLRIMVPN() (*mcastvpn.Route, error) {
 	if mp.SubAddressFamilyID == 129 {
+		if mp.AddressFamilyID != 1 && mp.AddressFamilyID != 2 {
+			return nil, fmt.Errorf("unsupported AFI %d for MVPN NLRI in MP_REACH_NLRI", mp.AddressFamilyID)
+		}
 		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.NLRI, mp.AddressFamilyID == 2)
 	}
 
