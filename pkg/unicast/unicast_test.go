@@ -322,26 +322,6 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 			},
 			pathID: true,
 		},
-		{
-			name:  "panic 11-02-2022",
-			input: []byte{0x38, 0x00, 0x00, 0x31, 0x0A, 0x00, 0x00, 0x07},
-			expect: &base.MPNLRI{
-				NLRI: []base.Route{
-					{
-						Length: 32,
-						Prefix: []byte{0x0A, 0x00, 0x00, 0x07},
-						Label: []*base.Label{
-							{
-								Value: 3,
-								Exp:   0x0,
-								BoS:   true,
-							},
-						},
-					},
-				},
-			},
-			pathID: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -354,5 +334,18 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 				t.Fatal("test failed as expected nlri does not match actual nlri")
 			}
 		})
+	}
+}
+
+// TestUnmarshalLUNLRI_NegativePrefixLength validates that malformed input with
+// negative prefix length (total length < label bits) returns an error instead
+// of silently defaulting to 32 bits.
+func TestUnmarshalLUNLRI_NegativePrefixLength(t *testing.T) {
+	// PathID(4)=0x38000031 + Length(1)=0x0A(10 bits) + Label(3)=0x000007
+	// prefixBitLen = 10 - 24 = -14 → should error
+	input := []byte{0x38, 0x00, 0x00, 0x31, 0x0A, 0x00, 0x00, 0x07}
+	_, err := UnmarshalLUNLRI(input, true)
+	if err == nil {
+		t.Fatal("expected error for negative prefix length, got nil")
 	}
 }
