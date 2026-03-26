@@ -478,7 +478,7 @@ func TestRFC6514_Type4_IPv4RouteKey(t *testing.T) {
 	input := routeKey[:len(routeKey):len(routeKey)]
 	input = append(input, origIP...)
 
-	got, err := UnmarshalType4(input)
+	got, err := UnmarshalType4(input, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -491,23 +491,17 @@ func TestRFC6514_Type4_IPv4RouteKey(t *testing.T) {
 }
 
 func TestRFC6514_Type4_TooShort(t *testing.T) {
-	_, err := UnmarshalType4(make([]byte, 3))
+	_, err := UnmarshalType4(make([]byte, 3), false)
 	if err == nil {
 		t.Fatal("expected error for input shorter than 4 bytes")
 	}
 }
 
 func TestRFC6514_Type4_RouteKeyTooShort(t *testing.T) {
-	// 4 bytes total: route key = 0 bytes (< 8 required), originator = 4 bytes
-	_, err := UnmarshalType4([]byte{10, 0, 0, 1})
+	// 4 bytes total is below minimum 12 (8 RD + 4 IPv4 originator)
+	_, err := UnmarshalType4([]byte{10, 0, 0, 1}, false)
 	if err == nil {
-		t.Fatal("expected error for route key shorter than 8 bytes")
-	}
-	// Route key length < 8, but implementation tries IPv4 first:
-	// routeKeyLen = 4-4 = 0, which is < 8, so it tries IPv6
-	// len(b) = 4 < 16, so IPv6 fails too -> error
-	if !strings.Contains(err.Error(), "invalid Type4 format") {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatal("expected error for input shorter than minimum")
 	}
 }
 
@@ -522,7 +516,7 @@ func TestRFC6514_Type4_InterfaceMethods(t *testing.T) {
 	input := routeKey[:len(routeKey):len(routeKey)]
 	input = append(input, 10, 0, 0, 2)
 
-	got, err := UnmarshalType4(input)
+	got, err := UnmarshalType4(input, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -976,7 +970,7 @@ func TestRFC6514_Dispatcher_AllRouteTypes(t *testing.T) {
 	input = append(input, t2nlri...)
 	input = append(input, t5nlri...)
 
-	route, err := UnmarshalMCASTVPNNLRI(input)
+	route, err := UnmarshalMCASTVPNNLRI(input, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -999,7 +993,7 @@ func TestRFC6514_Dispatcher_UnknownRouteType(t *testing.T) {
 		0x08, 0x04, // Route Type 8 (undefined), length 4
 		0x00, 0x00, 0x00, 0x00,
 	}
-	_, err := UnmarshalMCASTVPNNLRI(input)
+	_, err := UnmarshalMCASTVPNNLRI(input, false)
 	if err == nil {
 		t.Fatal("expected error for unknown route type")
 	}
@@ -1009,14 +1003,14 @@ func TestRFC6514_Dispatcher_UnknownRouteType(t *testing.T) {
 }
 
 func TestRFC6514_Dispatcher_EmptyInput(t *testing.T) {
-	_, err := UnmarshalMCASTVPNNLRI([]byte{})
+	_, err := UnmarshalMCASTVPNNLRI([]byte{}, false)
 	if err == nil {
 		t.Fatal("expected error for empty input")
 	}
 }
 
 func TestRFC6514_Dispatcher_TruncatedHeader(t *testing.T) {
-	_, err := UnmarshalMCASTVPNNLRI([]byte{0x01})
+	_, err := UnmarshalMCASTVPNNLRI([]byte{0x01}, false)
 	if err == nil {
 		t.Fatal("expected error for truncated header")
 	}
@@ -1027,7 +1021,7 @@ func TestRFC6514_Dispatcher_LengthExceedsData(t *testing.T) {
 		0x01, 0x0c, // Type 1, length 12
 		0x00, 0x00, 0x00, 0x64, // Only 4 bytes instead of 12
 	}
-	_, err := UnmarshalMCASTVPNNLRI(input)
+	_, err := UnmarshalMCASTVPNNLRI(input, false)
 	if err == nil {
 		t.Fatal("expected error for length exceeding data")
 	}
@@ -1038,7 +1032,7 @@ func TestRFC6514_Dispatcher_RouteTypeZero(t *testing.T) {
 		0x00, 0x04, // Route Type 0 (invalid)
 		0x00, 0x00, 0x00, 0x00,
 	}
-	_, err := UnmarshalMCASTVPNNLRI(input)
+	_, err := UnmarshalMCASTVPNNLRI(input, false)
 	if err == nil {
 		t.Fatal("expected error for route type 0")
 	}
@@ -1055,7 +1049,7 @@ func TestRFC6514_NLRIAccessors(t *testing.T) {
 	t1nlri := []byte{0x01, byte(len(t1data))}
 	t1nlri = append(t1nlri, t1data...)
 
-	route, err := UnmarshalMCASTVPNNLRI(t1nlri)
+	route, err := UnmarshalMCASTVPNNLRI(t1nlri, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1095,7 +1089,7 @@ func TestRFC6514_NLRIAccessors_Type6WithSourceAS(t *testing.T) {
 	t6nlri := []byte{0x06, byte(len(t6data))}
 	t6nlri = append(t6nlri, t6data...)
 
-	route, err := UnmarshalMCASTVPNNLRI(t6nlri)
+	route, err := UnmarshalMCASTVPNNLRI(t6nlri, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1401,7 +1395,7 @@ func TestRFC6514_InterfaceCompliance(t *testing.T) {
 			data = append(data, 224, 0, 0, 1)
 			data = append(data, 10, 0, 0, 1)
 			data = append(data, 10, 0, 0, 2)
-			return UnmarshalType4(data)
+			return UnmarshalType4(data, false)
 		}},
 		{"Type5", func() (RouteTypeSpec, error) {
 			data := rd
@@ -1544,7 +1538,7 @@ func TestRFC6514_MultiNLRI_AllSevenTypes(t *testing.T) {
 	input = append(input, t6...)
 	input = append(input, t7...)
 
-	route, err := UnmarshalMCASTVPNNLRI(input)
+	route, err := UnmarshalMCASTVPNNLRI(input, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1575,7 +1569,7 @@ func TestRFC6514_Dispatcher_ErrorInMiddleNLRI(t *testing.T) {
 
 	input := t1[:len(t1):len(t1)]
 	input = append(input, bad...)
-	_, err := UnmarshalMCASTVPNNLRI(input)
+	_, err := UnmarshalMCASTVPNNLRI(input, false)
 	if err == nil {
 		t.Fatal("expected error when second NLRI fails to parse")
 	}
