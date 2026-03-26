@@ -45,6 +45,7 @@ type BaseAttributes struct {
 	// PEDistinguisherLable
 	LgCommunityList []string      `json:"large_community_list,omitempty"`
 	BGPPrefixSID    *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
+	OTC uint32 `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
 	// SecPath
 	// AttrSet
 }
@@ -120,6 +121,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if !reflect.DeepEqual(sort.SortMergeComparableSlice(ba.IPv6ExtCommunityList), sort.SortMergeComparableSlice(oba.IPv6ExtCommunityList)) {
 		equal = false
 		diffs = append(diffs, "ipv6_ext_community_list mismatch")
+	}
+	if ba.OTC != oba.OTC {
+		equal = false
+		diffs = append(diffs, "otc mismatch: "+strconv.Itoa(int(ba.OTC))+" and "+strconv.Itoa(int(oba.OTC)))
 	}
 
 	return equal, diffs
@@ -237,6 +242,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			// BGP Community Container Attribute (TEMPORARY) - draft-ietf-idr-wide-bgp-communities
 		case 35:
 			// Only to Customer (OTC) - RFC 9234
+			baseAttr.OTC = unmarshalAttrOTC(b)
 		case 36:
 			// BGP Domain Path (D-PATH, TEMPORARY) - draft-ietf-bess-evpn-ipvpn-interworking
 		case 37:
@@ -398,6 +404,15 @@ func unmarshalAttrMED(b []byte) uint32 {
 
 // unmarshalAttrLocalPref returns the value of LOCAL_PREF attribute
 func unmarshalAttrLocalPref(b []byte) uint32 {
+	if len(b) != 4 {
+		return 0
+	}
+	return binary.BigEndian.Uint32(b)
+}
+
+// unmarshalAttrOTC returns the value of the Only to Customer (OTC) attribute (RFC 9234).
+// The attribute carries a 4-byte AS number.
+func unmarshalAttrOTC(b []byte) uint32 {
 	if len(b) != 4 {
 		return 0
 	}

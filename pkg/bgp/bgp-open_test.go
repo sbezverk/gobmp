@@ -161,3 +161,136 @@ func TestAddPathCapability(t *testing.T) {
 		})
 	}
 }
+
+func TestBGPRoleCapability(t *testing.T) {
+	tests := []struct {
+		name       string
+		openMsgRaw []byte
+		expectRole BGPRole
+		expectOK   bool
+		fail       bool
+	}{
+		{
+			name: "role Provider",
+			// Open: type=1, version=4, AS=65000, HoldTime=90, BGPID=10.0.0.1
+			// OptParams: cap code=9, len=1, value=0x00 (Provider)
+			//            cap code=65, len=4, value=0x0000FDE8 (4-byte AS 65000)
+			openMsgRaw: []byte{
+				0x00, 0x1A, 0x01, 0x04, 0xFD, 0xE8, 0x00, 0x5A, 0x0A, 0x00, 0x00, 0x01,
+				0x0D,       // OptParamLen=13
+				0x02, 0x0B, // Capabilities param, len=11
+				0x09, 0x01, 0x00, // BGP Role: Provider
+				0x41, 0x04, 0x00, 0x00, 0xFD, 0xE8, // 4-byte AS: 65000
+				0x02, 0x00, // Route Refresh
+			},
+			expectRole: BGPRoleProvider,
+			expectOK:   true,
+		},
+		{
+			name: "role Customer",
+			openMsgRaw: []byte{
+				0x00, 0x1A, 0x01, 0x04, 0xFD, 0xE8, 0x00, 0x5A, 0x0A, 0x00, 0x00, 0x01,
+				0x0D,
+				0x02, 0x0B,
+				0x09, 0x01, 0x03, // BGP Role: Customer
+				0x41, 0x04, 0x00, 0x00, 0xFD, 0xE8,
+				0x02, 0x00,
+			},
+			expectRole: BGPRoleCustomer,
+			expectOK:   true,
+		},
+		{
+			name: "role RS",
+			openMsgRaw: []byte{
+				0x00, 0x1A, 0x01, 0x04, 0xFD, 0xE8, 0x00, 0x5A, 0x0A, 0x00, 0x00, 0x01,
+				0x0D,
+				0x02, 0x0B,
+				0x09, 0x01, 0x01, // BGP Role: RS
+				0x41, 0x04, 0x00, 0x00, 0xFD, 0xE8,
+				0x02, 0x00,
+			},
+			expectRole: BGPRoleRS,
+			expectOK:   true,
+		},
+		{
+			name: "role RS-Client",
+			openMsgRaw: []byte{
+				0x00, 0x1A, 0x01, 0x04, 0xFD, 0xE8, 0x00, 0x5A, 0x0A, 0x00, 0x00, 0x01,
+				0x0D,
+				0x02, 0x0B,
+				0x09, 0x01, 0x02, // BGP Role: RS-Client
+				0x41, 0x04, 0x00, 0x00, 0xFD, 0xE8,
+				0x02, 0x00,
+			},
+			expectRole: BGPRoleRSClient,
+			expectOK:   true,
+		},
+		{
+			name: "role Peer",
+			openMsgRaw: []byte{
+				0x00, 0x1A, 0x01, 0x04, 0xFD, 0xE8, 0x00, 0x5A, 0x0A, 0x00, 0x00, 0x01,
+				0x0D,
+				0x02, 0x0B,
+				0x09, 0x01, 0x04, // BGP Role: Peer
+				0x41, 0x04, 0x00, 0x00, 0xFD, 0xE8,
+				0x02, 0x00,
+			},
+			expectRole: BGPRolePeer,
+			expectOK:   true,
+		},
+		{
+			name: "no role capability",
+			openMsgRaw: []byte{
+				0x00, 0x17, 0x01, 0x04, 0xFD, 0xE8, 0x00, 0x5A, 0x0A, 0x00, 0x00, 0x01,
+				0x0A,
+				0x02, 0x08,
+				0x41, 0x04, 0x00, 0x00, 0xFD, 0xE8, // 4-byte AS only
+				0x02, 0x00, // Route Refresh
+			},
+			expectRole: 0,
+			expectOK:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			om, err := UnmarshalBGPOpenMessage(tt.openMsgRaw)
+			if err != nil && !tt.fail {
+				t.Fatalf("expected to succeed but failed with: %v", err)
+			}
+			if err == nil && tt.fail {
+				t.Fatal("expected to fail but succeeded")
+			}
+			if err != nil {
+				return
+			}
+			role, ok := om.BGPRoleCapability()
+			if ok != tt.expectOK {
+				t.Fatalf("expected ok=%v, got ok=%v", tt.expectOK, ok)
+			}
+			if role != tt.expectRole {
+				t.Fatalf("expected role=%v, got role=%v", tt.expectRole, role)
+			}
+		})
+	}
+}
+
+func TestBGPRoleString(t *testing.T) {
+	tests := []struct {
+		role   BGPRole
+		expect string
+	}{
+		{BGPRoleProvider, "Provider"},
+		{BGPRoleRS, "RS"},
+		{BGPRoleRSClient, "RS-Client"},
+		{BGPRoleCustomer, "Customer"},
+		{BGPRolePeer, "Peer"},
+		{BGPRole(255), "Unknown(255)"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.expect, func(t *testing.T) {
+			if got := tt.role.String(); got != tt.expect {
+				t.Errorf("expected %q, got %q", tt.expect, got)
+			}
+		})
+	}
+}

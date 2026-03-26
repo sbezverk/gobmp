@@ -49,6 +49,34 @@ type CapabilityData struct {
 // Capability structure: https://tools.ietf.org/html/rfc5492#section-4
 type Capability map[uint8][]*CapabilityData
 
+// BGPRole defines BGP Role values as specified in RFC 9234 Section 4.
+type BGPRole uint8
+
+const (
+	BGPRoleProvider BGPRole = 0
+	BGPRoleRS       BGPRole = 1
+	BGPRoleRSClient BGPRole = 2
+	BGPRoleCustomer BGPRole = 3
+	BGPRolePeer     BGPRole = 4
+)
+
+func (r BGPRole) String() string {
+	switch r {
+	case BGPRoleProvider:
+		return "Provider"
+	case BGPRoleRS:
+		return "RS"
+	case BGPRoleRSClient:
+		return "RS-Client"
+	case BGPRoleCustomer:
+		return "Customer"
+	case BGPRolePeer:
+		return "Peer"
+	default:
+		return "Unknown(" + strconv.Itoa(int(r)) + ")"
+	}
+}
+
 func getAFISAFIString(afi uint16, safi uint8) string {
 	var afiStr, safiStr string
 	switch afi {
@@ -115,6 +143,13 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 			afi := binary.BigEndian.Uint16(capData.Value[:2])
 			safi := capData.Value[3]
 			capData.Description += getAFISAFIString(afi, safi)
+		}
+		if code == 9 {
+			// RFC 9234: BGP Role capability carries a single-octet Role value.
+			if length != 1 {
+				return nil, fmt.Errorf("invalid capability length %d for BGP Role, expected 1", length)
+			}
+			capData.Description += " : " + BGPRole(capData.Value[0]).String()
 		}
 		c, ok := caps[code]
 		if !ok {
