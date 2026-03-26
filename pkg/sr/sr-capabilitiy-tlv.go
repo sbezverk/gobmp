@@ -52,7 +52,7 @@ func UnmarshalSRCapabilitySubTLV(b []byte) ([]CapabilitySubTLV, error) {
 		case 4:
 			copy(s, b[p:p+int(l)])
 		default:
-			return nil, fmt.Errorf("invalid length %d for Prefix SID TLV", len(b))
+			return nil, fmt.Errorf("invalid length %d for SR Capability sub-TLV", l)
 		}
 		cap.SID = binary.BigEndian.Uint32(s)
 		p += int(l)
