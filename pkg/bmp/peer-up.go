@@ -32,7 +32,7 @@ func (pum *PeerUpMessage) GetLocalAddressString() string {
 // GetVRFTableName returns the VRF table name from the Peer Up message's Informational TLVs, if present.
 func (pum *PeerUpMessage) GetVRFTableName() (string, bool) {
 	for _, tlv := range pum.Information {
-		if tlv.InformationType != 3 {
+		if tlv.InformationType != PeerUpTLVVRFTableName {
 			continue
 		}
 		return string(tlv.Information), true
@@ -43,7 +43,7 @@ func (pum *PeerUpMessage) GetVRFTableName() (string, bool) {
 // GetAdminLabel returns the administrative label from the Peer Up message's Informational TLVs, if present.
 func (pum *PeerUpMessage) GetAdminLabel() (string, bool) {
 	for _, tlv := range pum.Information {
-		if tlv.InformationType != 4 {
+		if tlv.InformationType != PeerUpTLVAdminLabel {
 			continue
 		}
 		return string(tlv.Information), true

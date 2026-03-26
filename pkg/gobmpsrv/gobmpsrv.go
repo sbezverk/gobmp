@@ -16,6 +16,9 @@ import (
 	"github.com/sbezverk/gobmp/pkg/pub"
 )
 
+// maxBMPMessagePayload is the maximum allowed BMP message payload size (1 MB).
+const maxBMPMessagePayload = 1 << 20
+
 // BMPServer defines methods to manage BMP Server
 type BMPServer interface {
 	Start()
@@ -215,8 +218,9 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 			return
 		}
 		msgLen := totalLen - bmp.CommonHeaderLength
-		if msgLen < 0 || msgLen > 1<<20 { // Max 1MB per BMP message
-			glog.Errorf("invalid message length %d from client %+v, closing connection", header.MessageLength, client.RemoteAddr())
+		if msgLen > maxBMPMessagePayload {
+			glog.Errorf("BMP message too large from client %+v: totalLen=%d, payloadLen=%d, limit=%d; closing connection",
+				client.RemoteAddr(), totalLen, msgLen, maxBMPMessagePayload)
 			return
 		}
 		// A zero-length payload is valid only for Initiation and Termination,
