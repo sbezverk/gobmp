@@ -56,6 +56,46 @@ func TestUnmarshalBGPAttrPrefixSID(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "prefix sid type 6",
+			input: []byte{
+				0x06, 0x00, 0x22, // Type=6, Length=34
+				0x00,                                                                                                             // Reserved
+				0x01, 0x00, 0x1e,                                                                                                 // Sub-TLV: type=1, length=30
+				0x00,                                                                                                             // Reserved
+				0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SID
+				0x00,       // Flags
+				0x00, 0x15, // Endpoint Behavior = 21
+				0x00,                   // Sub-Sub-TLV reserved
+				0x01, 0x00, 0x06,       // Sub-Sub-TLV: type=1, length=6
+				0x28, 0x18, 0x10, 0x00, 0x10, 0x40, // SID Structure
+			},
+			expect: &PSid{
+				SRv6L2Service: &srv6.L2Service{
+					SubTLVs: map[uint8][]srv6.SvcSubTLV{
+						1: {
+							&srv6.InformationSubTLV{
+								SID:              net.IP([]byte{0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}).To16().String(),
+								Flags:            0,
+								EndpointBehavior: 21,
+								SubSubTLVs: map[uint8][]srv6.SvcSubSubTLV{
+									1: {
+										&srv6.SIDStructureSubSubTLV{
+											LocalBlockLength:    0x28,
+											LocalNodeLength:     0x18,
+											FunctionLength:      0x10,
+											ArgumentLength:      0,
+											TranspositionLength: 0x10,
+											TranspositionOffset: 0x40,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

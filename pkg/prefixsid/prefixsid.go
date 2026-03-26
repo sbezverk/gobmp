@@ -99,6 +99,16 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 			}
 			psid.SRv6L3Service = l3
 			p += int(l)
+		case 6:
+			p++
+			l := binary.BigEndian.Uint16(b[p : p+2])
+			p += 2
+			l2, err := srv6.UnmarshalSRv6L2Service(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			psid.SRv6L2Service = l2
+			p += int(l)
 		default:
 			// Skip unknown type, length 2 bytes and the value
 			p++
