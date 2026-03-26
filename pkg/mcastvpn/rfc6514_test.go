@@ -505,6 +505,56 @@ func TestRFC6514_Type4_RouteKeyTooShort(t *testing.T) {
 	}
 }
 
+func TestRFC6514_Type4_IPv6Originator(t *testing.T) {
+	rd := makeRD(100, 100)
+	routeKey := rd
+	routeKey = append(routeKey, 32)                                                // src_len
+	routeKey = append(routeKey, 192, 168, 1, 1)                                    // src
+	routeKey = append(routeKey, 32)                                                // grp_len
+	routeKey = append(routeKey, 224, 0, 0, 1)                                      // grp
+	origIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1} // 2001:db8::1
+	input := append(routeKey, origIPv6...)
+
+	got, err := UnmarshalType4(input, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.OriginatorIP) != 16 {
+		t.Errorf("OriginatorIP length = %d, want 16", len(got.OriginatorIP))
+	}
+	if len(got.RouteKey) != len(routeKey) {
+		t.Errorf("RouteKey length = %d, want %d", len(got.RouteKey), len(routeKey))
+	}
+}
+
+func TestRFC6514_Type4_IPv6ViaUnmarshalMCASTVPNNLRI(t *testing.T) {
+	rd := makeRD(100, 100)
+	routeKey := rd
+	routeKey = append(routeKey, 32)
+	routeKey = append(routeKey, 192, 168, 1, 1)
+	routeKey = append(routeKey, 32)
+	routeKey = append(routeKey, 224, 0, 0, 1)
+	origIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	type4Data := append(routeKey, origIPv6...)
+
+	// Build full NLRI: RouteType(1) + Length(1) + Data
+	nlri := []byte{0x04, byte(len(type4Data))}
+	nlri = append(nlri, type4Data...)
+
+	// ipv6=true to test AFI=2 path
+	route, err := UnmarshalMCASTVPNNLRI(nlri, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(route.Route) != 1 {
+		t.Fatalf("expected 1 route, got %d", len(route.Route))
+	}
+	t4 := route.Route[0].RouteTypeSpec.(*Type4)
+	if len(t4.OriginatorIP) != 16 {
+		t.Errorf("OriginatorIP length = %d, want 16 (IPv6)", len(t4.OriginatorIP))
+	}
+}
+
 func TestRFC6514_Type4_InterfaceMethods(t *testing.T) {
 	rd := makeRD(100, 100)
 	routeKey := rd
