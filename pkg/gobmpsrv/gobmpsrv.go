@@ -360,11 +360,12 @@ func (srv *bmpServer) connector() {
 						// freshly dialled connection and exit the goroutine.
 						srv.mu.Unlock()
 						_ = client.Close()
-						speaker.mu.Unlock()
 						return
 					}
+					speaker.mu.Lock()
 					speaker.isConnected = true
 					speaker.retryDelay = 1 * time.Second // reset backoff on a successful connection
+					speaker.mu.Unlock()
 					srv.wg.Add(1)
 					srv.clients[client] = struct{}{}
 					srv.mu.Unlock()

@@ -34,7 +34,8 @@ func TestPrefixDescriptorGetPrefixMTID(t *testing.T) {
 				return
 			}
 			if got == nil {
-				t.Fatal("GetPrefixMTID() returned nil")
+				t.Error("GetPrefixMTID() returned nil")
+				return
 			}
 			if got.MTID != tt.wantMTID {
 				t.Errorf("MTID = %d, want %d", got.MTID, tt.wantMTID)

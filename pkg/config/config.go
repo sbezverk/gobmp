@@ -109,8 +109,10 @@ func LoadConfig(path string) (*Config, error) {
 	if cfg.ActiveMode && len(cfg.SpeakersList) == 0 {
 		return nil, errors.New("active_mode is true but speakers_list is empty")
 	}
-	if err := validateSpeakersList(cfg.SpeakersList); err != nil {
-		return nil, err
+	if cfg.ActiveMode {
+		if err := validateSpeakersList(cfg.SpeakersList); err != nil {
+			return nil, err
+		}
 	}
 
 	return cfg, nil
@@ -121,17 +123,17 @@ func validateSpeakersList(speakers []string) error {
 	for _, addr := range speakers {
 		host, port, err := net.SplitHostPort(addr)
 		if err != nil {
-			return fmt.Errorf("invalid speaker address: %s", addr)
+			return fmt.Errorf("invalid speaker address: %q, error: %v, host %q is not a valid IP literal (speakers_list only accepts IP literals, not hostnames or scoped addresses)", addr, err, host)
 		}
 		if net.ParseIP(host) == nil {
-			return fmt.Errorf("invalid speaker address: %s", addr)
+			return fmt.Errorf("invalid speaker address: %q, host part of the address cannot be nil", addr)
 		}
 		p, err := strconv.Atoi(port)
 		if err != nil || p < 1 || p > 65535 {
-			return fmt.Errorf("invalid port in speaker address: %s", addr)
+			return fmt.Errorf("invalid value of port: %q, port must be between 1 and 65535", port)
 		}
 		if _, exists := uniqueAddrs[addr]; exists {
-			return fmt.Errorf("duplicate speaker address: %s", addr)
+			return fmt.Errorf("duplicate speaker address: %q", addr)
 		}
 		uniqueAddrs[addr] = true
 	}
