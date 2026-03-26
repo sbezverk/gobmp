@@ -103,6 +103,7 @@ func UnmarshalBGPExtCommunity(b []byte) ([]ExtCommunity, error) {
 var transAS2SubTypes = map[uint8]string{
 	0x2:  ECPRouteTarget,
 	0x3:  ECPRouteOrigin,
+	0x4:  ECPLinkBandwidth,
 	0x5:  ECPOSPFDomainID,
 	0x8:  ECPBGPDataCollection,
 	0x9:  ECPSourceAS,
@@ -265,7 +266,14 @@ func type0(subType uint8, value []byte) string {
 	if len(value) < 6 {
 		return fmt.Sprintf("invalid-type0-length=%d", len(value))
 	}
-	return getSubType(transAS2SubTypes, subType) + fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:]))
+	switch subType {
+	case 0x04:
+		// Link Bandwidth: Local Administrator (value[2:6]) is IEEE 754 float32, bytes/sec
+		f := binary.BigEndian.Uint32(value[2:6])
+		return getSubType(transAS2SubTypes, subType) + fmt.Sprintf("%03f", math.Float32frombits(f))
+	default:
+		return getSubType(transAS2SubTypes, subType) + fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:]))
+	}
 }
 
 // Transitive IPv4 Specific Extended Community
@@ -365,10 +373,14 @@ func type8(subType uint8, value []byte) string {
 
 // Non-Transitive Two-Octet AS-Specific Extended Community
 func type40(subType uint8, value []byte) string {
+	if len(value) < 6 {
+		return fmt.Sprintf("invalid-type40-length=%d", len(value))
+	}
 	var s string
 	switch subType {
 	case 0x04:
-		f := binary.BigEndian.Uint32(value[0:4])
+		// Link Bandwidth: Local Administrator (value[2:6]) is IEEE 754 float32, bytes/sec
+		f := binary.BigEndian.Uint32(value[2:6])
 		s = fmt.Sprintf("%03f", math.Float32frombits(f))
 	default:
 		s = fmt.Sprintf("%d", binary.BigEndian.Uint32(value[0:4]))
