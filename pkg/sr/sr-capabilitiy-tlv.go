@@ -22,6 +22,9 @@ func UnmarshalSRCapabilitySubTLV(b []byte) ([]CapabilitySubTLV, error) {
 	}
 	caps := make([]CapabilitySubTLV, 0)
 	for p := 0; p < len(b); {
+		if p+7 > len(b) {
+			return nil, fmt.Errorf("SR Capability sub-TLV truncated at offset %d: need 7 bytes, have %d", p, len(b)-p)
+		}
 		cap := CapabilitySubTLV{}
 		r := make([]byte, 4)
 		// Copy 3 bytes of Range into 4 byte slice to convert it into uint32
@@ -38,6 +41,9 @@ func UnmarshalSRCapabilitySubTLV(b []byte) ([]CapabilitySubTLV, error) {
 		case 1161:
 		default:
 			return nil, fmt.Errorf("unknown SR Capability tlv type %d", t)
+		}
+		if p+int(l) > len(b) {
+			return nil, fmt.Errorf("SR Capability sub-TLV value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
 		}
 		s := make([]byte, 4)
 		switch l {

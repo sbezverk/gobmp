@@ -124,6 +124,9 @@ func UnmarshalPrefixSIDTLV(b []byte, proto base.ProtoID) (*PrefixSIDTLV, error) 
 	if glog.V(6) {
 		glog.Infof("Prefix SID TLV Raw: %s for proto: %+v", tools.MessageHex(b), proto)
 	}
+	if len(b) < 2 {
+		return nil, fmt.Errorf("Prefix SID TLV too short: need at least 2 bytes, have %d", len(b))
+	}
 	psid := PrefixSIDTLV{}
 	p := 0
 	switch proto {

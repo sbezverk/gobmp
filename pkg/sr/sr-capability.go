@@ -92,6 +92,9 @@ func UnmarshalSRCapability(b []byte, proto base.ProtoID) (*Capability, error) {
 	if glog.V(6) {
 		glog.Infof("SR Capability Raw: %s", tools.MessageHex(b))
 	}
+	if len(b) < 2 {
+		return nil, fmt.Errorf("SR Capability too short: need at least 2 bytes, have %d", len(b))
+	}
 	cap := Capability{}
 	p := 0
 	switch proto {
