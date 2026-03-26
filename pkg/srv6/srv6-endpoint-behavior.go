@@ -22,7 +22,7 @@ func UnmarshalSRv6EndpointBehaviorTLV(b []byte) (*EndpointBehavior, error) {
 		glog.Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 4 {
-		return nil, fmt.Errorf("SRv6 Endpoint Behavior TLV too short: need 4 bytes, have %d", len(b))
+		return nil, fmt.Errorf("srv6 Endpoint Behavior TLV too short: need 4 bytes, have %d", len(b))
 	}
 	e := EndpointBehavior{}
 	p := 0

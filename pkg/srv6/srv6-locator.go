@@ -40,7 +40,7 @@ func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
 		glog.Infof("SRv6 Locator TLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 8 {
-		return nil, fmt.Errorf("SRv6 Locator TLV too short: need 8 bytes, have %d", len(b))
+		return nil, fmt.Errorf("srv6 Locator TLV too short: need 8 bytes, have %d", len(b))
 	}
 	p := 0
 	loc := LocatorTLV{}

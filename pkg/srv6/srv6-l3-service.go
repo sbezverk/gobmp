@@ -25,7 +25,7 @@ type SIDStructureSubSubTLV struct {
 // UnmarshalSIDStructureSubSubTLV instantiates SID Structure Sub Sub TLV
 func UnmarshalSIDStructureSubSubTLV(b []byte) (*SIDStructureSubSubTLV, error) {
 	if len(b) < 6 {
-		return nil, fmt.Errorf("SRv6 SID Structure sub-sub-TLV too short: need 6 bytes, have %d", len(b))
+		return nil, fmt.Errorf("srv6 SID Structure sub-sub-TLV too short: need 6 bytes, have %d", len(b))
 	}
 	// Skip Resrved byte
 	p := 0
@@ -102,7 +102,7 @@ func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
 // UnmarshalInformationSubTLV instantiates Information SubT LV
 func UnmarshalInformationSubTLV(b []byte) (*InformationSubTLV, error) {
 	if len(b) < 20 {
-		return nil, fmt.Errorf("SRv6 Information sub-TLV too short: need 20 bytes, have %d", len(b))
+		return nil, fmt.Errorf("srv6 Information sub-TLV too short: need 20 bytes, have %d", len(b))
 	}
 	// Skip Resrved byte
 	p := 1
@@ -198,14 +198,14 @@ func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]SvcSubTLV, error) {
 	var err error
 	for p := 0; p < len(b); {
 		if p+3 > len(b) {
-			return nil, fmt.Errorf("SRv6 L3 Service sub-TLV truncated at offset %d: need 3 bytes for header, have %d", p, len(b)-p)
+			return nil, fmt.Errorf("srv6 L3 Service sub-TLV truncated at offset %d: need 3 bytes for header, have %d", p, len(b)-p)
 		}
 		t := b[p]
 		p++
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		if p+int(l) > len(b) {
-			return nil, fmt.Errorf("SRv6 L3 Service sub-TLV value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+			return nil, fmt.Errorf("srv6 L3 Service sub-TLV value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
 		}
 		var s SvcSubTLV
 		switch t {
