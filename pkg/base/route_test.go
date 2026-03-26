@@ -189,4 +189,10 @@ func TestUnmarshalRoutes_RetrySucceeds(t *testing.T) {
 	if len(routes) != 1 {
 		t.Fatalf("expected 1 route, got %d", len(routes))
 	}
+	if routes[0].Length != 8 {
+		t.Errorf("expected prefix length 8, got %d", routes[0].Length)
+	}
+	if len(routes[0].Prefix) == 0 || routes[0].Prefix[0] != 0x0a {
+		t.Errorf("expected prefix starting with 10 (0x0a), got %v", routes[0].Prefix)
+	}
 }

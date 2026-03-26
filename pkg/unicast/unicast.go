@@ -137,7 +137,8 @@ func UnmarshalLUNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 			return nil, fmt.Errorf("invalid negative prefix length %d (total length %d, label bits %d)", prefixBitLen, originalLength, labelBits)
 		}
 		if prefixBitLen > 128 {
-			return nil, fmt.Errorf("invalid prefix length %d bits exceeds maximum 128", prefixBitLen)
+			err = fmt.Errorf("invalid prefix length %d bits exceeds maximum 128", prefixBitLen)
+			goto error_handle
 		}
 
 		// Additional check for potentially inverted IPv4 addresses with wrong lengths
