@@ -52,7 +52,7 @@ func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
 	p++
 	loc.Algorithm = b[p]
 	p++
-	// Skip reserved byte
+	// Skip 2 reserved bytes
 	p += 2
 	loc.Metric = binary.BigEndian.Uint32(b[p : p+4])
 	p += 4

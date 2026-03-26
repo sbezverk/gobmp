@@ -75,9 +75,16 @@ func TestUnmarshalSRv6SIDNLRI_TooShort(t *testing.T) {
 }
 
 func TestUnmarshalSRv6SIDNLRI_NodeDescTruncated(t *testing.T) {
-	// 13 bytes: proto(1) + identifier(8) + 4 bytes that are not enough for node desc
+	// proto(1) + identifier(8) + node desc header(4) = 13 bytes
+	// Set node desc length to 20 so it exceeds the buffer
 	input := make([]byte, 14)
 	input[0] = 0x03 // Proto
+	// Node Descriptor Type at offset 9
+	input[9] = 0x01
+	input[10] = 0x00
+	// Node Descriptor Length = 20 at offset 11, exceeds remaining bytes
+	input[11] = 0x00
+	input[12] = 0x14
 	_, err := UnmarshalSRv6SIDNLRI(input)
 	if err == nil {
 		t.Fatal("expected error for truncated node descriptor")
@@ -96,7 +103,10 @@ func TestEndXSIDTLV_UnmarshalJSON_WeightField(t *testing.T) {
 	input := map[string]interface{}{
 		"weight": float64(42),
 	}
-	b, _ := json.Marshal(input)
+	b, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("json.Marshal error: %v", err)
+	}
 	e := &EndXSIDTLV{}
 	if err := e.UnmarshalJSON(b); err != nil {
 		t.Fatalf("UnmarshalJSON error: %v", err)

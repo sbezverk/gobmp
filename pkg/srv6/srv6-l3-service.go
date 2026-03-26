@@ -27,7 +27,6 @@ func UnmarshalSIDStructureSubSubTLV(b []byte) (*SIDStructureSubSubTLV, error) {
 	if len(b) < 6 {
 		return nil, fmt.Errorf("srv6 SID Structure sub-sub-TLV too short: need 6 bytes, have %d", len(b))
 	}
-	// Skip Resrved byte
 	p := 0
 	tlv := &SIDStructureSubSubTLV{}
 	tlv.LocalBlockLength = b[p]
