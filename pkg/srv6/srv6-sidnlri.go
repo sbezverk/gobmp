@@ -79,9 +79,6 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 	copy(sr.Identifier, b[p:p+8])
 	p += 8
 	// Get Node Descriptor's length, skip Node Descriptor Type
-	if p+4 > len(b) {
-		return nil, fmt.Errorf("srv6 SID NLRI truncated at offset %d: need 4 bytes for Node Descriptor header, have %d", p, len(b)-p)
-	}
 	l := binary.BigEndian.Uint16(b[p+2 : p+4])
 	if p+int(l)+4 > len(b) {
 		return nil, fmt.Errorf("srv6 SID NLRI truncated at offset %d: need %d bytes for Node Descriptor, have %d", p, int(l)+4, len(b)-p)

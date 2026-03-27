@@ -103,7 +103,7 @@ func UnmarshalInformationSubTLV(b []byte) (*InformationSubTLV, error) {
 	if len(b) < 20 {
 		return nil, fmt.Errorf("srv6 Information sub-TLV too short: need 20 bytes, have %d", len(b))
 	}
-	// Skip Resrved byte
+	// Skip Reserved byte
 	p := 1
 	tlv := &InformationSubTLV{}
 	tlv.SID = net.IP(b[p : p+16]).To16().String()

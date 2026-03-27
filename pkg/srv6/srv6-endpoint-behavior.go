@@ -19,7 +19,7 @@ type EndpointBehavior struct {
 // UnmarshalSRv6EndpointBehaviorTLV builds SRv6 Endpoint Behavior TLV object
 func UnmarshalSRv6EndpointBehaviorTLV(b []byte) (*EndpointBehavior, error) {
 	if glog.V(6) {
-		glog.Infof("SRv6 End.X SID TLV Raw: %s", tools.MessageHex(b))
+		glog.Infof("SRv6 Endpoint Behavior TLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 4 {
 		return nil, fmt.Errorf("srv6 Endpoint Behavior TLV too short: need 4 bytes, have %d", len(b))
