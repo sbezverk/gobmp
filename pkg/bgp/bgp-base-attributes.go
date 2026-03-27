@@ -124,7 +124,7 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	}
 	if ba.OTC != oba.OTC {
 		equal = false
-		diffs = append(diffs, "otc mismatch: "+strconv.Itoa(int(ba.OTC))+" and "+strconv.Itoa(int(oba.OTC)))
+		diffs = append(diffs, "otc mismatch: "+strconv.FormatUint(uint64(ba.OTC), 10)+" and "+strconv.FormatUint(uint64(oba.OTC), 10))
 	}
 
 	return equal, diffs
