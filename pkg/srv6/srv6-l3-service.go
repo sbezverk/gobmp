@@ -112,7 +112,7 @@ func UnmarshalInformationSubTLV(b []byte) (*InformationSubTLV, error) {
 	p++
 	tlv.EndpointBehavior = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	if p < len(b) {
+	if len(b)-p >= 4 {
 		stlv, err := UnmarshalSRv6L3ServiceSubSubTLV(b[p:])
 		if err != nil {
 			return nil, err

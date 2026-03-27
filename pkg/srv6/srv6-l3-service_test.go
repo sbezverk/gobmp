@@ -8,6 +8,30 @@ import (
 	"github.com/go-test/deep"
 )
 
+func TestUnmarshalInformationSubTLV_ShortTrailingBytes(t *testing.T) {
+	// 20-byte valid header (1 reserved + 16 SID + 1 flags + 2 endpoint behavior)
+	// followed by 1-3 trailing bytes that are too short for a sub-sub-TLV header
+	// (which requires 4 bytes: 1 reserved + 1 type + 2 length).
+	// The function must not panic; it should ignore the trailing bytes.
+	base := []byte{
+		0x00,                                                                                           // reserved
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // SID (16 bytes)
+		0x00,       // flags
+		0x00, 0x06, // endpoint behavior
+	}
+	for trailing := 1; trailing <= 3; trailing++ {
+		input := make([]byte, len(base)+trailing)
+		copy(input, base)
+		got, err := UnmarshalInformationSubTLV(input)
+		if err != nil {
+			t.Fatalf("trailing=%d: unexpected error: %v", trailing, err)
+		}
+		if got.SubSubTLVs != nil {
+			t.Fatalf("trailing=%d: expected nil SubSubTLVs, got %v", trailing, got.SubSubTLVs)
+		}
+	}
+}
+
 func TestUnmarshalSRv6L3Service(t *testing.T) {
 	tests := []struct {
 		name   string

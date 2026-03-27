@@ -52,7 +52,7 @@ func UnmarshalSRv6BGPPeerNodeSIDTLV(b []byte) (*BGPPeerNodeSID, error) {
 	bgp.Flags = f
 	p++
 	bgp.Weight = b[p]
-	// Skip reserved 2 bytes
+	// Advance past weight byte and 1 reserved byte
 	p += 2
 	bgp.PeerASN = binary.BigEndian.Uint32(b[p : p+4])
 	p += 4
