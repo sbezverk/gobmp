@@ -338,15 +338,18 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 }
 
 // TestUnmarshalLUNLRI_NegativePrefixLength validates that malformed input with
-// negative prefix length (total length < label bits) returns an error instead
-// of silently defaulting to 32 bits.
+// negative prefix length (total length < label bits) recovers via pathID retry.
+// With pathID=true the first 4 bytes are consumed as PathID, leaving Length=0x0A(10)
+// and prefixBitLen = 10-24 = -14. The error_handle retry with pathID=false parses
+// the full slice as Length=0x38(56), one label, and a 32-bit prefix 10.0.0.7.
 func TestUnmarshalLUNLRI_NegativePrefixLength(t *testing.T) {
-	// PathID(4)=0x38000031 + Length(1)=0x0A(10 bits) + Label(3)=0x000007
-	// prefixBitLen = 10 - 24 = -14 → should error
 	input := []byte{0x38, 0x00, 0x00, 0x31, 0x0A, 0x00, 0x00, 0x07}
-	_, err := UnmarshalLUNLRI(input, true)
-	if err == nil {
-		t.Fatal("expected error for negative prefix length, got nil")
+	result, err := UnmarshalLUNLRI(input, true)
+	if err != nil {
+		t.Fatalf("expected pathID retry to succeed, got error: %v", err)
+	}
+	if len(result.NLRI) != 1 {
+		t.Fatalf("expected 1 NLRI after retry, got %d", len(result.NLRI))
 	}
 }
 
