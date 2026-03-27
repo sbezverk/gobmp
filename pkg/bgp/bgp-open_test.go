@@ -247,7 +247,7 @@ func TestBGPRoleCapability(t *testing.T) {
 				0x41, 0x04, 0x00, 0x00, 0xFD, 0xE8, // 4-byte AS only
 				0x02, 0x00, // Route Refresh
 			},
-			expectRole: 0,
+			expectRole: BGPRole(0), // sentinel, not BGPRoleProvider
 			expectOK:   false,
 		},
 		{
