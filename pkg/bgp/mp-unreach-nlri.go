@@ -170,7 +170,7 @@ func (mp *MPUnReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 		}
 		return flowspec.UnmarshalFlowspecNLRI(mp.WithdrawnRoutes)
 	}
-	if mp.SubAddressFamilyID == 134 {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 134 {
 		if len(mp.WithdrawnRoutes) == 0 {
 			return nil, nil
 		}
@@ -190,7 +190,7 @@ func (mp *MPUnReachNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
 	if mp.AddressFamilyID == 2 && mp.SubAddressFamilyID == 133 {
 		return flowspec.UnmarshalAllIPv6FlowspecNLRI(mp.WithdrawnRoutes)
 	}
-	if mp.SubAddressFamilyID == 134 {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 134 {
 		return flowspec.UnmarshalAllVPNFlowspecNLRI(mp.WithdrawnRoutes, mp.AddressFamilyID == 2)
 	}
 

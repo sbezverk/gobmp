@@ -199,7 +199,7 @@ func (mp *MPReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetFlowspecNLRI checks for presence of Flowspec (SAFI=133) in MP_REACH_NLRI and parses the first NLRI.
+// GetFlowspecNLRI checks for presence of Flowspec (SAFI=133) or VPN FlowSpec (SAFI=134) in MP_REACH_NLRI and parses the first NLRI.
 // Use GetAllFlowspecNLRI to parse multiple NLRIs per RFC 8955 §4 / RFC 8956 §3.
 func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 133 {
@@ -208,7 +208,7 @@ func (mp *MPReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 	if mp.AddressFamilyID == 2 && mp.SubAddressFamilyID == 133 {
 		return flowspec.UnmarshalIPv6FlowspecNLRI(mp.NLRI)
 	}
-	if mp.SubAddressFamilyID == 134 {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 134 {
 		return flowspec.UnmarshalVPNFlowspecNLRI(mp.NLRI, mp.AddressFamilyID == 2)
 	}
 
@@ -224,7 +224,7 @@ func (mp *MPReachNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
 	if mp.AddressFamilyID == 2 && mp.SubAddressFamilyID == 133 {
 		return flowspec.UnmarshalAllIPv6FlowspecNLRI(mp.NLRI)
 	}
-	if mp.SubAddressFamilyID == 134 {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 134 {
 		return flowspec.UnmarshalAllVPNFlowspecNLRI(mp.NLRI, mp.AddressFamilyID == 2)
 	}
 
