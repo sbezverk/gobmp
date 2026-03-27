@@ -147,7 +147,7 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 		if code == 9 {
 			// RFC 9234: BGP Role capability carries a single-octet Role value.
 			if length != 1 {
-				return nil, fmt.Errorf("invalid capability length %d for BGP Role, expected 1", length)
+				return nil, fmt.Errorf("invalid BGP Role capability (code 9) length %d at offset %d, expected 1", length, p-int(length))
 			}
 			capData.Description += " : " + BGPRole(capData.Value[0]).String()
 		}
