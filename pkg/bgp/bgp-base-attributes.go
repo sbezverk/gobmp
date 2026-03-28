@@ -427,7 +427,7 @@ func unmarshalAttrAggregator(b []byte) []byte {
 
 // getCommunity returns a slice of communities
 func getCommunity(b []byte) []uint32 {
-	comm := make([]uint32, 0)
+	comm := make([]uint32, 0, len(b)/4)
 	if len(b)%4 != 0 {
 		return comm
 	}
