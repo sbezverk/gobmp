@@ -81,6 +81,36 @@ func TestUnmarshalAdjacencySIDTLV_TooShort(t *testing.T) {
 	}
 }
 
+func TestUnmarshalAdjacencySIDTLV_ValidISIS(t *testing.T) {
+	// 7-byte ISIS Adjacency SID: Flags(1)=0x30(V+L) + Weight(1)=10 + Reserved(2) + SID(3)=0x003A41(14913)
+	input := []byte{0x30, 0x0A, 0x00, 0x00, 0x00, 0x3A, 0x41}
+	result, err := UnmarshalAdjacencySIDTLV(input, base.ISISL1)
+	if err != nil {
+		t.Fatalf("expected success, got error: %v", err)
+	}
+	if result.Weight != 10 {
+		t.Errorf("expected weight 10, got %d", result.Weight)
+	}
+	if result.SID != 14913 {
+		t.Errorf("expected SID 14913, got %d", result.SID)
+	}
+}
+
+func TestUnmarshalAdjacencySIDTLV_ValidOSPF(t *testing.T) {
+	// 8-byte OSPF Adjacency SID: Flags(1)=0x60(V+L) + Weight(1)=5 + Reserved(2) + SID(4)=100000
+	input := []byte{0x60, 0x05, 0x00, 0x00, 0x00, 0x01, 0x86, 0xA0}
+	result, err := UnmarshalAdjacencySIDTLV(input, base.OSPFv2)
+	if err != nil {
+		t.Fatalf("expected success, got error: %v", err)
+	}
+	if result.Weight != 5 {
+		t.Errorf("expected weight 5, got %d", result.Weight)
+	}
+	if result.SID != 100000 {
+		t.Errorf("expected SID 100000, got %d", result.SID)
+	}
+}
+
 func TestUnmarshalPrefixSIDTLV_TooShort(t *testing.T) {
 	_, err := UnmarshalPrefixSIDTLV([]byte{}, base.ISISL1)
 	if err == nil {
