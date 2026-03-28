@@ -407,11 +407,11 @@ func (ls *NLRI) GetIGPMetric() uint32 {
 		m := make([]byte, 4)
 		// 1095 TLV has variable length
 		// 1, 2 or 3 bytes, depending on the length copying the actual value into the right position.
-		if tlv.Length < 1 || tlv.Length > 3 {
-			glog.Errorf("Invalid length %d for IGP Metric TLV 1095, expected 1, 2 or 3", tlv.Length)
+		if tlv.Length < 1 || tlv.Length > 3 || len(tlv.Value) < int(tlv.Length) {
+			glog.Errorf("Invalid length %d (value %d bytes) for IGP Metric TLV 1095, expected 1, 2 or 3", tlv.Length, len(tlv.Value))
 			return 0
 		}
-		copy(m[4-tlv.Length:], tlv.Value)
+		copy(m[4-tlv.Length:], tlv.Value[:tlv.Length])
 		return binary.BigEndian.Uint32(m)
 	}
 

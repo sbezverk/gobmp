@@ -25,10 +25,9 @@ func (ls *NLRI) GetPrefixIGPRouteTag() []uint32 {
 		if tlv.Type != 1153 {
 			continue
 		}
-		for p := 0; p < len(tlv.Value); {
+		for p := 0; p+4 <= len(tlv.Value); p += 4 {
 			tag := binary.BigEndian.Uint32(tlv.Value[p : p+4])
 			tags = append(tags, tag)
-			p += 4
 		}
 		return tags
 	}
@@ -43,10 +42,9 @@ func (ls *NLRI) GetPrefixIGPExtRouteTag() []uint64 {
 		if tlv.Type != 1154 {
 			continue
 		}
-		for p := 0; p < len(tlv.Value); {
+		for p := 0; p+8 <= len(tlv.Value); p += 8 {
 			tag := binary.BigEndian.Uint64(tlv.Value[p : p+8])
 			tags = append(tags, tag)
-			p += 8
 		}
 		return tags
 	}
@@ -60,10 +58,13 @@ func (ls *NLRI) GetPrefixOSPFForwardAddr() string {
 		if tlv.Type != 1156 {
 			continue
 		}
-		if tlv.Length == 4 {
+		if len(tlv.Value) == 4 {
 			return net.IP(tlv.Value).To4().String()
 		}
-		return net.IP(tlv.Value).To16().String()
+		if ip := net.IP(tlv.Value).To16(); ip != nil {
+			return ip.String()
+		}
+		return ""
 	}
 
 	return ""

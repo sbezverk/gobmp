@@ -70,3 +70,26 @@ func TestUnmarshalBGPAttrPrefixSID(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalBGPAttrPrefixSID_Bounds(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{name: "truncated header", input: []byte{0x01, 0x00}},
+		{name: "type 1 truncated", input: []byte{0x01, 0x00, 0x07, 0x00}},
+		{name: "type 3 truncated header", input: []byte{0x03, 0x00}},
+		{name: "type 3 truncated srgb", input: []byte{0x03, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00}},
+		{name: "type 5 truncated length", input: []byte{0x05, 0x00}},
+		{name: "type 5 truncated value", input: []byte{0x05, 0x00, 0x10}},
+		{name: "unknown type truncated", input: []byte{0xFF, 0x00}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalBGPAttrPrefixSID(tt.input)
+			if err == nil {
+				t.Fatal("expected error for truncated input")
+			}
+		})
+	}
+}

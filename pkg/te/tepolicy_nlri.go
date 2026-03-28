@@ -52,7 +52,7 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 	}
 	// Get Node Descriptor's length, skip Node Descriptor Type
 	l := binary.BigEndian.Uint16(b[p+2 : p+4])
-	if p+int(l) >= len(b) {
+	if p+int(l)+4 > len(b) {
 		return nil, fmt.Errorf("not enough bytes to process TE Policy NLRI")
 	}
 	he, err := base.UnmarshalNodeDescriptor(b[p : p+int(l)+4])

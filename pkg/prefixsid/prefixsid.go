@@ -2,6 +2,7 @@ package prefixsid
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/srv6"
@@ -52,10 +53,15 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 		OriginatorSRGB: nil,
 	}
 	for p := 0; p < len(b); {
-		// Determin the type, currently only type 1 and 3 are supported
+		if p+3 > len(b) {
+			return nil, fmt.Errorf("prefix SID truncated at offset %d: need at least 3 bytes for TLV header, have %d", p, len(b)-p)
+		}
 		switch b[p] {
 		case 1:
 			p++
+			if p+9 > len(b) {
+				return nil, fmt.Errorf("prefix SID label index TLV truncated at offset %d: need 9 bytes, have %d", p, len(b)-p)
+			}
 			psid.LabelIndex = &LabelIndexTLV{}
 			psid.LabelIndex.Type = 1
 			psid.LabelIndex.Length = binary.BigEndian.Uint16(b[p : p+2])
@@ -68,16 +74,24 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 			p += 4
 		case 3:
 			p++
+			if p+4 > len(b) {
+				return nil, fmt.Errorf("prefix SID originator SRGB TLV truncated at offset %d: need 4 bytes, have %d", p, len(b)-p)
+			}
 			psid.OriginatorSRGB = &OriginatorSRGBTLV{}
 			psid.OriginatorSRGB.Type = 1
 			psid.OriginatorSRGB.Length = binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
 			psid.OriginatorSRGB.Flags = binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
-			// Multiple SRGB are possible, loop through, each SRGB takes 6 bytes. Subtrack 2 (length of Flags)
-			// from the total Value portion length
 			psid.OriginatorSRGB.SRGB = make([]SRGB, 0)
-			for i := 0; i < int(psid.OriginatorSRGB.Length-2)/6; i++ {
+			if psid.OriginatorSRGB.Length < 2 {
+				return nil, fmt.Errorf("prefix SID originator SRGB length %d too short", psid.OriginatorSRGB.Length)
+			}
+			srgbCount := int(psid.OriginatorSRGB.Length-2) / 6
+			for i := 0; i < srgbCount; i++ {
+				if p+6 > len(b) {
+					return nil, fmt.Errorf("prefix SID SRGB entry %d truncated at offset %d: need 6 bytes, have %d", i, p, len(b)-p)
+				}
 				srgb := SRGB{}
 				t := make([]byte, 4)
 				copy(t, b[p:p+3])
@@ -91,8 +105,14 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 			}
 		case 5:
 			p++
+			if p+2 > len(b) {
+				return nil, fmt.Errorf("prefix SID SRv6 L3 service TLV truncated at offset %d: need 2 bytes for length, have %d", p, len(b)-p)
+			}
 			l := binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
+			if p+int(l) > len(b) {
+				return nil, fmt.Errorf("prefix SID SRv6 L3 service value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+			}
 			l3, err := srv6.UnmarshalSRv6L3Service(b[p : p+int(l)])
 			if err != nil {
 				return nil, err
@@ -100,10 +120,16 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 			psid.SRv6L3Service = l3
 			p += int(l)
 		default:
-			// Skip unknown type, length 2 bytes and the value
 			p++
-			p += int(binary.BigEndian.Uint16(b[p : p+2]))
+			if p+2 > len(b) {
+				return nil, fmt.Errorf("prefix SID unknown TLV truncated at offset %d: need 2 bytes for length, have %d", p, len(b)-p)
+			}
+			l := int(binary.BigEndian.Uint16(b[p : p+2]))
 			p += 2
+			if p+l > len(b) {
+				return nil, fmt.Errorf("prefix SID unknown TLV value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+			}
+			p += l
 		}
 	}
 	return &psid, nil
