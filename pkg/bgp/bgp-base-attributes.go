@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
@@ -267,13 +266,12 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			// ATTR_SET - RFC 6368
 		}
 	}
-	// Calculating hash of all recovered base attributes
-	ba, err := json.Marshal(baseAttr)
-	if err != nil {
-		return nil, err
+	// Hash the raw attribute bytes directly instead of marshaling to JSON
+	h := md5.New()
+	for _, attr := range attrs {
+		h.Write(attr.Attribute)
 	}
-	s := md5.Sum(ba)
-	baseAttr.BaseAttrHash = hex.EncodeToString(s[:])
+	baseAttr.BaseAttrHash = hex.EncodeToString(h.Sum(nil))
 
 	return &baseAttr, nil
 }

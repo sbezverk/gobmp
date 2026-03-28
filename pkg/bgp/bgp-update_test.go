@@ -21,7 +21,7 @@ func TestUnmarshalBGPUpdate(t *testing.T) {
 				NLRI:                     make([]byte, 0),
 				TotalPathAttributeLength: 44,
 				BaseAttributes: &BaseAttributes{
-					BaseAttrHash: "3b87061fdf773278959113c6f010f24c",
+					BaseAttrHash: "8681ce86ce93dc0060f7582ae21cc6a1",
 					ASPath:       []uint32{65001, 65003},
 					ASPathCount:  2,
 					Origin:       "incomplete",
