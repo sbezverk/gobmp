@@ -3,6 +3,7 @@ package bgp
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -43,7 +44,7 @@ func (up *Update) GetBaseAttrHash() string {
 	for _, attr := range up.PathAttributes {
 		h.Write(attr.Attribute)
 	}
-	return fmt.Sprintf("%x", h.Sum(nil))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // GetNLRI29 check for presence of NLRI 29 in the update and if exists, instantiate NLRI29 object
