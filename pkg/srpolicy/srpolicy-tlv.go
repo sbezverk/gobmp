@@ -92,7 +92,10 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			}
 			sl = int(binary.BigEndian.Uint16(b[p : p+2]))
 			p += 2
-			if sl < 1 || p+sl > len(b) {
+			if sl < 1 {
+				return nil, fmt.Errorf("SR Policy segment list sub-TLV at offset %d: invalid length %d", p, sl)
+			}
+			if p+sl > len(b) {
 				return nil, fmt.Errorf("SR Policy segment list sub-TLV truncated at offset %d: need %d bytes, have %d", p, sl, len(b)-p)
 			}
 			// Skip reserved byte
