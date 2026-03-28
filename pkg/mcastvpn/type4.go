@@ -15,44 +15,29 @@ type Type4 struct {
 	OriginatorIP []byte
 }
 
-// UnmarshalType4 parses Leaf A-D route
-func UnmarshalType4(b []byte) (*Type4, error) {
-	if len(b) < 4 {
-		return nil, fmt.Errorf("invalid Type4 length: %d bytes (minimum 4)", len(b))
+// UnmarshalType4 parses Leaf A-D route.
+// ipv6 indicates AFI=2 from the enclosing MP_REACH/UNREACH, which determines
+// whether the Originating Router's IP is 4 bytes (IPv4) or 16 bytes (IPv6).
+func UnmarshalType4(b []byte, ipv6 bool) (*Type4, error) {
+	ipLen := 4
+	if ipv6 {
+		ipLen = 16
+	}
+	minLen := 8 + ipLen // RD (8) + Originator IP (4 or 16)
+	ipVersion := "IPv4"
+	if ipv6 {
+		ipVersion = "IPv6"
+	}
+	if len(b) < minLen {
+		return nil, fmt.Errorf("invalid Type4 length: %d bytes (minimum %d for %s)", len(b), minLen, ipVersion)
 	}
 	t := &Type4{}
-
-	// The Route Key length is variable. The Originating Router's IP is the last 4 or 16 bytes.
-	// We need to determine where the Route Key ends and the Originator IP begins.
-	// The Originator IP is always either 4 bytes (IPv4) or 16 bytes (IPv6).
-
-	// Try IPv4 (4 bytes) first
-	if len(b) >= 4 {
-		routeKeyLen := len(b) - 4
-		t.RouteKey = make([]byte, routeKeyLen)
-		copy(t.RouteKey, b[0:routeKeyLen])
-		t.OriginatorIP = make([]byte, 4)
-		copy(t.OriginatorIP, b[routeKeyLen:])
-
-		// Validate that the route key makes sense (should start with RD, so at least 8 bytes)
-		if routeKeyLen >= 8 {
-			return t, nil
-		}
-	}
-
-	// Try IPv6 (16 bytes)
-	if len(b) >= 16 {
-		routeKeyLen := len(b) - 16
-		if routeKeyLen >= 8 {
-			t.RouteKey = make([]byte, routeKeyLen)
-			copy(t.RouteKey, b[0:routeKeyLen])
-			t.OriginatorIP = make([]byte, 16)
-			copy(t.OriginatorIP, b[routeKeyLen:])
-			return t, nil
-		}
-	}
-
-	return nil, fmt.Errorf("invalid Type4 format: cannot determine route key and originator IP boundaries")
+	routeKeyLen := len(b) - ipLen
+	t.RouteKey = make([]byte, routeKeyLen)
+	copy(t.RouteKey, b[0:routeKeyLen])
+	t.OriginatorIP = make([]byte, ipLen)
+	copy(t.OriginatorIP, b[routeKeyLen:])
+	return t, nil
 }
 
 // GetRouteTypeSpec returns the route type specific structure

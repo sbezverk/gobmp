@@ -272,6 +272,36 @@ func TestMPReachNLRI_NLRINotFound(t *testing.T) {
 	})
 }
 
+// TestMPReachNLRI_GetNLRIMCASTVPN_WithData exercises the ipv6 flag path in GetNLRIMCASTVPN.
+func TestMPReachNLRI_GetNLRIMCASTVPN_WithData(t *testing.T) {
+	// Type 4 (Leaf A-D) with AFI=2: RD(8) + OriginatorIP(16) = 24 bytes min
+	type4Data := []byte{
+		0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD 100:200
+		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // Originator IP 2001:db8::1
+	}
+	nlri := []byte{0x04, byte(len(type4Data))}
+	nlri = append(nlri, type4Data...)
+
+	mp := &MPReachNLRI{
+		AddressFamilyID:    2,
+		SubAddressFamilyID: 5,
+		NLRI:               nlri,
+		addPath:            map[int]bool{},
+	}
+	route, err := mp.GetNLRIMCASTVPN()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(route.Route) != 1 {
+		t.Fatalf("expected 1 route, got %d", len(route.Route))
+	}
+	origIP := route.Route[0].GetMCASTVPNOriginatorIP()
+	if len(origIP) != 16 {
+		t.Fatalf("expected 16-byte IPv6 originator IP, got %d bytes", len(origIP))
+	}
+}
+
 // ---------------------------------------------------------------------------
 // MPReachNLRI.GetFlowspecNLRI stubs
 // ---------------------------------------------------------------------------

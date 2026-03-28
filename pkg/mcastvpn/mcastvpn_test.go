@@ -396,7 +396,7 @@ func TestUnmarshalMCASTVPNNLRI(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := UnmarshalMCASTVPNNLRI(tt.input)
+			got, err := UnmarshalMCASTVPNNLRI(tt.input, false)
 			if err != nil && !tt.fail {
 				t.Fatalf("expected to succeed but failed with error: %+v", err)
 			}
