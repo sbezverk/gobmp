@@ -68,7 +68,7 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 	}
 	te.HeadEnd = he
 	te.HeadEndHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(l)+4]))
-	p += int(l)
+	p += int(l) + 4
 	// TE Policy Descriptor consists of list of TLVs, minimal TLV length is 4 bytes
 	if p+4 < len(b) {
 		te.Policy, err = UnmarshalPolicyDescriptor(b[p:])

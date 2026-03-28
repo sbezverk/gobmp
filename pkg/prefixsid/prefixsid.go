@@ -78,7 +78,7 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 				return nil, fmt.Errorf("prefix SID originator SRGB TLV truncated at offset %d: need 4 bytes, have %d", p, len(b)-p)
 			}
 			psid.OriginatorSRGB = &OriginatorSRGBTLV{}
-			psid.OriginatorSRGB.Type = 1
+			psid.OriginatorSRGB.Type = 3
 			psid.OriginatorSRGB.Length = binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
 			psid.OriginatorSRGB.Flags = binary.BigEndian.Uint16(b[p : p+2])
