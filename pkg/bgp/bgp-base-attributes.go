@@ -384,7 +384,7 @@ func unmarshalAttrNextHop(b []byte) string {
 		return ""
 	}
 	if len(b) == 4 {
-		return net.IP(b).To4().String()
+		return net.IP(b).String()
 	}
 	if ip := net.IP(b).To16(); ip != nil {
 		return ip.String()
@@ -454,7 +454,7 @@ func unmarshalAttrCommunity(b []byte) []string {
 // unmarshalAttrOriginatorID returns the value of ORIGINATOR_ID attribute
 func unmarshalAttrOriginatorID(b []byte) string {
 	if len(b) == 4 {
-		return net.IP(b).To4().String()
+		return net.IP(b).String()
 	}
 
 	return "invalid length"
@@ -470,7 +470,7 @@ func unmarshalAttrClusterList(b []byte) (string, error) {
 	}
 	parts := make([]string, len(b)/4)
 	for i := 0; i < len(b); i += 4 {
-		parts[i/4] = net.IP(b[i : i+4]).To4().String()
+		parts[i/4] = net.IP(b[i : i+4]).String()
 	}
 	return strings.Join(parts, ", "), nil
 }

@@ -10,6 +10,11 @@ import (
 	"github.com/sbezverk/tools"
 )
 
+var (
+	compatLabel = []byte{0x80, 0x00, 0x00}
+	zeroLabel   = []byte{0x00, 0x00, 0x00}
+)
+
 // UnmarshalL3VPNNLRI parses VPNv4/VPNv6 NLRI according to the caller-provided pathID flag.
 // If parsing fails, it will try exactly once with !pathID. No recursion...
 func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, error) {
@@ -70,8 +75,8 @@ func parseL3VPNNLRI(b []byte, pathID bool, srv6Flag bool) (*base.MPNLRI, error) 
 			return nil, fmt.Errorf("not enough bytes for label/compat field at pos %d", p)
 		}
 		labelField := b[p : p+3]
-		if bytes.Equal(labelField, []byte{0x80, 0x00, 0x00}) ||
-			bytes.Equal(labelField, []byte{0x00, 0x00, 0x00}) {
+		if bytes.Equal(labelField, compatLabel) ||
+			bytes.Equal(labelField, zeroLabel) {
 			up.Label = nil
 			p += 3
 		} else {

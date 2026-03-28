@@ -103,7 +103,8 @@ func (p *PerPeerHeader) GetPeerHash() string {
 	h := md5.New()
 	h.Write(p.PeerDistinguisher)
 	h.Write(p.PeerAddress)
-	h.Write([]byte(strconv.FormatUint(uint64(p.PeerAS), 10)))
+	var asBuf [20]byte
+	h.Write(strconv.AppendUint(asBuf[:0], uint64(p.PeerAS), 10))
 	h.Write(p.PeerBGPID)
 	return hex.EncodeToString(h.Sum(nil))
 }
@@ -127,7 +128,7 @@ func (p *PerPeerHeader) GetPeerAddrString() string {
 		return net.IP(p.PeerAddress).To16().String()
 	}
 	// IPv4 specific conversions
-	return net.IP(p.PeerAddress[12:]).To4().String()
+	return net.IP(p.PeerAddress[12:]).String()
 }
 
 // IsAdjRIBIn returns true if route is from Adj-RIB-In (O flag not set)
