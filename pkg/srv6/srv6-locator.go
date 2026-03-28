@@ -39,6 +39,9 @@ func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
 	if glog.V(6) {
 		glog.Infof("SRv6 Locator TLV Raw: %s", tools.MessageHex(b))
 	}
+	if len(b) < 8 {
+		return nil, fmt.Errorf("srv6 Locator TLV too short: need 8 bytes, have %d", len(b))
+	}
 	p := 0
 	loc := LocatorTLV{}
 	f, err := UnmarshalLocatorFlags(b[p : p+1])
@@ -46,23 +49,11 @@ func UnmarshalSRv6LocatorTLV(b []byte) (*LocatorTLV, error) {
 		return nil, err
 	}
 	loc.Flag = f
-	if p+1 > len(b) {
-		return nil, fmt.Errorf("invalid input %s", tools.MessageHex(b))
-	}
 	p++
 	loc.Algorithm = b[p]
-	if p+1 > len(b) {
-		return nil, fmt.Errorf("invalid input %s", tools.MessageHex(b))
-	}
 	p++
-	// Skip reserved byte
-	if p+2 > len(b) {
-		return nil, fmt.Errorf("invalid input %s", tools.MessageHex(b))
-	}
+	// Skip 2 reserved bytes
 	p += 2
-	if p+4 > len(b) {
-		return nil, fmt.Errorf("invalid input %s", tools.MessageHex(b))
-	}
 	loc.Metric = binary.BigEndian.Uint32(b[p : p+4])
 	p += 4
 

@@ -68,8 +68,8 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 	if glog.V(6) {
 		glog.Infof("SRv6 SID NLRI Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
+	if len(b) < 13 {
+		return nil, fmt.Errorf("srv6 SID NLRI too short: need at least 13 bytes, have %d", len(b))
 	}
 	sr := SIDNLRI{}
 	p := 0
@@ -80,6 +80,9 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 	p += 8
 	// Get Node Descriptor's length, skip Node Descriptor Type
 	l := binary.BigEndian.Uint16(b[p+2 : p+4])
+	if p+int(l)+4 > len(b) {
+		return nil, fmt.Errorf("srv6 SID NLRI truncated at offset %d: need %d bytes for Node Descriptor, have %d", p, int(l)+4, len(b)-p)
+	}
 	ln, err := base.UnmarshalNodeDescriptor(b[p : p+int(l)+4])
 	if err != nil {
 		return nil, err

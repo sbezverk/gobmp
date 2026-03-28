@@ -99,7 +99,7 @@ func (e *EndXSIDTLV) UnmarshalJSON(b []byte) error {
 		}
 	}
 	// Weight           uint8         `json:"weight,omitempty"`
-	if v, ok := objVal["weigh"]; ok {
+	if v, ok := objVal["weight"]; ok {
 		if err := json.Unmarshal(v, &result.Weight); err != nil {
 			return err
 		}
