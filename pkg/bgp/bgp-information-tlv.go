@@ -28,7 +28,7 @@ func UnmarshalBGPTLV(b []byte) ([]InformationalTLV, Capability, error) {
 // unmarshalTLVs is the shared implementation for both RFC 4271 (extendedParamLen=false, 1-byte
 // parameter length) and RFC 9072 (extendedParamLen=true, 2-byte parameter length) encodings.
 func unmarshalTLVs(b []byte, extendedParamLen bool) ([]InformationalTLV, Capability, error) {
-	tlvs := make([]InformationalTLV, 0)
+	tlvs := make([]InformationalTLV, 0, 4)
 	caps := make(Capability)
 	if len(b) == 0 {
 		return tlvs, caps, nil

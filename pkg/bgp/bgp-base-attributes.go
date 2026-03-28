@@ -298,7 +298,7 @@ func unmarshalAttrASPath(b []byte) ([]uint32, error) {
 	if len(b) == 0 {
 		return []uint32{}, nil
 	}
-	path := make([]uint32, 0)
+	path := make([]uint32, 0, len(b)/2)
 	// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 only inspects the
 	// first segment, so full per-segment bounds validation is done in the loop below.
 	as4, err := isASPath4(b)
@@ -505,7 +505,7 @@ func unmarshalAttrLgCommunity(b []byte) []string {
 
 // unmarshalAttrAS4Path returns a sequence of AS4 path segments
 func unmarshalAttrAS4Path(b []byte) []uint32 {
-	path := make([]uint32, 0)
+	path := make([]uint32, 0, len(b)/4)
 	for p := 0; p < len(b); {
 		if p+2 > len(b) {
 			glog.Errorf("AS4_PATH truncated at segment header: offset %d, len %d", p, len(b))
