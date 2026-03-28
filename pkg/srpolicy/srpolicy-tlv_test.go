@@ -161,6 +161,13 @@ func TestUnmarshalSRPolicyTLV_SubTLVBounds(t *testing.T) {
 			input: wrap([]byte{SEGMENTLISTSTLV}), // type byte only, no length
 		},
 		{
+			name: "segment list zero length",
+			input: wrap([]byte{
+				SEGMENTLISTSTLV,
+				0x00, 0x00, // Length: 0
+			}),
+		},
+		{
 			name: "segment list truncated value",
 			input: wrap([]byte{
 				SEGMENTLISTSTLV,
@@ -181,6 +188,13 @@ func TestUnmarshalSRPolicyTLV_SubTLVBounds(t *testing.T) {
 		{
 			name:  "preference no length byte",
 			input: wrap([]byte{PREFERENCESTLV}),
+		},
+		{
+			name: "preference truncated value",
+			input: wrap([]byte{
+				PREFERENCESTLV,
+				0x10, // Length: 16 but 0 available
+			}),
 		},
 		{
 			name:  "ENLP no length byte",
@@ -205,6 +219,13 @@ func TestUnmarshalSRPolicyTLV_SubTLVBounds(t *testing.T) {
 		{
 			name:  "unknown type no length byte",
 			input: wrap([]byte{0xFF}),
+		},
+		{
+			name: "unknown type truncated value",
+			input: wrap([]byte{
+				0xFF, // Unknown type
+				0x10, // Length: 16 but 0 available
+			}),
 		},
 	}
 	for _, tt := range tests {
