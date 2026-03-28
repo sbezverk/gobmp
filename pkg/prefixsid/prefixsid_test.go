@@ -77,12 +77,19 @@ func TestUnmarshalBGPAttrPrefixSID_Bounds(t *testing.T) {
 		input []byte
 	}{
 		{name: "truncated header", input: []byte{0x01, 0x00}},
-		{name: "type 1 truncated", input: []byte{0x01, 0x00, 0x07, 0x00}},
-		{name: "type 3 truncated header", input: []byte{0x03, 0x00}},
-		{name: "type 3 truncated srgb", input: []byte{0x03, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00}},
-		{name: "type 5 truncated length", input: []byte{0x05, 0x00}},
-		{name: "type 5 truncated value", input: []byte{0x05, 0x00, 0x10}},
-		{name: "unknown type truncated", input: []byte{0xFF, 0x00}},
+		{name: "type 1 truncated value", input: []byte{0x01, 0x00, 0x07, 0x00, 0x00}},
+		// Type 3: need 3+ bytes to enter switch, then p++ leaves insufficient for 4-byte read
+		{name: "type 3 truncated header", input: []byte{0x03, 0x00, 0x04}},
+		// Type 3: valid header but SRGB Length < 2
+		{name: "type 3 length too short", input: []byte{0x03, 0x00, 0x01, 0x00, 0x00}},
+		// Type 3: Length=8 implies 1 SRGB entry (6 bytes) but buffer too short
+		{name: "type 3 truncated srgb value", input: []byte{0x03, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00}},
+		// Type 5: need 3+ bytes, then p++ leaves insufficient for 2-byte length
+		{name: "type 5 truncated length", input: []byte{0x05, 0x00, 0x00}},
+		// Type 5: valid length header but value truncated
+		{name: "type 5 truncated value", input: []byte{0x05, 0x00, 0x10, 0x00}},
+		// Unknown type: valid length but value truncated
+		{name: "unknown type truncated value", input: []byte{0xFF, 0x00, 0x08, 0x00}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

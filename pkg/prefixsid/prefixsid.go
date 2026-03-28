@@ -87,11 +87,12 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 			if psid.OriginatorSRGB.Length < 2 {
 				return nil, fmt.Errorf("prefix SID originator SRGB length %d too short", psid.OriginatorSRGB.Length)
 			}
-			srgbCount := int(psid.OriginatorSRGB.Length-2) / 6
+			srgbBytes := int(psid.OriginatorSRGB.Length - 2)
+			if p+srgbBytes > len(b) {
+				return nil, fmt.Errorf("prefix SID originator SRGB value truncated at offset %d: need %d bytes, have %d", p, srgbBytes, len(b)-p)
+			}
+			srgbCount := srgbBytes / 6
 			for i := 0; i < srgbCount; i++ {
-				if p+6 > len(b) {
-					return nil, fmt.Errorf("prefix SID SRGB entry %d truncated at offset %d: need 6 bytes, have %d", i, p, len(b)-p)
-				}
 				srgb := SRGB{}
 				t := make([]byte, 4)
 				copy(t, b[p:p+3])
@@ -103,6 +104,8 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 				p += 3
 				psid.OriginatorSRGB.SRGB = append(psid.OriginatorSRGB.SRGB, srgb)
 			}
+			// Skip any trailing bytes not forming a complete SRGB entry
+			p += srgbBytes - srgbCount*6
 		case 5:
 			p++
 			if p+2 > len(b) {
@@ -110,6 +113,9 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 			}
 			l := binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
+			if l == 0 {
+				return nil, fmt.Errorf("prefix SID SRv6 L3 service TLV has zero length")
+			}
 			if p+int(l) > len(b) {
 				return nil, fmt.Errorf("prefix SID SRv6 L3 service value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
 			}
