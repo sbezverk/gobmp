@@ -141,8 +141,11 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			}
 			sl = int(b[p])
 			p++
-			if p+sl > len(b) || sl < 3 {
-				return nil, fmt.Errorf("SR Policy ENLP sub-TLV truncated at offset %d: need at least 3 bytes, have %d", p, len(b)-p)
+			if sl < 3 {
+				return nil, fmt.Errorf("SR Policy ENLP sub-TLV too short: need at least 3 bytes, have %d", sl)
+			}
+			if p+sl > len(b) {
+				return nil, fmt.Errorf("SR Policy ENLP sub-TLV truncated at offset %d: need %d bytes, have %d", p, sl, len(b)-p)
 			}
 			tlv.ENLP = &ENLP{
 				Flags: b[p],
@@ -155,8 +158,11 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			}
 			sl = int(b[p])
 			p++
-			if p+sl > len(b) || sl < 1 {
-				return nil, fmt.Errorf("SR Policy priority sub-TLV truncated at offset %d: need at least 1 byte, have %d", p, len(b)-p)
+			if sl < 1 {
+				return nil, fmt.Errorf("SR Policy priority sub-TLV too short: need at least 1 byte, have %d", sl)
+			}
+			if p+sl > len(b) {
+				return nil, fmt.Errorf("SR Policy priority sub-TLV truncated at offset %d: need %d bytes, have %d", p, sl, len(b)-p)
 			}
 			tlv.Priority = b[p]
 		case PATHNAMESTLV:

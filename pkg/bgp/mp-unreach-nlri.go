@@ -230,7 +230,7 @@ func UnmarshalMPUnReachNLRI(b []byte, addPath map[int]bool, srv6 ...bool) (MPNLR
 	mp := MPUnReachNLRI{
 		addPath: addPath,
 	}
-	if len(srv6) == 1 {
+	if len(srv6) > 0 {
 		mp.SRv6 = srv6[0]
 	}
 	p := 0

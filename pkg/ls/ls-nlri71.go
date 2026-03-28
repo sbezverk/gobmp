@@ -93,17 +93,9 @@ func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 			el.LS = n
 		default:
 			el.LS = make([]byte, el.Length)
-			if p+int(el.Length) <= len(b) {
-				copy(el.LS.([]byte), b[p:p+int(el.Length)])
-			} else {
-				copy(el.LS.([]byte), b[p:])
-			}
+			copy(el.LS.([]byte), b[p:p+int(el.Length)])
 		}
-		if p+int(el.Length) <= len(b) {
-			p += int(el.Length)
-		} else {
-			p = len(b)
-		}
+		p += int(el.Length)
 
 		ls.NLRI = append(ls.NLRI, el)
 	}
