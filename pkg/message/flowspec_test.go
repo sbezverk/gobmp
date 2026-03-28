@@ -392,15 +392,15 @@ func TestFlowspecUnmarshalJSON_PrefixOffset_Fractional(t *testing.T) {
 func buildFlowspecJSON(t *testing.T, specs []map[string]interface{}) []byte {
 	t.Helper()
 	obj := map[string]interface{}{
-		"action":           "add",
-		"spec_hash":        "abc123",
-		"base_attrs":       map[string]interface{}{},
-		"is_ipv4":          true,
-		"is_nexthop_ipv4":  true,
-		"nexthop":          "10.0.0.1",
-		"peer_asn":         float64(65000),
-		"router_ip":        "192.168.1.1",
-		"timestamp":        "2026-01-01T00:00:00Z",
+		"action":          "add",
+		"spec_hash":       "abc123",
+		"base_attrs":      map[string]interface{}{},
+		"is_ipv4":         true,
+		"is_nexthop_ipv4": true,
+		"nexthop":         "10.0.0.1",
+		"peer_asn":        float64(65000),
+		"router_ip":       "192.168.1.1",
+		"timestamp":       "2026-01-01T00:00:00Z",
 	}
 	if specs != nil {
 		obj["spec"] = specs
@@ -410,4 +410,43 @@ func buildFlowspecJSON(t *testing.T, specs []map[string]interface{}) []byte {
 		t.Fatalf("failed to build test JSON: %v", err)
 	}
 	return b
+}
+
+// TestFlowspecUnmarshalJSON_RD validates RD field round-trip through UnmarshalJSON.
+func TestFlowspecUnmarshalJSON_RD(t *testing.T) {
+	obj := map[string]interface{}{
+		"action":          "add",
+		"spec_hash":       "abc123",
+		"base_attrs":      map[string]interface{}{},
+		"is_ipv4":         true,
+		"is_nexthop_ipv4": true,
+		"nexthop":         "10.0.0.1",
+		"peer_asn":        float64(65000),
+		"router_ip":       "192.168.1.1",
+		"timestamp":       "2026-01-01T00:00:00Z",
+		"rd":              "100:200",
+	}
+	b, err := json.Marshal(obj)
+	if err != nil {
+		t.Fatalf("failed to build test JSON: %v", err)
+	}
+	fs := &Flowspec{}
+	if err := fs.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON failed: %v", err)
+	}
+	if fs.RD != "100:200" {
+		t.Errorf("RD = %q, want %q", fs.RD, "100:200")
+	}
+}
+
+// TestFlowspecUnmarshalJSON_NoRD validates RD is empty when not in JSON.
+func TestFlowspecUnmarshalJSON_NoRD(t *testing.T) {
+	input := buildFlowspecJSON(t, nil)
+	fs := &Flowspec{}
+	if err := fs.UnmarshalJSON(input); err != nil {
+		t.Fatalf("UnmarshalJSON failed: %v", err)
+	}
+	if fs.RD != "" {
+		t.Errorf("RD = %q, want empty for non-VPN flowspec", fs.RD)
+	}
 }

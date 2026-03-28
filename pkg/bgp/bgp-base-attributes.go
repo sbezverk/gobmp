@@ -40,8 +40,8 @@ type BaseAttributes struct {
 	PMSITunnel       *pmsi.PMSITunnel `json:"pmsi_tunnel,omitempty"` // RFC 6514 PMSI Tunnel Attribute (Type 22)
 	TunnelEncapAttr  []byte           `json:"-"`
 	// TraficEng
-	// IPv6SpecExtCommunity
-	AIGP *AIGP `json:"aigp,omitempty"` // RFC 7311 AIGP Attribute (Type 26)
+	IPv6ExtCommunityList []string `json:"ipv6_ext_community_list,omitempty"` // RFC 5701
+	AIGP                 *AIGP    `json:"aigp,omitempty"`                    // RFC 7311 AIGP Attribute (Type 26)
 	// PEDistinguisherLable
 	LgCommunityList []string      `json:"large_community_list,omitempty"`
 	BGPPrefixSID    *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
@@ -116,6 +116,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if !reflect.DeepEqual(sort.SortMergeComparableSlice(ba.LgCommunityList), sort.SortMergeComparableSlice(oba.LgCommunityList)) {
 		equal = false
 		diffs = append(diffs, "large_community_list mismatch")
+	}
+	if !reflect.DeepEqual(sort.SortMergeComparableSlice(ba.IPv6ExtCommunityList), sort.SortMergeComparableSlice(oba.IPv6ExtCommunityList)) {
+		equal = false
+		diffs = append(diffs, "ipv6_ext_community_list mismatch")
 	}
 
 	return equal, diffs
@@ -206,6 +210,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			// Traffic Engineering - RFC 5543
 		case 25:
 			// IPv6 Address Specific Extended Community - RFC 5701
+			baseAttr.IPv6ExtCommunityList = unmarshalAttrIPv6ExtCommunity(b)
 		case 26:
 			// RFC 7311: AIGP Attribute
 			aigp, err := UnmarshalAIGP(b)

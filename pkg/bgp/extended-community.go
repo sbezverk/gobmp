@@ -499,6 +499,26 @@ var extComm = map[uint8]func(uint8, []byte) string{
 	0x82: type82,
 }
 
+// unmarshalAttrIPv6ExtCommunity parses IPv6 Address Specific Extended Communities (RFC 5701).
+// Each community is 20 bytes: Type(1) + SubType(1) + IPv6 Address(16) + Local Admin(2).
+func unmarshalAttrIPv6ExtCommunity(b []byte) []string {
+	if len(b) == 0 {
+		return nil
+	}
+	if len(b)%20 != 0 {
+		glog.Errorf("IPv6 Extended Community attribute length %d is not a multiple of 20; %d trailing bytes ignored", len(b), len(b)%20)
+	}
+	result := make([]string, 0, len(b)/20)
+	for p := 0; p+20 <= len(b); p += 20 {
+		subType := b[p+1]
+		result = append(result, type5(subType, b[p+2:p+20]))
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
 func (ext *ExtCommunity) String() string {
 	var s string
 	// var prefix string
