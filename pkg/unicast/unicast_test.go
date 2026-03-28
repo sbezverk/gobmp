@@ -2,6 +2,7 @@ package unicast
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -351,6 +352,16 @@ func TestUnmarshalLUNLRI_NegativePrefixLength(t *testing.T) {
 	if len(result.NLRI) != 1 {
 		t.Fatalf("expected 1 NLRI after retry, got %d", len(result.NLRI))
 	}
+	route := result.NLRI[0]
+	if route.Length != 32 {
+		t.Errorf("expected prefix length 32, got %d", route.Length)
+	}
+	if len(route.Prefix) != 4 || route.Prefix[0] != 0x0A || route.Prefix[3] != 0x07 {
+		t.Errorf("expected prefix 10.0.0.7, got %v", route.Prefix)
+	}
+	if len(route.Label) != 1 || !route.Label[0].BoS {
+		t.Errorf("expected 1 label with BoS=true, got %v", route.Label)
+	}
 }
 
 // TestUnmarshalLUNLRI_PrefixLengthExceeds128 validates error for prefix length > 128 bits.
@@ -366,5 +377,8 @@ func TestUnmarshalLUNLRI_PrefixLengthExceeds128(t *testing.T) {
 	_, err := UnmarshalLUNLRI(input, false)
 	if err == nil {
 		t.Fatal("expected error for prefix length exceeding 128 bits, got nil")
+	}
+	if !strings.Contains(err.Error(), "exceeds maximum 128") {
+		t.Errorf("expected error about exceeding 128 bits, got: %v", err)
 	}
 }
