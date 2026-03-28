@@ -102,3 +102,19 @@ func TestIPv6PrefixSpec_ErrorPaths(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalFlowspecNLRI_ZeroLength(t *testing.T) {
+	// A single 0x00 byte sets fs.Length = 0, triggering the
+	// "invalid zero-length Flowspec NLRI" guard.
+	input := []byte{0x00}
+	got, err := UnmarshalFlowspecNLRI(input)
+	if err == nil {
+		t.Fatal("expected error for zero-length FlowSpec NLRI, got nil")
+	}
+	if got != nil {
+		t.Fatalf("expected nil NLRI, got %+v", got)
+	}
+	if !strings.Contains(err.Error(), "zero-length Flowspec NLRI") {
+		t.Fatalf("unexpected error message: got %q, want substring %q", err.Error(), "zero-length Flowspec NLRI")
+	}
+}

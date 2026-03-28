@@ -43,8 +43,8 @@ type Weight struct {
 	Weight uint32 `json:"weight,omitempty"`
 }
 
-// UnmarshalSON reconstructs Weight struct from a slice of bytes
-func (w *Weight) UnmarshalSON(b []byte) error {
+// UnmarshalJSON reconstructs Weight struct from JSON data.
+func (w *Weight) UnmarshalJSON(b []byte) error {
 	var objmap map[string]json.RawMessage
 	if err := json.Unmarshal(b, &objmap); err != nil {
 		return err
@@ -55,7 +55,7 @@ func (w *Weight) UnmarshalSON(b []byte) error {
 		}
 	}
 	if b, ok := objmap["weight"]; ok {
-		if err := json.Unmarshal(b, &w.Flags); err != nil {
+		if err := json.Unmarshal(b, &w.Weight); err != nil {
 			return err
 		}
 	}

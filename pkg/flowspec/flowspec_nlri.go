@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/tools"
 )
 
@@ -17,10 +18,12 @@ type Spec interface {
 }
 
 // NLRI defines Flowspec NLRI structure.
+// RD is populated only for VPN FlowSpec (SAFI=134) per RFC 8955 Section 6.
 type NLRI struct {
 	Length   uint16
 	Spec     []Spec
 	SpecHash string
+	RD       string `json:"rd,omitempty"`
 }
 
 // GetSpecHash returns calculated MD5 for Flowspec NLRI's Spec.
@@ -58,6 +61,76 @@ const (
 	Type12 SpecType = 12
 )
 
+// parseFlowspecSpecs parses the filter spec portion of a FlowSpec NLRI (no length prefix, no RD).
+// Set ipv6=true for IPv6 FlowSpec (RFC 8956) prefix encoding with offset field.
+func parseFlowspecSpecs(b []byte, ipv6 bool) ([]Spec, error) {
+	var specs []Spec
+	p := 0
+	for p < len(b) {
+		t := b[p]
+		l := 0
+		var spec Spec
+		var err error
+		switch SpecType(t) {
+		case Type1:
+			fallthrough
+		case Type2:
+			if ipv6 {
+				spec, l, err = makeIPv6PrefixSpec(b[p:])
+			} else {
+				spec, l, err = makePrefixSpec(b[p:])
+			}
+			if err != nil {
+				return nil, err
+			}
+		case Type3:
+			fallthrough
+		case Type4:
+			fallthrough
+		case Type5:
+			fallthrough
+		case Type6:
+			fallthrough
+		case Type7:
+			fallthrough
+		case Type8:
+			fallthrough
+		case Type9:
+			fallthrough
+		case Type10:
+			fallthrough
+		case Type11:
+			fallthrough
+		case Type12:
+			spec, l, err = makeGenericSpec(b[p:])
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("unknown Flowspec type: %+v", t)
+		}
+		if l == 0 {
+			return nil, fmt.Errorf("spec parser returned zero-length advance at offset %d, type %d", p, t)
+		}
+		specs = append(specs, spec)
+		p += l
+	}
+	return specs, nil
+}
+
+// computeSpecHash calculates an MD5 hash of specs with an optional namespace prefix.
+func computeSpecHash(specs []Spec, prefix string) (string, error) {
+	sp, err := json.Marshal(specs)
+	if err != nil {
+		return "", err
+	}
+	if prefix != "" {
+		sp = append([]byte(prefix), sp...)
+	}
+	s := md5.Sum(sp)
+	return hex.EncodeToString(s[:]), nil
+}
+
 // unmarshalSingleFlowspecNLRI parses a single Flowspec NLRI starting at b[0].
 // It reads the length prefix, parses all filter specs within that NLRI, and
 // returns the NLRI plus the total number of bytes consumed (including the length field).
@@ -79,68 +152,83 @@ func unmarshalSingleFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, int, error) {
 		fs.Length = uint16(b[p])
 		p++
 	}
+	if fs.Length == 0 {
+		return nil, 0, fmt.Errorf("invalid zero-length Flowspec NLRI")
+	}
 	end := p + int(fs.Length)
 	if end > len(b) {
 		return nil, 0, fmt.Errorf("not enough bytes to unmarshal flowspec NLRI: need %d bytes, have %d", fs.Length, len(b)-p)
 	}
-	for p < end {
-		t := b[p]
-		l := 0
-		var spec Spec
-		var err error
-		switch SpecType(t) {
-		case Type1:
-			fallthrough
-		case Type2:
-			if ipv6 {
-				spec, l, err = makeIPv6PrefixSpec(b[p:end])
-			} else {
-				spec, l, err = makePrefixSpec(b[p:end])
-			}
-			if err != nil {
-				return nil, 0, err
-			}
-		case Type3:
-			fallthrough
-		case Type4:
-			fallthrough
-		case Type5:
-			fallthrough
-		case Type6:
-			fallthrough
-		case Type7:
-			fallthrough
-		case Type8:
-			fallthrough
-		case Type9:
-			fallthrough
-		case Type10:
-			fallthrough
-		case Type11:
-			fallthrough
-		case Type12:
-			spec, l, err = makeGenericSpec(b[p:end])
-			if err != nil {
-				return nil, 0, err
-			}
-		default:
-			return nil, 0, fmt.Errorf("unknown Flowspec type: %+v", t)
-		}
-		fs.Spec = append(fs.Spec, spec)
-		p += l
-	}
-
-	// Calculating hash of all recovered spec, namespaced by address family to
-	// prevent IPv4 and IPv6 rules with identical spec sets from colliding on the publish key.
-	sp, err := json.Marshal(fs.Spec)
+	specs, err := parseFlowspecSpecs(b[p:end], ipv6)
 	if err != nil {
 		return nil, 0, err
 	}
+	fs.Spec = specs
+
+	// Calculating hash of all recovered spec, namespaced by address family to
+	// prevent IPv4 and IPv6 rules with identical spec sets from colliding on the publish key.
+	hashPrefix := ""
 	if ipv6 {
-		sp = append([]byte("afi=2;"), sp...)
+		hashPrefix = "afi=2;"
 	}
-	s := md5.Sum(sp)
-	fs.SpecHash = hex.EncodeToString(s[:])
+	fs.SpecHash, err = computeSpecHash(fs.Spec, hashPrefix)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return fs, end, nil
+}
+
+// unmarshalSingleVPNFlowspecNLRI parses a single VPN FlowSpec NLRI (SAFI=134) per RFC 8955 Section 6.
+// The NLRI payload starts with an 8-byte Route Distinguisher followed by standard FlowSpec specs.
+func unmarshalSingleVPNFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, int, error) {
+	if len(b) == 0 {
+		return nil, 0, fmt.Errorf("NLRI length is 0")
+	}
+	fs := &NLRI{}
+	p := 0
+	if b[p]&0xf0 == 0xf0 {
+		if len(b) < 2 {
+			return nil, 0, fmt.Errorf("need 2 bytes for extended NLRI length, have %d", len(b))
+		}
+		fs.Length = ((uint16(b[p]) & 0x0f) << 8) | uint16(b[p+1])
+		p += 2
+	} else {
+		fs.Length = uint16(b[p])
+		p++
+	}
+	if fs.Length == 0 {
+		return nil, 0, fmt.Errorf("invalid zero-length VPN Flowspec NLRI")
+	}
+	end := p + int(fs.Length)
+	if end > len(b) {
+		return nil, 0, fmt.Errorf("not enough bytes to unmarshal VPN flowspec NLRI: need %d bytes, have %d", fs.Length, len(b)-p)
+	}
+	// RFC 8955 Section 6: First 8 bytes of payload are the Route Distinguisher.
+	if end-p < 8 {
+		return nil, 0, fmt.Errorf("VPN Flowspec NLRI too short for Route Distinguisher: need 8 bytes, have %d", end-p)
+	}
+	rd, err := base.MakeRD(b[p : p+8])
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to parse Route Distinguisher: %w", err)
+	}
+	fs.RD = rd.String()
+	p += 8
+
+	specs, err := parseFlowspecSpecs(b[p:end], ipv6)
+	if err != nil {
+		return nil, 0, fmt.Errorf("VPN FlowSpec (RD=%s): %w", fs.RD, err)
+	}
+	fs.Spec = specs
+
+	hashPrefix := fmt.Sprintf("vpn:%s;", fs.RD)
+	if ipv6 {
+		hashPrefix = fmt.Sprintf("vpn:%s;afi=2;", fs.RD)
+	}
+	fs.SpecHash, err = computeSpecHash(fs.Spec, hashPrefix)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	return fs, end, nil
 }
@@ -213,6 +301,50 @@ func unmarshalAllFlowspecNLRIWithAF(b []byte, ipv6 bool) ([]*NLRI, error) {
 		fs, consumed, err := unmarshalSingleFlowspecNLRI(b[p:], ipv6)
 		if err != nil {
 			return nil, fmt.Errorf("NLRI at offset %d: %w", p, err)
+		}
+		result = append(result, fs)
+		p += consumed
+	}
+	return result, nil
+}
+
+// UnmarshalVPNFlowspecNLRI parses a single VPN FlowSpec NLRI (SAFI=134) per RFC 8955 Section 6.
+// The NLRI payload is prefixed with an 8-byte Route Distinguisher before the FlowSpec filter specs.
+// Set ipv6=true for AFI=2 (IPv6 prefix encoding with offset field per RFC 8956).
+func UnmarshalVPNFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, error) {
+	if glog.V(5) {
+		glog.Infof("VPN Flowspec NLRI Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) == 0 {
+		return nil, fmt.Errorf("NLRI length is 0")
+	}
+	fs, consumed, err := unmarshalSingleVPNFlowspecNLRI(b, ipv6)
+	if err != nil {
+		return nil, err
+	}
+	if consumed < len(b) {
+		if glog.V(5) {
+			glog.Infof("UnmarshalVPNFlowspecNLRI: %d trailing bytes ignored (multiple NLRIs), use UnmarshalAllVPNFlowspecNLRI", len(b)-consumed)
+		}
+	}
+	return fs, nil
+}
+
+// UnmarshalAllVPNFlowspecNLRI parses one or more VPN FlowSpec NLRIs (SAFI=134) per RFC 8955 Section 6.
+// Returns nil slice with nil error for empty input (withdraw-all signal).
+func UnmarshalAllVPNFlowspecNLRI(b []byte, ipv6 bool) ([]*NLRI, error) {
+	if glog.V(5) {
+		glog.Infof("VPN Flowspec NLRI Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) == 0 {
+		return nil, nil
+	}
+	var result []*NLRI
+	p := 0
+	for p < len(b) {
+		fs, consumed, err := unmarshalSingleVPNFlowspecNLRI(b[p:], ipv6)
+		if err != nil {
+			return nil, fmt.Errorf("VPN NLRI at offset %d: %w", p, err)
 		}
 		result = append(result, fs)
 		p += consumed

@@ -170,15 +170,18 @@ func (mp *MPUnReachNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error) {
 		}
 		return flowspec.UnmarshalFlowspecNLRI(mp.WithdrawnRoutes)
 	}
-	if mp.SubAddressFamilyID == 134 {
-		return nil, fmt.Errorf("VPN Flowspec (AFI=%d, SAFI=134) is not yet implemented", mp.AddressFamilyID)
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 134 {
+		if len(mp.WithdrawnRoutes) == 0 {
+			return nil, nil
+		}
+		return flowspec.UnmarshalVPNFlowspecNLRI(mp.WithdrawnRoutes, mp.AddressFamilyID == 2)
 	}
 
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
 }
 
 // GetAllFlowspecNLRI parses all Flowspec NLRIs from MP_UNREACH_NLRI.
-// Supports IPv4 (AFI=1, RFC 8955) and IPv6 (AFI=2, RFC 8956).
+// Supports IPv4 (AFI=1, RFC 8955), IPv6 (AFI=2, RFC 8956), and VPN (SAFI=134, RFC 8955 §6).
 // Returns nil slice with nil error for empty withdrawn routes (withdraw-all).
 func (mp *MPUnReachNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
 	if mp.AddressFamilyID == 1 && mp.SubAddressFamilyID == 133 {
@@ -187,8 +190,8 @@ func (mp *MPUnReachNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
 	if mp.AddressFamilyID == 2 && mp.SubAddressFamilyID == 133 {
 		return flowspec.UnmarshalAllIPv6FlowspecNLRI(mp.WithdrawnRoutes)
 	}
-	if mp.SubAddressFamilyID == 134 {
-		return nil, fmt.Errorf("VPN Flowspec (AFI=%d, SAFI=134) is not yet implemented", mp.AddressFamilyID)
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 134 {
+		return flowspec.UnmarshalAllVPNFlowspecNLRI(mp.WithdrawnRoutes, mp.AddressFamilyID == 2)
 	}
 
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
@@ -196,8 +199,8 @@ func (mp *MPUnReachNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
 
 // GetNLRIMCASTVPN instantiates a MCAST-VPN NLRI structure based on withdrawn routes
 func (mp *MPUnReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
-	if mp.SubAddressFamilyID == 5 {
-		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes)
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 5 {
+		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes, mp.AddressFamilyID == 2)
 	}
 
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
@@ -205,8 +208,8 @@ func (mp *MPUnReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
 
 // GetNLRIMVPN instantiates Multicast VPN (SAFI 129) NLRI
 func (mp *MPUnReachNLRI) GetNLRIMVPN() (*mcastvpn.Route, error) {
-	if mp.SubAddressFamilyID == 129 {
-		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes)
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 129 {
+		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes, mp.AddressFamilyID == 2)
 	}
 
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")

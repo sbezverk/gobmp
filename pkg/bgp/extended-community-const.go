@@ -105,7 +105,7 @@ const (
 
 	// Non-Transitive Two-Octet AS-Specific Extended Community Sub-Types
 
-	//ECPLinkBandwidth extended community prefix for Link Bandwidth Extended Community	[draft-ietf-idr-link-bandwidth-00]
+	//ECPLinkBandwidth extended community prefix for Link Bandwidth Extended Community	[draft-ietf-idr-link-bandwidth]
 	ECPLinkBandwidth = "link-bw="
 	// ECPVNIID extended community prefix for Non-Transitive Virtual-Network Identifier Extended Community [draft-drao-bgp-l3vpn-virtual-network-overlays]
 	// Keeps "vni=" as the canonical prefix; the transitive variant (ECPVirtualNetworkID, Transitive Two-Octet AS-Specific subtype 0x80) uses "t-vni=".

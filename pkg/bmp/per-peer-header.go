@@ -18,10 +18,6 @@ var (
 	ErrInvFlagRequestForPeerType = errors.New("unsupported request for the peer type")
 )
 
-const (
-	BMP_PEER_HEADER_SIZE = 42
-)
-
 type PeerType uint8
 
 const (
@@ -289,8 +285,8 @@ func UnmarshalPerPeerHeader(b []byte) (*PerPeerHeader, error) {
 	if glog.V(6) {
 		glog.Infof("BMP Per Peer Header Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) < BMP_PEER_HEADER_SIZE {
-		return nil, fmt.Errorf("not enough bytes to decode BMP per-peer header, need %d bytes, have %d", BMP_PEER_HEADER_SIZE, len(b))
+	if len(b) < PerPeerHeaderLength {
+		return nil, fmt.Errorf("not enough bytes to decode BMP per-peer header, need %d bytes, have %d", PerPeerHeaderLength, len(b))
 	}
 	pph := &PerPeerHeader{
 		PeerDistinguisher: make([]byte, 8), // newPeerDistinguisher(),
