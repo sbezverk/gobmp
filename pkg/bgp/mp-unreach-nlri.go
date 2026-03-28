@@ -25,6 +25,7 @@ type MPUnReachNLRI struct {
 	SubAddressFamilyID uint8
 	WithdrawnRoutes    []byte
 	addPath            map[int]bool
+	SRv6               bool
 }
 
 // GetAFISAFIType returns underlaying NLRI's type based on AFI/SAFI
@@ -50,7 +51,7 @@ func (mp *MPUnReachNLRI) IsNextHopIPv6() bool {
 
 // GetNLRI71 check for presence of NLRI 71 in the NLRI 14 NLRI data and if exists, instantiate NLRI71 object
 func (mp *MPUnReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
-	if mp.SubAddressFamilyID == 71 {
+	if mp.AddressFamilyID == 16388 && mp.SubAddressFamilyID == 71 {
 		nlri71, err := ls.UnmarshalLSNLRI71(mp.WithdrawnRoutes)
 		if err != nil {
 			return nil, err
@@ -63,7 +64,7 @@ func (mp *MPUnReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 
 // GetNLRI73 check for presence of NLRI 73 in the NLRI 14 NLRI data and if exists, instantiate NLRI73 object
 func (mp *MPUnReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
-	if mp.SubAddressFamilyID == 73 {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 73 {
 		nlri73, err := srpolicy.UnmarshalLSNLRI73(mp.WithdrawnRoutes)
 		if err != nil {
 			return nil, err
@@ -78,7 +79,7 @@ func (mp *MPUnReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
 func (mp *MPUnReachNLRI) GetNLRIL3VPN() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 128 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
-		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.WithdrawnRoutes, pathID)
+		nlri, err := l3vpn.UnmarshalL3VPNNLRI(mp.WithdrawnRoutes, pathID, mp.SRv6)
 		if err != nil {
 			return nil, err
 		}
@@ -222,12 +223,15 @@ func (mp *MPUnReachNLRI) GetNLRIRTC() (*rtc.Route, error) {
 }
 
 // UnmarshalMPUnReachNLRI builds MP UnReach NLRI attributes
-func UnmarshalMPUnReachNLRI(b []byte, addPath map[int]bool) (MPNLRI, error) {
+func UnmarshalMPUnReachNLRI(b []byte, addPath map[int]bool, srv6 ...bool) (MPNLRI, error) {
 	if glog.V(6) {
 		glog.Infof("MPUnReachNLRI Raw: %s", tools.MessageHex(b))
 	}
 	mp := MPUnReachNLRI{
 		addPath: addPath,
+	}
+	if len(srv6) == 1 {
+		mp.SRv6 = srv6[0]
 	}
 	p := 0
 	if p+3 > len(b) {

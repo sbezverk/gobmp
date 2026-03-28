@@ -40,11 +40,17 @@ func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 		NLRI: make([]Element, 0),
 	}
 	for p := 0; p < len(b); {
+		if p+4 > len(b) {
+			return nil, fmt.Errorf("NLRI71 truncated at offset %d: need 4 bytes for TLV header, have %d", p, len(b)-p)
+		}
 		el := Element{}
 		el.Type = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		el.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
+		if p+int(el.Length) > len(b) {
+			return nil, fmt.Errorf("NLRI71 TLV type %d truncated at offset %d: need %d bytes, have %d", el.Type, p, el.Length, len(b)-p)
+		}
 
 		switch el.Type {
 		case 1:

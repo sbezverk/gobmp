@@ -143,6 +143,80 @@ func TestUnmarshalSRPolicyTLV(t *testing.T) {
 	}
 }
 
+func TestUnmarshalSRPolicyTLV_SubTLVBounds(t *testing.T) {
+	// Helper: wrap sub-TLV bytes in a valid tunnel type header
+	wrap := func(stlvBytes []byte) []byte {
+		hdr := make([]byte, 4)
+		binary.BigEndian.PutUint16(hdr[0:2], SRPOLICYTUNNELTYPE)
+		binary.BigEndian.PutUint16(hdr[2:4], uint16(len(stlvBytes)))
+		return append(hdr, stlvBytes...)
+	}
+
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "segment list truncated length",
+			input: wrap([]byte{SEGMENTLISTSTLV}), // type byte only, no length
+		},
+		{
+			name: "segment list truncated value",
+			input: wrap([]byte{
+				SEGMENTLISTSTLV,
+				0x00, 0x20, // Length: 32 bytes but none available
+			}),
+		},
+		{
+			name:  "BSID no length byte",
+			input: wrap([]byte{BSIDSTLV}),
+		},
+		{
+			name: "BSID truncated value",
+			input: wrap([]byte{
+				BSIDSTLV,
+				0x10, // Length: 16 but 0 available
+			}),
+		},
+		{
+			name:  "preference no length byte",
+			input: wrap([]byte{PREFERENCESTLV}),
+		},
+		{
+			name:  "ENLP no length byte",
+			input: wrap([]byte{ENLPSTLV}),
+		},
+		{
+			name: "ENLP too short value",
+			input: wrap([]byte{
+				ENLPSTLV,
+				0x01, // Length: 1, need at least 3
+				0x00,
+			}),
+		},
+		{
+			name:  "priority no length byte",
+			input: wrap([]byte{PRIORITYSTLV}),
+		},
+		{
+			name:  "pathname no length byte",
+			input: wrap([]byte{PATHNAMESTLV}),
+		},
+		{
+			name:  "unknown type no length byte",
+			input: wrap([]byte{0xFF}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalSRPolicyTLV(tt.input)
+			if err == nil {
+				t.Fatal("expected error for truncated sub-TLV")
+			}
+		})
+	}
+}
+
 // ============================================================================
 // Additional UnmarshalSRPolicyTLV Tests - Wire Format Parsing
 // ============================================================================

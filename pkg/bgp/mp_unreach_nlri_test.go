@@ -111,6 +111,29 @@ func TestUnmarshalMPUnReachNLRI(t *testing.T) {
 	}
 }
 
+// TestUnmarshalMPUnReachNLRI_SRv6Flag verifies the SRv6 flag is propagated.
+func TestUnmarshalMPUnReachNLRI_SRv6Flag(t *testing.T) {
+	// AFI=1, SAFI=128 (L3VPN)
+	input := []byte{0x00, 0x01, 0x80}
+	nlri, err := UnmarshalMPUnReachNLRI(input, map[int]bool{}, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	mp := nlri.(*MPUnReachNLRI)
+	if !mp.SRv6 {
+		t.Error("expected SRv6 flag to be true")
+	}
+
+	nlri2, err := UnmarshalMPUnReachNLRI(input, map[int]bool{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	mp2 := nlri2.(*MPUnReachNLRI)
+	if mp2.SRv6 {
+		t.Error("expected SRv6 flag to be false when not passed")
+	}
+}
+
 // TestMPUnReachNLRI_GetAFISAFIType covers GetAFISAFIType for key AFI/SAFI combos.
 func TestMPUnReachNLRI_GetAFISAFIType(t *testing.T) {
 	tests := []struct {
@@ -255,6 +278,32 @@ func TestMPUnReachNLRI_NLRINotFound(t *testing.T) {
 		_, err := mp.GetNLRIRTC()
 		if !errors.As(err, &notFound) {
 			t.Errorf("expected NLRINotFoundError, got %v", err)
+		}
+	})
+
+	// N11: Verify wrong AFI with correct SAFI is rejected
+	t.Run("GetNLRI71 wrong AFI correct SAFI", func(t *testing.T) {
+		mp71 := &MPUnReachNLRI{
+			AddressFamilyID:    1, // should be 16388
+			SubAddressFamilyID: 71,
+			WithdrawnRoutes:    []byte{},
+			addPath:            map[int]bool{},
+		}
+		_, err := mp71.GetNLRI71()
+		if !errors.As(err, &notFound) {
+			t.Errorf("expected NLRINotFoundError for wrong AFI, got %T: %v", err, err)
+		}
+	})
+	t.Run("GetNLRI73 wrong AFI correct SAFI", func(t *testing.T) {
+		mp73 := &MPUnReachNLRI{
+			AddressFamilyID:    16388, // should be 1 or 2
+			SubAddressFamilyID: 73,
+			WithdrawnRoutes:    []byte{},
+			addPath:            map[int]bool{},
+		}
+		_, err := mp73.GetNLRI73()
+		if !errors.As(err, &notFound) {
+			t.Errorf("expected NLRINotFoundError for wrong AFI, got %T: %v", err, err)
 		}
 	})
 }

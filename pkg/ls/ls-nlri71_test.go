@@ -1,6 +1,7 @@
 package ls
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -85,5 +86,43 @@ func TestLSNLRI71(t *testing.T) {
 
 			}
 		})
+	}
+}
+
+func TestUnmarshalLSNLRI71_TruncatedHeader(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{name: "1 byte", input: []byte{0x00}},
+		{name: "2 bytes", input: []byte{0x00, 0x01}},
+		{name: "3 bytes", input: []byte{0x00, 0x01, 0x00}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalLSNLRI71(tt.input)
+			if err == nil {
+				t.Fatal("expected error for truncated TLV header")
+			}
+			if !strings.Contains(err.Error(), "truncated") {
+				t.Errorf("expected truncation error, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestUnmarshalLSNLRI71_TruncatedValue(t *testing.T) {
+	// Type=1 (Node), Length=100 but only 2 bytes of value
+	input := []byte{
+		0x00, 0x01, // Type: 1 (Node NLRI)
+		0x00, 0x64, // Length: 100
+		0x00, 0x00, // Only 2 bytes
+	}
+	_, err := UnmarshalLSNLRI71(input)
+	if err == nil {
+		t.Fatal("expected error for truncated TLV value")
+	}
+	if !strings.Contains(err.Error(), "truncated") {
+		t.Errorf("expected truncation error, got: %v", err)
 	}
 }
