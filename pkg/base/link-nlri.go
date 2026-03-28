@@ -3,6 +3,7 @@ package base
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"net"
 
@@ -129,7 +130,8 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 		return nil, err
 	}
 	l.LocalNode = ln
-	l.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)+4]))
+	lnh := md5.Sum(b[p : p+int(ndl)+4])
+	l.LocalNodeHash = hex.EncodeToString(lnh[:])
 	// Skip Node Type and Length 4 bytes
 	p += 4
 	p += int(ndl)
@@ -147,7 +149,8 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 		return nil, err
 	}
 	l.RemoteNode = rn
-	l.RemoteNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)+4]))
+	rnh := md5.Sum(b[p : p+int(ndl)+4])
+	l.RemoteNodeHash = hex.EncodeToString(rnh[:])
 	p += int(ndl)
 	// Skip Node Type and Length 4 bytes
 	p += 4
@@ -157,6 +160,7 @@ func UnmarshalLinkNLRI(b []byte) (*LinkNLRI, error) {
 		return nil, err
 	}
 	l.Link = ld
-	l.LinkHash = fmt.Sprintf("%x", md5.Sum(b[p:]))
+	lkh := md5.Sum(b[p:])
+	l.LinkHash = hex.EncodeToString(lkh[:])
 	return &l, nil
 }

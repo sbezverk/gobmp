@@ -3,6 +3,7 @@ package bmp
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -99,13 +100,12 @@ func (p *PerPeerHeader) GetPeerTimestamp() string {
 
 // GetPeerHash calculates Peer Hash and returns as a hex string
 func (p *PerPeerHeader) GetPeerHash() string {
-	data := []byte{}
-	data = append(data, p.PeerDistinguisher...)
-	data = append(data, p.PeerAddress...)
-	data = append(data, []byte(fmt.Sprintf("%d", p.PeerAS))...)
-	data = append(data, p.PeerBGPID...)
-
-	return fmt.Sprintf("%x", md5.Sum(data))
+	h := md5.New()
+	h.Write(p.PeerDistinguisher)
+	h.Write(p.PeerAddress)
+	h.Write([]byte(strconv.FormatUint(uint64(p.PeerAS), 10)))
+	h.Write(p.PeerBGPID)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // GetPeerBGPIDString returns a string representation of Peer BGP ID

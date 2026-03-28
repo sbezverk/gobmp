@@ -118,17 +118,13 @@ func parseFlowspecSpecs(b []byte, ipv6 bool) ([]Spec, error) {
 	return specs, nil
 }
 
-// computeSpecHash calculates an MD5 hash of specs with an optional namespace prefix.
-func computeSpecHash(specs []Spec, prefix string) (string, error) {
-	sp, err := json.Marshal(specs)
-	if err != nil {
-		return "", err
-	}
-	if prefix != "" {
-		sp = append([]byte(prefix), sp...)
-	}
-	s := md5.Sum(sp)
-	return hex.EncodeToString(s[:]), nil
+// computeSpecHash calculates an MD5 hash of raw spec bytes with a namespace prefix byte.
+// Using raw bytes avoids the json.Marshal allocation on the hot path.
+func computeSpecHash(rawSpecs []byte, afiByte byte) string {
+	h := md5.New()
+	h.Write([]byte{afiByte})
+	h.Write(rawSpecs)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // unmarshalSingleFlowspecNLRI parses a single Flowspec NLRI starting at b[0].
@@ -159,22 +155,18 @@ func unmarshalSingleFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, int, error) {
 	if end > len(b) {
 		return nil, 0, fmt.Errorf("not enough bytes to unmarshal flowspec NLRI: need %d bytes, have %d", fs.Length, len(b)-p)
 	}
+	specStart := p
 	specs, err := parseFlowspecSpecs(b[p:end], ipv6)
 	if err != nil {
 		return nil, 0, err
 	}
 	fs.Spec = specs
 
-	// Calculating hash of all recovered spec, namespaced by address family to
-	// prevent IPv4 and IPv6 rules with identical spec sets from colliding on the publish key.
-	hashPrefix := ""
+	afiByte := byte(1)
 	if ipv6 {
-		hashPrefix = "afi=2;"
+		afiByte = 2
 	}
-	fs.SpecHash, err = computeSpecHash(fs.Spec, hashPrefix)
-	if err != nil {
-		return nil, 0, err
-	}
+	fs.SpecHash = computeSpecHash(b[specStart:end], afiByte)
 
 	return fs, end, nil
 }
@@ -215,20 +207,23 @@ func unmarshalSingleVPNFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, int, error) {
 	fs.RD = rd.String()
 	p += 8
 
+	specStart := p
 	specs, err := parseFlowspecSpecs(b[p:end], ipv6)
 	if err != nil {
 		return nil, 0, fmt.Errorf("VPN FlowSpec (RD=%s): %w", fs.RD, err)
 	}
 	fs.Spec = specs
 
-	hashPrefix := fmt.Sprintf("vpn:%s;", fs.RD)
+	// Namespace VPN hashes by RD + AFI to avoid collisions across VRFs.
+	h := md5.New()
+	h.Write([]byte(fs.RD))
 	if ipv6 {
-		hashPrefix = fmt.Sprintf("vpn:%s;afi=2;", fs.RD)
+		h.Write([]byte{2})
+	} else {
+		h.Write([]byte{1})
 	}
-	fs.SpecHash, err = computeSpecHash(fs.Spec, hashPrefix)
-	if err != nil {
-		return nil, 0, err
-	}
+	h.Write(b[specStart:end])
+	fs.SpecHash = hex.EncodeToString(h.Sum(nil))
 
 	return fs, end, nil
 }
