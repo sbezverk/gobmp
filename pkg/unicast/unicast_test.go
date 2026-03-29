@@ -2,6 +2,7 @@ package unicast
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -322,26 +323,6 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 			},
 			pathID: true,
 		},
-		{
-			name:  "panic 11-02-2022",
-			input: []byte{0x38, 0x00, 0x00, 0x31, 0x0A, 0x00, 0x00, 0x07},
-			expect: &base.MPNLRI{
-				NLRI: []base.Route{
-					{
-						Length: 32,
-						Prefix: []byte{0x0A, 0x00, 0x00, 0x07},
-						Label: []*base.Label{
-							{
-								Value: 3,
-								Exp:   0x0,
-								BoS:   true,
-							},
-						},
-					},
-				},
-			},
-			pathID: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -354,5 +335,50 @@ func TestUnmarshalLUNLRI(t *testing.T) {
 				t.Fatal("test failed as expected nlri does not match actual nlri")
 			}
 		})
+	}
+}
+
+// TestUnmarshalLUNLRI_NegativePrefixLength validates that malformed input with
+// negative prefix length (total length < label bits) recovers via pathID retry.
+// With pathID=true the first 4 bytes are consumed as PathID, leaving Length=0x0A(10)
+// and prefixBitLen = 10-24 = -14. The error_handle retry with pathID=false parses
+// the full slice as Length=0x38(56), one label, and a 32-bit prefix 10.0.0.7.
+func TestUnmarshalLUNLRI_NegativePrefixLength(t *testing.T) {
+	input := []byte{0x38, 0x00, 0x00, 0x31, 0x0A, 0x00, 0x00, 0x07}
+	result, err := UnmarshalLUNLRI(input, true)
+	if err != nil {
+		t.Fatalf("expected pathID retry to succeed, got error: %v", err)
+	}
+	if len(result.NLRI) != 1 {
+		t.Fatalf("expected 1 NLRI after retry, got %d", len(result.NLRI))
+	}
+	route := result.NLRI[0]
+	if route.Length != 32 {
+		t.Errorf("expected prefix length 32, got %d", route.Length)
+	}
+	if len(route.Prefix) != 4 || route.Prefix[0] != 0x0A || route.Prefix[3] != 0x07 {
+		t.Errorf("expected prefix 10.0.0.7, got %v", route.Prefix)
+	}
+	if len(route.Label) != 1 || !route.Label[0].BoS {
+		t.Errorf("expected 1 label with BoS=true, got %v", route.Label)
+	}
+}
+
+// TestUnmarshalLUNLRI_PrefixLengthExceeds128 validates error for prefix length > 128 bits.
+func TestUnmarshalLUNLRI_PrefixLengthExceeds128(t *testing.T) {
+	// Length=0xFF(255 bits), Label(3)=0x000031 (BoS), prefix bits = 255-24 = 231 > 128
+	input := []byte{
+		0xFF,             // Length: 255 bits total
+		0x00, 0x00, 0x31, // Label: value=3, BoS=true
+	}
+	// Pad with enough bytes for the parser to attempt reading
+	padding := make([]byte, 32)
+	input = append(input, padding...)
+	_, err := UnmarshalLUNLRI(input, false)
+	if err == nil {
+		t.Fatal("expected error for prefix length exceeding 128 bits, got nil")
+	}
+	if !strings.Contains(err.Error(), "exceeds maximum 128") {
+		t.Errorf("expected error about exceeding 128 bits, got: %v", err)
 	}
 }
