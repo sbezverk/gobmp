@@ -1166,12 +1166,18 @@ func TestGetLocalIPv4RouterID(t *testing.T) {
 	if got := (&NLRI{}).GetLocalIPv4RouterID(); got != "" {
 		t.Errorf("GetLocalIPv4RouterID() absent = %q, want empty", got)
 	}
+	if got := (&NLRI{LS: []TLV{{Type: 1028, Length: 2, Value: []byte{10, 0}}}}).GetLocalIPv4RouterID(); got != "" {
+		t.Errorf("GetLocalIPv4RouterID() short value = %q, want empty", got)
+	}
 }
 
 func TestGetRemoteIPv4RouterID(t *testing.T) {
 	nlri := &NLRI{LS: []TLV{{Type: 1030, Length: 4, Value: []byte{192, 168, 1, 1}}}}
 	if got := nlri.GetRemoteIPv4RouterID(); got != "192.168.1.1" {
 		t.Errorf("GetRemoteIPv4RouterID() = %q, want 192.168.1.1", got)
+	}
+	if got := (&NLRI{LS: []TLV{{Type: 1030, Length: 1, Value: []byte{10}}}}).GetRemoteIPv4RouterID(); got != "" {
+		t.Errorf("GetRemoteIPv4RouterID() short value = %q, want empty", got)
 	}
 }
 
@@ -1181,6 +1187,9 @@ func TestGetLocalIPv6RouterID(t *testing.T) {
 	if got := nlri.GetLocalIPv6RouterID(); got != "2001:db8::1" {
 		t.Errorf("GetLocalIPv6RouterID() = %q, want 2001:db8::1", got)
 	}
+	if got := (&NLRI{LS: []TLV{{Type: 1029, Length: 4, Value: []byte{10, 0, 0, 1}}}}).GetLocalIPv6RouterID(); got != "" {
+		t.Errorf("GetLocalIPv6RouterID() short value = %q, want empty", got)
+	}
 }
 
 func TestGetRemoteIPv6RouterID(t *testing.T) {
@@ -1188,6 +1197,9 @@ func TestGetRemoteIPv6RouterID(t *testing.T) {
 	nlri := &NLRI{LS: []TLV{{Type: 1031, Length: 16, Value: addr}}}
 	if got := nlri.GetRemoteIPv6RouterID(); got != "2001:db8::2" {
 		t.Errorf("GetRemoteIPv6RouterID() = %q, want 2001:db8::2", got)
+	}
+	if got := (&NLRI{LS: []TLV{{Type: 1031, Length: 8, Value: []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0}}}}).GetRemoteIPv6RouterID(); got != "" {
+		t.Errorf("GetRemoteIPv6RouterID() short value = %q, want empty", got)
 	}
 }
 
