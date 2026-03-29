@@ -42,6 +42,68 @@ func TestUnmarshaBaseAttributes(t *testing.T) {
 	}
 }
 
+func TestUnmarshalAttrOTC(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []byte
+		expect uint32
+	}{
+		{
+			name:   "valid OTC ASN 65000",
+			input:  []byte{0x00, 0x00, 0xFD, 0xE8},
+			expect: 65000,
+		},
+		{
+			name:   "valid OTC ASN 1",
+			input:  []byte{0x00, 0x00, 0x00, 0x01},
+			expect: 1,
+		},
+		{
+			name:   "valid OTC large ASN 4200000000",
+			input:  []byte{0xFA, 0x56, 0xEA, 0x00},
+			expect: 4200000000,
+		},
+		{
+			name:   "invalid length 3 bytes",
+			input:  []byte{0x00, 0x00, 0x01},
+			expect: 0,
+		},
+		{
+			name:   "invalid length 0 bytes",
+			input:  []byte{},
+			expect: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := unmarshalAttrOTC(tt.input)
+			if got != tt.expect {
+				t.Errorf("expected %d, got %d", tt.expect, got)
+			}
+		})
+	}
+}
+
+func TestUnmarshalBaseAttributesWithOTC(t *testing.T) {
+	// Raw path attributes: ORIGIN(igp) + OTC(ASN 65000)
+	// ORIGIN: flags=0x40, type=0x01, len=0x01, value=0x00
+	// OTC:    flags=0xC0 (optional transitive), type=0x23, len=0x04, value=0x0000FDE8
+	input := []byte{
+		0x40, 0x01, 0x01, 0x00,
+		0xC0, 0x23, 0x04, 0x00, 0x00, 0xFD, 0xE8,
+	}
+	got, err := UnmarshalBGPBaseAttributes(input)
+	if err != nil {
+		t.Fatalf("expected to succeed but failed with error: %+v", err)
+	}
+	if got.Origin != "igp" {
+		t.Errorf("expected origin igp, got %s", got.Origin)
+	}
+	if got.OTC != 65000 {
+		t.Errorf("expected OTC 65000, got %d", got.OTC)
+	}
+}
+
 func TestUnmarshalASPath(t *testing.T) {
 	tests := []struct {
 		name   string
