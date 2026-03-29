@@ -157,7 +157,7 @@ func (mp *MPReachNLRI) GetNLRIVPLS() (*vpls.Route, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRIUnicast check for presence of NLRI EVPN AFI 1 or 2  and SAFI 1 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
+// GetNLRIUnicast check for presence of Unicast AFI 1 or 2 and SAFI 1 in the MP_REACH_NLRI data and if exists, instantiate Unicast object
 func (mp *MPReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 1 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
@@ -185,7 +185,7 @@ func (mp *MPReachNLRI) GetNLRIMulticast() (*base.MPNLRI, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRILU check for presence of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
+// GetNLRILU check for presence of Labeled Unicast AFI 1 or 2 and SAFI 4 in the MP_REACH_NLRI data and if exists, instantiate LU object
 func (mp *MPReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 4 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
