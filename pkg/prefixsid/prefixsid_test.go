@@ -84,8 +84,8 @@ func TestUnmarshalBGPAttrPrefixSID_Bounds(t *testing.T) {
 		{name: "type 3 length too short", input: []byte{0x03, 0x00, 0x01, 0x00, 0x00}},
 		// Type 3: Length=8 implies 1 SRGB entry (6 bytes) but buffer too short
 		{name: "type 3 truncated srgb value", input: []byte{0x03, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00}},
-		// Type 5: need 3+ bytes, then p++ leaves insufficient for 2-byte length
-		{name: "type 5 truncated length", input: []byte{0x05, 0x00, 0x00}},
+		// Type 5: zero-length value triggers SRv6 L3 Service guard
+		{name: "type 5 zero length", input: []byte{0x05, 0x00, 0x00}},
 		// Type 5: valid length header but value truncated
 		{name: "type 5 truncated value", input: []byte{0x05, 0x00, 0x10, 0x00}},
 		// Unknown type: valid length but value truncated
