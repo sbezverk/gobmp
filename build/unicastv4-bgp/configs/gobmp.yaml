@@ -1,0 +1,6 @@
+active_mode: true
+speakers_list:
+  - "10.1.1.3:57000"
+
+kafka_config:
+  kafka_srv: "10.1.1.4:9092"
