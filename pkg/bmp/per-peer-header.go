@@ -106,7 +106,8 @@ func (p *PerPeerHeader) GetPeerHash() string {
 	var asBuf [20]byte
 	h.Write(strconv.AppendUint(asBuf[:0], uint64(p.PeerAS), 10))
 	h.Write(p.PeerBGPID)
-	return hex.EncodeToString(h.Sum(nil))
+	var digest [md5.Size]byte
+	return hex.EncodeToString(h.Sum(digest[:0]))
 }
 
 // GetPeerBGPIDString returns a string representation of Peer BGP ID

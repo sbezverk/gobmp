@@ -124,7 +124,8 @@ func computeSpecHash(rawSpecs []byte, afiByte byte) string {
 	h := md5.New()
 	h.Write([]byte{afiByte})
 	h.Write(rawSpecs)
-	return hex.EncodeToString(h.Sum(nil))
+	var digest [md5.Size]byte
+	return hex.EncodeToString(h.Sum(digest[:0]))
 }
 
 // unmarshalSingleFlowspecNLRI parses a single Flowspec NLRI starting at b[0].
@@ -223,7 +224,8 @@ func unmarshalSingleVPNFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, int, error) {
 		h.Write([]byte{1})
 	}
 	h.Write(b[specStart:end])
-	fs.SpecHash = hex.EncodeToString(h.Sum(nil))
+	var vpnDigest [md5.Size]byte
+	fs.SpecHash = hex.EncodeToString(h.Sum(vpnDigest[:0]))
 
 	return fs, end, nil
 }

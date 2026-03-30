@@ -271,7 +271,8 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 	for _, attr := range attrs {
 		h.Write(attr.Attribute)
 	}
-	baseAttr.BaseAttrHash = hex.EncodeToString(h.Sum(nil))
+	var digest [md5.Size]byte
+	baseAttr.BaseAttrHash = hex.EncodeToString(h.Sum(digest[:0]))
 
 	return &baseAttr, nil
 }
