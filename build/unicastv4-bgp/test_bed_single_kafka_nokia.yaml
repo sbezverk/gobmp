@@ -105,21 +105,12 @@ services:
       - ./configs/srl-1.cli:/configs/startup.cli:ro
       - srl-1:/etc/opt/srlinux
     command: >
-      bash -lc '
-        ip netns exec srbase-mgmt ip link delete gateway 2>/dev/null || true
-        ip netns exec srbase-mgmt ip link delete gway-1 2>/dev/null || true
-        /opt/srlinux/bin/sr_linux &
-        for i in $$(seq 1 60); do
-          if sudo -u linuxadmin sr_cli -c "show version" >/dev/null 2>&1; then
-            break
-          fi
-          sleep 2
-        done
-        sudo -u linuxadmin sr_cli < /configs/startup.cli
-        wait
-      '
-    depends_on:
-      - gobmp
+      bash -c '
+        sudo bash -c /opt/srlinux/bin/sr_linux &
+        echo "Waiting for bgp_mgr to be running..."
+        for i in $(seq 1 120); do
+          state=$$(sudo -u linuxadmin sr_cli -c "show system application" 2>/dev/null | awk "/bgp_mgr/{print \$$3}")
+          if [ "$$state" = "running" ]; then
 
   srl-2:
     image: ghcr.io/nokia/srlinux:25.10.2
@@ -137,21 +128,12 @@ services:
       - ./configs/srl-2.cli:/configs/startup.cli:ro
       - srl-2:/etc/opt/srlinux
     command: >
-      bash -lc '
-        ip netns exec srbase-mgmt ip link delete gateway 2>/dev/null || true
-        ip netns exec srbase-mgmt ip link delete gway-1 2>/dev/null || true
-        /opt/srlinux/bin/sr_linux &
-        for i in $$(seq 1 60); do
-          if sudo -u linuxadmin sr_cli -c "show version" >/dev/null 2>&1; then
-            break
-          fi
-          sleep 2
-        done
-        sudo -u linuxadmin sr_cli < /configs/startup.cli
-        wait
-      '
-
-volumes:
+      bash -c '
+        sudo bash -c /opt/srlinux/bin/sr_linux &
+        echo "Waiting for bgp_mgr to be running..."
+        for i in $(seq 1 120); do
+          state=$$(sudo -u linuxadmin sr_cli -c "show system application" 2>/dev/null | awk "/bgp_mgr/{print \$$3}")
+          if [ "$$state" = "running" ]; then
   srl-1:
     name: srl-1
   srl-2:
