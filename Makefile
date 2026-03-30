@@ -19,6 +19,15 @@ gobmp-mac-arm64:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/gobmp compile-gobmp-mac-arm64
 
+gobmp-linux-arm64:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/gobmp compile-gobmp-linux-arm64
+
+cicd-image:
+	mkdir -p bin
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(shell go env GOARCH) GO111MODULE=on go build -a -ldflags '-extldflags "-static"' -o ./bin/gobmp ./cmd/gobmp/gobmp.go
+	docker buildx build --platform linux/$(shell go env GOARCH) -t localhost/gobmp:cicd -f ./build/Dockerfile.gobmp --load .
+
 gobmp-mac-amd64:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/gobmp compile-gobmp-mac-amd64
