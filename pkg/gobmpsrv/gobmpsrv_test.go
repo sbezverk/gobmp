@@ -3,6 +3,7 @@ package gobmpsrv
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -664,7 +665,8 @@ func freeAddr(t *testing.T) string {
 
 // acceptWithTimeout blocks until ln.Accept() succeeds or d elapses.
 // On timeout it returns nil and a descriptive error without closing ln.
-func acceptWithTimeout(t *testing.T, ln net.Listener, d time.Duration) net.Conn {
+// On ln.Accept() failure, it returns nil and the error from Accept() without closing ln.
+func acceptWithTimeout(t *testing.T, ln net.Listener, d time.Duration) (net.Conn, error) {
 	t.Helper()
 	type result struct {
 		c   net.Conn
@@ -678,12 +680,12 @@ func acceptWithTimeout(t *testing.T, ln net.Listener, d time.Duration) net.Conn 
 	select {
 	case r := <-ch:
 		if r.err != nil {
-			t.Fatalf("Accept: %v", r.err)
+			return nil, fmt.Errorf("accept: %v", r.err)
 		}
-		return r.c
+		return r.c, nil
 	case <-time.After(d):
 		t.Fatalf("timed out waiting for connection after %v", d)
-		return nil
+		return nil, fmt.Errorf("timed out waiting for connection after %v", d)
 	}
 }
 
@@ -851,9 +853,12 @@ func TestBMPServer_ActiveMode_ConnectsAndProcessesBMP(t *testing.T) {
 	srv.Start()
 
 	// gobmp is the dialer in active mode; accept that outbound connection here.
-	speakerConn := acceptWithTimeout(t, ln, 5*time.Second)
+	speakerConn, err := acceptWithTimeout(t, ln, 5*time.Second)
 	defer func() { _ = speakerConn.Close() }()
-
+	if err != nil {
+		srv.Stop()
+		t.Fatalf("accepting speaker connection: %v", err)
+	}
 	if _, err := speakerConn.Write(makePeerDownMessage()); err != nil {
 		srv.Stop()
 		t.Fatalf("Write BMP message: %v", err)
@@ -897,7 +902,11 @@ func TestBMPServer_ActiveMode_MultipleSpeakers(t *testing.T) {
 	msg := makePeerDownMessage()
 	speakerConns := make([]net.Conn, n)
 	for i, ln := range listeners {
-		c := acceptWithTimeout(t, ln, 5*time.Second)
+		c, err := acceptWithTimeout(t, ln, 5*time.Second)
+		if err != nil {
+			srv.Stop()
+			t.Fatalf("accepting speaker connection[%d]: %v", i, err)
+		}
 		speakerConns[i] = c
 		if _, err := c.Write(msg); err != nil {
 			srv.Stop()
@@ -945,13 +954,21 @@ func TestBMPServer_ActiveMode_ReconnectsAfterDisconnect(t *testing.T) {
 	srv.Start()
 
 	// Accept and immediately close: simulates a speaker that drops the session.
-	conn1 := acceptWithTimeout(t, ln, 5*time.Second)
+	conn1, err := acceptWithTimeout(t, ln, 5*time.Second)
+	if err != nil {
+		srv.Stop()
+		t.Fatalf("accepting speaker connection: %v", err)
+	}
 	_ = conn1.Close()
 
 	// The connector resets retryDelay to 1 s on a successful connection.
 	// After bmpWorker exits it marks isConnected=false; the retry fires ≈1 s
 	// after the initial dial. Allow 4 s for the second connection.
-	conn2 := acceptWithTimeout(t, ln, 4*time.Second)
+	conn2, err := acceptWithTimeout(t, ln, 4*time.Second)
+	if err != nil {
+		srv.Stop()
+		t.Fatalf("accepting speaker connection: %v", err)
+	}
 	_ = conn2.Close()
 
 	stopWithTimeout(t, srv, 3*time.Second)
