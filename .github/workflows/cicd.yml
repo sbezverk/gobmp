@@ -52,7 +52,7 @@ jobs:
             go test -v ./... 2>&1 | tee test-output.txt
             go test -race -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           files: coverage.txt
           flags: unittests
