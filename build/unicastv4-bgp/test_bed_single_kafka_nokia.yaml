@@ -108,9 +108,20 @@ services:
       bash -c '
         sudo bash -c /opt/srlinux/bin/sr_linux &
         echo "Waiting for bgp_mgr to be running..."
-        for i in $(seq 1 120); do
+        for i in $$(seq 1 120); do
           state=$$(sudo -u linuxadmin sr_cli -c "show system application" 2>/dev/null | awk "/bgp_mgr/{print \$$3}")
           if [ "$$state" = "running" ]; then
+            echo "bgp_mgr is running, applying startup config"
+            break
+          fi
+          sleep 2
+        done
+        sudo -u linuxadmin sr_cli < /configs/startup.cli
+        echo "startup.cli exit code: $$?"
+        wait
+      '
+    depends_on:
+      - gobmp
 
   srl-2:
     image: ghcr.io/nokia/srlinux:25.10.2
@@ -131,9 +142,22 @@ services:
       bash -c '
         sudo bash -c /opt/srlinux/bin/sr_linux &
         echo "Waiting for bgp_mgr to be running..."
-        for i in $(seq 1 120); do
+        for i in $$(seq 1 120); do
           state=$$(sudo -u linuxadmin sr_cli -c "show system application" 2>/dev/null | awk "/bgp_mgr/{print \$$3}")
           if [ "$$state" = "running" ]; then
+            echo "bgp_mgr is running, applying startup config"
+            break
+          fi
+          sleep 2
+        done
+        sudo -u linuxadmin sr_cli < /configs/startup.cli
+        echo "startup.cli exit code: $$?"
+        wait
+      '
+    depends_on:
+      - gobmp
+
+volumes:
   srl-1:
     name: srl-1
   srl-2:
