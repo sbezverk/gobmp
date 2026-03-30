@@ -110,7 +110,7 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, errors.New("active_mode is true but speakers_list is empty")
 	}
 	if cfg.ActiveMode {
-		if err := validateSpeakersList(cfg.SpeakersList); err != nil {
+		if err := ValidateSpeakersList(cfg.SpeakersList); err != nil {
 			return nil, err
 		}
 	}
@@ -118,15 +118,15 @@ func LoadConfig(path string) (*Config, error) {
 	return cfg, nil
 }
 
-func validateSpeakersList(speakers []string) error {
+func ValidateSpeakersList(speakers []string) error {
 	uniqueAddrs := make(map[string]bool)
 	for _, addr := range speakers {
 		host, port, err := net.SplitHostPort(addr)
 		if err != nil {
-			return fmt.Errorf("invalid speaker address: %q, error: %v, host %q is not a valid IP literal (speakers_list only accepts IP literals, not hostnames or scoped addresses)", addr, err, host)
+			return fmt.Errorf("invalid speaker address %q: must be in the form <ip-literal>:<port>: %v", addr, err)
 		}
 		if net.ParseIP(host) == nil {
-			return fmt.Errorf("invalid speaker address: %q, host part of the address cannot be nil", addr)
+			return fmt.Errorf("invalid speaker address %q: host %q is not a valid IP literal (speakers_list only accepts IP literals, not hostnames or scoped addresses)", addr, host)
 		}
 		p, err := strconv.Atoi(port)
 		if err != nil || p < 1 || p > 65535 {

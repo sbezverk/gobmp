@@ -326,6 +326,8 @@ func (srv *bmpServer) connector() {
 		speakers[addr] = &bgpSpeaker{Address: addr, retryDelay: 1 * time.Second}
 	}
 	defer srv.wg.Done()
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		for _, speaker := range speakers {
 			// Check for stop signal before each per-speaker iteration so the
@@ -412,7 +414,7 @@ func (srv *bmpServer) connector() {
 		case <-srv.connectorStopCh:
 			glog.Infof("connector received stop signal, exiting")
 			return
-		case <-time.After(200 * time.Millisecond):
+		case <-ticker.C:
 		}
 	}
 }
@@ -444,6 +446,9 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 		return nil, errors.New("active_mode is true but speakers_list is empty")
 	}
 	if bmpSrv.isActive {
+		if err := config.ValidateSpeakersList(bmpSrv.bgpSpeakers); err != nil {
+			return nil, err
+		}
 		bmpSrv.connectorStopCh = make(chan struct{})
 		ctx, cancel := context.WithCancel(context.Background())
 		bmpSrv.connectorCtx = ctx
