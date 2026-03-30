@@ -56,6 +56,21 @@ func TestUnmarshalBGPAttrPrefixSID(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "type 3 originator srgb",
+			// Type=3, Length=8 (2 Flags + 6 SRGB), Flags=0x0000, First=16000 (0x003E80), Number=8000 (0x001F40)
+			input: []byte{0x03, 0x00, 0x08, 0x00, 0x00, 0x00, 0x3E, 0x80, 0x00, 0x1F, 0x40},
+			expect: &PSid{
+				OriginatorSRGB: &OriginatorSRGBTLV{
+					Type:   3,
+					Length: 8,
+					Flags:  0,
+					SRGB: []SRGB{
+						{First: 16000, Number: 8000},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
