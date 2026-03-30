@@ -835,7 +835,9 @@ func TestBMPServer_ActiveMode_ConnectsAndProcessesBMP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
 	}
-	defer ln.Close()
+	defer func() {
+		_ = ln.Close()
+	}()
 
 	pub := newMockPublisher()
 	srv, err := NewBMPServer(&config.Config{
@@ -874,7 +876,9 @@ func TestBMPServer_ActiveMode_MultipleSpeakers(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Listen[%d]: %v", i, err)
 		}
-		defer ln.Close()
+		defer func(ln net.Listener) {
+			_ = ln.Close()
+		}(ln)
 		listeners[i] = ln
 		addrs[i] = ln.Addr().String()
 	}
@@ -926,7 +930,9 @@ func TestBMPServer_ActiveMode_ReconnectsAfterDisconnect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
 	}
-	defer ln.Close()
+	defer func(ln net.Listener) {
+		_ = ln.Close()
+	}(ln)
 
 	srv, err := NewBMPServer(&config.Config{
 		Publisher:    newMockPublisher(),
@@ -981,7 +987,9 @@ func TestBMPServer_ActiveMode_ClosingRaceWithDial(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
 	}
-	defer ln.Close()
+	defer func(ln net.Listener) {
+		_ = ln.Close()
+	}(ln)
 
 	srv, err := NewBMPServer(&config.Config{
 		Publisher:    newMockPublisher(),
