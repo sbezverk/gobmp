@@ -363,7 +363,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run BGP-LS RFC 7752 compliance tests
         run: |
@@ -415,7 +415,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Verify VPLS test data exists
         run: |
@@ -464,7 +464,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.23.x
+          go-version: 1.25.x
 
       - name: Run L3VPN RFC 4364 compliance tests
         run: |
@@ -503,7 +503,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run RFC 9069 LocRIB compliance tests
         run: |
@@ -553,7 +553,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run EVPN RFC 7432 compliance tests
         run: |
@@ -629,7 +629,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run RTC RFC 4684 compliance tests
         run: |
@@ -668,7 +668,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run FlowSpec RFC 8955/8956 compliance tests
         run: |
@@ -708,7 +708,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run SR Policy RFC 9256 compliance tests
         run: |
@@ -747,7 +747,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run MCAST-VPN RFC 6513/6514 compliance tests
         run: |
@@ -787,7 +787,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run Multicast RFC 4760 compliance tests
         run: |
@@ -826,7 +826,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run RFC 9252 SRv6 compliance tests
         run: |
@@ -865,7 +865,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run RFC 8097 RPKI compliance tests (Extended Community)
         run: |
@@ -914,7 +914,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run RFC 9723 Color Prefix Routing compliance tests
         run: |
@@ -953,7 +953,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version: 1.24.x
+          go-version: 1.25.x
 
       - name: Run RFC 9012 Tunnel Encapsulation compliance tests
         run: |
