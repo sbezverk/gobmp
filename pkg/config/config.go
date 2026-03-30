@@ -130,7 +130,7 @@ func ValidateSpeakersList(speakers []string) error {
 		}
 		p, err := strconv.Atoi(port)
 		if err != nil || p < 1 || p > 65535 {
-			return fmt.Errorf("invalid value of port: %q, port must be between 1 and 65535", port)
+			return fmt.Errorf("invalid speaker address %q: invalid port %q (must be between 1 and 65535)", addr, port)
 		}
 		if _, exists := uniqueAddrs[addr]; exists {
 			return fmt.Errorf("duplicate speaker address: %q", addr)

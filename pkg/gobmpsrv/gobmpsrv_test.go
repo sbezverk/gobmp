@@ -644,3 +644,367 @@ func TestBMPWorker_HeaderRead_NonCleanError(t *testing.T) {
 	done := workerDone(newTestServer(newMockPublisher(), false), conn)
 	assertWorkerExits(t, done)
 }
+
+// ---- active mode helpers ----------------------------------------------------
+
+// freeAddr briefly binds a random TCP port and immediately releases it,
+// returning the "host:port" string. The caller receives an address that was
+// recently valid (so it passes format validation in NewBMPServer) but is no
+// longer listening, causing DialContext to fail with ECONNREFUSED.
+func freeAddr(t *testing.T) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("freeAddr Listen: %v", err)
+	}
+	addr := ln.Addr().String()
+	_ = ln.Close()
+	return addr
+}
+
+// acceptWithTimeout blocks until ln.Accept() succeeds or d elapses.
+// On timeout it returns nil and a descriptive error without closing ln.
+func acceptWithTimeout(t *testing.T, ln net.Listener, d time.Duration) net.Conn {
+	t.Helper()
+	type result struct {
+		c   net.Conn
+		err error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		c, err := ln.Accept()
+		ch <- result{c, err}
+	}()
+	select {
+	case r := <-ch:
+		if r.err != nil {
+			t.Fatalf("Accept: %v", r.err)
+		}
+		return r.c
+	case <-time.After(d):
+		t.Fatalf("timed out waiting for connection after %v", d)
+		return nil
+	}
+}
+
+// stopWithTimeout calls srv.Stop() in a goroutine and fails the test if it has
+// not returned within d.
+func stopWithTimeout(t *testing.T, srv BMPServer, d time.Duration) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		srv.Stop()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(d):
+		t.Fatalf("Stop() did not return within %v — possible goroutine leak", d)
+	}
+}
+
+// ---- NewBMPServer: active mode construction ---------------------------------
+
+func TestNewBMPServer_ActiveMode_EmptySpeakers(t *testing.T) {
+	_, err := NewBMPServer(&config.Config{
+		Publisher:  newMockPublisher(),
+		ActiveMode: true,
+	})
+	if err == nil {
+		t.Fatal("expected error for active_mode=true with empty speakers_list, got nil")
+	}
+}
+
+func TestNewBMPServer_ActiveMode_InvalidAddress(t *testing.T) {
+	_, err := NewBMPServer(&config.Config{
+		Publisher:    newMockPublisher(),
+		ActiveMode:   true,
+		SpeakersList: []string{"not-a-valid-address"},
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid speaker address, got nil")
+	}
+}
+
+func TestNewBMPServer_ActiveMode_HostnameRejected(t *testing.T) {
+	// speakers_list only accepts IP literals; hostnames must be rejected.
+	_, err := NewBMPServer(&config.Config{
+		Publisher:    newMockPublisher(),
+		ActiveMode:   true,
+		SpeakersList: []string{"router.example.com:5000"},
+	})
+	if err == nil {
+		t.Fatal("expected error for hostname speaker address, got nil")
+	}
+}
+
+func TestNewBMPServer_ActiveMode_InvalidPort(t *testing.T) {
+	_, err := NewBMPServer(&config.Config{
+		Publisher:    newMockPublisher(),
+		ActiveMode:   true,
+		SpeakersList: []string{"127.0.0.1:99999"},
+	})
+	if err == nil {
+		t.Fatal("expected error for out-of-range speaker port, got nil")
+	}
+}
+
+func TestNewBMPServer_ActiveMode_DuplicateSpeaker(t *testing.T) {
+	_, err := NewBMPServer(&config.Config{
+		Publisher:    newMockPublisher(),
+		ActiveMode:   true,
+		SpeakersList: []string{"127.0.0.1:5000", "127.0.0.1:5000"},
+	})
+	if err == nil {
+		t.Fatal("expected error for duplicate speaker address, got nil")
+	}
+}
+
+func TestNewBMPServer_ActiveMode_Success_ChecksFields(t *testing.T) {
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:    newMockPublisher(),
+		ActiveMode:   true,
+		SpeakersList: []string{"127.0.0.1:5000"},
+	})
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	bs := srv.(*bmpServer)
+	if !bs.isActive {
+		t.Error("isActive = false, want true")
+	}
+	if bs.connectorStopCh == nil {
+		t.Error("connectorStopCh is nil, want initialised channel")
+	}
+	if bs.connectorCancel == nil {
+		t.Error("connectorCancel is nil, want non-nil cancel func")
+	}
+	if bs.incoming != nil {
+		t.Error("incoming listener should be nil in active mode")
+	}
+	if len(bs.bgpSpeakers) != 1 || bs.bgpSpeakers[0] != "127.0.0.1:5000" {
+		t.Errorf("bgpSpeakers = %v, want [127.0.0.1:5000]", bs.bgpSpeakers)
+	}
+	stopWithTimeout(t, srv, 3*time.Second)
+}
+
+// ---- Start / Stop lifecycle (active mode) -----------------------------------
+
+func TestBMPServer_ActiveMode_StartStop_NoHang(t *testing.T) {
+	// The address is not listening; connector fails with ECONNREFUSED immediately
+	// and enters backoff. Stop() cancels the wait via connectorStopCh promptly.
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:    newMockPublisher(),
+		ActiveMode:   true,
+		SpeakersList: []string{freeAddr(t)},
+	})
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Start()
+	stopWithTimeout(t, srv, 3*time.Second)
+}
+
+func TestBMPServer_ActiveMode_Stop_CallsPublisherStop(t *testing.T) {
+	pub := newMockPublisher()
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:    pub,
+		ActiveMode:   true,
+		SpeakersList: []string{freeAddr(t)},
+	})
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Start()
+	stopWithTimeout(t, srv, 3*time.Second)
+
+	pub.mu.Lock()
+	defer pub.mu.Unlock()
+	if !pub.stopped {
+		t.Error("expected publisher.Stop() to be called by srv.Stop() in active mode")
+	}
+}
+
+// ---- Active mode: connector happy paths -------------------------------------
+
+// TestBMPServer_ActiveMode_ConnectsAndProcessesBMP starts a local TCP listener
+// that simulates a BGP speaker. The active-mode gobmp server dials out, the
+// "speaker" writes a valid BMP frame, and the test verifies it reaches the publisher.
+func TestBMPServer_ActiveMode_ConnectsAndProcessesBMP(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer ln.Close()
+
+	pub := newMockPublisher()
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:    pub,
+		ActiveMode:   true,
+		SpeakersList: []string{ln.Addr().String()},
+	})
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Start()
+
+	// gobmp is the dialer in active mode; accept that outbound connection here.
+	speakerConn := acceptWithTimeout(t, ln, 5*time.Second)
+	defer speakerConn.Close()
+
+	if _, err := speakerConn.Write(makePeerDownMessage()); err != nil {
+		srv.Stop()
+		t.Fatalf("Write BMP message: %v", err)
+	}
+	if !pub.waitForMessages(1, 5*time.Second) {
+		srv.Stop()
+		t.Fatal("timed out waiting for BMP message to reach publisher")
+	}
+	stopWithTimeout(t, srv, 3*time.Second)
+}
+
+// TestBMPServer_ActiveMode_MultipleSpeakers verifies that gobmp in active mode
+// connects to all configured speakers concurrently and publishes a message from each.
+func TestBMPServer_ActiveMode_MultipleSpeakers(t *testing.T) {
+	const n = 3
+	listeners := make([]net.Listener, n)
+	addrs := make([]string, n)
+	for i := range listeners {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("Listen[%d]: %v", i, err)
+		}
+		defer ln.Close()
+		listeners[i] = ln
+		addrs[i] = ln.Addr().String()
+	}
+
+	pub := newMockPublisher()
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:    pub,
+		ActiveMode:   true,
+		SpeakersList: addrs,
+	})
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Start()
+
+	msg := makePeerDownMessage()
+	speakerConns := make([]net.Conn, n)
+	for i, ln := range listeners {
+		c := acceptWithTimeout(t, ln, 5*time.Second)
+		speakerConns[i] = c
+		if _, err := c.Write(msg); err != nil {
+			srv.Stop()
+			t.Fatalf("Write[%d]: %v", i, err)
+		}
+	}
+	defer func() {
+		for _, c := range speakerConns {
+			if c != nil {
+				_ = c.Close()
+			}
+		}
+	}()
+
+	if !pub.waitForMessages(n, 10*time.Second) {
+		pub.mu.Lock()
+		got := pub.count
+		pub.mu.Unlock()
+		srv.Stop()
+		t.Fatalf("expected %d published messages, got %d", n, got)
+	}
+	stopWithTimeout(t, srv, 3*time.Second)
+}
+
+// TestBMPServer_ActiveMode_ReconnectsAfterDisconnect verifies that after the
+// speaker closes the connection, the connector marks the speaker as disconnected
+// and re-dials once the retry delay (reset to 1 s on a successful connection) elapses.
+func TestBMPServer_ActiveMode_ReconnectsAfterDisconnect(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer ln.Close()
+
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:    newMockPublisher(),
+		ActiveMode:   true,
+		SpeakersList: []string{ln.Addr().String()},
+	})
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Start()
+
+	// Accept and immediately close: simulates a speaker that drops the session.
+	conn1 := acceptWithTimeout(t, ln, 5*time.Second)
+	_ = conn1.Close()
+
+	// The connector resets retryDelay to 1 s on a successful connection.
+	// After bmpWorker exits it marks isConnected=false; the retry fires ≈1 s
+	// after the initial dial. Allow 4 s for the second connection.
+	conn2 := acceptWithTimeout(t, ln, 4*time.Second)
+	_ = conn2.Close()
+
+	stopWithTimeout(t, srv, 3*time.Second)
+}
+
+// TestBMPServer_ActiveMode_StopInterruptsDial verifies that Stop() cancels the
+// connector's backoff wait promptly even when all speakers are unreachable.
+func TestBMPServer_ActiveMode_StopInterruptsDial(t *testing.T) {
+	// freeAddr gives a recently-valid address that is now ECONNREFUSED, so the
+	// first dial fails quickly and the connector enters its backoff. Stop() must
+	// interrupt that wait rather than block until the timer expires.
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:    newMockPublisher(),
+		ActiveMode:   true,
+		SpeakersList: []string{freeAddr(t)},
+	})
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Start()
+	// One full sweep (200 ms tick) ensures the connector has attempted its first
+	// dial and is now sleeping in the ticker select.
+	time.Sleep(300 * time.Millisecond)
+	stopWithTimeout(t, srv, 3*time.Second)
+}
+
+// TestBMPServer_ActiveMode_ClosingRaceWithDial exercises the srv.closing guard
+// inside connector(): if Stop() sets closing=true just after a successful dial,
+// the connector must close the connection and exit rather than spawning a
+// bmpWorker goroutine. Both outcomes must leave Stop() unblocked.
+func TestBMPServer_ActiveMode_ClosingRaceWithDial(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer ln.Close()
+
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:    newMockPublisher(),
+		ActiveMode:   true,
+		SpeakersList: []string{ln.Addr().String()},
+	})
+	if err != nil {
+		t.Fatalf("NewBMPServer: %v", err)
+	}
+	srv.Start()
+
+	// Drain accepted connections so the listener does not stall gobmp's dial.
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			_ = c.Close()
+		}
+	}()
+
+	// Race Stop() against the in-flight dial; either path must not hang.
+	time.Sleep(50 * time.Millisecond)
+	stopWithTimeout(t, srv, 3*time.Second)
+}

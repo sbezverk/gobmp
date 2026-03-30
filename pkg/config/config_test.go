@@ -274,7 +274,7 @@ func TestValidateSpeakersList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateSpeakersList(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateSpeakersList(%v) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				t.Errorf("ValidateSpeakersList(%v) error = %v, wantErr %v", tt.input, err, tt.wantErr)
 			}
 		})
 	}
