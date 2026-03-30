@@ -107,11 +107,19 @@ services:
     command: >
       bash -c '
         sudo bash -c /opt/srlinux/bin/sr_linux &
+<<<<<<< HEAD
         echo "Waiting for bgp_mgr to be running..."
         for i in $$(seq 1 120); do
           state=$$(sudo -u linuxadmin sr_cli -c "show system application" 2>/dev/null | awk "/bgp_mgr/{print \$$3}")
           if [ "$$state" = "running" ]; then
             echo "bgp_mgr is running, applying startup config"
+=======
+        echo "Waiting for mgmt_server to be running..."
+        for i in $$(seq 1 120); do
+          state=$$(sudo -u linuxadmin sr_cli -c "show system application" 2>/dev/null | awk "/mgmt_server/{print \$$3}" | head -1)
+          if [ "$$state" = "running" ]; then
+            echo "mgmt_server is running, applying startup config"
+>>>>>>> 439e92a (trying to make nokia container to run)
             break
           fi
           sleep 2
@@ -141,11 +149,19 @@ services:
     command: >
       bash -c '
         sudo bash -c /opt/srlinux/bin/sr_linux &
+<<<<<<< HEAD
         echo "Waiting for bgp_mgr to be running..."
         for i in $$(seq 1 120); do
           state=$$(sudo -u linuxadmin sr_cli -c "show system application" 2>/dev/null | awk "/bgp_mgr/{print \$$3}")
           if [ "$$state" = "running" ]; then
             echo "bgp_mgr is running, applying startup config"
+=======
+        echo "Waiting for mgmt_server to be running..."
+        for i in $$(seq 1 120); do
+          state=$$(sudo -u linuxadmin sr_cli -c "show system application" 2>/dev/null | awk "/mgmt_server/{print \$$3}" | head -1)
+          if [ "$$state" = "running" ]; then
+            echo "mgmt_server is running, applying startup config"
+>>>>>>> 439e92a (trying to make nokia container to run)
             break
           fi
           sleep 2
