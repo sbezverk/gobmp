@@ -115,7 +115,7 @@ func (ls *NLRI) GetLocalIPv4RouterID() string {
 		if tlv.Type != 1028 {
 			continue
 		}
-		if len(tlv.Value) < 4 {
+		if len(tlv.Value) != 4 {
 			return ""
 		}
 		return net.IP(tlv.Value).To4().String()
@@ -130,7 +130,7 @@ func (ls *NLRI) GetLocalIPv6RouterID() string {
 		if tlv.Type != 1029 {
 			continue
 		}
-		if len(tlv.Value) < 16 {
+		if len(tlv.Value) != 16 {
 			return ""
 		}
 		return net.IP(tlv.Value).To16().String()
@@ -145,7 +145,7 @@ func (ls *NLRI) GetRemoteIPv4RouterID() string {
 		if tlv.Type != 1030 {
 			continue
 		}
-		if len(tlv.Value) < 4 {
+		if len(tlv.Value) != 4 {
 			return ""
 		}
 		return net.IP(tlv.Value).To4().String()
@@ -160,7 +160,7 @@ func (ls *NLRI) GetRemoteIPv6RouterID() string {
 		if tlv.Type != 1031 {
 			continue
 		}
-		if len(tlv.Value) < 16 {
+		if len(tlv.Value) != 16 {
 			return ""
 		}
 		return net.IP(tlv.Value).To16().String()
