@@ -667,26 +667,27 @@ func freeAddr(t *testing.T) string {
 // acceptWithTimeout blocks until ln.Accept() succeeds or d elapses.
 // On timeout it returns nil and a descriptive error without closing ln.
 // On ln.Accept() failure, it returns nil and the error from Accept() without closing ln.
-func acceptWithTimeout(t *testing.T, ln net.Listener, d time.Duration) (net.Conn, error) {
-	t.Helper()
-	type result struct {
-		c   net.Conn
-		err error
+// acceptWithTimeout blocks until ln.Accept() succeeds or d elapses.
+// It uses SetDeadline on the underlying *net.TCPListener so that Accept
+// returns with a timeout error on its own — no goroutine is spawned and
+// no resources are leaked when the deadline is hit.
+func acceptWithTimeout(ln net.Listener, d time.Duration) (net.Conn, error) {
+	tcpLn, ok := ln.(*net.TCPListener)
+	if !ok {
+		return nil, fmt.Errorf("acceptWithTimeout: listener is %T, want *net.TCPListener", ln)
 	}
-	ch := make(chan result, 1)
-	go func() {
-		c, err := ln.Accept()
-		ch <- result{c, err}
+	if err := tcpLn.SetDeadline(time.Now().Add(d)); err != nil {
+		return nil, fmt.Errorf("acceptWithTimeout: SetDeadline: %v", err)
+	}
+	defer func() {
+		// Clear the deadline so subsequent calls are not affected.
+		_ = tcpLn.SetDeadline(time.Time{})
 	}()
-	select {
-	case r := <-ch:
-		if r.err != nil {
-			return nil, fmt.Errorf("accept: %v", r.err)
-		}
-		return r.c, nil
-	case <-time.After(d):
-		return nil, fmt.Errorf("timed out waiting for connection after %v", d)
+	c, err := tcpLn.Accept()
+	if err != nil {
+		return nil, fmt.Errorf("accept: %v", err)
 	}
+	return c, nil
 }
 
 // stopWithTimeout calls srv.Stop() in a goroutine and fails the test if it has
@@ -853,7 +854,7 @@ func TestBMPServer_ActiveMode_ConnectsAndProcessesBMP(t *testing.T) {
 	srv.Start()
 
 	// gobmp is the dialer in active mode; accept that outbound connection here.
-	speakerConn, err := acceptWithTimeout(t, ln, 5*time.Second)
+	speakerConn, err := acceptWithTimeout(ln, 5*time.Second)
 	if err != nil {
 		srv.Stop()
 		t.Fatalf("accepting speaker connection: %v", err)
@@ -902,7 +903,7 @@ func TestBMPServer_ActiveMode_MultipleSpeakers(t *testing.T) {
 	msg := makePeerDownMessage()
 	speakerConns := make([]net.Conn, n)
 	for i, ln := range listeners {
-		c, err := acceptWithTimeout(t, ln, 5*time.Second)
+		c, err := acceptWithTimeout(ln, 5*time.Second)
 		if err != nil {
 			srv.Stop()
 			t.Fatalf("accepting speaker connection[%d]: %v", i, err)
@@ -954,7 +955,7 @@ func TestBMPServer_ActiveMode_ReconnectsAfterDisconnect(t *testing.T) {
 	srv.Start()
 
 	// Accept and immediately close: simulates a speaker that drops the session.
-	conn1, err := acceptWithTimeout(t, ln, 5*time.Second)
+	conn1, err := acceptWithTimeout(ln, 5*time.Second)
 	if err != nil {
 		srv.Stop()
 		t.Fatalf("accepting speaker connection: %v", err)
@@ -964,7 +965,7 @@ func TestBMPServer_ActiveMode_ReconnectsAfterDisconnect(t *testing.T) {
 	// The connector resets retryDelay to 1 s on a successful connection.
 	// After bmpWorker exits it marks isConnected=false; the retry fires ≈1 s
 	// after the initial dial. Allow 4 s for the second connection.
-	conn2, err := acceptWithTimeout(t, ln, 4*time.Second)
+	conn2, err := acceptWithTimeout(ln, 4*time.Second)
 	if err != nil {
 		srv.Stop()
 		t.Fatalf("accepting speaker connection: %v", err)
@@ -1203,7 +1204,7 @@ func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
 	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
 	done := runConnectSpeaker(srv, speaker)
 
-	conn, err := acceptWithTimeout(t, ln, 3*time.Second)
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
 	if err != nil {
 		t.Fatalf("accepting connection: %v", err)
 	}
@@ -1241,7 +1242,7 @@ func TestConnectSpeaker_PostDisconnect_NextAttemptInFuture(t *testing.T) {
 	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 1 * time.Second}
 	done := runConnectSpeaker(srv, speaker)
 
-	conn, err := acceptWithTimeout(t, ln, 3*time.Second)
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
 	if err != nil {
 		t.Fatalf("accepting connection: %v", err)
 	}
