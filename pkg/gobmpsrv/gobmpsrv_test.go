@@ -664,13 +664,10 @@ func freeAddr(t *testing.T) string {
 	return addr
 }
 
-// acceptWithTimeout blocks until ln.Accept() succeeds or d elapses.
-// On timeout it returns nil and a descriptive error without closing ln.
-// On ln.Accept() failure, it returns nil and the error from Accept() without closing ln.
-// acceptWithTimeout blocks until ln.Accept() succeeds or d elapses.
-// It uses SetDeadline on the underlying *net.TCPListener so that Accept
-// returns with a timeout error on its own — no goroutine is spawned and
-// no resources are leaked when the deadline is hit.
+// acceptWithTimeout sets a deadline of d on ln and calls Accept once.
+// It blocks until a connection is accepted or the deadline elapses, and
+// returns the accepted net.Conn on success. On any error (including a
+// timeout) it returns (nil, a wrapped error from Accept) without closing ln.
 func acceptWithTimeout(ln net.Listener, d time.Duration) (net.Conn, error) {
 	tcpLn, ok := ln.(*net.TCPListener)
 	if !ok {
