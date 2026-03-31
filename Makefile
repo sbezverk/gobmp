@@ -1,7 +1,7 @@
 REGISTRY_NAME?=docker.io/sbezverk
 IMAGE_VERSION?=test-235
 
-PHONY: \
+.PHONY: \
 	all \
 	gobmp \
 	player \
