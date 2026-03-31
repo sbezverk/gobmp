@@ -81,7 +81,14 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 		dictionary[k] = u
 	}
 	glog.Infof("Dictionary for topic type %d contains %d test messages", topic.TopicType, len(dictionary))
+	// maxStaleMismatches is the number of times a key is allowed to arrive with
+	// differing values before we treat it as a genuine failure.  A small budget
+	// (e.g. 3) tolerates the 1-2 incomplete "early" messages that BMP active-mode
+	// routers (e.g. FRR) sometimes publish before metadata is fully resolved,
+	// while still failing fast when a real value mismatch persists.
+	const maxStaleMismatches = 3
 	matched := make(map[string]bool)
+	mismatches := make(map[string]int)
 	for {
 		select {
 		case <-c.stopCh:
@@ -117,10 +124,14 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 			}
 			equal, diffs := u.Equal(ou)
 			if !equal {
-				// This may be a stale/early message published before metadata (e.g.
-				// router_ip) was fully resolved. Log and skip it — a corrected version
-				// may follow later in the topic.
-				glog.Warningf("key: %s matched but values differ (stale message?), skipping: %s", k, strings.Join(diffs, " | "))
+				mismatches[k]++
+				if mismatches[k] >= maxStaleMismatches {
+					workersErrChan <- fmt.Errorf("for key: %s, expected and received messages differ after %d attempts, diffs: %s",
+						k, mismatches[k], strings.Join(diffs, " | "))
+					return
+				}
+				glog.Warningf("key: %s values differ (stale message? attempt %d/%d), skipping: %s",
+					k, mismatches[k], maxStaleMismatches, strings.Join(diffs, " | "))
 				continue
 			}
 			glog.Infof("found matching the test message for the key: %s", k)

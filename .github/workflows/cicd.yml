@@ -373,7 +373,7 @@ jobs:
           fi
       - name: check connection to kafka and bmp session with a router
         id: session_5
-        run: ./build/monitor_container.sh gobmp
+        run: ./build/monitor_container.sh gobmp frr-1
         continue-on-error: true
       - name: Add kafka host to /etc/hosts
         run: |

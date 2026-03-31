@@ -241,7 +241,10 @@ dump_config:
 # By default goBMP runs in passive mode (active_mode: false), where routers initiate BMP sessions to goBMP.
 active_mode: false
 speakers_list: []           # default: no dial-out speakers configured
+```
 
+**Enable active mode example:**
+```yaml
 # Active mode / speaker list
 # When active_mode is true, goBMP dials out to the listed speakers instead of
 # binding a listener. speakers_list must be non-empty; bmp_listen_port is ignored.
