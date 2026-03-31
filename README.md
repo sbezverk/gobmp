@@ -238,8 +238,7 @@ nats_config:
 dump_config:
   file: "/path/to/dump.json"    # dump destination file used when --dump is enabled
 
-# By default goBMP runs in a Passive mode, (active_mode set to false in a configuration yaml file), 
-# when bmp sessions are initiated by routers running bgp/bmp speakers.
+# By default goBMP runs in passive mode (active_mode: false), where routers initiate BMP sessions to goBMP.
 active_mode: false
 speakers_list: []           # default: no dial-out speakers configured
 
@@ -252,8 +251,7 @@ speakers_list: []           # default: no dial-out speakers configured
 #   - IPv6: "[2001:db8::1]:57000"  (brackets required for IPv6)
 # Hostnames and IPv6 scoped/zone addresses (e.g. "fe80::1%eth0") are rejected
 # at startup. Duplicate entries are also rejected.
-# Below is an example of Active mode, with a list of passive/listening for bmp sessions
-# routers.
+# Example: Active mode with a list of BMP speaker routers that goBMP will dial out to.
 active_mode: true
 speakers_list:
   - "192.0.2.1:57000"       # router-1 (IPv4)

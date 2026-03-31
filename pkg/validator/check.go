@@ -80,7 +80,7 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 		}
 		dictionary[k] = u
 	}
-	glog.Infof("Dictionaly for topic type %d contains %d test messages", topic.TopicType, len(dictionary))
+	glog.Infof("Dictionary for topic type %d contains %d test messages", topic.TopicType, len(dictionary))
 	matched := make(map[string]bool)
 	for {
 		select {

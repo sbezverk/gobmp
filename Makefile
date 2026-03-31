@@ -1,7 +1,26 @@
 REGISTRY_NAME?=docker.io/sbezverk
 IMAGE_VERSION?=test-235
 
-.PHONY: all gobmp player container push clean test lint gobmp-mac-arm64  gobmp-linux-arm64  gobmp-mac-amd64  cicd-image validator-mac-amd64 validator-mac-arm64 validator player-container validator-container player-push validator-push
+PHONY: \
+	all \
+	gobmp \
+	player \
+	container \
+	push \
+	clean \
+	test \
+	lint \
+	gobmp-mac-arm64 \
+	gobmp-linux-arm64 \
+	gobmp-mac-amd64 \
+	cicd-image \
+	validator-mac-amd64 \
+	validator-mac-arm64 \
+	validator \
+	player-container \
+	validator-container \
+	player-push \
+	validator-push
 
 ifdef V
 TESTARGS = -v -args -alsologtostderr -v 5
