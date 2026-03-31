@@ -239,7 +239,7 @@ dump_config:
   file: "/path/to/dump.json"    # dump destination file used when --dump is enabled
 
 # By default goBMP runs in a Passive mode, (active_mode set to false in a configuration yaml file), 
-# when bmp sessions are initiated by ruouters running bgp/bmp speakers.
+# when bmp sessions are initiated by routers running bgp/bmp speakers.
 active_mode: false
 speakers_list: []           # default: no dial-out speakers configured
 
