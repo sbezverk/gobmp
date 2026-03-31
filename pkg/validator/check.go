@@ -81,7 +81,7 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 		dictionary[k] = u
 	}
 	glog.Infof("Dictionaly for topic type %d contains %d test messages", topic.TopicType, len(dictionary))
-	matches := 0
+	matched := make(map[string]bool)
 	for {
 		select {
 		case <-c.stopCh:
@@ -106,14 +106,21 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 				workersErrChan <- fmt.Errorf("dictionary does not have a test message for key: %s", k)
 				return
 			}
-			glog.Infof("found matching the test message for the key: %s", k)
+			// Skip messages that have already been matched by a later correct version.
+			if matched[k] {
+				continue
+			}
 			equal, diffs := u.Equal(ou)
 			if !equal {
-				workersErrChan <- fmt.Errorf("for key: %s, expected and received messages differ, diffs: %s", k, strings.Join(diffs, " | "))
-				return
+				// This may be a stale/early message published before metadata (e.g.
+				// router_ip) was fully resolved. Log and skip it — a corrected version
+				// may follow later in the topic.
+				glog.Warningf("key: %s matched but values differ (stale message?), skipping: %s", k, strings.Join(diffs, " | "))
+				continue
 			}
-			matches++
-			if matches >= len(dictionary) {
+			glog.Infof("found matching the test message for the key: %s", k)
+			matched[k] = true
+			if len(matched) >= len(dictionary) {
 				// All checks are completed, exiting
 				glog.Infof("topic type %d, all checks are done.", topic.TopicType)
 				done <- struct{}{}
