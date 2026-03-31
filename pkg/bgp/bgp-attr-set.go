@@ -16,6 +16,40 @@ type AttrSet struct {
 	PathAttributes *BaseAttributes `json:"path_attributes,omitempty"`
 }
 
+// Equal compares two AttrSet values semantically. It compares OriginAS
+// directly and delegates embedded PathAttributes comparison to
+// BaseAttributes.Equal, which applies order-independent slice comparisons
+// and intentionally ignores BaseAttrHash.
+func (a *AttrSet) Equal(o *AttrSet) (bool, []string) {
+	if a == nil && o == nil {
+		return true, nil
+	}
+	if a == nil || o == nil {
+		return false, []string{"attr_set mismatch: one is nil"}
+	}
+	equal := true
+	var diffs []string
+	if a.OriginAS != o.OriginAS {
+		equal = false
+		diffs = append(diffs, "attr_set origin_as mismatch: "+fmt.Sprint(a.OriginAS)+" and "+fmt.Sprint(o.OriginAS))
+	}
+	switch {
+	case a.PathAttributes == nil && o.PathAttributes == nil:
+	case a.PathAttributes == nil || o.PathAttributes == nil:
+		equal = false
+		diffs = append(diffs, "attr_set path_attributes mismatch: one is nil")
+	default:
+		paEqual, paDiffs := a.PathAttributes.Equal(o.PathAttributes)
+		if !paEqual {
+			equal = false
+			for _, d := range paDiffs {
+				diffs = append(diffs, "attr_set: "+d)
+			}
+		}
+	}
+	return equal, diffs
+}
+
 // UnmarshalAttrSet parses an ATTR_SET attribute value (RFC 6368 §2).
 //
 // Wire format (after the common path-attribute header):

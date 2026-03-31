@@ -3,6 +3,7 @@ package bgp
 import (
 	"encoding/binary"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -305,11 +306,11 @@ func TestUnmarshalAttrSet_DeprecatedAttrsSkipped(t *testing.T) {
 
 func TestBaseAttributes_Equal_AttrSet(t *testing.T) {
 	tests := []struct {
-		name    string
-		a       *BaseAttributes
-		b       *BaseAttributes
-		isEqual bool
-		diffKey string
+		name        string
+		a           *BaseAttributes
+		b           *BaseAttributes
+		isEqual     bool
+		diffSubstr  string
 	}{
 		{
 			name:    "both nil",
@@ -318,11 +319,11 @@ func TestBaseAttributes_Equal_AttrSet(t *testing.T) {
 			isEqual: true,
 		},
 		{
-			name:    "one nil one non-nil",
-			a:       &BaseAttributes{AttrSet: &AttrSet{OriginAS: 65001}},
-			b:       &BaseAttributes{AttrSet: nil},
-			isEqual: false,
-			diffKey: "attr_set mismatch",
+			name:       "one nil one non-nil",
+			a:          &BaseAttributes{AttrSet: &AttrSet{OriginAS: 65001}},
+			b:          &BaseAttributes{AttrSet: nil},
+			isEqual:    false,
+			diffSubstr: "attr_set mismatch",
 		},
 		{
 			name:    "same OriginAS no attrs",
@@ -331,11 +332,123 @@ func TestBaseAttributes_Equal_AttrSet(t *testing.T) {
 			isEqual: true,
 		},
 		{
-			name:    "different OriginAS",
-			a:       &BaseAttributes{AttrSet: &AttrSet{OriginAS: 65001}},
-			b:       &BaseAttributes{AttrSet: &AttrSet{OriginAS: 65002}},
-			isEqual: false,
-			diffKey: "attr_set mismatch",
+			name:       "different OriginAS",
+			a:          &BaseAttributes{AttrSet: &AttrSet{OriginAS: 65001}},
+			b:          &BaseAttributes{AttrSet: &AttrSet{OriginAS: 65002}},
+			isEqual:    false,
+			diffSubstr: "origin_as mismatch",
+		},
+		{
+			name: "same embedded attrs different BaseAttrHash",
+			a: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS: 65001,
+				PathAttributes: &BaseAttributes{
+					BaseAttrHash: "aaa",
+					Origin:       "igp",
+					MED:          100,
+				},
+			}},
+			b: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS: 65001,
+				PathAttributes: &BaseAttributes{
+					BaseAttrHash: "bbb",
+					Origin:       "igp",
+					MED:          100,
+				},
+			}},
+			isEqual: true,
+		},
+		{
+			name: "embedded communities different order equal semantics",
+			a: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS: 65001,
+				PathAttributes: &BaseAttributes{
+					CommunityList: []string{"65001:200", "65001:100"},
+				},
+			}},
+			b: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS: 65001,
+				PathAttributes: &BaseAttributes{
+					CommunityList: []string{"65001:100", "65001:200"},
+				},
+			}},
+			isEqual: true,
+		},
+		{
+			name: "embedded AS_PATH different order equal semantics",
+			a: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS: 65001,
+				PathAttributes: &BaseAttributes{
+					ASPath:      []uint32{65002, 65001},
+					ASPathCount: 2,
+				},
+			}},
+			b: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS: 65001,
+				PathAttributes: &BaseAttributes{
+					ASPath:      []uint32{65001, 65002},
+					ASPathCount: 2,
+				},
+			}},
+			isEqual: true,
+		},
+		{
+			name: "embedded ext_community different order equal semantics",
+			a: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS: 65001,
+				PathAttributes: &BaseAttributes{
+					ExtCommunityList: []string{"rt=65001:100", "rt=65001:200"},
+				},
+			}},
+			b: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS: 65001,
+				PathAttributes: &BaseAttributes{
+					ExtCommunityList: []string{"rt=65001:200", "rt=65001:100"},
+				},
+			}},
+			isEqual: true,
+		},
+		{
+			name: "embedded large_community different order equal semantics",
+			a: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS: 65001,
+				PathAttributes: &BaseAttributes{
+					LgCommunityList: []string{"65001:0:200", "65001:0:100"},
+				},
+			}},
+			b: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS: 65001,
+				PathAttributes: &BaseAttributes{
+					LgCommunityList: []string{"65001:0:100", "65001:0:200"},
+				},
+			}},
+			isEqual: true,
+		},
+		{
+			name: "embedded different MED",
+			a: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS:       65001,
+				PathAttributes: &BaseAttributes{MED: 100},
+			}},
+			b: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS:       65001,
+				PathAttributes: &BaseAttributes{MED: 200},
+			}},
+			isEqual:    false,
+			diffSubstr: "med mismatch",
+		},
+		{
+			name: "one embedded nil one non-nil",
+			a: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS:       65001,
+				PathAttributes: &BaseAttributes{Origin: "igp"},
+			}},
+			b: &BaseAttributes{AttrSet: &AttrSet{
+				OriginAS:       65001,
+				PathAttributes: nil,
+			}},
+			isEqual:    false,
+			diffSubstr: "path_attributes mismatch",
 		},
 	}
 	for _, tt := range tests {
@@ -345,16 +458,16 @@ func TestBaseAttributes_Equal_AttrSet(t *testing.T) {
 			if eq != tt.isEqual {
 				t.Errorf("expected Equal=%v, got %v (diffs: %v)", tt.isEqual, eq, diffs)
 			}
-			if !tt.isEqual && tt.diffKey != "" {
+			if !tt.isEqual && tt.diffSubstr != "" {
 				found := false
 				for _, d := range diffs {
-					if d == tt.diffKey {
+					if strings.Contains(d, tt.diffSubstr) {
 						found = true
 						break
 					}
 				}
 				if !found {
-					t.Errorf("expected diff key %q in diffs %v", tt.diffKey, diffs)
+					t.Errorf("expected diff containing %q in diffs %v", tt.diffSubstr, diffs)
 				}
 			}
 		})
