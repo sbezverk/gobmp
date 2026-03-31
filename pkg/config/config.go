@@ -118,6 +118,10 @@ func LoadConfig(path string) (*Config, error) {
 	return cfg, nil
 }
 
+// ValidateSpeakersList verifies that each speaker address is a unique "<ip-literal>:<port>" endpoint.
+// The host part must be an IP literal (IPv4 or IPv6), not a hostname or scoped/zone address;
+// IPv6 addresses must be in bracket form "[<ipv6-literal>]:<port>" as required by net.SplitHostPort.
+// The port must be a decimal integer in the range 1–65535, and duplicate addresses in the list are rejected.
 func ValidateSpeakersList(speakers []string) error {
 	uniqueAddrs := make(map[string]bool)
 	for _, addr := range speakers {
