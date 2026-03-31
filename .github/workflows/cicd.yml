@@ -352,6 +352,19 @@ jobs:
         run: docker images
       - name: starts unicast v4 integration test on a single node kafka
         run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_frr.yaml up --detach
+      - name: wait for BGP session between frr-1 and frr-2
+        run: |
+          echo "Waiting for BGP session to establish (up to 2 min)..."
+          for i in $(seq 1 24); do
+            state=$(docker exec frr-1 vtysh -c "show bgp summary" 2>/dev/null \
+              | awk '/192.168.100.12/{print $10}' || true)
+            if echo "$state" | grep -qE '^[0-9]+$'; then
+              echo "BGP established after $((i * 5))s"
+              break
+            fi
+            echo "BGP not up yet ($i/24, state=$state)..."
+            sleep 5
+          done
       - name: check connection to kafka and bmp session with a router
         id: session_5
         run: ./build/monitor_container.sh gobmp
