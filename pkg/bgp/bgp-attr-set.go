@@ -26,12 +26,14 @@ type AttrSet struct {
 //	| Path Attributes (variable)              |
 //	+-----------------------------------------+
 //
-// The embedded path attributes are decoded with the same logic used for
-// top-level attributes (unmarshalBaseAttrsFromSlice). If the embedded set
-// contains another ATTR_SET the parser returns an error.
+// The embedded path attributes are first decoded into raw TLVs via
+// unmarshalRawPathAttributes (no semantic mapping), then checked for forbidden
+// types, and only then passed to unmarshalBaseAttrsFromSlice. This avoids
+// unbounded recursion: a nested ATTR_SET (type 128) is rejected before
+// semantic mapping would trigger another call to UnmarshalAttrSet.
 func UnmarshalAttrSet(b []byte) (*AttrSet, error) {
 	if len(b) < 4 {
-		return nil, fmt.Errorf("ATTR_SET too short: need at least 4 bytes for Origin AS, got %d", len(b))
+		return nil, fmt.Errorf("ATTR_SET too short: need 4 bytes for Origin AS, have %d", len(b))
 	}
 
 	originAS := binary.BigEndian.Uint32(b[:4])
@@ -44,9 +46,9 @@ func UnmarshalAttrSet(b []byte) (*AttrSet, error) {
 		return attrSet, nil
 	}
 
-	// Parse the embedded path attributes using the top-level parser which
-	// returns both the raw PathAttribute slice and the populated BaseAttributes.
-	attrs, _, err := UnmarshalBGPPathAttributes(b[4:])
+	// Parse the embedded bytes into raw TLVs only — no semantic mapping yet,
+	// so case 128 in unmarshalBaseAttrsFromSlice is never reached.
+	attrs, err := unmarshalRawPathAttributes(b[4:])
 	if err != nil {
 		return nil, fmt.Errorf("ATTR_SET: failed to parse embedded path attributes: %w", err)
 	}

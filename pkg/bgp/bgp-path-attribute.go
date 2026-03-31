@@ -22,6 +22,26 @@ type PathAttribute struct {
 // End-of-RIB marker per RFC 4724 §2); in that case an empty but non-nil
 // BaseAttributes is returned so callers can dereference it safely.
 func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, *BaseAttributes, error) {
+	attrs, err := unmarshalRawPathAttributes(b)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	baseAttrs, err := unmarshalBaseAttrsFromSlice(attrs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return attrs, baseAttrs, nil
+}
+
+// unmarshalRawPathAttributes decodes the TLV-encoded path attributes from a
+// raw byte buffer into a []PathAttribute slice without any semantic
+// interpretation. This is the low-level parser used by both
+// UnmarshalBGPPathAttributes (top-level UPDATE) and UnmarshalAttrSet (embedded
+// attributes inside ATTR_SET) so that forbidden-type checks can run before
+// semantic mapping triggers recursion.
+func unmarshalRawPathAttributes(b []byte) ([]PathAttribute, error) {
 	if glog.V(6) {
 		glog.Infof("BGPPathAttributes Raw: %s", tools.MessageHex(b))
 	}
@@ -30,7 +50,7 @@ func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, *BaseAttributes, err
 	for p := 0; p < len(b); {
 		// Need at least flag + type (2 bytes) before reading anything.
 		if p+2 > len(b) {
-			return nil, nil, fmt.Errorf("truncated path attribute header at offset %d: need 2 bytes, have %d", p, len(b)-p)
+			return nil, fmt.Errorf("truncated path attribute header at offset %d: need 2 bytes, have %d", p, len(b)-p)
 		}
 		f := b[p]
 		t := b[p+1]
@@ -39,19 +59,19 @@ func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, *BaseAttributes, err
 		// Checking for Extended-Length flag (bit 4 of flags).
 		if f&0x10 == 0x10 {
 			if p+2 > len(b) {
-				return nil, nil, fmt.Errorf("truncated extended-length field at offset %d: need 2 bytes, have %d", p, len(b)-p)
+				return nil, fmt.Errorf("truncated extended-length field at offset %d: need 2 bytes, have %d", p, len(b)-p)
 			}
 			l = binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
 		} else {
 			if p+1 > len(b) {
-				return nil, nil, fmt.Errorf("truncated length field at offset %d: need 1 byte, have 0", p)
+				return nil, fmt.Errorf("truncated length field at offset %d: need 1 byte, have 0", p)
 			}
 			l = uint16(b[p])
 			p++
 		}
 		if p+int(l) > len(b) {
-			return nil, nil, fmt.Errorf("truncated path attribute value at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+			return nil, fmt.Errorf("truncated path attribute value at offset %d: need %d bytes, have %d", p, l, len(b)-p)
 		}
 		pa := PathAttribute{
 			AttributeTypeFlags: f,
@@ -65,10 +85,5 @@ func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, *BaseAttributes, err
 		p += int(l)
 	}
 
-	baseAttrs, err := unmarshalBaseAttrsFromSlice(attrs)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return attrs, baseAttrs, nil
+	return attrs, nil
 }
