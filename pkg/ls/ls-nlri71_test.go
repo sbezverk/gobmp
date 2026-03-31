@@ -111,6 +111,21 @@ func TestUnmarshalLSNLRI71_TruncatedHeader(t *testing.T) {
 	}
 }
 
+func TestUnmarshalLSNLRI71_ZeroLengthTLV(t *testing.T) {
+	// Type=1 (Node), Length=0 — must not cause infinite loop
+	input := []byte{
+		0x00, 0x01, // Type: 1
+		0x00, 0x00, // Length: 0
+	}
+	_, err := UnmarshalLSNLRI71(input)
+	if err == nil {
+		t.Fatal("expected error for zero-length TLV")
+	}
+	if !strings.Contains(err.Error(), "zero length") {
+		t.Errorf("expected zero length error, got: %v", err)
+	}
+}
+
 func TestUnmarshalLSNLRI71_TruncatedValue(t *testing.T) {
 	// Type=1 (Node), Length=100 but only 2 bytes of value
 	input := []byte{

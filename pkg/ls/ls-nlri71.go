@@ -48,6 +48,9 @@ func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 		p += 2
 		el.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
+		if el.Length == 0 {
+			return nil, fmt.Errorf("NLRI71 TLV type %d has invalid zero length at offset %d", el.Type, p-4)
+		}
 		if p+int(el.Length) > len(b) {
 			return nil, fmt.Errorf("NLRI71 TLV type %d truncated at offset %d: need %d bytes, have %d", el.Type, p, el.Length, len(b)-p)
 		}
