@@ -994,7 +994,7 @@ func TestBMPServer_ActiveMode_StopInterruptsDial(t *testing.T) {
 }
 
 // TestBMPServer_ActiveMode_ClosingRaceWithDial exercises the srv.closing guard
-// inside connector(): if Stop() sets closing=true just after a successful dial,
+// inside connectSpeaker(): if Stop() sets closing=true just after a successful dial,
 // the connector must close the connection and exit rather than spawning a
 // bmpWorker goroutine. Both outcomes must leave Stop() unblocked.
 func TestBMPServer_ActiveMode_ClosingRaceWithDial(t *testing.T) {

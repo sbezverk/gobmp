@@ -37,7 +37,7 @@ type bmpServer struct {
 	splitAF   bool
 	publisher pub.Publisher
 	incoming  net.Listener   // passive mode only; nil in active mode
-	wg        sync.WaitGroup // tracks server()/connector() + in-flight bmpWorker goroutines
+	wg        sync.WaitGroup // tracks server()/connectSpeaker() + in-flight bmpWorker goroutines
 	mu        sync.Mutex     // protects clients and closing
 	stopOnce  sync.Once
 	clients   map[net.Conn]struct{} // active bmpWorker connections
