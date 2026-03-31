@@ -47,7 +47,7 @@ type BaseAttributes struct {
 	BGPPrefixSID    *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
 	OTC uint32 `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
 	// SecPath
-	// AttrSet
+	AttrSet *AttrSet `json:"attr_set,omitempty"` // RFC 6368 ATTR_SET Attribute (Type 128)
 }
 
 func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
@@ -125,6 +125,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if ba.OTC != oba.OTC {
 		equal = false
 		diffs = append(diffs, "otc mismatch: "+strconv.FormatUint(uint64(ba.OTC), 10)+" and "+strconv.FormatUint(uint64(oba.OTC), 10))
+	if !reflect.DeepEqual(ba.AttrSet, oba.AttrSet) {
+		equal = false
+		diffs = append(diffs, "attr_set mismatch")
+
 	}
 
 	return equal, diffs
@@ -265,6 +269,12 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			// Edge Metadata Path Attribute (TEMPORARY) - draft-ietf-idr-5g-edge-service-metadata
 		case 128:
 			// ATTR_SET - RFC 6368
+			attrSet, err := UnmarshalAttrSet(b)
+			if err != nil {
+				glog.Errorf("failed to unmarshal ATTR_SET attribute: %v", err)
+			} else {
+				baseAttr.AttrSet = attrSet
+			}
 		}
 	}
 	// Calculating hash of all recovered base attributes
