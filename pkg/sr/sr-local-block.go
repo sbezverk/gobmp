@@ -1,6 +1,8 @@
 package sr
 
 import (
+	"fmt"
+
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
 )
@@ -16,6 +18,9 @@ type LocalBlock struct {
 func UnmarshalSRLocalBlock(b []byte) (*LocalBlock, error) {
 	if glog.V(6) {
 		glog.Infof("SR Local BLock Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) < 2 {
+		return nil, fmt.Errorf("sr local block too short: need at least 2 bytes, have %d", len(b))
 	}
 	lb := LocalBlock{}
 	p := 0

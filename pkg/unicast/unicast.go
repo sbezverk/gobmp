@@ -134,17 +134,12 @@ func UnmarshalLUNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 
 		// Validate prefix length for IPv4/IPv6
 		if prefixBitLen < 0 {
-			// Invalid - use a reasonable default
-			if glog.V(6) {
-				glog.Warningf("Invalid negative prefix length: %d, using 32 bits", prefixBitLen)
-			}
-			prefixBitLen = 32
-		} else if prefixBitLen > 128 {
-			// IPv6 prefixes can't be longer than 128 bits
-			if glog.V(6) {
-				glog.Warningf("Invalid prefix length: %d bits (too large), capping at 128", prefixBitLen)
-			}
-			prefixBitLen = 128
+			err = fmt.Errorf("invalid negative prefix length %d (total length %d, label bits %d)", prefixBitLen, originalLength, labelBits)
+			goto error_handle
+		}
+		if prefixBitLen > 128 {
+			err = fmt.Errorf("invalid prefix length %d bits exceeds maximum 128 (total length %d, label bits %d)", prefixBitLen, originalLength, labelBits)
+			goto error_handle
 		}
 
 		// Additional check for potentially inverted IPv4 addresses with wrong lengths

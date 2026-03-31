@@ -22,6 +22,9 @@ func UnmarshalSRCapabilitySubTLV(b []byte) ([]CapabilitySubTLV, error) {
 	}
 	caps := make([]CapabilitySubTLV, 0)
 	for p := 0; p < len(b); {
+		if p+7 > len(b) {
+			return nil, fmt.Errorf("sr capability sub-TLV truncated at offset %d: need 7 bytes, have %d", p, len(b)-p)
+		}
 		cap := CapabilitySubTLV{}
 		r := make([]byte, 4)
 		// Copy 3 bytes of Range into 4 byte slice to convert it into uint32
@@ -39,6 +42,9 @@ func UnmarshalSRCapabilitySubTLV(b []byte) ([]CapabilitySubTLV, error) {
 		default:
 			return nil, fmt.Errorf("unknown SR Capability tlv type %d", t)
 		}
+		if p+int(l) > len(b) {
+			return nil, fmt.Errorf("sr capability sub-TLV value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+		}
 		s := make([]byte, 4)
 		switch l {
 		case 3:
@@ -46,7 +52,7 @@ func UnmarshalSRCapabilitySubTLV(b []byte) ([]CapabilitySubTLV, error) {
 		case 4:
 			copy(s, b[p:p+int(l)])
 		default:
-			return nil, fmt.Errorf("invalid length %d for Prefix SID TLV", len(b))
+			return nil, fmt.Errorf("invalid length %d for SR Capability sub-TLV", l)
 		}
 		cap.SID = binary.BigEndian.Uint32(s)
 		p += int(l)

@@ -161,3 +161,36 @@ func TestUnmarshalBaseNLRI(t *testing.T) {
 		})
 	}
 }
+
+// TestUnmarshalRoutes_RetryLimit verifies that malformed input fails after one retry
+// instead of recursing infinitely.
+func TestUnmarshalRoutes_RetryLimit(t *testing.T) {
+	// Single byte 0xFF — invalid prefix length whether pathID=true or false.
+	// With pathID=true: not enough bytes for PathID (need 4).
+	// With pathID=false: prefix length 255, need 32 bytes but only 0 remain.
+	// Both fail → should return error, not hang.
+	_, err := UnmarshalRoutes([]byte{0xFF}, false)
+	if err == nil {
+		t.Fatal("expected error for malformed input, got nil")
+	}
+}
+
+// TestUnmarshalRoutes_RetrySucceeds verifies the retry path works when flipping pathID helps.
+func TestUnmarshalRoutes_RetrySucceeds(t *testing.T) {
+	// Valid route without pathID: length=8, prefix=10.0.0.0
+	input := []byte{0x08, 0x0a}
+	// Call with pathID=true — fails (need 4 bytes for PathID), retries with pathID=false → succeeds
+	routes, err := UnmarshalRoutes(input, true)
+	if err != nil {
+		t.Fatalf("expected retry to succeed, got error: %v", err)
+	}
+	if len(routes) != 1 {
+		t.Fatalf("expected 1 route, got %d", len(routes))
+	}
+	if routes[0].Length != 8 {
+		t.Errorf("expected prefix length 8, got %d", routes[0].Length)
+	}
+	if len(routes[0].Prefix) == 0 || routes[0].Prefix[0] != 0x0a {
+		t.Errorf("expected prefix starting with 10 (0x0a), got %v", routes[0].Prefix)
+	}
+}

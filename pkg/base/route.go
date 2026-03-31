@@ -26,6 +26,10 @@ type Route struct {
 
 // UnmarshalRoutes builds BGP Withdrawn routes object
 func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
+	return unmarshalRoutes(b, pathID, true)
+}
+
+func unmarshalRoutes(b []byte, pathID bool, canRetry bool) ([]Route, error) {
 	if glog.V(6) {
 		glog.Infof("Routes Raw: %s Path ID flag: %t", tools.MessageHex(b), pathID)
 	}
@@ -78,8 +82,10 @@ error_handle:
 		// might be advertised and received, but BGP Update would not have PathID set due to some other conditions,
 		// example when bgp speakers are in different AS. In error handle, attempting to Unmarshal again with reversed
 		// value of PathID flag.
-		if r, e := UnmarshalRoutes(b, !pathID); e == nil {
-			return r, nil
+		if canRetry {
+			if r, e := unmarshalRoutes(b, !pathID, false); e == nil {
+				return r, nil
+			}
 		}
 		glog.Errorf("failed to reconstruct routes from slice %s with error: %+v", tools.MessageHex(b), err)
 
