@@ -854,6 +854,10 @@ func TestBMPServer_ActiveMode_ConnectsAndProcessesBMP(t *testing.T) {
 
 	// gobmp is the dialer in active mode; accept that outbound connection here.
 	speakerConn, err := acceptWithTimeout(t, ln, 5*time.Second)
+	if err != nil {
+		srv.Stop()
+		t.Fatalf("accepting speaker connection: %v", err)
+	}
 	defer func() { _ = speakerConn.Close() }()
 	if err != nil {
 		srv.Stop()
