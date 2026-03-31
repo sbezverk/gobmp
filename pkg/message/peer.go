@@ -62,6 +62,10 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		p.speakerHash = fmt.Sprintf("%x", md5.Sum([]byte(p.speakerIP)))
 		m.RouterIP = p.speakerIP
 		m.RouterHash = p.speakerHash
+		// Signal all goroutines waiting in producingWorker that speakerIP is now
+		// populated.  sync.Once guarantees the channel is closed exactly once even
+		// if multiple PeerUp messages arrive (e.g. reconnections).
+		p.speakerReadyOnce.Do(func() { close(p.speakerReady) })
 
 		m.LocalASN = uint32(peerUpMsg.SentOpen.MyAS)
 		if lasn, ok := peerUpMsg.SentOpen.Is4BytesASCapable(); ok {

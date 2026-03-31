@@ -41,6 +41,14 @@ type producer struct {
 	publisher   pub.Publisher
 	speakerIP   string
 	speakerHash string
+	// speakerReady is closed exactly once (by speakerReadyOnce) when the first
+	// PeerUp message has been processed and speakerIP/speakerHash are populated.
+	// All producingWorker goroutines for non-PeerUp message types block on this
+	// channel before reading speakerIP, eliminating the race between the burst of
+	// initial RouteMonitor goroutines and the PeerUp goroutine that sets the field.
+	// After the channel is closed, all subsequent reads are immediately non-blocking.
+	speakerReady     chan struct{}
+	speakerReadyOnce sync.Once
 	// Per-VRF table properties tracking (replaces global addPathCapable)
 	// Key format: BGP-ID + Peer Distinguisher (e.g., "10.0.0.10:0")
 	// Per RFC 9069 Section 4: uniquely identifies each Loc-RIB instance
@@ -74,6 +82,12 @@ func (p *producer) producingWorker(msg bmp.Message) {
 	case *bmp.PeerDownMessage:
 		p.producePeerMessage(peerDown, msg)
 	case *bmp.RouteMonitor:
+		// Wait until PeerUp has populated speakerIP/speakerHash before producing
+		// any route message.  In active mode (gobmp dials the router) FRR floods
+		// its full Loc-RIB in a burst that races the PeerUp goroutine.  Blocking
+		// here costs nothing after the channel is closed: a closed-channel receive
+		// is a single no-op instruction with no lock or syscall involved.
+		<-p.speakerReady
 		p.produceRouteMonitorMessage(msg)
 	case *bmp.StatsReport:
 		p.produceStatsMessage(msg)
@@ -147,5 +161,6 @@ func NewProducer(publisher pub.Publisher, splitAF bool) Producer {
 		publisher:       publisher,
 		splitAF:         splitAF,
 		tableProperties: make(map[string]PerTableProperties),
+		speakerReady:    make(chan struct{}),
 	}
 }
