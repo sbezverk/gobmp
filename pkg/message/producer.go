@@ -90,6 +90,9 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		<-p.speakerReady
 		p.produceRouteMonitorMessage(msg)
 	case *bmp.StatsReport:
+		// See comment for RouteMonitor: wait for speakerIP/speakerHash to be
+		// populated before producing any stats message.
+		<-p.speakerReady
 		p.produceStatsMessage(msg)
 	case *bmp.RawMessage:
 		p.produceRawMessage(msg)
