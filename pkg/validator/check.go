@@ -49,6 +49,13 @@ type check struct {
 	stopCh chan struct{}
 }
 
+// maxStaleMismatches is the number of times a key is allowed to arrive with
+// differing values before we treat it as a genuine failure.  A small budget
+// (e.g. 3) tolerates the 1-2 incomplete "early" messages that BMP active-mode
+// routers (e.g. FRR) sometimes publish before metadata is fully resolved,
+// while still failing fast when a real value mismatch persists.
+const maxStaleMismatches = 3
+
 func makeUnicastPrefixKey(u *bmp_message.UnicastPrefix) (string, error) {
 	if u == nil {
 		return "", fmt.Errorf("object is nil")
@@ -81,12 +88,6 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 		dictionary[k] = u
 	}
 	glog.Infof("Dictionary for topic type %d contains %d test messages", topic.TopicType, len(dictionary))
-	// maxStaleMismatches is the number of times a key is allowed to arrive with
-	// differing values before we treat it as a genuine failure.  A small budget
-	// (e.g. 3) tolerates the 1-2 incomplete "early" messages that BMP active-mode
-	// routers (e.g. FRR) sometimes publish before metadata is fully resolved,
-	// while still failing fast when a real value mismatch persists.
-	const maxStaleMismatches = 3
 	matched := make(map[string]bool)
 	mismatches := make(map[string]int)
 	for {

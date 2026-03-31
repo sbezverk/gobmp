@@ -395,7 +395,7 @@ func TestCheck_KeyNotInDictionary(t *testing.T) {
 	storedJSON, _ := json.Marshal(stored)
 
 	// Incoming message has a different Prefix so its key won't be in the dictionary.
-	// The validator should skip it with a warning rather than failing immediately,
+	// The validator logs a warning and skips it rather than failing immediately,
 	// so that transient/unexpected BGP messages (e.g. convergence withdrawals) don't
 	// cause flaky test failures.
 	incoming := &bmp_message.UnicastPrefix{
@@ -424,7 +424,7 @@ func TestCheck_KeyNotInDictionary(t *testing.T) {
 	errCh := make(chan error, 1)
 	go Check(topics, storedBytes, stopCh, errCh)
 
-	// Send the unexpected message first — it must be silently skipped.
+	// Send the unexpected message first — the validator logs a warning and skips it.
 	topicChan <- incomingJSON
 
 	// Then send the expected message so the validator can complete successfully.
@@ -434,8 +434,8 @@ func TestCheck_KeyNotInDictionary(t *testing.T) {
 	case err := <-errCh:
 		// A nil error means all dictionary entries were matched (Check only sends
 		// nil when every worker's matched count reaches the dictionary size).
-		// This simultaneously confirms: (a) the unexpected message was skipped
-		// without causing an error, and (b) the expected message was verified.
+		// This simultaneously confirms: (a) the unexpected message was skipped with
+		// a warning (not a hard failure), and (b) the expected message was verified.
 		if err != nil {
 			t.Errorf("unexpected error: unexpected messages should be skipped, not fail: %v", err)
 		}
@@ -524,5 +524,121 @@ func TestCheck_StopCh(t *testing.T) {
 		// Check returned as expected.
 	case <-time.After(2 * time.Second):
 		t.Fatal("Check did not return after stopCh was closed")
+	}
+}
+
+// staleMismatch builds a UnicastPrefix JSON message whose key matches
+// expected but whose RouterIP field has a different value. This simulates
+// the "stale" messages that arrive before BMP Initiation metadata is
+// fully resolved in active-mode sessions.
+func staleMismatch(expected *bmp_message.UnicastPrefix) []byte {
+	stale := *expected // shallow copy — same key fields
+	stale.RouterIP = "0.0.0.0"
+	b, _ := json.Marshal(&stale)
+	return b
+}
+
+// TestCheck_StaleMismatches_ThenMatch verifies that the worker tolerates
+// fewer than maxStaleMismatches consecutive value-mismatches for the same
+// key and still completes successfully when a correctly-matching message
+// eventually arrives.
+//
+// The dictionary holds one entry. We send (maxStaleMismatches - 1) stale
+// messages followed by the exact matching message. The worker must not
+// fail during the stale window and must signal success on the final message.
+func TestCheck_StaleMismatches_ThenMatch(t *testing.T) {
+	expected := &bmp_message.UnicastPrefix{
+		Action:    "add",
+		Prefix:    "10.1.0.0",
+		PrefixLen: 16,
+		PeerIP:    "10.0.0.1",
+		Nexthop:   "10.0.0.2",
+		RouterIP:  "192.168.1.1",
+	}
+	expectedJSON, _ := json.Marshal(expected)
+
+	storedBytes := (&StoredMessage{
+		TopicType: bmp.UnicastPrefixV4Msg,
+		Len:       uint32(len(expectedJSON)),
+		Message:   expectedJSON,
+	}).Marshal()
+
+	topicChan := make(chan []byte, maxStaleMismatches+1)
+	topics := []*kafka.TopicDescriptor{
+		{
+			TopicType: bmp.UnicastPrefixV4Msg,
+			TopicChan: topicChan,
+		},
+	}
+	stopCh := make(chan struct{})
+	errCh := make(chan error, 1)
+	go Check(topics, storedBytes, stopCh, errCh)
+
+	// Send (maxStaleMismatches - 1) stale messages: same key, wrong RouterIP.
+	// The budget has one slot remaining so the worker must not fail yet.
+	for i := 0; i < maxStaleMismatches-1; i++ {
+		topicChan <- staleMismatch(expected)
+	}
+
+	// Send the matching message. The worker must accept it and signal success.
+	topicChan <- expectedJSON
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Errorf("expected success after stale window, got error: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for Check to complete")
+	}
+}
+
+// TestCheck_StaleMismatches_BudgetExceeded verifies that the worker reports
+// an error once the mismatch count for a key reaches maxStaleMismatches,
+// even if a correct message has not yet arrived.
+//
+// We send exactly maxStaleMismatches stale messages for the same key. The
+// worker must fail on the last one without waiting for a matching message.
+func TestCheck_StaleMismatches_BudgetExceeded(t *testing.T) {
+	expected := &bmp_message.UnicastPrefix{
+		Action:    "add",
+		Prefix:    "10.2.0.0",
+		PrefixLen: 16,
+		PeerIP:    "10.0.0.1",
+		Nexthop:   "10.0.0.2",
+		RouterIP:  "192.168.1.1",
+	}
+	expectedJSON, _ := json.Marshal(expected)
+
+	storedBytes := (&StoredMessage{
+		TopicType: bmp.UnicastPrefixV4Msg,
+		Len:       uint32(len(expectedJSON)),
+		Message:   expectedJSON,
+	}).Marshal()
+
+	topicChan := make(chan []byte, maxStaleMismatches+1)
+	topics := []*kafka.TopicDescriptor{
+		{
+			TopicType: bmp.UnicastPrefixV4Msg,
+			TopicChan: topicChan,
+		},
+	}
+	stopCh := make(chan struct{})
+	errCh := make(chan error, 1)
+	go Check(topics, storedBytes, stopCh, errCh)
+
+	// Send maxStaleMismatches stale messages. The budget is now exhausted and
+	// the worker must report a non-nil error.
+	for i := 0; i < maxStaleMismatches; i++ {
+		topicChan <- staleMismatch(expected)
+	}
+
+	select {
+	case err := <-errCh:
+		if err == nil {
+			t.Error("expected error after mismatch budget was exceeded, got nil")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for Check to report budget-exceeded error")
 	}
 }
