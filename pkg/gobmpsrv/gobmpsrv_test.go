@@ -685,7 +685,6 @@ func acceptWithTimeout(t *testing.T, ln net.Listener, d time.Duration) (net.Conn
 		}
 		return r.c, nil
 	case <-time.After(d):
-		t.Fatalf("timed out waiting for connection after %v", d)
 		return nil, fmt.Errorf("timed out waiting for connection after %v", d)
 	}
 }
@@ -990,8 +989,8 @@ func TestBMPServer_ActiveMode_StopInterruptsDial(t *testing.T) {
 		t.Fatalf("NewBMPServer: %v", err)
 	}
 	srv.Start()
-	// One full sweep (200 ms tick) ensures the connector has attempted its first
-	// dial and is now sleeping in the ticker select.
+	// Sleep briefly to ensure the connector has performed its initial failed dial
+	// and is now waiting in its backoff timer before Stop() is called.
 	time.Sleep(300 * time.Millisecond)
 	stopWithTimeout(t, srv, 3*time.Second)
 }
