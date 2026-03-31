@@ -215,23 +215,25 @@ var nonTransOpaqueSubTypes = map[uint8]string{
 // 0x0D	EVI-RT Type 3 Extended Community	[draft-ietf-bess-evpn-igmp-mld-proxy]
 // 0x0E	EVPN Attachment Circuit Extended Community	[draft-sajassi-bess-evpn-ac-aware-bundling]
 // 0x0F	Service Carving Timestamp	[draft-ietf-bess-evpn-fast-df-recovery-01]
+// 0x10	EVPN Link Bandwidth Extended Community	[draft-ietf-bess-evpn-unequal-lb]
 var evpnSubTypes = map[uint8]string{
-	0x0: ECPMACMobility,
-	0x1: ECPESILabel,
-	0x2: ECPESImportRouteTarget,
-	0x3: ECPEVPNRouterMAC,
-	0x4: ECPEVPNLayer2Attributes,
-	0x5: ECPETree,
-	0x6: ECPDFElection,
-	0x7: ECPISID,
-	0x8: ECPND,
-	0x9: ECPMulticastFlags,
-	0xa: ECPEVIRTType0,
-	0xb: ECPEVIRTType1,
-	0xc: ECPEVIRTType2,
-	0xd: ECPEVIRTType3,
-	0xe: ECPEVPNAttachmentCircuit,
-	0xf: ECPServiceCarvingTimestamp,
+	0x0:  ECPMACMobility,
+	0x1:  ECPESILabel,
+	0x2:  ECPESImportRouteTarget,
+	0x3:  ECPEVPNRouterMAC,
+	0x4:  ECPEVPNLayer2Attributes,
+	0x5:  ECPETree,
+	0x6:  ECPDFElection,
+	0x7:  ECPISID,
+	0x8:  ECPND,
+	0x9:  ECPMulticastFlags,
+	0xa:  ECPEVIRTType0,
+	0xb:  ECPEVIRTType1,
+	0xc:  ECPEVIRTType2,
+	0xd:  ECPEVIRTType3,
+	0xe:  ECPEVPNAttachmentCircuit,
+	0xf:  ECPServiceCarvingTimestamp,
+	0x10: ECPEVPNLinkBandwidth,
 }
 
 // Non-Transitive Two-Octet AS-Specific Extended Community Sub-Types
@@ -334,6 +336,20 @@ func type6(subType uint8, value []byte) string {
 		s = fmt.Sprintf("%d:%d", value[0], binary.BigEndian.Uint32(value[2:]))
 	case 0x06:
 		s = fmt.Sprintf("%d:0x%04x", value[0], binary.BigEndian.Uint16(value[1:]))
+	case 0x10:
+		// EVPN Link Bandwidth [draft-ietf-bess-evpn-unequal-lb]
+		// value[0] = Value-Units: 0 = Mbps, 1 = generalized weight
+		// value[1:6] = Value-Weight: 5-octet unsigned integer
+		units := value[0]
+		weight := uint64(value[1])<<32 | uint64(binary.BigEndian.Uint32(value[2:6]))
+		switch units {
+		case 0:
+			s = fmt.Sprintf("%d Mbps", weight)
+		case 1:
+			s = fmt.Sprintf("weight %d", weight)
+		default:
+			s = fmt.Sprintf("units=%d weight=%d", units, weight)
+		}
 	default:
 		s = fmt.Sprintf("%d", binary.BigEndian.Uint32(value[0:4]))
 	}
