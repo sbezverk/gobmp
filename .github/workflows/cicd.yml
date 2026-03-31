@@ -345,6 +345,47 @@ jobs:
           exit 1
       - name: cleanup unicast v4 integration test on a multinode kafka with cEOS
         run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka_ceos.yml down
+      - name: pulling FRR container
+        run: docker pull sbezverk/frr_v8.4.1:cicd
+        continue-on-error: true
+      - name: check for gobmp container
+        run: docker images
+      - name: starts unicast v4 integration test on a single node kafka
+        run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_frr.yaml up --detach
+      - name: check connection to kafka and bmp session with a router
+        id: session_5
+        run: ./build/monitor_container.sh gobmp
+        continue-on-error: true
+      - name: Add kafka host to /etc/hosts
+        run: |
+            sudo echo "127.0.0.1 kafka" | sudo tee -a /etc/hosts
+      - name: run validator for ipv4 unicast
+        id: validation_5
+        run: ./bin/validator --validate=true --kafka=127.0.0.1:9092 --msg-file=./testdata/validator/ipv4_unicast_frr.msg
+        continue-on-error: true
+      - name: Check on failures
+        if: steps.session_5.outcome != 'success' || steps.validation_5.outcome != 'success'
+        run: |
+          docker ps -a
+          docker logs gobmp
+          docker logs frr-1
+          exit 1
+      - name: Collect container logs (single kafka frr)
+        if: always()
+        run: |
+          mkdir -p /tmp/logs/single-kafka-frr
+          docker logs gobmp > /tmp/logs/single-kafka-frr/gobmp.log 2>&1 || true
+          docker logs frr-1 > /tmp/logs/single-kafka-frr/frr-1.log 2>&1 || true
+          docker logs kafka > /tmp/logs/single-kafka-frr/kafka.log 2>&1 || true
+      - name: Upload single-kafka-frr logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-single-kafka-frr
+          path: /tmp/logs/single-kafka-frr/
+      - name: cleanup unicast v4 integration test on a single node kafka
+        if: always()
+        run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_frr.yaml down
 
   # ==============================================================================
   # RFC Compliance Validation (BGP-LS RFC 7752 & RFC 9085)

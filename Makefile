@@ -1,7 +1,7 @@
 REGISTRY_NAME?=docker.io/sbezverk
 IMAGE_VERSION?=test-235
 
-.PHONY: all gobmp player container push clean test lint gobmp-mac-arm64  gobmp-linux-arm64  gobmp-mac-amd64  cicd-image
+.PHONY: all gobmp player container push clean test lint gobmp-mac-arm64  gobmp-linux-arm64  gobmp-mac-amd64  cicd-image validator-mac-amd64 validator-mac-arm64 validator player-container validator-container player-push validator-push
 
 ifdef V
 TESTARGS = -v -args -alsologtostderr -v 5
@@ -40,9 +40,13 @@ validator:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/validator compile-validator
 
-validator-mac:
+validator-mac-amd64:
 	mkdir -p bin
-	$(MAKE) -C ./cmd/validator compile-validator-mac
+	$(MAKE) -C ./cmd/validator compile-validator-mac-amd64
+
+validator-mac-arm64:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/validator compile-validator-mac-arm64
 
 container: gobmp
 	docker buildx build --platform linux/amd64 --load -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile.gobmp .

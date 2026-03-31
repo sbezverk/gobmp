@@ -375,7 +375,7 @@ func (srv *bmpServer) connector() {
 					srv.wg.Add(1)
 					srv.clients[client] = struct{}{}
 					srv.mu.Unlock()
-					glog.Infof("Successfully connected to BGP speaker %s", speaker.Address)
+					glog.V(5).Infof("client %s connected, calling bmpWorker", speaker.Address)
 					go func() {
 						defer srv.wg.Done()
 						// Mark the speaker as disconnected when bmpWorker returns

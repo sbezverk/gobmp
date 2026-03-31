@@ -859,10 +859,6 @@ func TestBMPServer_ActiveMode_ConnectsAndProcessesBMP(t *testing.T) {
 		t.Fatalf("accepting speaker connection: %v", err)
 	}
 	defer func() { _ = speakerConn.Close() }()
-	if err != nil {
-		srv.Stop()
-		t.Fatalf("accepting speaker connection: %v", err)
-	}
 	if _, err := speakerConn.Write(makePeerDownMessage()); err != nil {
 		srv.Stop()
 		t.Fatalf("Write BMP message: %v", err)
