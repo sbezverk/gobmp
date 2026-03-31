@@ -200,5 +200,3 @@ func Check(topics []*kafka.TopicDescriptor, b []byte, stopCh chan struct{}, errC
 		}
 	}
 }
-
-
