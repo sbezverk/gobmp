@@ -342,7 +342,6 @@ func (srv *bmpServer) connector() {
 			speaker.mu.Lock()
 			if !speaker.isConnected && time.Since(speaker.lastAttempt) >= speaker.retryDelay {
 				glog.Infof("Attempting to connect to BGP speaker %s", speaker.Address)
-				speaker.lastAttempt = time.Now()
 				// Release speaker.mu before dialling: the dial may block for up
 				// to 5 seconds and we must not hold the lock across I/O.
 				speaker.mu.Unlock()
@@ -369,6 +368,7 @@ func (srv *bmpServer) connector() {
 						return
 					}
 					speaker.mu.Lock()
+					speaker.lastAttempt = time.Now()
 					speaker.isConnected = true
 					speaker.retryDelay = 1 * time.Second // reset backoff on a successful connection
 					speaker.mu.Unlock()
@@ -400,6 +400,7 @@ func (srv *bmpServer) connector() {
 					// Exponential backoff: double the retry delay on each failure,
 					// capped at 5 minutes to avoid indefinitely long quiet periods.
 					speaker.mu.Lock()
+					speaker.lastAttempt = time.Now()
 					newDelay := speaker.retryDelay * 2
 					speaker.retryDelay = min(newDelay, 5*time.Minute)
 					speaker.mu.Unlock()
