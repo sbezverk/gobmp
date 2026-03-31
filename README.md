@@ -53,6 +53,7 @@ goBMP is a production-ready implementation of the BGP Monitoring Protocol ([RFC 
 - ✅ **OpenBMP Compatibility:** RAW mode publishes binary messages compatible with OpenBMP consumers
 - ✅ **Intercept Mode:** Transparent proxy mode for inserting into existing BMP pipelines
 - ✅ **Topic Flexibility:** Separate or combined topics for IPv4/IPv6 address families
+- ✅ **Active Mode:** Initiate outbound BMP sessions to routers — no inbound listener required
 - ✅ **Performance Monitoring:** Built-in pprof endpoints for profiling and debugging
 - ✅ **Kubernetes Native:** Ready-to-use deployment manifests included
 
@@ -237,9 +238,27 @@ nats_config:
 dump_config:
   file: "/path/to/dump.json"    # dump destination file used when --dump is enabled
 
-# Active mode / speaker list (advanced)
+# By default goBMP runs in passive mode (active_mode: false), where routers initiate BMP sessions to goBMP.
 active_mode: false
-speakers_list: []
+speakers_list: []           # default: no dial-out speakers configured
+```
+
+**Enable active mode example:**
+```yaml
+# Active mode / speaker list
+# When active_mode is true, goBMP dials out to the listed speakers instead of
+# binding a listener. speakers_list must be non-empty; bmp_listen_port is ignored.
+#
+# Each entry must be an IP literal and port in "ip:port" form:
+#   - IPv4: "192.0.2.1:57000"
+#   - IPv6: "[2001:db8::1]:57000"  (brackets required for IPv6)
+# Hostnames and IPv6 scoped/zone addresses (e.g. "fe80::1%eth0") are rejected
+# at startup. Duplicate entries are also rejected.
+# Example: Active mode with a list of BMP speaker routers that goBMP will dial out to.
+active_mode: true
+speakers_list:
+  - "192.0.2.1:57000"       # router-1 (IPv4)
+  - "[2001:db8::1]:57000"   # router-2 (IPv6)
 ```
 
 ### Command-Line Parameters

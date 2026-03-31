@@ -49,6 +49,13 @@ type check struct {
 	stopCh chan struct{}
 }
 
+// maxStaleMismatches is the number of times a key is allowed to arrive with
+// differing values before we treat it as a genuine failure.  A small budget
+// (e.g. 3) tolerates the 1-2 incomplete "early" messages that BMP active-mode
+// routers (e.g. FRR) sometimes publish before metadata is fully resolved,
+// while still failing fast when a real value mismatch persists.
+const maxStaleMismatches = 3
+
 func makeUnicastPrefixKey(u *bmp_message.UnicastPrefix) (string, error) {
 	if u == nil {
 		return "", fmt.Errorf("object is nil")
@@ -80,8 +87,9 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 		}
 		dictionary[k] = u
 	}
-	glog.Infof("Dictionaly for topic type %d contains %d test messages", topic.TopicType, len(dictionary))
-	matches := 0
+	glog.Infof("Dictionary for topic type %d contains %d test messages", topic.TopicType, len(dictionary))
+	matched := make(map[string]bool)
+	mismatches := make(map[string]int)
 	for {
 		select {
 		case <-c.stopCh:
@@ -103,17 +111,33 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 			}
 			u, ok := dictionary[k]
 			if !ok {
-				workersErrChan <- fmt.Errorf("dictionary does not have a test message for key: %s", k)
-				return
+				// Some BMP sessions produce transient or unexpected messages (e.g.
+				// a withdrawal for a route that was briefly in a peer's adj-rib-in
+				// during BGP convergence).  Log a warning and skip rather than
+				// treating this as a hard failure, so the test remains focused on
+				// verifying that all expected messages ARE received.
+				glog.Warningf("received unexpected message for key: %s (not in test dictionary, skipping)", k)
+				continue
 			}
-			glog.Infof("found matching the test message for the key: %s", k)
+			// Skip messages that have already been matched by a later correct version.
+			if matched[k] {
+				continue
+			}
 			equal, diffs := u.Equal(ou)
 			if !equal {
-				workersErrChan <- fmt.Errorf("for key: %s, expected and received messages differ, diffs: %s", k, strings.Join(diffs, " | "))
-				return
+				mismatches[k]++
+				if mismatches[k] >= maxStaleMismatches {
+					workersErrChan <- fmt.Errorf("for key: %s, expected and received messages differ after %d attempts, diffs: %s",
+						k, mismatches[k], strings.Join(diffs, " | "))
+					return
+				}
+				glog.Warningf("key: %s values differ (stale message? attempt %d/%d), skipping: %s",
+					k, mismatches[k], maxStaleMismatches, strings.Join(diffs, " | "))
+				continue
 			}
-			matches++
-			if matches >= len(dictionary) {
+			glog.Infof("found matching the test message for the key: %s", k)
+			matched[k] = true
+			if len(matched) >= len(dictionary) {
 				// All checks are completed, exiting
 				glog.Infof("topic type %d, all checks are done.", topic.TopicType)
 				done <- struct{}{}

@@ -214,7 +214,8 @@ func TestLinkDescriptorGetLinkMTID(t *testing.T) {
 				return
 			}
 			if got == nil {
-				t.Fatal("GetLinkMTID() returned nil, want non-nil")
+				t.Error("GetLinkMTID() returned nil, want non-nil")
+				return
 			}
 			if got.MTID != tt.wantMTID {
 				t.Errorf("MTID = 0x%04x, want 0x%04x", got.MTID, tt.wantMTID)

@@ -1,0 +1,28 @@
+# This file tells the frr package which daemons to start.
+# bgpd must be started with -M bmp to enable the BMP loadable module.
+bgpd=yes
+bgpd_options="  -A 127.0.0.1 -M bmp"
+
+zebra=yes
+zebra_options="  -A 127.0.0.1 -s 90000000"
+
+staticd=yes
+staticd_options="  -A 127.0.0.1"
+
+# Leave all others off.
+ospfd=no
+ospf6d=no
+ripd=no
+ripngd=no
+isisd=no
+pimd=no
+ldpd=no
+nhrpd=no
+eigrpd=no
+babeld=no
+sharpd=no
+pbrd=no
+bfdd=no
+fabricd=no
+vrrpd=no
+pathd=no

@@ -49,10 +49,8 @@ func TestGetPrefixIPReachability(t *testing.T) {
 			route := tt.input.GetPrefixIPReachability(tt.ipv4)
 			var rs string
 			if route == nil {
-				t.Errorf("failed, no routes reterned")
-			}
-			if route == nil {
-				t.Fatal("computed route is nil")
+				t.Errorf("failed, no routes returned")
+				return
 			}
 			if len(route.Prefix) == 16 {
 				rs = net.IP(route.Prefix).To16().String()

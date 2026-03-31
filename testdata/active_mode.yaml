@@ -1,0 +1,4 @@
+active_mode: true
+speakers_list:
+  - 127.0.0.1:54000
+  - 127.0.0.1:54001

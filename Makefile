@@ -1,7 +1,26 @@
 REGISTRY_NAME?=docker.io/sbezverk
 IMAGE_VERSION?=test-235
 
-.PHONY: all gobmp player container push clean test lint
+.PHONY: \
+	all \
+	gobmp \
+	player \
+	container \
+	push \
+	clean \
+	test \
+	lint \
+	gobmp-mac-arm64 \
+	gobmp-linux-arm64 \
+	gobmp-mac-amd64 \
+	cicd-image \
+	validator-mac-amd64 \
+	validator-mac-arm64 \
+	validator \
+	player-container \
+	validator-container \
+	player-push \
+	validator-push
 
 ifdef V
 TESTARGS = -v -args -alsologtostderr -v 5
@@ -15,6 +34,23 @@ gobmp:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/gobmp compile-gobmp
 
+gobmp-mac-arm64:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/gobmp compile-gobmp-mac-arm64
+
+gobmp-linux-arm64:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/gobmp compile-gobmp-linux-arm64
+
+cicd-image:
+	mkdir -p bin
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(shell go env GOARCH) GO111MODULE=on go build -a -ldflags '-extldflags "-static"' -o ./bin/gobmp ./cmd/gobmp/gobmp.go
+	docker buildx build --platform linux/$(shell go env GOARCH) -t localhost/gobmp:cicd -f ./build/Dockerfile.gobmp --load .
+
+gobmp-mac-amd64:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/gobmp compile-gobmp-mac-amd64
+
 player:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/player compile-player
@@ -23,9 +59,13 @@ validator:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/validator compile-validator
 
-validator-mac:
+validator-mac-amd64:
 	mkdir -p bin
-	$(MAKE) -C ./cmd/validator compile-validator-mac
+	$(MAKE) -C ./cmd/validator compile-validator-mac-amd64
+
+validator-mac-arm64:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/validator compile-validator-mac-arm64
 
 container: gobmp
 	docker buildx build --platform linux/amd64 --load -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile.gobmp .

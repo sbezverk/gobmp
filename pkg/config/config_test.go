@@ -152,3 +152,130 @@ func TestLoadConfig_ComputedFieldNotUnmarshalled(t *testing.T) {
 		t.Error("Publisher must remain nil after LoadConfig")
 	}
 }
+
+func TestLoadConfig_EmptyPath(t *testing.T) {
+	_, err := LoadConfig("")
+	if err != ErrNoConfig {
+		t.Errorf("LoadConfig(\"\") error = %v, want ErrNoConfig", err)
+	}
+}
+
+func TestLoadConfig_ActiveModeEmptySpeakers(t *testing.T) {
+	path := writeTemp(t, "active_mode: true\nspeakers_list: []\n")
+	_, err := LoadConfig(path)
+	if err == nil {
+		t.Error("expected error when active_mode=true and speakers_list is empty, got nil")
+	}
+}
+
+func TestLoadConfig_ActiveModeInvalidSpeaker(t *testing.T) {
+	yml := `
+active_mode: true
+speakers_list:
+  - "not-an-ip:179"
+`
+	path := writeTemp(t, yml)
+	_, err := LoadConfig(path)
+	if err == nil {
+		t.Error("expected error when active_mode=true and speakers_list contains non-IP address, got nil")
+	}
+}
+
+func TestLoadConfig_ActiveModeIPv6Speaker(t *testing.T) {
+	yml := `
+active_mode: true
+speakers_list:
+  - "[2001:db8::1]:179"
+`
+	path := writeTemp(t, yml)
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig() unexpected error for valid IPv6 speaker: %v", err)
+	}
+	if len(cfg.SpeakersList) != 1 || cfg.SpeakersList[0] != "[2001:db8::1]:179" {
+		t.Errorf("SpeakersList = %v, want [\"[2001:db8::1]:179\"]", cfg.SpeakersList)
+	}
+}
+
+func TestValidateSpeakersList(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []string
+		wantErr bool
+	}{
+		{
+			name:    "valid single IPv4",
+			input:   []string{"192.0.2.1:179"},
+			wantErr: false,
+		},
+		{
+			name:    "valid multiple IPv4",
+			input:   []string{"192.0.2.1:179", "10.0.0.1:180"},
+			wantErr: false,
+		},
+		{
+			name:    "valid IPv6",
+			input:   []string{"[2001:db8::1]:179"},
+			wantErr: false,
+		},
+		{
+			name:    "valid port boundary low",
+			input:   []string{"192.0.2.1:1"},
+			wantErr: false,
+		},
+		{
+			name:    "valid port boundary high",
+			input:   []string{"192.0.2.1:65535"},
+			wantErr: false,
+		},
+		{
+			name:    "empty list is valid",
+			input:   []string{},
+			wantErr: false,
+		},
+		{
+			name:    "invalid format no port",
+			input:   []string{"192.0.2.1"},
+			wantErr: true,
+		},
+		{
+			name:    "hostname instead of IP",
+			input:   []string{"router.example.com:179"},
+			wantErr: true,
+		},
+		{
+			name:    "port zero",
+			input:   []string{"192.0.2.1:0"},
+			wantErr: true,
+		},
+		{
+			name:    "port too large",
+			input:   []string{"192.0.2.1:65536"},
+			wantErr: true,
+		},
+		{
+			name:    "non-numeric port",
+			input:   []string{"192.0.2.1:bgp"},
+			wantErr: true,
+		},
+		{
+			name:    "duplicate address",
+			input:   []string{"192.0.2.1:179", "192.0.2.1:179"},
+			wantErr: true,
+		},
+		{
+			name:    "second entry invalid keeps first valid",
+			input:   []string{"192.0.2.1:179", "bad-entry"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSpeakersList(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateSpeakersList(%v) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+		})
+	}
+}

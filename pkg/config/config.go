@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
+	"strconv"
 
 	"github.com/sbezverk/gobmp/pkg/pub"
 	"gopkg.in/yaml.v3"
@@ -104,6 +106,41 @@ func LoadConfig(path string) (*Config, error) {
 	if err := yaml.Unmarshal(b, cfg); err != nil {
 		return nil, err
 	}
+	if cfg.ActiveMode && len(cfg.SpeakersList) == 0 {
+		return nil, errors.New("active_mode is true but speakers_list is empty")
+	}
+	if cfg.ActiveMode {
+		if err := ValidateSpeakersList(cfg.SpeakersList); err != nil {
+			return nil, err
+		}
+	}
 
 	return cfg, nil
+}
+
+// ValidateSpeakersList verifies that each speaker address is a unique "<ip-literal>:<port>" endpoint.
+// The host part must be an IP literal (IPv4 or IPv6), not a hostname or scoped/zone address;
+// IPv6 addresses must be in bracket form "[<ipv6-literal>]:<port>" as required by net.SplitHostPort.
+// The port must be a decimal integer in the range 1–65535, and duplicate addresses in the list are rejected.
+func ValidateSpeakersList(speakers []string) error {
+	uniqueAddrs := make(map[string]bool)
+	for _, addr := range speakers {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return fmt.Errorf("invalid speaker address %q: must be in the form <ip-literal>:<port>: %v", addr, err)
+		}
+		if net.ParseIP(host) == nil {
+			return fmt.Errorf("invalid speaker address %q: host %q is not a valid IP literal (speakers_list only accepts IP literals, not hostnames or scoped addresses)", addr, host)
+		}
+		p, err := strconv.Atoi(port)
+		if err != nil || p < 1 || p > 65535 {
+			return fmt.Errorf("invalid speaker address %q: invalid port %q (must be between 1 and 65535)", addr, port)
+		}
+		if _, exists := uniqueAddrs[addr]; exists {
+			return fmt.Errorf("duplicate speaker address: %q", addr)
+		}
+		uniqueAddrs[addr] = true
+	}
+
+	return nil
 }

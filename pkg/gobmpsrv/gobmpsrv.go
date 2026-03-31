@@ -1,12 +1,14 @@
 package gobmpsrv
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -26,28 +28,61 @@ type BMPServer interface {
 }
 
 type bmpServer struct {
+	// isActive selects the operating mode:
+	//   false (default) — passive: bind a TCP listener and wait for routers to
+	//                     connect and send BMP sessions.
+	//   true            — active: initiate TCP connections to a known set of
+	//                     BGP speakers listed in bgpSpeakers.
+	isActive  bool
 	splitAF   bool
 	publisher pub.Publisher
-	incoming  net.Listener
-	wg        sync.WaitGroup        // tracks server() + in-flight bmpWorker goroutines
-	mu        sync.Mutex            // protects clients and closing
+	incoming  net.Listener   // passive mode only; nil in active mode
+	wg        sync.WaitGroup // tracks server()/connectSpeaker() + in-flight bmpWorker goroutines
+	mu        sync.Mutex     // protects clients and closing
+	stopOnce  sync.Once
 	clients   map[net.Conn]struct{} // active bmpWorker connections
 	closing   bool                  // set to true in Stop() before iterating clients
 	bmpRaw    bool
 	adminID   string
+	// Active-mode fields — all nil/zero in passive mode.
+	connectorStopCh chan struct{}      // closed by stopConnector() to signal connector() to exit
+	bgpSpeakers     []string           // list of "host:port" addresses to dial
+	connectorCtx    context.Context    // parent context for all dials; cancelled by stopConnector()
+	connectorCancel context.CancelFunc // cancels connectorCtx
 }
 
 func (srv *bmpServer) Start() {
-	// Starting bmp server
-	glog.Infof("Starting gobmp server on %s", srv.incoming.Addr().String())
-	srv.wg.Add(1)
-	go srv.server()
+	if srv.isActive {
+		glog.Infof("Starting gobmp server in Active mode")
+		// Spawn all per-speaker goroutines under srv.mu so that every wg.Add
+		// completes before Stop() can acquire the lock, set srv.closing, and
+		// reach wg.Wait().  sync.WaitGroup forbids Add(+1) concurrent with
+		// Wait(), so we must guarantee all adds are visible before Wait is
+		// called.  Holding srv.mu here and checking srv.closing in Stop()
+		// before wg.Wait() provides that guarantee without a connector()
+		// goroutine.
+		srv.mu.Lock()
+		for _, addr := range srv.bgpSpeakers {
+			speaker := &bgpSpeaker{Address: addr, retryDelay: 1 * time.Second}
+			srv.wg.Add(1)
+			go srv.connectSpeaker(speaker)
+		}
+		srv.mu.Unlock()
+	} else {
+		glog.Infof("Starting gobmp server on %s", srv.incoming.Addr().String())
+		srv.wg.Add(1)
+		go srv.server()
+	}
 }
 
 func (srv *bmpServer) Stop() {
 	glog.Infof("Stopping gobmp server")
-	// 1. Stop accepting new connections.
-	_ = srv.incoming.Close()
+	if srv.isActive {
+		srv.stopConnector()
+	} else {
+		// 1. Stop accepting new connections.
+		_ = srv.incoming.Close()
+	}
 	// 2. Set the closing flag and close every active client connection atomically
 	//    under mu.  startWorker checks this flag (also under mu) so any connection
 	//    that races through Accept() after this point is closed immediately there,
@@ -251,6 +286,142 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	}
 }
 
+// bgpSpeaker tracks the connection state and reconnection backoff for a single
+// BGP speaker in active mode. All fields except Address are protected by mu.
+type bgpSpeaker struct {
+	Address     string
+	mu          sync.Mutex
+	isConnected bool          // true while a bmpWorker goroutine owns the connection
+	nextAttempt time.Time     // earliest time for the next dial attempt (zero = immediate)
+	retryDelay  time.Duration // current backoff delay; doubles on each failure up to 5 minutes
+}
+
+// stopConnector signals all per-speaker goroutines to exit and cancels any
+// in-progress dial. It is a no-op in passive mode and safe to call multiple
+// times (guarded by stopOnce).
+func (srv *bmpServer) stopConnector() {
+	if !srv.isActive {
+		return
+	}
+	srv.stopOnce.Do(func() {
+		// Cancel connectorCtx first so any in-flight DialContext returns
+		// immediately rather than waiting out its 5-second timeout.
+		srv.connectorCancel()
+		close(srv.connectorStopCh)
+	})
+}
+
+// connectSpeaker manages the full lifecycle (dial → bmpWorker → backoff →
+// redial) for a single BGP speaker.  It runs as its own goroutine so that
+// a blocked or slow dial cannot stall connection attempts to other speakers.
+func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
+	defer srv.wg.Done()
+	for {
+		// Honour a stop signal before each dial attempt.
+		select {
+		case <-srv.connectorStopCh:
+			glog.Infof("connectSpeaker(%s): stop signal received, exiting", speaker.Address)
+			return
+		default:
+		}
+
+		// Wait out the current backoff delay, but wake immediately on stop.
+		// nextAttempt is set after each dial attempt (success or failure) so the
+		// wait is measured from when the dial *returned*, not when it started.
+		speaker.mu.Lock()
+		remaining := time.Until(speaker.nextAttempt)
+		speaker.mu.Unlock()
+		if remaining > 0 {
+			select {
+			case <-srv.connectorStopCh:
+				glog.Infof("connectSpeaker(%s): stop signal received during backoff, exiting", speaker.Address)
+				return
+			case <-time.After(remaining):
+			}
+		}
+
+		glog.Infof("Attempting to connect to BGP speaker %s", speaker.Address)
+
+		// Derive a timeout context from connectorCtx so that
+		// stopConnector() (which cancels connectorCtx) also aborts
+		// any dial that is currently in progress.
+		ctx, cancel := context.WithTimeout(srv.connectorCtx, 5*time.Second)
+		client, err := (&net.Dialer{}).DialContext(ctx, "tcp", speaker.Address)
+		cancel() // always release the timer goroutine regardless of outcome
+
+		if err != nil {
+			// context.Canceled means stopConnector() cancelled connectorCtx while
+			// the dial was in progress — this is a clean shutdown, not a network
+			// error.  Exit immediately without error logging or backoff so that
+			// Stop() completes quietly.  net.ErrClosed can surface for the same
+			// reason on some platforms (underlying fd closed under the dialer).
+			if errors.Is(err, context.Canceled) || errors.Is(err, net.ErrClosed) {
+				glog.Infof("connectSpeaker(%s): dial cancelled during shutdown, exiting", speaker.Address)
+				return
+			}
+			glog.Errorf("Failed to connect to BGP speaker %s: %v", speaker.Address, err)
+			// Exponential backoff: double the retry delay on each failure,
+			// capped at 5 minutes to avoid indefinitely long quiet periods.
+			// nextAttempt is set here — after DialContext returned — so the full
+			// backoff window is preserved even when the dial blocked for its
+			// entire 5-second timeout.
+			speaker.mu.Lock()
+			newDelay := speaker.retryDelay * 2
+			speaker.retryDelay = min(newDelay, 5*time.Minute)
+			speaker.nextAttempt = time.Now().Add(speaker.retryDelay)
+			speaker.mu.Unlock()
+			glog.Infof("Will retry connection to %s in %v", speaker.Address, speaker.retryDelay)
+			continue
+		}
+
+		// Hold srv.mu for the entire block that checks srv.closing,
+		// updates speaker state, increments the WaitGroup, and inserts
+		// the connection into srv.clients. Doing all of this atomically
+		// under one lock ensures Stop() cannot iterate srv.clients and
+		// miss this connection, which would cause srv.wg.Wait() to hang.
+		srv.mu.Lock()
+		if srv.closing {
+			// Stop() has already iterated srv.clients; close the
+			// freshly dialled connection and exit the goroutine.
+			srv.mu.Unlock()
+			_ = client.Close()
+			return
+		}
+		speaker.mu.Lock()
+		speaker.isConnected = true
+		speaker.retryDelay = 1 * time.Second // reset backoff on a successful connection
+		speaker.nextAttempt = time.Time{}    // allow immediate reconnect after a clean disconnect
+		speaker.mu.Unlock()
+		srv.wg.Add(1)
+		srv.clients[client] = struct{}{}
+		srv.mu.Unlock()
+
+		glog.V(5).Infof("client %s connected, calling bmpWorker", speaker.Address)
+		// Run bmpWorker synchronously: this goroutine is dedicated to this
+		// speaker, so blocking here is correct and avoids an extra goroutine.
+		func() {
+			defer srv.wg.Done()
+			defer func() {
+				speaker.mu.Lock()
+				speaker.isConnected = false
+				speaker.mu.Unlock()
+			}()
+			defer func() {
+				srv.mu.Lock()
+				delete(srv.clients, client)
+				srv.mu.Unlock()
+			}()
+			defer func() { _ = client.Close() }()
+			srv.bmpWorker(client)
+		}()
+		// bmpWorker returned — the connection dropped; schedule reconnect with backoff.
+		speaker.mu.Lock()
+		speaker.nextAttempt = time.Now().Add(speaker.retryDelay)
+		speaker.mu.Unlock()
+		glog.Infof("connectSpeaker(%s): bmpWorker exited, scheduling reconnect in %v", speaker.Address, speaker.retryDelay)
+	}
+}
+
 // NewBMPServer instantiates a new instance of BMP Server
 func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 	if cfg == nil {
@@ -259,16 +430,32 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 	if cfg.Publisher == nil {
 		return nil, errors.New("publisher cannot be nil")
 	}
-	incoming, err := net.Listen("tcp", ":"+strconv.Itoa(cfg.BmpListenPort))
-	if err != nil {
-		glog.Errorf("fail to setup listener on port %d with error: %+v", cfg.BmpListenPort, err)
-		return nil, err
-	}
 	bmpSrv := bmpServer{
-		clients:   make(map[net.Conn]struct{}),
-		publisher: cfg.Publisher,
-		incoming:  incoming,
-		splitAF:   cfg.SplitAF == nil || *cfg.SplitAF, // nil means unset → default true
+		isActive:    cfg.ActiveMode,
+		clients:     make(map[net.Conn]struct{}),
+		publisher:   cfg.Publisher,
+		splitAF:     cfg.SplitAF == nil || *cfg.SplitAF, // nil means unset → default true
+		bgpSpeakers: cfg.SpeakersList,
+	}
+	if !bmpSrv.isActive {
+		incoming, err := net.Listen("tcp", ":"+strconv.Itoa(cfg.BmpListenPort))
+		if err != nil {
+			glog.Errorf("fail to setup listener on port %d with error: %+v", cfg.BmpListenPort, err)
+			return nil, err
+		}
+		bmpSrv.incoming = incoming
+	}
+	if bmpSrv.isActive && len(bmpSrv.bgpSpeakers) == 0 {
+		return nil, errors.New("active_mode is true but speakers_list is empty")
+	}
+	if bmpSrv.isActive {
+		if err := config.ValidateSpeakersList(bmpSrv.bgpSpeakers); err != nil {
+			return nil, err
+		}
+		bmpSrv.connectorStopCh = make(chan struct{})
+		ctx, cancel := context.WithCancel(context.Background())
+		bmpSrv.connectorCtx = ctx
+		bmpSrv.connectorCancel = cancel
 	}
 	if cfg.PublisherType == config.PublisherTypeKafka && cfg.KafkaConfig != nil {
 		bmpSrv.bmpRaw = cfg.KafkaConfig.BmpRaw
