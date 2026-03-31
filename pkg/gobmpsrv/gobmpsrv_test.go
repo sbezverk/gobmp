@@ -1,6 +1,7 @@
 package gobmpsrv
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -1032,4 +1033,263 @@ func TestBMPServer_ActiveMode_ClosingRaceWithDial(t *testing.T) {
 	// Race Stop() against the in-flight dial; either path must not hang.
 	time.Sleep(50 * time.Millisecond)
 	stopWithTimeout(t, srv, 3*time.Second)
+}
+
+// ---- connectSpeaker unit tests (backoff logic) ------------------------------
+//
+// These tests call connectSpeaker directly (same package) to exercise the
+// bgpSpeaker backoff state machine in isolation, independent of NewBMPServer.
+
+// newConnectSpeakerSrv creates a minimal bmpServer wired for active mode so
+// that connectSpeaker can be invoked directly. The returned cleanup function
+// calls stopConnector (idempotent via sync.Once) and is safe to defer.
+func newConnectSpeakerSrv() (*bmpServer, func()) {
+	ctx, cancel := context.WithCancel(context.Background())
+	srv := &bmpServer{
+		isActive:        true,
+		publisher:       newMockPublisher(),
+		clients:         make(map[net.Conn]struct{}),
+		connectorStopCh: make(chan struct{}),
+		connectorCtx:    ctx,
+		connectorCancel: cancel,
+	}
+	return srv, func() { srv.stopConnector() }
+}
+
+// runConnectSpeaker increments the server WaitGroup (connectSpeaker calls
+// defer wg.Done()) and launches connectSpeaker in a goroutine. The returned
+// channel is closed when the goroutine exits.
+func runConnectSpeaker(srv *bmpServer, speaker *bgpSpeaker) <-chan struct{} {
+	done := make(chan struct{})
+	srv.wg.Add(1)
+	go func() {
+		srv.connectSpeaker(speaker)
+		close(done)
+	}()
+	return done
+}
+
+// assertExitsWithin fails the test if the done channel is not closed within d.
+func assertExitsWithin(t *testing.T, done <-chan struct{}, d time.Duration) {
+	t.Helper()
+	select {
+	case <-done:
+	case <-time.After(d):
+		t.Fatalf("connectSpeaker did not exit within %v", d)
+	}
+}
+
+// TestConnectSpeaker_StopPreSignaled_ExitsBeforeDial closes connectorStopCh
+// before starting connectSpeaker and verifies that the goroutine exits
+// immediately via the first select without attempting a dial.
+func TestConnectSpeaker_StopPreSignaled_ExitsBeforeDial(t *testing.T) {
+	srv, cleanup := newConnectSpeakerSrv()
+	cleanup() // close stop channel before the goroutine starts
+
+	speaker := &bgpSpeaker{Address: "127.0.0.1:1", retryDelay: 1 * time.Second}
+	assertExitsWithin(t, runConnectSpeaker(srv, speaker), 500*time.Millisecond)
+}
+
+// TestConnectSpeaker_StopDuringBackoff pre-sets nextAttempt far in the future
+// so that connectSpeaker enters the backoff sleep immediately. Closing the
+// stop channel must wake the goroutine and cause it to exit without waiting
+// out the full backoff window.
+func TestConnectSpeaker_StopDuringBackoff(t *testing.T) {
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	speaker := &bgpSpeaker{
+		Address:     "127.0.0.1:1",
+		retryDelay:  30 * time.Second,
+		nextAttempt: time.Now().Add(30 * time.Second), // far future → enters wait
+	}
+	done := runConnectSpeaker(srv, speaker)
+
+	time.Sleep(50 * time.Millisecond) // let goroutine enter the backoff select
+	cleanup()                         // signal stop
+	assertExitsWithin(t, done, 500*time.Millisecond)
+}
+
+// TestConnectSpeaker_ExponentialBackoff_DelayDoubles verifies that retryDelay
+// doubles after a failed dial. A refused connection returns almost instantly, so
+// we allow just enough time for one dial+backoff cycle before stopping and
+// inspecting the speaker state.
+func TestConnectSpeaker_ExponentialBackoff_DelayDoubles(t *testing.T) {
+	addr := freeAddr(t) // port released → ECONNREFUSED immediately
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	const initial = 200 * time.Millisecond
+	speaker := &bgpSpeaker{Address: addr, retryDelay: initial}
+	done := runConnectSpeaker(srv, speaker)
+
+	// Wait long enough for the first dial to fail and retryDelay to be updated,
+	// but short enough that we are still inside the first backoff window.
+	time.Sleep(50 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	got := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	if got != 2*initial {
+		t.Errorf("retryDelay after 1 failure = %v, want %v", got, 2*initial)
+	}
+}
+
+// TestConnectSpeaker_BackoffCappedAt5Min exercises the cap: once retryDelay
+// has reached the 5-minute maximum, further failures must not increase it.
+func TestConnectSpeaker_BackoffCappedAt5Min(t *testing.T) {
+	addr := freeAddr(t)
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	// Pre-set retryDelay just below the cap so one failure pushes it over.
+	speaker := &bgpSpeaker{Address: addr, retryDelay: 4 * time.Minute}
+	done := runConnectSpeaker(srv, speaker)
+
+	time.Sleep(50 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	got := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	const cap = 5 * time.Minute
+	if got != cap {
+		t.Errorf("retryDelay after failure near cap = %v, want %v", got, cap)
+	}
+}
+
+// TestConnectSpeaker_NextAttemptInFutureAfterFailure checks that nextAttempt
+// is set to a time in the future after a failed dial, ensuring the backoff
+// window is measured from after DialContext returns.
+func TestConnectSpeaker_NextAttemptInFutureAfterFailure(t *testing.T) {
+	addr := freeAddr(t)
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	const initial = 200 * time.Millisecond
+	speaker := &bgpSpeaker{Address: addr, retryDelay: initial}
+	done := runConnectSpeaker(srv, speaker)
+
+	time.Sleep(50 * time.Millisecond) // dial has failed; goroutine is in backoff
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	next := speaker.nextAttempt
+	speaker.mu.Unlock()
+
+	if !next.After(time.Now()) {
+		t.Errorf("nextAttempt = %v is not in the future; backoff window not reserved", next)
+	}
+}
+
+// TestConnectSpeaker_BackoffResetOnSuccess verifies that retryDelay is reset
+// to 1 second after a successful dial, regardless of how high it had grown.
+func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	// Pre-set a high retryDelay to verify it gets reset on success.
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(t, ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	// Give connectSpeaker time to update speaker state after the dial succeeds.
+	time.Sleep(50 * time.Millisecond)
+
+	speaker.mu.Lock()
+	delay := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	if delay != 1*time.Second {
+		t.Errorf("retryDelay after successful connect = %v, want 1s", delay)
+	}
+
+	cleanup()
+	_ = conn.Close()
+	assertExitsWithin(t, done, 2*time.Second)
+}
+
+// TestConnectSpeaker_PostDisconnect_NextAttemptInFuture verifies that after
+// bmpWorker exits (server-side close), nextAttempt is set to a future time
+// so the reconnect loop waits the backoff before re-dialing.
+func TestConnectSpeaker_PostDisconnect_NextAttemptInFuture(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 1 * time.Second}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(t, ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+	_ = conn.Close() // trigger bmpWorker exit via EOF
+
+	// Give connectSpeaker time to process the disconnect and set nextAttempt.
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	next := speaker.nextAttempt
+	speaker.mu.Unlock()
+
+	if !next.After(time.Now()) {
+		t.Errorf("nextAttempt = %v is not in the future after disconnect", next)
+	}
+}
+
+// TestConnectSpeaker_ClosingFlag_ExitsAfterSuccessfulDial verifies that when
+// srv.closing is true at the time a dial succeeds, connectSpeaker closes the
+// connection and exits rather than spawning a bmpWorker.
+func TestConnectSpeaker_ClosingFlag_ExitsAfterSuccessfulDial(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	// Drain accepted connections so the listener does not stall the dialer.
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			_ = c.Close()
+		}
+	}()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	srv.mu.Lock()
+	srv.closing = true // simulate Stop() having already run
+	srv.mu.Unlock()
+
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 1 * time.Second}
+	assertExitsWithin(t, runConnectSpeaker(srv, speaker), 3*time.Second)
 }

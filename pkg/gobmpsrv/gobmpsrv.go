@@ -280,7 +280,7 @@ type bgpSpeaker struct {
 	Address     string
 	mu          sync.Mutex
 	isConnected bool          // true while a bmpWorker goroutine owns the connection
-	lastAttempt time.Time     // time of the most recent dial attempt
+	nextAttempt time.Time     // earliest time for the next dial attempt (zero = immediate)
 	retryDelay  time.Duration // current backoff delay; doubles on each failure up to 5 minutes
 }
 
@@ -336,25 +336,21 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 		}
 
 		// Wait out the current backoff delay, but wake immediately on stop.
+		// nextAttempt is set after each dial attempt (success or failure) so the
+		// wait is measured from when the dial *returned*, not when it started.
 		speaker.mu.Lock()
-		delay := speaker.retryDelay
-		if time.Since(speaker.lastAttempt) < delay {
-			remaining := delay - time.Since(speaker.lastAttempt)
-			speaker.mu.Unlock()
+		remaining := time.Until(speaker.nextAttempt)
+		speaker.mu.Unlock()
+		if remaining > 0 {
 			select {
 			case <-srv.connectorStopCh:
 				glog.Infof("connectSpeaker(%s): stop signal received during backoff, exiting", speaker.Address)
 				return
 			case <-time.After(remaining):
 			}
-		} else {
-			speaker.mu.Unlock()
 		}
 
 		glog.Infof("Attempting to connect to BGP speaker %s", speaker.Address)
-		speaker.mu.Lock()
-		speaker.lastAttempt = time.Now()
-		speaker.mu.Unlock()
 
 		// Derive a timeout context from connectorCtx so that
 		// stopConnector() (which cancels connectorCtx) also aborts
@@ -367,9 +363,13 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 			glog.Errorf("Failed to connect to BGP speaker %s: %v", speaker.Address, err)
 			// Exponential backoff: double the retry delay on each failure,
 			// capped at 5 minutes to avoid indefinitely long quiet periods.
+			// nextAttempt is set here — after DialContext returned — so the full
+			// backoff window is preserved even when the dial blocked for its
+			// entire 5-second timeout.
 			speaker.mu.Lock()
 			newDelay := speaker.retryDelay * 2
 			speaker.retryDelay = min(newDelay, 5*time.Minute)
+			speaker.nextAttempt = time.Now().Add(speaker.retryDelay)
 			speaker.mu.Unlock()
 			glog.Infof("Will retry connection to %s in %v", speaker.Address, speaker.retryDelay)
 			continue
@@ -391,6 +391,7 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 		speaker.mu.Lock()
 		speaker.isConnected = true
 		speaker.retryDelay = 1 * time.Second // reset backoff on a successful connection
+		speaker.nextAttempt = time.Time{}    // allow immediate reconnect after a clean disconnect
 		speaker.mu.Unlock()
 		srv.wg.Add(1)
 		srv.clients[client] = struct{}{}
@@ -414,8 +415,11 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 			defer func() { _ = client.Close() }()
 			srv.bmpWorker(client)
 		}()
-		// bmpWorker returned — the connection dropped; loop back and reconnect.
-		glog.Infof("connectSpeaker(%s): bmpWorker exited, scheduling reconnect", speaker.Address)
+		// bmpWorker returned — the connection dropped; schedule reconnect with backoff.
+		speaker.mu.Lock()
+		speaker.nextAttempt = time.Now().Add(speaker.retryDelay)
+		speaker.mu.Unlock()
+		glog.Infof("connectSpeaker(%s): bmpWorker exited, scheduling reconnect in %v", speaker.Address, speaker.retryDelay)
 	}
 }
 
