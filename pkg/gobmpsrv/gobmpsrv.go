@@ -52,13 +52,25 @@ type bmpServer struct {
 }
 
 func (srv *bmpServer) Start() {
-	// Starting bmp server
-	srv.wg.Add(1)
 	if srv.isActive {
 		glog.Infof("Starting gobmp server in Active mode")
-		go srv.connector()
+		// Spawn all per-speaker goroutines under srv.mu so that every wg.Add
+		// completes before Stop() can acquire the lock, set srv.closing, and
+		// reach wg.Wait().  sync.WaitGroup forbids Add(+1) concurrent with
+		// Wait(), so we must guarantee all adds are visible before Wait is
+		// called.  Holding srv.mu here and checking srv.closing in Stop()
+		// before wg.Wait() provides that guarantee without a connector()
+		// goroutine.
+		srv.mu.Lock()
+		for _, addr := range srv.bgpSpeakers {
+			speaker := &bgpSpeaker{Address: addr, retryDelay: 1 * time.Second}
+			srv.wg.Add(1)
+			go srv.connectSpeaker(speaker)
+		}
+		srv.mu.Unlock()
 	} else {
 		glog.Infof("Starting gobmp server on %s", srv.incoming.Addr().String())
+		srv.wg.Add(1)
 		go srv.server()
 	}
 }
@@ -284,7 +296,7 @@ type bgpSpeaker struct {
 	retryDelay  time.Duration // current backoff delay; doubles on each failure up to 5 minutes
 }
 
-// stopConnector signals the connector goroutine to exit and cancels any
+// stopConnector signals all per-speaker goroutines to exit and cancels any
 // in-progress dial. It is a no-op in passive mode and safe to call multiple
 // times (guarded by stopOnce).
 func (srv *bmpServer) stopConnector() {
@@ -297,28 +309,6 @@ func (srv *bmpServer) stopConnector() {
 		srv.connectorCancel()
 		close(srv.connectorStopCh)
 	})
-}
-
-// connector is the active-mode counterpart of server(). It spawns one
-// independent goroutine per configured BGP speaker so that a slow or
-// black-holed dial to one speaker never delays reconnection attempts to
-// any other speaker.
-//
-// Each per-speaker goroutine:
-//  1. Dials the speaker with a 5-second timeout derived from connectorCtx so
-//     that Stop() (which cancels connectorCtx) aborts any in-progress dial.
-//  2. On success: registers the connection in srv.clients under srv.mu, then
-//     runs bmpWorker synchronously.  When bmpWorker returns the goroutine
-//     applies exponential backoff and retries.
-//  3. On failure: applies exponential backoff (1 s → … → 5 min) and retries.
-//  4. Exits when connectorStopCh is closed (by stopConnector()).
-func (srv *bmpServer) connector() {
-	defer srv.wg.Done()
-	for _, addr := range srv.bgpSpeakers {
-		speaker := &bgpSpeaker{Address: addr, retryDelay: 1 * time.Second}
-		srv.wg.Add(1)
-		go srv.connectSpeaker(speaker)
-	}
 }
 
 // connectSpeaker manages the full lifecycle (dial → bmpWorker → backoff →
