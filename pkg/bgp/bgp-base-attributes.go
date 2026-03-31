@@ -125,10 +125,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if ba.OTC != oba.OTC {
 		equal = false
 		diffs = append(diffs, "otc mismatch: "+strconv.FormatUint(uint64(ba.OTC), 10)+" and "+strconv.FormatUint(uint64(oba.OTC), 10))
+	}
 	if !reflect.DeepEqual(ba.AttrSet, oba.AttrSet) {
 		equal = false
 		diffs = append(diffs, "attr_set mismatch")
-
 	}
 
 	return equal, diffs
