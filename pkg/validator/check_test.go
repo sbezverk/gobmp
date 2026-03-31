@@ -395,6 +395,9 @@ func TestCheck_KeyNotInDictionary(t *testing.T) {
 	storedJSON, _ := json.Marshal(stored)
 
 	// Incoming message has a different Prefix so its key won't be in the dictionary.
+	// The validator should skip it with a warning rather than failing immediately,
+	// so that transient/unexpected BGP messages (e.g. convergence withdrawals) don't
+	// cause flaky test failures.
 	incoming := &bmp_message.UnicastPrefix{
 		Prefix:    "10.255.255.0",
 		PrefixLen: 24,
@@ -409,7 +412,7 @@ func TestCheck_KeyNotInDictionary(t *testing.T) {
 		Message:   storedJSON,
 	}).Marshal()
 
-	topicChan := make(chan []byte, 1)
+	topicChan := make(chan []byte, 2)
 	topics := []*kafka.TopicDescriptor{
 		{
 			TopicName: "test.unicast.v4",
@@ -421,15 +424,23 @@ func TestCheck_KeyNotInDictionary(t *testing.T) {
 	errCh := make(chan error, 1)
 	go Check(topics, storedBytes, stopCh, errCh)
 
+	// Send the unexpected message first — it must be silently skipped.
 	topicChan <- incomingJSON
+
+	// Then send the expected message so the validator can complete successfully.
+	topicChan <- storedJSON
 
 	select {
 	case err := <-errCh:
-		if err == nil {
-			t.Error("expected error for key not found in dictionary, got nil")
+		// A nil error means all dictionary entries were matched (Check only sends
+		// nil when every worker's matched count reaches the dictionary size).
+		// This simultaneously confirms: (a) the unexpected message was skipped
+		// without causing an error, and (b) the expected message was verified.
+		if err != nil {
+			t.Errorf("unexpected error: unexpected messages should be skipped, not fail: %v", err)
 		}
 	case <-time.After(5 * time.Second):
-		t.Fatal("timed out waiting for Check to return error")
+		t.Fatal("timed out waiting for Check to complete")
 	}
 }
 

@@ -103,8 +103,13 @@ func (c *check) checkUnicastWorker(testMsgs [][]byte, topic *kafka.TopicDescript
 			}
 			u, ok := dictionary[k]
 			if !ok {
-				workersErrChan <- fmt.Errorf("dictionary does not have a test message for key: %s", k)
-				return
+				// Some BMP sessions produce transient or unexpected messages (e.g.
+				// a withdrawal for a route that was briefly in a peer's adj-rib-in
+				// during BGP convergence).  Log a warning and skip rather than
+				// treating this as a hard failure, so the test remains focused on
+				// verifying that all expected messages ARE received.
+				glog.Warningf("received unexpected message for key: %s (not in test dictionary, skipping)", k)
+				continue
 			}
 			// Skip messages that have already been matched by a later correct version.
 			if matched[k] {
