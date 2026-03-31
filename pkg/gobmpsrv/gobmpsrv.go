@@ -360,6 +360,15 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 		cancel() // always release the timer goroutine regardless of outcome
 
 		if err != nil {
+			// context.Canceled means stopConnector() cancelled connectorCtx while
+			// the dial was in progress — this is a clean shutdown, not a network
+			// error.  Exit immediately without error logging or backoff so that
+			// Stop() completes quietly.  net.ErrClosed can surface for the same
+			// reason on some platforms (underlying fd closed under the dialer).
+			if errors.Is(err, context.Canceled) || errors.Is(err, net.ErrClosed) {
+				glog.Infof("connectSpeaker(%s): dial cancelled during shutdown, exiting", speaker.Address)
+				return
+			}
 			glog.Errorf("Failed to connect to BGP speaker %s: %v", speaker.Address, err)
 			// Exponential backoff: double the retry delay on each failure,
 			// capped at 5 minutes to avoid indefinitely long quiet periods.

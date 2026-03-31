@@ -43,12 +43,16 @@ type producer struct {
 	speakerHash string
 	// speakerReady is closed exactly once (by speakerReadyOnce) when the first
 	// PeerUp message has been processed and speakerIP/speakerHash are populated.
-	// All producingWorker goroutines for non-PeerUp message types block on this
-	// channel before reading speakerIP, eliminating the race between the burst of
-	// initial RouteMonitor goroutines and the PeerUp goroutine that sets the field.
-	// After the channel is closed, all subsequent reads are immediately non-blocking.
+	// RouteMonitor and StatsReport goroutines block here before reading speakerIP,
+	// eliminating the race against FRR's initial Loc-RIB burst in active mode.
+	// After the channel is closed, all subsequent receives are immediately non-blocking.
 	speakerReady     chan struct{}
 	speakerReadyOnce sync.Once
+	// stopCh is set to the stop channel passed to Producer() before the dispatch
+	// loop starts.  producingWorker goroutines select on it alongside speakerReady
+	// so they can exit cleanly if the producer is shut down before any PeerUp
+	// arrives (e.g. the connection drops before BGP session establishment).
+	stopCh chan struct{}
 	// Per-VRF table properties tracking (replaces global addPathCapable)
 	// Key format: BGP-ID + Peer Distinguisher (e.g., "10.0.0.10:0")
 	// Per RFC 9069 Section 4: uniquely identifies each Loc-RIB instance
@@ -64,6 +68,9 @@ type producer struct {
 
 // Producer dispatches kafka workers upon request received from the channel
 func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
+	// Store stop before spawning any goroutine.  The Go memory model guarantees
+	// that all goroutines created inside the loop below observe this write.
+	p.stopCh = stop
 	for {
 		select {
 		case msg := <-queue:
@@ -87,12 +94,21 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		// its full Loc-RIB in a burst that races the PeerUp goroutine.  Blocking
 		// here costs nothing after the channel is closed: a closed-channel receive
 		// is a single no-op instruction with no lock or syscall involved.
-		<-p.speakerReady
+		// The stopCh arm handles the case where the connection is terminated before
+		// any PeerUp arrives, preventing these goroutines from leaking forever.
+		select {
+		case <-p.speakerReady:
+		case <-p.stopCh:
+			return
+		}
 		p.produceRouteMonitorMessage(msg)
 	case *bmp.StatsReport:
-		// See comment for RouteMonitor: wait for speakerIP/speakerHash to be
-		// populated before producing any stats message.
-		<-p.speakerReady
+		// Same cancellable wait as RouteMonitor above.
+		select {
+		case <-p.speakerReady:
+		case <-p.stopCh:
+			return
+		}
 		p.produceStatsMessage(msg)
 	case *bmp.RawMessage:
 		p.produceRawMessage(msg)
