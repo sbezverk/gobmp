@@ -299,125 +299,123 @@ func (srv *bmpServer) stopConnector() {
 	})
 }
 
-// connector is the active-mode counterpart of server(). It runs as a single
-// goroutine (tracked by srv.wg) and manages outbound TCP connections to the
-// configured BGP speakers.
+// connector is the active-mode counterpart of server(). It spawns one
+// independent goroutine per configured BGP speaker so that a slow or
+// black-holed dial to one speaker never delays reconnection attempts to
+// any other speaker.
 //
-// For each speaker the loop:
-//  1. Skips the speaker if it is already connected (bmpWorker goroutine running).
-//  2. Waits until the per-speaker retry delay has elapsed (exponential backoff,
-//     starting at 1 s, doubling on each failure, capped at 5 minutes).
-//  3. Dials the speaker with a 5-second timeout derived from connectorCtx so
-//     that Stop() can interrupt an in-progress dial immediately.
-//  4. On success: registers the connection in srv.clients under srv.mu (the
-//     same lock Stop() holds when it iterates the map), then spawns a
-//     bmpWorker goroutine that processes BMP frames exactly as in passive mode.
-//     When bmpWorker returns the goroutine marks the speaker as disconnected,
-//     making it eligible for reconnection on the next loop iteration.
-//  5. On failure: applies exponential backoff and continues to the next speaker.
-//
-// The outer loop sleeps 200 ms between full sweeps to avoid a busy-wait when
-// all speakers are either connected or in their backoff window.
+// Each per-speaker goroutine:
+//  1. Dials the speaker with a 5-second timeout derived from connectorCtx so
+//     that Stop() (which cancels connectorCtx) aborts any in-progress dial.
+//  2. On success: registers the connection in srv.clients under srv.mu, then
+//     runs bmpWorker synchronously.  When bmpWorker returns the goroutine
+//     applies exponential backoff and retries.
+//  3. On failure: applies exponential backoff (1 s → … → 5 min) and retries.
+//  4. Exits when connectorStopCh is closed (by stopConnector()).
 func (srv *bmpServer) connector() {
-	speakers := make(map[string]*bgpSpeaker)
-	for _, addr := range srv.bgpSpeakers {
-		// Zero lastAttempt so time.Since(lastAttempt) ≫ retryDelay on the very
-		// first iteration, causing an immediate connection attempt at startup.
-		speakers[addr] = &bgpSpeaker{Address: addr, retryDelay: 1 * time.Second}
-	}
 	defer srv.wg.Done()
-	ticker := time.NewTicker(200 * time.Millisecond)
-	defer ticker.Stop()
+	for _, addr := range srv.bgpSpeakers {
+		speaker := &bgpSpeaker{Address: addr, retryDelay: 1 * time.Second}
+		srv.wg.Add(1)
+		go srv.connectSpeaker(speaker)
+	}
+}
+
+// connectSpeaker manages the full lifecycle (dial → bmpWorker → backoff →
+// redial) for a single BGP speaker.  It runs as its own goroutine so that
+// a blocked or slow dial cannot stall connection attempts to other speakers.
+func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
+	defer srv.wg.Done()
 	for {
-		for _, speaker := range speakers {
-			// Check for stop signal before each per-speaker iteration so the
-			// loop exits promptly when Stop() is called.
-			select {
-			case <-srv.connectorStopCh:
-				glog.Infof("connector received stop signal, exiting")
-				return
-			default:
-			}
-
-			speaker.mu.Lock()
-			if !speaker.isConnected && time.Since(speaker.lastAttempt) >= speaker.retryDelay {
-				glog.Infof("Attempting to connect to BGP speaker %s", speaker.Address)
-				// Release speaker.mu before dialling: the dial may block for up
-				// to 5 seconds and we must not hold the lock across I/O.
-				speaker.mu.Unlock()
-
-				// Derive a timeout context from connectorCtx so that
-				// stopConnector() (which cancels connectorCtx) also aborts
-				// any dial that is currently in progress.
-				ctx, cancel := context.WithTimeout(srv.connectorCtx, 5*time.Second)
-				client, err := (&net.Dialer{}).DialContext(ctx, "tcp", speaker.Address)
-				cancel() // always release the timer goroutine regardless of outcome
-
-				if err == nil {
-					// Hold srv.mu for the entire block that checks srv.closing,
-					// updates speaker state, increments the WaitGroup, and inserts
-					// the connection into srv.clients. Doing all of this atomically
-					// under one lock ensures Stop() cannot iterate srv.clients and
-					// miss this connection, which would cause srv.wg.Wait() to hang.
-					srv.mu.Lock()
-					if srv.closing {
-						// Stop() has already iterated srv.clients; close the
-						// freshly dialled connection and exit the goroutine.
-						srv.mu.Unlock()
-						_ = client.Close()
-						return
-					}
-					speaker.mu.Lock()
-					speaker.lastAttempt = time.Now()
-					speaker.isConnected = true
-					speaker.retryDelay = 1 * time.Second // reset backoff on a successful connection
-					speaker.mu.Unlock()
-					srv.wg.Add(1)
-					srv.clients[client] = struct{}{}
-					srv.mu.Unlock()
-					glog.V(5).Infof("client %s connected, calling bmpWorker", speaker.Address)
-					go func() {
-						defer srv.wg.Done()
-						// Mark the speaker as disconnected when bmpWorker returns
-						// so the connector loop will attempt to reconnect.
-						defer func() {
-							speaker.mu.Lock()
-							speaker.isConnected = false
-							speaker.mu.Unlock()
-						}()
-						defer func() {
-							srv.mu.Lock()
-							delete(srv.clients, client)
-							srv.mu.Unlock()
-						}()
-						defer func() { _ = client.Close() }()
-						// Hand the connection to bmpWorker — identical processing
-						// pipeline as passive mode (parser → producer → publisher).
-						srv.bmpWorker(client)
-					}()
-				} else {
-					glog.Errorf("Failed to connect to BGP speaker %s: %v", speaker.Address, err)
-					// Exponential backoff: double the retry delay on each failure,
-					// capped at 5 minutes to avoid indefinitely long quiet periods.
-					speaker.mu.Lock()
-					speaker.lastAttempt = time.Now()
-					newDelay := speaker.retryDelay * 2
-					speaker.retryDelay = min(newDelay, 5*time.Minute)
-					speaker.mu.Unlock()
-					glog.Infof("Will retry connection to %s in %v", speaker.Address, speaker.retryDelay)
-				}
-			} else {
-				speaker.mu.Unlock()
-			}
-		}
-		// Sleep briefly between sweeps to avoid a busy-wait when all speakers
-		// are either connected or still within their backoff window.
+		// Honour a stop signal before each dial attempt.
 		select {
 		case <-srv.connectorStopCh:
-			glog.Infof("connector received stop signal, exiting")
+			glog.Infof("connectSpeaker(%s): stop signal received, exiting", speaker.Address)
 			return
-		case <-ticker.C:
+		default:
 		}
+
+		// Wait out the current backoff delay, but wake immediately on stop.
+		speaker.mu.Lock()
+		delay := speaker.retryDelay
+		if time.Since(speaker.lastAttempt) < delay {
+			remaining := delay - time.Since(speaker.lastAttempt)
+			speaker.mu.Unlock()
+			select {
+			case <-srv.connectorStopCh:
+				glog.Infof("connectSpeaker(%s): stop signal received during backoff, exiting", speaker.Address)
+				return
+			case <-time.After(remaining):
+			}
+		} else {
+			speaker.mu.Unlock()
+		}
+
+		glog.Infof("Attempting to connect to BGP speaker %s", speaker.Address)
+		speaker.mu.Lock()
+		speaker.lastAttempt = time.Now()
+		speaker.mu.Unlock()
+
+		// Derive a timeout context from connectorCtx so that
+		// stopConnector() (which cancels connectorCtx) also aborts
+		// any dial that is currently in progress.
+		ctx, cancel := context.WithTimeout(srv.connectorCtx, 5*time.Second)
+		client, err := (&net.Dialer{}).DialContext(ctx, "tcp", speaker.Address)
+		cancel() // always release the timer goroutine regardless of outcome
+
+		if err != nil {
+			glog.Errorf("Failed to connect to BGP speaker %s: %v", speaker.Address, err)
+			// Exponential backoff: double the retry delay on each failure,
+			// capped at 5 minutes to avoid indefinitely long quiet periods.
+			speaker.mu.Lock()
+			newDelay := speaker.retryDelay * 2
+			speaker.retryDelay = min(newDelay, 5*time.Minute)
+			speaker.mu.Unlock()
+			glog.Infof("Will retry connection to %s in %v", speaker.Address, speaker.retryDelay)
+			continue
+		}
+
+		// Hold srv.mu for the entire block that checks srv.closing,
+		// updates speaker state, increments the WaitGroup, and inserts
+		// the connection into srv.clients. Doing all of this atomically
+		// under one lock ensures Stop() cannot iterate srv.clients and
+		// miss this connection, which would cause srv.wg.Wait() to hang.
+		srv.mu.Lock()
+		if srv.closing {
+			// Stop() has already iterated srv.clients; close the
+			// freshly dialled connection and exit the goroutine.
+			srv.mu.Unlock()
+			_ = client.Close()
+			return
+		}
+		speaker.mu.Lock()
+		speaker.isConnected = true
+		speaker.retryDelay = 1 * time.Second // reset backoff on a successful connection
+		speaker.mu.Unlock()
+		srv.wg.Add(1)
+		srv.clients[client] = struct{}{}
+		srv.mu.Unlock()
+
+		glog.V(5).Infof("client %s connected, calling bmpWorker", speaker.Address)
+		// Run bmpWorker synchronously: this goroutine is dedicated to this
+		// speaker, so blocking here is correct and avoids an extra goroutine.
+		func() {
+			defer srv.wg.Done()
+			defer func() {
+				speaker.mu.Lock()
+				speaker.isConnected = false
+				speaker.mu.Unlock()
+			}()
+			defer func() {
+				srv.mu.Lock()
+				delete(srv.clients, client)
+				srv.mu.Unlock()
+			}()
+			defer func() { _ = client.Close() }()
+			srv.bmpWorker(client)
+		}()
+		// bmpWorker returned — the connection dropped; loop back and reconnect.
+		glog.Infof("connectSpeaker(%s): bmpWorker exited, scheduling reconnect", speaker.Address)
 	}
 }
 
