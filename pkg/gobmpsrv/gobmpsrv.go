@@ -399,8 +399,10 @@ func (srv *bmpServer) connector() {
 					glog.Errorf("Failed to connect to BGP speaker %s: %v", speaker.Address, err)
 					// Exponential backoff: double the retry delay on each failure,
 					// capped at 5 minutes to avoid indefinitely long quiet periods.
+					speaker.mu.Lock()
 					newDelay := speaker.retryDelay * 2
 					speaker.retryDelay = min(newDelay, 5*time.Minute)
+					speaker.mu.Unlock()
 					glog.Infof("Will retry connection to %s in %v", speaker.Address, speaker.retryDelay)
 				}
 			} else {
