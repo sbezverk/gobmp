@@ -654,9 +654,19 @@ func TestBMPWorker_HeaderRead_NonCleanError(t *testing.T) {
 // uses 192.0.2.0/24, which is reserved for documentation (RFC 5737), and a
 // high, fixed port. Callers must not rely on a specific error value such as
 // ECONNREFUSED, only that connection attempts fail.
+// freeAddr briefly binds a random TCP port and immediately releases it,
+// returning the "host:port" string. The caller receives an address that was
+// recently valid (so it passes format validation in NewBMPServer) but is no
+// longer listening, causing DialContext to fail with ECONNREFUSED immediately.
 func freeAddr(t *testing.T) string {
 	t.Helper()
-	return "192.0.2.1:65000"
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("freeAddr Listen: %v", err)
+	}
+	addr := ln.Addr().String()
+	_ = ln.Close()
+	return addr
 }
 
 // acceptWithTimeout sets a deadline of d on ln and calls Accept once.
