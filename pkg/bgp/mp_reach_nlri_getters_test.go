@@ -270,6 +270,32 @@ func TestMPReachNLRI_NLRINotFound(t *testing.T) {
 			t.Errorf("expected NLRINotFoundError, got %T: %v", err, err)
 		}
 	})
+
+	// N11: Verify wrong AFI with correct SAFI is rejected
+	t.Run("GetNLRI71 wrong AFI correct SAFI", func(t *testing.T) {
+		mp71 := &MPReachNLRI{
+			AddressFamilyID:    1, // should be 16388
+			SubAddressFamilyID: 71,
+			NLRI:               []byte{},
+			addPath:            map[int]bool{},
+		}
+		_, err := mp71.GetNLRI71()
+		if !errors.As(err, &notFound) {
+			t.Errorf("expected NLRINotFoundError for wrong AFI, got %T: %v", err, err)
+		}
+	})
+	t.Run("GetNLRI73 wrong AFI correct SAFI", func(t *testing.T) {
+		mp73 := &MPReachNLRI{
+			AddressFamilyID:    16388, // should be 1 or 2
+			SubAddressFamilyID: 73,
+			NLRI:               []byte{},
+			addPath:            map[int]bool{},
+		}
+		_, err := mp73.GetNLRI73()
+		if !errors.As(err, &notFound) {
+			t.Errorf("expected NLRINotFoundError for wrong AFI, got %T: %v", err, err)
+		}
+	})
 }
 
 // TestMPReachNLRI_GetNLRIMCASTVPN_WithData exercises the ipv6 flag path in GetNLRIMCASTVPN.
