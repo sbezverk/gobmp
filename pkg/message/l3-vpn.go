@@ -27,6 +27,21 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	prfxs := make([]L3VPNPrefix, 0)
+	// Check if Update carries any routes, if update comes with 0 routes, it is EoR message
+	if len(nlril3vpn.NLRI) == 0 {
+		return []L3VPNPrefix{
+			{
+				Action:     operation,
+				RouterHash: p.speakerHash,
+				RouterIP:   p.speakerIP,
+				PeerHash:   ph.GetPeerHash(),
+				PeerASN:    ph.PeerAS,
+				Timestamp:  ph.GetPeerTimestamp(),
+				PeerType:   uint8(ph.PeerType),
+				IsEOR:      true,
+			},
+		}, nil
+	}
 	for _, e := range nlril3vpn.NLRI {
 		prfx := L3VPNPrefix{
 			Action:         operation,
@@ -83,6 +98,9 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		}
 		if f, err := ph.IsLocRIBFiltered(); err == nil {
 			prfx.IsLocRIBFiltered = f
+		}
+		if prfx.IsLocRIB {
+			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
 		}
 		prfx.Labels = make([]uint32, 0)
 		for _, l := range e.Label {

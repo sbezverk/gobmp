@@ -84,6 +84,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		}
 		msgs, err := p.unicast(nlri, operation, ph, update, labeled)
 		if err != nil {
+			glog.Errorf("failed to produce unicast messages with error: %+v", err)
 			return
 		}
 		// Loop through and publish all collected messages
@@ -112,14 +113,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		// Updatng the error handling in the l3vpn case...
 		msgs, err := p.l3vpn(nlri, operation, ph, update)
 		if err != nil {
-			// Only log as error if its not the common "not found" case
-			if err.Error() == "not found" || err.Error() == "NLRI length is 0" {
-				if glog.V(6) {
-					glog.Infof("No L3VPN NLRI found in update") // Debug level logging
-				}
-			} else {
-				glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
-			}
+			glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
 			return
 		}
 		for _, m := range msgs {
@@ -279,6 +273,8 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		}
 	case 71:
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
+	default:
+		glog.Warningf("unsupported AFI/SAFI type %d in MP update", nlri.GetAFISAFIType())
 	}
 }
 
@@ -296,7 +292,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		case 1:
 			n, ok := e.LS.(*base.NodeNLRI)
 			if !ok {
-				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				glog.Errorf("NLRI 71 type 1: expected *base.NodeNLRI, got %T", e.LS)
 				continue
 			}
 			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update, ph.IsRemotePeerIPv6())
@@ -311,7 +307,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		case 2:
 			l, ok := e.LS.(*base.LinkNLRI)
 			if !ok {
-				glog.Errorf("failed to produce ls_link message with error: %+v", err)
+				glog.Errorf("NLRI 71 type 2: expected *base.LinkNLRI, got %T", e.LS)
 				continue
 			}
 			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, ph.IsRemotePeerIPv6())
@@ -329,7 +325,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		case 4:
 			prfx, ok := e.LS.(*base.PrefixNLRI)
 			if !ok {
-				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
+				glog.Errorf("NLRI 71 type %d: expected *base.PrefixNLRI, got %T", e.Type, e.LS)
 				continue
 			}
 			msg, err := p.lsPrefix(prfx, nlri.GetNextHop(), operation, ph, update, ipv4Flag)
@@ -344,7 +340,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		case 6:
 			s, ok := e.LS.(*srv6.SIDNLRI)
 			if !ok {
-				glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
+				glog.Errorf("NLRI 71 type 6: expected *srv6.SIDNLRI, got %T", e.LS)
 				continue
 			}
 			msg, err := p.lsSRv6SID(s, nlri.GetNextHop(), operation, ph, update)

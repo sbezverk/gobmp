@@ -40,7 +40,9 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 	prfxs := make([]*UnicastPrefix, 0)
 	// Check if Update carries any routes, if update comes with 0 routes, it is EoR message
 	if len(routes) == 0 {
-		glog.Infof("><SB> Suspected EoR message for Unicast ipv4")
+		if glog.V(6) {
+			glog.Infof("EoR message for Unicast IPv4")
+		}
 		return []*UnicastPrefix{
 			{
 				Action:     operation,
@@ -100,6 +102,9 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 		}
 		if f, err := ph.IsLocRIBFiltered(); err == nil {
 			prfx.IsLocRIBFiltered = f
+		}
+		if prfx.IsLocRIB {
+			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
 		}
 
 		prfxs = append(prfxs, prfx)
