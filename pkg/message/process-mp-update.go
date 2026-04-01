@@ -112,9 +112,14 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 	case 19:
 		msgs, err := p.l3vpn(nlri, operation, ph, update)
 		if err != nil {
-			// L3VPN parser returns "NLRI length is 0" for empty NLRI (EoR signal)
-			if glog.V(6) {
-				glog.Infof("L3VPN: %v", err)
+			// L3VPN parser returns "NLRI length is 0" for empty NLRI (EoR signal).
+			// Log at debug level for expected empty NLRI; error level for real failures.
+			if err.Error() == "NLRI length is 0" {
+				if glog.V(6) {
+					glog.Infof("L3VPN EoR: %v", err)
+				}
+			} else {
+				glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
 			}
 			return
 		}
