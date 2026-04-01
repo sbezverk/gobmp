@@ -11,6 +11,8 @@ import (
 	"github.com/sbezverk/tools"
 )
 
+var compatMarker = []byte{0x80, 0x00, 0x00}
+
 // UnmarshalUnicastNLRI builds MP NLRI object from the slice of bytes
 func UnmarshalUnicastNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 	if glog.V(6) {
@@ -95,7 +97,7 @@ func UnmarshalLUNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 		}
 
 		// checking for compatibility field (special 3-byte value)
-		if bytes.Equal([]byte{0x80, 0x00, 0x00}, b[p:p+3]) {
+		if bytes.Equal(compatMarker, b[p:p+3]) {
 			up.Label = nil
 			compatibilityField = 3
 			p += 3

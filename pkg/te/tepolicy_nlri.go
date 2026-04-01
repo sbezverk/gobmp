@@ -3,6 +3,7 @@ package te
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -67,7 +68,8 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 		return nil, fmt.Errorf("HeadEnd Node Descriptor missing mandatory TLV 516 (BGP Router ID)")
 	}
 	te.HeadEnd = he
-	te.HeadEndHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(l)+4]))
+	heh := md5.Sum(b[p : p+int(l)+4])
+	te.HeadEndHash = hex.EncodeToString(heh[:])
 	p += int(l) + 4
 	// TE Policy Descriptor consists of list of TLVs, minimal TLV length is 4 bytes
 	if p+4 < len(b) {

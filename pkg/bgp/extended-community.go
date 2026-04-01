@@ -68,7 +68,7 @@ func makeExtCommunity(b []byte) (*ExtCommunity, error) {
 
 // UnmarshalBGPExtCommunity builds a slice of Extended Communities
 func UnmarshalBGPExtCommunity(b []byte) ([]ExtCommunity, error) {
-	exts := make([]ExtCommunity, 0)
+	exts := make([]ExtCommunity, 0, len(b)/8)
 	if len(b) == 0 {
 		return exts, nil
 	}

@@ -3,6 +3,7 @@ package base
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -113,7 +114,8 @@ func UnmarshalPrefixNLRI(b []byte, ipv4 bool) (*PrefixNLRI, error) {
 		return nil, err
 	}
 	pr.LocalNode = ln
-	pr.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(ndl)+4]))
+	s := md5.Sum(b[p : p+int(ndl)+4])
+	pr.LocalNodeHash = hex.EncodeToString(s[:])
 	// Skip Node Descriptor Type and Length 4 bytes
 	p += 4
 	p += int(ndl)

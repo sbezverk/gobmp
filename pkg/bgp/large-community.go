@@ -32,7 +32,7 @@ func (lg *LgCommunity) String() string {
 
 // UnmarshalBGPLgCommunity builds a slice of Large Communities
 func UnmarshalBGPLgCommunity(b []byte) ([]LgCommunity, error) {
-	lgs := make([]LgCommunity, 0)
+	lgs := make([]LgCommunity, 0, len(b)/12)
 	if len(b) == 0 {
 		return lgs, nil
 	}

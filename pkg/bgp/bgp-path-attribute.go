@@ -25,7 +25,7 @@ func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, *BaseAttributes, err
 	if glog.V(6) {
 		glog.Infof("BGPPathAttributes Raw: %s", tools.MessageHex(b))
 	}
-	attrs := make([]PathAttribute, 0)
+	attrs := make([]PathAttribute, 0, 8)
 
 	for p := 0; p < len(b); {
 		// Need at least flag + type (2 bytes) before reading anything.
