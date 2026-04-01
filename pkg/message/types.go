@@ -205,6 +205,10 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "is_loc_rib_filtered mismatch: "+strconv.FormatBool(u.IsLocRIBFiltered)+" and "+strconv.FormatBool(ou.IsLocRIBFiltered))
 	}
+	if u.TableName != ou.TableName {
+		equal = false
+		diffs = append(diffs, "table_name mismatch: "+u.TableName+" and "+ou.TableName)
+	}
 
 	return equal, diffs
 }

@@ -92,3 +92,23 @@ func TestUnicastPrefixEqual_Nil(t *testing.T) {
 		t.Error("Equal(nil) = true, want false")
 	}
 }
+
+// TestUnicastPrefixEqual_TableName verifies Equal() detects TableName mismatches.
+func TestUnicastPrefixEqual_TableName(t *testing.T) {
+	a := UnicastPrefix{TableName: "VRF-A"}
+	b := UnicastPrefix{TableName: "VRF-B"}
+	c := UnicastPrefix{TableName: "VRF-A"}
+
+	eq, diffs := a.Equal(&b)
+	if eq {
+		t.Error("Equal() = true for different TableName values")
+	}
+	if len(diffs) == 0 {
+		t.Error("Equal() returned no diffs for different TableName values")
+	}
+
+	eq, _ = a.Equal(&c)
+	if !eq {
+		t.Error("Equal() = false for identical TableName values")
+	}
+}
