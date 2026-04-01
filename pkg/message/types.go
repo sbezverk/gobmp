@@ -458,7 +458,6 @@ type L3VPNPrefix struct {
 	VPNRD            string              `json:"vpn_rd,omitempty"`
 	VPNRDType        uint16              `json:"vpn_rd_type"`
 	PrefixSID        *prefixsid.PSid     `json:"prefix_sid,omitempty"`
-	IsEOR            bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`

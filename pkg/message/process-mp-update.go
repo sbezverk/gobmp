@@ -110,10 +110,12 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 	case 18:
 		fallthrough
 	case 19:
-		// Updatng the error handling in the l3vpn case...
 		msgs, err := p.l3vpn(nlri, operation, ph, update)
 		if err != nil {
-			glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
+			// L3VPN parser returns "NLRI length is 0" for empty NLRI (EoR signal)
+			if glog.V(6) {
+				glog.Infof("L3VPN: %v", err)
+			}
 			return
 		}
 		for _, m := range msgs {
