@@ -109,7 +109,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 		case BSIDSTLV:
 			glog.Infof("Binding SID Sub TLV")
 			if p >= len(b) {
-				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need length byte", st, p)
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
 			}
 			sl = int(b[p])
 			p++
@@ -124,7 +124,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 		case PREFERENCESTLV:
 			glog.Infof("Preference Sub TLV")
 			if p >= len(b) {
-				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need length byte", st, p)
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
 			}
 			sl = int(b[p])
 			p++
@@ -140,7 +140,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			}
 			glog.Infof("ENLP Sub TLV")
 			if p >= len(b) {
-				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need length byte", st, p)
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
 			}
 			sl = int(b[p])
 			p++
@@ -157,7 +157,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 		case PRIORITYSTLV:
 			glog.Infof("Priority Sub TLV")
 			if p >= len(b) {
-				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need length byte", st, p)
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
 			}
 			sl = int(b[p])
 			p++
@@ -191,7 +191,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 				p += 2
 			} else {
 				if p >= len(b) {
-					return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need length byte", st, p)
+					return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
 				}
 				sl = int(b[p])
 				p++
