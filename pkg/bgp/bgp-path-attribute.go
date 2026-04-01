@@ -65,7 +65,7 @@ func unmarshalRawPathAttributes(b []byte) ([]PathAttribute, error) {
 			p += 2
 		} else {
 			if p+1 > len(b) {
-				return nil, fmt.Errorf("truncated length field at offset %d: need 1 byte, have 0", p)
+				return nil, fmt.Errorf("truncated length field at offset %d: need 1 byte, have %d", p, len(b)-p)
 			}
 			l = uint16(b[p])
 			p++
