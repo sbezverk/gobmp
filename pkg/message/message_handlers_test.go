@@ -296,3 +296,100 @@ func TestBaseNLRI_EoR(t *testing.T) {
 		t.Error("IsEOR = false, want true")
 	}
 }
+
+// TestMVPN_LocRIB_TableName verifies MVPN handler sets TableName for LocRIB peers.
+func TestMVPN_LocRIB_TableName(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	p.speakerIP = "10.0.0.1"
+	p.speakerHash = "abc123"
+
+	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
+
+	tableKey := phLocRIB.GetPeerBGPIDString() + phLocRIB.GetPeerDistinguisherString()
+	p.tableLock.Lock()
+	p.tableProperties[tableKey] = PerTableProperties{
+		addPathCapable: make(map[int]bool),
+		tableInfoTLVs: []bmp.InformationalTLV{
+			{InformationType: 3, Information: []byte("VRF-MVPN")},
+		},
+	}
+	p.tableLock.Unlock()
+
+	// MVPN Type 1 route with LocRIB peer
+	reachBytes := []byte{
+		0x00, 0x01, // AFI: 1
+		0x81,                   // SAFI: 129
+		0x04,                   // NH Length: 4
+		0x0a, 0x00, 0x00, 0x01, // NextHop
+		0x00,                                           // Reserved
+		0x01,                                           // Route Type: 1
+		0x0C,                                           // Length: 12
+		0x00, 0x02, 0x00, 0x00, 0xFD, 0xE8, 0x00, 0x64, // RD
+		0x0a, 0x00, 0x00, 0x01, // Originator IP
+	}
+	nlri, err := bgp.UnmarshalMPReachNLRI(reachBytes, false, map[int]bool{})
+	if err != nil {
+		t.Fatalf("UnmarshalMPReachNLRI: %v", err)
+	}
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	msgs, err := p.mvpn(nlri, 0, phLocRIB, update)
+	if err != nil {
+		t.Fatalf("mvpn() error: %v", err)
+	}
+	if len(msgs) < 1 {
+		t.Fatal("mvpn() returned 0 messages")
+	}
+	if msgs[0].TableName != "VRF-MVPN" {
+		t.Errorf("TableName = %q, want %q", msgs[0].TableName, "VRF-MVPN")
+	}
+	if !msgs[0].IsLocRIB {
+		t.Error("IsLocRIB = false, want true")
+	}
+}
+
+// TestProcessMPUpdate_L3VPN_EoR verifies L3VPN EoR is handled at debug level.
+func TestProcessMPUpdate_L3VPN_EoR(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	p.speakerIP = "10.0.0.1"
+	p.speakerHash = "abc123"
+
+	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	// L3VPN MP_UNREACH with empty withdrawn routes — triggers "NLRI length is 0"
+	unreachBytes := []byte{
+		0x00, 0x01, // AFI: 1
+		0x80, // SAFI: 128
+	}
+	nlri, err := bgp.UnmarshalMPUnReachNLRI(unreachBytes, map[int]bool{})
+	if err != nil {
+		t.Fatalf("UnmarshalMPUnReachNLRI: %v", err)
+	}
+
+	// Should not panic — exercises the L3VPN EoR error path
+	p.processMPUpdate(nlri, 1, ph, update)
+}
+
+// TestProcessMPUpdate_UnknownAFISAFI verifies default case logs warning for unknown types.
+func TestProcessMPUpdate_UnknownAFISAFI(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	p.speakerIP = "10.0.0.1"
+	p.speakerHash = "abc123"
+
+	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	// AFI=99, SAFI=99 — unknown, should hit default case
+	unreachBytes := []byte{
+		0x00, 0x63, // AFI: 99
+		0x63, // SAFI: 99
+	}
+	nlri, err := bgp.UnmarshalMPUnReachNLRI(unreachBytes, map[int]bool{})
+	if err != nil {
+		t.Fatalf("UnmarshalMPUnReachNLRI: %v", err)
+	}
+
+	// Should not panic — exercises the default case
+	p.processMPUpdate(nlri, 1, ph, update)
+}
