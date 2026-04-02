@@ -283,7 +283,14 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 	case 71:
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
 	default:
-		glog.Warningf("unsupported AFI/SAFI type %d in MP update", nlri.GetAFISAFIType())
+		switch n := nlri.(type) {
+		case *bgp.MPReachNLRI:
+			glog.Warningf("unsupported AFI/SAFI %d/%d in MP_REACH update", n.AddressFamilyID, n.SubAddressFamilyID)
+		case *bgp.MPUnReachNLRI:
+			glog.Warningf("unsupported AFI/SAFI %d/%d in MP_UNREACH update", n.AddressFamilyID, n.SubAddressFamilyID)
+		default:
+			glog.Warningf("unsupported AFI/SAFI type %d in MP update", nlri.GetAFISAFIType())
+		}
 	}
 }
 
