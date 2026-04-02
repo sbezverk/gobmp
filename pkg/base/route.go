@@ -34,7 +34,7 @@ func unmarshalRoutes(b []byte, pathID bool, canRetry bool) ([]Route, error) {
 		glog.Infof("Routes Raw: %s Path ID flag: %t", tools.MessageHex(b), pathID)
 	}
 	// Handle EoR case.
-	routes := make([]Route, 0)
+	routes := make([]Route, 0, len(b)/4)
 	if len(b) == 0 {
 		return routes, nil
 	}

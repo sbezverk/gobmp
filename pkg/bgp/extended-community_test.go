@@ -168,3 +168,79 @@ func TestLinkBandwidthTruncatedValue(t *testing.T) {
 		})
 	}
 }
+
+func TestEVPNLinkBandwidth(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []byte // full 8-byte extended community: type(1) + subtype(1) + value(6)
+		expect string
+	}{
+		{
+			name: "10000 Mbps (default units)",
+			// type=0x06, subtype=0x10, units=0x00 (Mbps), weight=10000 (5 bytes)
+			input:  []byte{0x06, 0x10, 0x00, 0x00, 0x00, 0x00, 0x27, 0x10},
+			expect: "evpn-link-bw=10000 Mbps",
+		},
+		{
+			name: "1 Mbps",
+			input:  []byte{0x06, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
+			expect: "evpn-link-bw=1 Mbps",
+		},
+		{
+			name: "0 Mbps",
+			input:  []byte{0x06, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			expect: "evpn-link-bw=0 Mbps",
+		},
+		{
+			name: "generalized weight 500",
+			// units=0x01 (generalized weight), weight=500
+			input:  []byte{0x06, 0x10, 0x01, 0x00, 0x00, 0x00, 0x01, 0xF4},
+			expect: "evpn-link-bw=weight 500",
+		},
+		{
+			name: "generalized weight 1",
+			input:  []byte{0x06, 0x10, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01},
+			expect: "evpn-link-bw=weight 1",
+		},
+		{
+			name: "unknown units value 0xFF",
+			input:  []byte{0x06, 0x10, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x0A},
+			expect: "evpn-link-bw=units=255 weight=10",
+		},
+		{
+			name: "large bandwidth value using all 5 weight bytes",
+			// units=0x00, weight = 0x01_00000000 = 4294967296
+			input:  []byte{0x06, 0x10, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00},
+			expect: "evpn-link-bw=4294967296 Mbps",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ext, err := makeExtCommunity(tt.input)
+			if err != nil {
+				t.Fatalf("makeExtCommunity() error = %v", err)
+			}
+			result := ext.String()
+			if result != tt.expect {
+				t.Errorf("got %s, want %s", result, tt.expect)
+			}
+		})
+	}
+}
+
+func TestEVPNLinkBandwidthTruncatedValue(t *testing.T) {
+	// type6 with subtype 0x10 but truncated value (less than 6 bytes)
+	result := type6(0x10, []byte{0x00, 0x00, 0x00})
+	expect := "invalid-type6-length=3"
+	if result != expect {
+		t.Errorf("got %s, want %s", result, expect)
+	}
+
+	result = type6(0x10, nil)
+	expect = "invalid-type6-length=0"
+	if result != expect {
+		t.Errorf("got %s, want %s", result, expect)
+	}
+}

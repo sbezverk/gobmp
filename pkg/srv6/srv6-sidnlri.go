@@ -3,6 +3,7 @@ package srv6
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"net"
 
@@ -88,7 +89,8 @@ func UnmarshalSRv6SIDNLRI(b []byte) (*SIDNLRI, error) {
 		return nil, err
 	}
 	sr.LocalNode = ln
-	sr.LocalNodeHash = fmt.Sprintf("%x", md5.Sum(b[p:p+int(l)+4]))
+	lnh := md5.Sum(b[p : p+int(l)+4])
+	sr.LocalNodeHash = hex.EncodeToString(lnh[:])
 	// Skip Node Descriptor Type and Length 4 bytes
 	p += 4
 	p += int(l)

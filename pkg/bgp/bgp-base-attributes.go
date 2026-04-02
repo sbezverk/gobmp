@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
@@ -47,7 +46,7 @@ type BaseAttributes struct {
 	BGPPrefixSID    *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
 	OTC uint32 `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
 	// SecPath
-	// AttrSet
+	AttrSet *AttrSet `json:"attr_set,omitempty"` // RFC 6368 ATTR_SET Attribute (Type 128)
 }
 
 func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
@@ -125,6 +124,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if ba.OTC != oba.OTC {
 		equal = false
 		diffs = append(diffs, "otc mismatch: "+strconv.FormatUint(uint64(ba.OTC), 10)+" and "+strconv.FormatUint(uint64(oba.OTC), 10))
+	}
+	if asEqual, asDiffs := ba.AttrSet.Equal(oba.AttrSet); !asEqual {
+		equal = false
+		diffs = append(diffs, asDiffs...)
 	}
 
 	return equal, diffs
@@ -265,15 +268,21 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			// Edge Metadata Path Attribute (TEMPORARY) - draft-ietf-idr-5g-edge-service-metadata
 		case 128:
 			// ATTR_SET - RFC 6368
+			attrSet, err := UnmarshalAttrSet(b)
+			if err != nil {
+				glog.Errorf("failed to unmarshal ATTR_SET attribute: %v", err)
+			} else {
+				baseAttr.AttrSet = attrSet
+			}
 		}
 	}
-	// Calculating hash of all recovered base attributes
-	ba, err := json.Marshal(baseAttr)
-	if err != nil {
-		return nil, err
+	// Hash the raw attribute bytes directly instead of marshaling to JSON
+	h := md5.New()
+	for _, attr := range attrs {
+		h.Write(attr.Attribute)
 	}
-	s := md5.Sum(ba)
-	baseAttr.BaseAttrHash = hex.EncodeToString(s[:])
+	var digest [md5.Size]byte
+	baseAttr.BaseAttrHash = hex.EncodeToString(h.Sum(digest[:0]))
 
 	return &baseAttr, nil
 }
@@ -300,7 +309,7 @@ func unmarshalAttrASPath(b []byte) ([]uint32, error) {
 	if len(b) == 0 {
 		return []uint32{}, nil
 	}
-	path := make([]uint32, 0)
+	path := make([]uint32, 0, len(b)/2)
 	// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 only inspects the
 	// first segment, so full per-segment bounds validation is done in the loop below.
 	as4, err := isASPath4(b)
@@ -386,7 +395,7 @@ func unmarshalAttrNextHop(b []byte) string {
 		return ""
 	}
 	if len(b) == 4 {
-		return net.IP(b).To4().String()
+		return net.IP(b).String()
 	}
 	if ip := net.IP(b).To16(); ip != nil {
 		return ip.String()
@@ -429,7 +438,7 @@ func unmarshalAttrAggregator(b []byte) []byte {
 
 // getCommunity returns a slice of communities
 func getCommunity(b []byte) []uint32 {
-	comm := make([]uint32, 0)
+	comm := make([]uint32, 0, len(b)/4)
 	if len(b)%4 != 0 {
 		return comm
 	}
@@ -456,7 +465,7 @@ func unmarshalAttrCommunity(b []byte) []string {
 // unmarshalAttrOriginatorID returns the value of ORIGINATOR_ID attribute
 func unmarshalAttrOriginatorID(b []byte) string {
 	if len(b) == 4 {
-		return net.IP(b).To4().String()
+		return net.IP(b).String()
 	}
 
 	return "invalid length"
@@ -472,7 +481,7 @@ func unmarshalAttrClusterList(b []byte) (string, error) {
 	}
 	parts := make([]string, len(b)/4)
 	for i := 0; i < len(b); i += 4 {
-		parts[i/4] = net.IP(b[i : i+4]).To4().String()
+		parts[i/4] = net.IP(b[i : i+4]).String()
 	}
 	return strings.Join(parts, ", "), nil
 }
@@ -507,7 +516,7 @@ func unmarshalAttrLgCommunity(b []byte) []string {
 
 // unmarshalAttrAS4Path returns a sequence of AS4 path segments
 func unmarshalAttrAS4Path(b []byte) []uint32 {
-	path := make([]uint32, 0)
+	path := make([]uint32, 0, len(b)/4)
 	for p := 0; p < len(b); {
 		if p+2 > len(b) {
 			glog.Errorf("AS4_PATH truncated at segment header: offset %d, len %d", p, len(b))

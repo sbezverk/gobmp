@@ -102,6 +102,8 @@ const (
 	ECPEVPNAttachmentCircuit = "ac="
 	// ECPServiceCarvingTimestamp extended community prefix for Service Carving Timestamp [draft-ietf-bess-evpn-fast-df-recovery-01]
 	ECPServiceCarvingTimestamp = "sct="
+	// ECPEVPNLinkBandwidth extended community prefix for EVPN Link Bandwidth Extended Community [draft-ietf-bess-evpn-unequal-lb]
+	ECPEVPNLinkBandwidth = "evpn-link-bw="
 
 	// Non-Transitive Two-Octet AS-Specific Extended Community Sub-Types
 

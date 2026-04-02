@@ -3,6 +3,7 @@ package bmp
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -99,13 +100,14 @@ func (p *PerPeerHeader) GetPeerTimestamp() string {
 
 // GetPeerHash calculates Peer Hash and returns as a hex string
 func (p *PerPeerHeader) GetPeerHash() string {
-	data := []byte{}
-	data = append(data, p.PeerDistinguisher...)
-	data = append(data, p.PeerAddress...)
-	data = append(data, []byte(fmt.Sprintf("%d", p.PeerAS))...)
-	data = append(data, p.PeerBGPID...)
-
-	return fmt.Sprintf("%x", md5.Sum(data))
+	h := md5.New()
+	h.Write(p.PeerDistinguisher)
+	h.Write(p.PeerAddress)
+	var asBuf [20]byte
+	h.Write(strconv.AppendUint(asBuf[:0], uint64(p.PeerAS), 10))
+	h.Write(p.PeerBGPID)
+	var digest [md5.Size]byte
+	return hex.EncodeToString(h.Sum(digest[:0]))
 }
 
 // GetPeerBGPIDString returns a string representation of Peer BGP ID
@@ -127,7 +129,7 @@ func (p *PerPeerHeader) GetPeerAddrString() string {
 		return net.IP(p.PeerAddress).To16().String()
 	}
 	// IPv4 specific conversions
-	return net.IP(p.PeerAddress[12:]).To4().String()
+	return net.IP(p.PeerAddress[12:]).String()
 }
 
 // IsAdjRIBIn returns true if route is from Adj-RIB-In (O flag not set)
