@@ -44,7 +44,7 @@ func (mp *MPReachNLRI) IsIPv6NLRI() bool {
 	return mp.AddressFamilyID == 2
 }
 
-// IsNextHopIPv6 return true if the next hop is IPv6 address, otherwise it returns false.
+// IsNextHopIPv6 returns true if the next hop is an IPv6 address; otherwise, it returns false.
 // A 16-byte next-hop that is an IPv4-mapped-IPv6 address (::ffff:x.x.x.x) is treated as IPv4.
 func (mp *MPReachNLRI) IsNextHopIPv6() bool {
 	// https://tools.ietf.org/id/draft-mishra-bess-ipv4nlri-ipv6nh-use-cases-00.html#rfc.section.3
