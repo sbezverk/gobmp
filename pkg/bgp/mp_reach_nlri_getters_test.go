@@ -101,23 +101,28 @@ func TestMPReachNLRI_IsIPv6NLRI(t *testing.T) {
 
 func TestMPReachNLRI_IsNextHopIPv6(t *testing.T) {
 	tests := []struct {
-		nhLen uint8
-		want  bool
+		name    string
+		nhLen   uint8
+		nhBytes []byte
+		want    bool
 	}{
-		{4, false},
-		{8, false},
-		{12, false},
-		{16, true},
-		{24, true},
-		{32, true},
-		{48, true},
-		{0, false},
+		{"IPv4 4-byte", 4, nil, false},
+		{"RD+IPv4 8-byte", 8, nil, false},
+		{"RD+IPv4 12-byte", 12, nil, false},
+		{"IPv6 16-byte", 16, []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, true},
+		{"IPv4-mapped-IPv6 16-byte", 16, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 168, 1, 1}, false},
+		{"RD+IPv6 24-byte", 24, nil, true},
+		{"IPv6+LL 32-byte", 32, nil, true},
+		{"RD+IPv6+LL 48-byte", 48, nil, true},
+		{"zero length", 0, nil, false},
 	}
 	for _, tt := range tests {
-		mp := &MPReachNLRI{NextHopAddressLength: tt.nhLen}
-		if got := mp.IsNextHopIPv6(); got != tt.want {
-			t.Errorf("IsNextHopIPv6() nhLen=%d = %v, want %v", tt.nhLen, got, tt.want)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			mp := &MPReachNLRI{NextHopAddressLength: tt.nhLen, NextHopAddress: tt.nhBytes}
+			if got := mp.IsNextHopIPv6(); got != tt.want {
+				t.Errorf("IsNextHopIPv6() nhLen=%d = %v, want %v", tt.nhLen, got, tt.want)
+			}
+		})
 	}
 }
 
@@ -155,6 +160,12 @@ func TestMPReachNLRI_GetNextHop(t *testing.T) {
 			nhLen:   16,
 			nhBytes: []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			want:    "2001:db8::1",
+		},
+		{
+			name:    "IPv4-mapped-IPv6 (len=16)",
+			nhLen:   16,
+			nhBytes: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 10, 0, 0, 1},
+			want:    "10.0.0.1",
 		},
 		{
 			name:  "RD+IPv6 (len=24)",
