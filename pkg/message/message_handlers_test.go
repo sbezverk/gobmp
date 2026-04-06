@@ -3,8 +3,10 @@ package message
 import (
 	"testing"
 
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/mcastvpn"
 )
 
 // makePeerHeader constructs a PerPeerHeader with the given flags byte.
@@ -375,6 +377,122 @@ func TestProcessMPUpdate_L3VPN_EoR(t *testing.T) {
 
 	// Should not panic — exercises the L3VPN EoR error path
 	p.processMPUpdate(nlri, 1, ph, update)
+}
+
+// TestUnicast_EoR_RIBFlags verifies EoR messages carry RIB flags and IsIPv4.
+func TestUnicast_EoR_RIBFlags(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	p.speakerIP = "10.0.0.1"
+	p.speakerHash = "abc123"
+
+	// AdjRIBOut Post-Policy (O=1, L=1) — flags byte 0x50
+	ph := makePeerHeader(t, bmp.PeerType0, 0x50)
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	nlri := &mockMPNLRI{
+		isIPv6:       false,
+		unicastRoute: &base.MPNLRI{NLRI: []base.Route{}},
+	}
+
+	msgs, err := p.unicast(nlri, 0, ph, update, false)
+	if err != nil {
+		t.Fatalf("unicast() error: %v", err)
+	}
+	if len(msgs) != 1 {
+		t.Fatalf("unicast() returned %d messages, want 1", len(msgs))
+	}
+	r := msgs[0]
+	if !r.IsEOR {
+		t.Error("IsEOR = false, want true")
+	}
+	if !r.IsIPv4 {
+		t.Error("IsIPv4 = false, want true for IPv4")
+	}
+	if !r.IsAdjRIBOut {
+		t.Error("IsAdjRIBOut = false, want true")
+	}
+	if !r.IsAdjRIBOutPost {
+		t.Error("IsAdjRIBOutPost = false, want true")
+	}
+}
+
+// TestUnicast_EoR_LocRIB verifies EoR sets TableName for LocRIB peers.
+func TestUnicast_EoR_LocRIB(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	p.speakerIP = "10.0.0.1"
+	p.speakerHash = "abc123"
+
+	ph := makePeerHeader(t, bmp.PeerType3, 0x00)
+	tableKey := ph.GetPeerBGPIDString() + ph.GetPeerDistinguisherString()
+	p.tableLock.Lock()
+	p.tableProperties[tableKey] = PerTableProperties{
+		addPathCapable: make(map[int]bool),
+		tableInfoTLVs: []bmp.InformationalTLV{
+			{InformationType: 3, Information: []byte("VRF-Test")},
+		},
+	}
+	p.tableLock.Unlock()
+
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	nlri := &mockMPNLRI{
+		isIPv6:       false,
+		unicastRoute: &base.MPNLRI{NLRI: []base.Route{}},
+	}
+
+	msgs, err := p.unicast(nlri, 0, ph, update, false)
+	if err != nil {
+		t.Fatalf("unicast() error: %v", err)
+	}
+	if len(msgs) != 1 {
+		t.Fatalf("unicast() returned %d messages, want 1", len(msgs))
+	}
+	r := msgs[0]
+	if !r.IsEOR {
+		t.Error("IsEOR = false, want true")
+	}
+	if !r.IsLocRIB {
+		t.Error("IsLocRIB = false, want true for PeerType3")
+	}
+	if r.TableName != "VRF-Test" {
+		t.Errorf("TableName = %q, want %q", r.TableName, "VRF-Test")
+	}
+}
+
+// TestMVPN_EoR_RIBFlags verifies MVPN EoR messages carry RIB flags.
+func TestMVPN_EoR_RIBFlags(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	p.speakerIP = "10.0.0.1"
+	p.speakerHash = "abc123"
+
+	// AdjRIBOut Post-Policy (O=1, L=1)
+	ph := makePeerHeader(t, bmp.PeerType0, 0x50)
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	nlri := &mockMPNLRI{
+		mvpnRoute: &mcastvpn.Route{Route: []*mcastvpn.NLRI{}},
+	}
+
+	msgs, err := p.mvpn(nlri, 0, ph, update)
+	if err != nil {
+		t.Fatalf("mvpn() error: %v", err)
+	}
+	if len(msgs) != 1 {
+		t.Fatalf("mvpn() returned %d messages, want 1", len(msgs))
+	}
+	r := msgs[0]
+	if !r.IsEOR {
+		t.Error("IsEOR = false, want true")
+	}
+	if !r.IsAdjRIBOut {
+		t.Error("IsAdjRIBOut = false, want true")
+	}
+	if !r.IsAdjRIBOutPost {
+		t.Error("IsAdjRIBOutPost = false, want true")
+	}
+	if r.IsLocRIB {
+		t.Error("IsLocRIB = true, want false for PeerType0")
+	}
 }
 
 // TestProcessMPUpdate_UnknownAFISAFI verifies default case logs warning for unknown types.
