@@ -38,18 +38,37 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 	}
 	// Check if Update carries any routes, if update comes with 0 routes, it is EoR message
 	if len(u.NLRI) == 0 {
-		return []*UnicastPrefix{
-			{
-				Action:     operation,
-				RouterHash: p.speakerHash,
-				RouterIP:   p.speakerIP,
-				PeerHash:   ph.GetPeerHash(),
-				PeerASN:    ph.PeerAS,
-				Timestamp:  ph.GetPeerTimestamp(),
-				PeerType:   uint8(ph.PeerType),
-				IsEOR:      true,
-			},
-		}, nil
+		prfx := &UnicastPrefix{
+			Action:     operation,
+			RouterHash: p.speakerHash,
+			RouterIP:   p.speakerIP,
+			PeerHash:   ph.GetPeerHash(),
+			PeerASN:    ph.PeerAS,
+			Timestamp:  ph.GetPeerTimestamp(),
+			PeerType:   uint8(ph.PeerType),
+			IsEOR:      true,
+			IsIPv4:     !nlri.IsIPv6NLRI(),
+		}
+		prfx.IsNexthopIPv4 = prfx.IsIPv4
+		if f, err := ph.IsAdjRIBInPost(); err == nil {
+			prfx.IsAdjRIBInPost = f
+		}
+		if f, err := ph.IsAdjRIBOutPost(); err == nil {
+			prfx.IsAdjRIBOutPost = f
+		}
+		if f, err := ph.IsAdjRIBOut(); err == nil {
+			prfx.IsAdjRIBOut = f
+		}
+		if f, err := ph.IsLocRIB(); err == nil {
+			prfx.IsLocRIB = f
+		}
+		if f, err := ph.IsLocRIBFiltered(); err == nil {
+			prfx.IsLocRIBFiltered = f
+		}
+		if prfx.IsLocRIB {
+			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		}
+		return []*UnicastPrefix{prfx}, nil
 	}
 	for _, e := range u.NLRI {
 		prfx := &UnicastPrefix{

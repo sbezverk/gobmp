@@ -125,8 +125,14 @@ func TestMVPN_RIBFlags_AllFive(t *testing.T) {
 	if !r.IsAdjRIBOutPost {
 		t.Error("IsAdjRIBOutPost = false, want true")
 	}
+	if r.IsAdjRIBInPost {
+		t.Error("IsAdjRIBInPost = true, want false for O=1")
+	}
 	if r.IsLocRIB {
 		t.Error("IsLocRIB = true, want false for PeerType0")
+	}
+	if r.IsLocRIBFiltered {
+		t.Error("IsLocRIBFiltered = true, want false for PeerType0")
 	}
 }
 

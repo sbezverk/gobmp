@@ -30,18 +30,35 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 
 	// Handle EOR (End-of-RIB) when no NLRIs present
 	if len(mvpnRoute.Route) == 0 {
-		return []*MVPNPrefix{
-			{
-				Action:     operation,
-				RouterHash: p.speakerHash,
-				RouterIP:   p.speakerIP,
-				PeerHash:   ph.GetPeerHash(),
-				PeerASN:    ph.PeerAS,
-				Timestamp:  ph.GetPeerTimestamp(),
-				PeerType:   uint8(ph.PeerType),
-				IsEOR:      true,
-			},
-		}, nil
+		prfx := &MVPNPrefix{
+			Action:     operation,
+			RouterHash: p.speakerHash,
+			RouterIP:   p.speakerIP,
+			PeerHash:   ph.GetPeerHash(),
+			PeerASN:    ph.PeerAS,
+			Timestamp:  ph.GetPeerTimestamp(),
+			PeerType:   uint8(ph.PeerType),
+			IsEOR:      true,
+		}
+		if f, err := ph.IsAdjRIBInPost(); err == nil {
+			prfx.IsAdjRIBInPost = f
+		}
+		if f, err := ph.IsAdjRIBOutPost(); err == nil {
+			prfx.IsAdjRIBOutPost = f
+		}
+		if f, err := ph.IsAdjRIBOut(); err == nil {
+			prfx.IsAdjRIBOut = f
+		}
+		if f, err := ph.IsLocRIB(); err == nil {
+			prfx.IsLocRIB = f
+		}
+		if f, err := ph.IsLocRIBFiltered(); err == nil {
+			prfx.IsLocRIBFiltered = f
+		}
+		if prfx.IsLocRIB {
+			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		}
+		return []*MVPNPrefix{prfx}, nil
 	}
 
 	for _, route := range mvpnRoute.Route {
