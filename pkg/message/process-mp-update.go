@@ -114,7 +114,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 	case 19:
 		msgs, err := p.l3vpn(nlri, operation, ph, update)
 		if err != nil {
-			// L3VPN parser returns ErrEmptyNLRI for empty NLRI (EoR signal per RFC 4724).
+			// L3VPN parser returns ErrEmptyNLRI for empty NLRI (EoR signal per RFC 4724 §2).
 			// Log at debug level for expected empty NLRI; error level for real failures.
 			if errors.Is(err, l3vpn.ErrEmptyNLRI) {
 				if glog.V(6) {

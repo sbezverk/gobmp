@@ -484,6 +484,12 @@ func TestMVPN_EoR_RIBFlags(t *testing.T) {
 	if !r.IsEOR {
 		t.Error("IsEOR = false, want true")
 	}
+	if !r.IsIPv4 {
+		t.Error("IsIPv4 = false, want true for IPv4 MVPN EoR")
+	}
+	if !r.IsNexthopIPv4 {
+		t.Error("IsNexthopIPv4 = false, want true for IPv4 MVPN EoR")
+	}
 	if !r.IsAdjRIBOut {
 		t.Error("IsAdjRIBOut = false, want true")
 	}

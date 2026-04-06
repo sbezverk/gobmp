@@ -31,14 +31,16 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	// Handle EOR (End-of-RIB) when no NLRIs present
 	if len(mvpnRoute.Route) == 0 {
 		prfx := &MVPNPrefix{
-			Action:     operation,
-			RouterHash: p.speakerHash,
-			RouterIP:   p.speakerIP,
-			PeerHash:   ph.GetPeerHash(),
-			PeerASN:    ph.PeerAS,
-			Timestamp:  ph.GetPeerTimestamp(),
-			PeerType:   uint8(ph.PeerType),
-			IsEOR:      true,
+			Action:        operation,
+			RouterHash:    p.speakerHash,
+			RouterIP:      p.speakerIP,
+			PeerHash:      ph.GetPeerHash(),
+			PeerASN:       ph.PeerAS,
+			Timestamp:     ph.GetPeerTimestamp(),
+			PeerType:      uint8(ph.PeerType),
+			IsEOR:         true,
+			IsIPv4:        !nlri.IsIPv6NLRI(),
+			IsNexthopIPv4: !nlri.IsIPv6NLRI(),
 		}
 		if f, err := ph.IsAdjRIBInPost(); err == nil {
 			prfx.IsAdjRIBInPost = f

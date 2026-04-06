@@ -12,7 +12,7 @@ import (
 )
 
 // ErrEmptyNLRI is returned when L3VPN NLRI data has zero length,
-// signaling an End-of-RIB marker per RFC 4724.
+// signaling an End-of-RIB marker per RFC 4724 §2.
 var ErrEmptyNLRI = errors.New("NLRI length is 0")
 
 var (
