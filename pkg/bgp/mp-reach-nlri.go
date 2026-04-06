@@ -44,12 +44,14 @@ func (mp *MPReachNLRI) IsIPv6NLRI() bool {
 	return mp.AddressFamilyID == 2
 }
 
-// IsNextHopIPv6 return true if the next hop is IPv6 address, otherwise it returns flase
+// IsNextHopIPv6 returns true if the next hop is an IPv6 address; otherwise, it returns false.
+// A 16-byte next-hop that is an IPv4-mapped-IPv6 address (::ffff:x.x.x.x per RFC 4291 §2.5.5.2)
+// is treated as IPv4.
 func (mp *MPReachNLRI) IsNextHopIPv6() bool {
-	// https://tools.ietf.org/id/draft-mishra-bess-ipv4nlri-ipv6nh-use-cases-00.html#rfc.section.3
+	// Per RFC 4291 §2.5.5.2 and draft-mishra-bess-ipv4nlri-ipv6nh-use-cases §3
 	switch mp.NextHopAddressLength {
 	case 16:
-		fallthrough
+		return net.IP(mp.NextHopAddress).To4() == nil
 	case 32:
 		fallthrough
 	case 24:
@@ -74,7 +76,10 @@ func (mp *MPReachNLRI) GetNextHop() string {
 		// RD (8 bytes) + IPv4
 		return net.IP(mp.NextHopAddress[8:]).To4().String()
 	case 16:
-		// IPv6
+		// IPv4-mapped-IPv6 (::ffff:x.x.x.x per RFC 4291 §2.5.5.2) → return IPv4 string
+		if v4 := net.IP(mp.NextHopAddress).To4(); v4 != nil {
+			return v4.String()
+		}
 		return net.IP(mp.NextHopAddress).To16().String()
 	case 24:
 		// RD (8 bytes) + IPv6
