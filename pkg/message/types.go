@@ -142,7 +142,7 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "prefix len mismatch: "+strconv.Itoa(int(u.PrefixLen))+" and "+strconv.Itoa(int(ou.PrefixLen)))
 	}
-	if u.IsIPv4 && !ou.IsIPv4 {
+	if u.IsIPv4 != ou.IsIPv4 {
 		equal = false
 		diffs = append(diffs, "is_ipv4 mismatch: "+strconv.FormatBool(u.IsIPv4)+" and "+strconv.FormatBool(ou.IsIPv4))
 	}
@@ -154,7 +154,7 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "nexthop mismatch: "+u.Nexthop+" and "+ou.Nexthop)
 	}
-	if u.IsNexthopIPv4 && !ou.IsNexthopIPv4 {
+	if u.IsNexthopIPv4 != ou.IsNexthopIPv4 {
 		equal = false
 		diffs = append(diffs, "is_nexthop_ipv4 mismatch: "+strconv.FormatBool(u.IsNexthopIPv4)+" and "+strconv.FormatBool(ou.IsNexthopIPv4))
 	}
@@ -185,17 +185,29 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 			diffs = append(diffs, df...)
 		}
 	}
-	if u.IsAdjRIBInPost && !ou.IsAdjRIBInPost {
+	if u.IsAdjRIBInPost != ou.IsAdjRIBInPost {
 		equal = false
 		diffs = append(diffs, "is_adj_rib_in_post_policy mismatch: "+strconv.FormatBool(u.IsAdjRIBInPost)+" and "+strconv.FormatBool(ou.IsAdjRIBInPost))
 	}
-	if u.IsAdjRIBOutPost && !ou.IsAdjRIBOutPost {
+	if u.IsAdjRIBOutPost != ou.IsAdjRIBOutPost {
 		equal = false
-		diffs = append(diffs, "is_adj_rib_out_post_policy: "+strconv.FormatBool(u.IsAdjRIBOutPost)+" and "+strconv.FormatBool(ou.IsAdjRIBOutPost))
+		diffs = append(diffs, "is_adj_rib_out_post_policy mismatch: "+strconv.FormatBool(u.IsAdjRIBOutPost)+" and "+strconv.FormatBool(ou.IsAdjRIBOutPost))
 	}
-	if u.IsLocRIBFiltered && !ou.IsLocRIBFiltered {
+	if u.IsAdjRIBOut != ou.IsAdjRIBOut {
+		equal = false
+		diffs = append(diffs, "is_adj_rib_out mismatch: "+strconv.FormatBool(u.IsAdjRIBOut)+" and "+strconv.FormatBool(ou.IsAdjRIBOut))
+	}
+	if u.IsLocRIB != ou.IsLocRIB {
+		equal = false
+		diffs = append(diffs, "is_loc_rib mismatch: "+strconv.FormatBool(u.IsLocRIB)+" and "+strconv.FormatBool(ou.IsLocRIB))
+	}
+	if u.IsLocRIBFiltered != ou.IsLocRIBFiltered {
 		equal = false
 		diffs = append(diffs, "is_loc_rib_filtered mismatch: "+strconv.FormatBool(u.IsLocRIBFiltered)+" and "+strconv.FormatBool(ou.IsLocRIBFiltered))
+	}
+	if u.TableName != ou.TableName {
+		equal = false
+		diffs = append(diffs, "table_name mismatch: "+u.TableName+" and "+ou.TableName)
 	}
 
 	return equal, diffs

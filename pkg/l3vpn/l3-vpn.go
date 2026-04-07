@@ -3,12 +3,17 @@ package l3vpn
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/tools"
 )
+
+// ErrEmptyNLRI is returned when L3VPN NLRI data has zero length,
+// signaling an End-of-RIB marker per RFC 4724 §2.
+var ErrEmptyNLRI = errors.New("NLRI length is 0")
 
 var (
 	compatLabel = []byte{0x80, 0x00, 0x00}
@@ -26,7 +31,7 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 		glog.Infof("L3VPN NLRI Raw: %s, pathID: %t, srv6: %t", tools.MessageHex(b), pathID, srv6Flag)
 	}
 	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
+		return nil, ErrEmptyNLRI
 	}
 
 	// First attempt with the provided pathID flag
