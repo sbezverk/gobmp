@@ -47,8 +47,8 @@ type producer struct {
 	publisher     pub.Publisher
 	transportIP   string
 	transportHash string
-	speakerIP   string
-	speakerHash string
+	speakerIP     string
+	speakerHash   string
 	// speakerReady is closed exactly once (by speakerReadyOnce) when the first
 	// PeerUp message has been processed and speakerIP/speakerHash are populated.
 	// RouteMonitor and StatsReport goroutines block here before reading speakerIP,
