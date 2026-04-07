@@ -95,22 +95,20 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		ptp.tableInfoTLVs = make([]bmp.InformationalTLV, len(peerUpMsg.Information))
 		copy(ptp.tableInfoTLVs, peerUpMsg.Information)
 
-		// Store properties for this table before signalling speakerReady, so
-		// that RouteMonitor goroutines unblocked by the channel close below can
-		// immediately call peerLocal() and find the entry.
+		// Store properties for this table before signalling readiness, so that
+		// RouteMonitor goroutines unblocked by markTableReady can immediately
+		// call peerLocal() and find the entry.
 		p.tableProperties[msg.PeerHeader.GetTableKey()] = ptp
 		p.tableLock.Unlock()
 
-		// Signal all goroutines waiting in producingWorker that the table entry
-		// is now populated.  sync.Once guarantees the channel is closed exactly
-		// once even if multiple PeerUp messages arrive (e.g. reconnections).
-		p.speakerReadyOnce.Do(func() { close(p.speakerReady) })
+		// Signal goroutines waiting for this specific table's PeerUp to complete.
+		p.markTableReady(msg.PeerHeader.GetTableKey())
 
 		m.AdvCapabilities = peerUpMsg.SentOpen.GetCapabilities()
 		m.RcvCapabilities = peerUpMsg.ReceivedOpen.GetCapabilities()
 		if glog.V(6) {
-			glog.Infof("producer for speaker ip: %s table: %s add path: %+v",
-				p.speakerIP,
+			glog.Infof("producer for transport ip: %s table: %s add path: %+v",
+				p.transportIP,
 				msg.PeerHeader.GetTableKey(),
 				ptp.addPathCapable)
 		}
@@ -140,6 +138,9 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m.InfoData = make([]byte, len(peerDownMsg.Data))
 		copy(m.InfoData, peerDownMsg.Data)
 
+		// Reset the per-table ready channel before deleting properties so the
+		// next session's goroutines wait for the new PeerUp.
+		p.resetTableReady(msg.PeerHeader.GetTableKey())
 		// Clean up table properties when peer goes down
 		// This prevents memory leaks and ensures stale data isn't used
 		p.tableLock.Lock()

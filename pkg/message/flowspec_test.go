@@ -484,3 +484,61 @@ func TestFlowspecUnmarshalJSON_NoRD(t *testing.T) {
 		t.Errorf("RD = %q, want empty for non-VPN flowspec", fs.RD)
 	}
 }
+
+// TestFlowspecUnmarshalJSON_IdentityFields validates that router_hash,
+// transport_ip, and transport_hash round-trip through UnmarshalJSON.
+func TestFlowspecUnmarshalJSON_IdentityFields(t *testing.T) {
+	obj := map[string]interface{}{
+		"action":          "add",
+		"spec_hash":       "abc123",
+		"base_attrs":      map[string]interface{}{},
+		"is_ipv4":         true,
+		"is_nexthop_ipv4": true,
+		"nexthop":         "10.0.0.1",
+		"peer_asn":        float64(65000),
+		"router_ip":       fsLocalIP,
+		"router_hash":     fsLocalHash,
+		"transport_ip":    fsTransportIP,
+		"transport_hash":  fsTransportHash,
+		"timestamp":       "2026-01-01T00:00:00Z",
+	}
+	b, err := json.Marshal(obj)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	fs := &Flowspec{}
+	if err := fs.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON failed: %v", err)
+	}
+	if fs.RouterIP != fsLocalIP {
+		t.Errorf("RouterIP = %q, want %q", fs.RouterIP, fsLocalIP)
+	}
+	if fs.RouterHash != fsLocalHash {
+		t.Errorf("RouterHash = %q, want %q", fs.RouterHash, fsLocalHash)
+	}
+	if fs.TransportIP != fsTransportIP {
+		t.Errorf("TransportIP = %q, want %q", fs.TransportIP, fsTransportIP)
+	}
+	if fs.TransportHash != fsTransportHash {
+		t.Errorf("TransportHash = %q, want %q", fs.TransportHash, fsTransportHash)
+	}
+}
+
+// TestFlowspecUnmarshalJSON_IdentityFieldsAbsent validates that missing
+// router_hash/transport_* fields decode to empty strings without error.
+func TestFlowspecUnmarshalJSON_IdentityFieldsAbsent(t *testing.T) {
+	input := buildFlowspecJSON(t, nil)
+	fs := &Flowspec{}
+	if err := fs.UnmarshalJSON(input); err != nil {
+		t.Fatalf("UnmarshalJSON failed: %v", err)
+	}
+	if fs.RouterHash != "" {
+		t.Errorf("RouterHash = %q, want empty when absent", fs.RouterHash)
+	}
+	if fs.TransportIP != "" {
+		t.Errorf("TransportIP = %q, want empty when absent", fs.TransportIP)
+	}
+	if fs.TransportHash != "" {
+		t.Errorf("TransportHash = %q, want empty when absent", fs.TransportHash)
+	}
+}

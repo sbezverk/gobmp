@@ -45,8 +45,8 @@ https://www.snas.io/docs/
 13: (local_asn):
 14: (local_ip):
 15: (local_hash):
-16: (transport_ip): 10.1.34.1
-17: (transport_hash): b684810f26f15fa57c62abae34d3ef07
+16: (transport_ip): 192.0.2.10
+17: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 18: (local_port):
 19: (local_bgp_id):
 20: (info_data):
@@ -82,8 +82,8 @@ https://www.snas.io/docs/
 13: (local_asn): 100000
 14: (local_ip): 10.0.0.10
 15: (local_hash): 9e1a9a3663f25a297ed16a834b473eb0
-16: (transport_ip): 10.1.34.1
-17: (transport_hash): b684810f26f15fa57c62abae34d3ef07
+16: (transport_ip): 192.0.2.10
+17: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 18: (local_port): 179
 19: (local_bgp_id): 10.0.0.10
 20: (info_data):
@@ -153,8 +153,8 @@ https://www.snas.io/docs/
 3: (hash): 5214a8eb996f030b3d96784c1890ab3d
 4: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 5: (router_ip): 10.1.62.1
-6: (transport_ip):
-7: (transport_hash):
+6: (transport_ip): 192.0.2.10
+7: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 8: (base_attr_hash): 3479c4959c47a2cf634a72ce2c416fb9
 9: (peer_hash): a4935a0f520cd5f72ed483d2b37f58ae
 10: (peer_ip): 2.2.71.1
@@ -193,8 +193,8 @@ https://www.snas.io/docs/
 4: (base_attr_hash): f7e177580a2209c7af48c6a90f707cc9
 5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (transport_ip): 10.1.62.1
-8: (transport_hash): 367321d1bb7194e1f0f57f8ce99e7316
+7: (transport_ip): 192.0.2.10
+8: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 9: (peer_hash): 1787a325b86857cdcb82e46d2e919780
 10: (peer_ip): 10.0.0.1
 11: (peer_asn): 100000
@@ -242,8 +242,8 @@ Future:
 4: (base_attr_hash): 17fcffffffffffff0000000000000000
 5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (transport_ip):
-8: (transport_hash):
+7: (transport_ip): 192.0.2.10
+8: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 9: (peer_hash): 6c6ba2119bddb79001663deb1801dfcc
 10: (peer_ip): 10.0.0.2
 11: (peer_asn): 100000
@@ -276,8 +276,8 @@ Future:
 4: (base_attr_hash): f7e177580a2209c7af48c6a90f707cc9
 5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (transport_ip):
-8: (transport_hash):
+7: (transport_ip): 192.0.2.10
+8: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 9: (peer_hash): 1787a325b86857cdcb82e46d2e919780
 10: (peer_ip): 10.0.0.1
 11: (peer_asn): 100000
@@ -358,8 +358,8 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 4: (base_attr_hash): 17fcffffffffffff0000000000000000
 5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (transport_ip):
-8: (transport_hash):
+7: (transport_ip): 192.0.2.10
+8: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 9: (peer_hash): 6c6ba2119bddb79001663deb1801dfcc
 10: (peer_ip): 10.0.0.2
 11: (peer_asn): 100000
@@ -415,8 +415,8 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 4: (base_attr_hash): f7e177580a2209c7af48c6a90f707cc9
 5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (transport_ip):
-8: (transport_hash):
+7: (transport_ip): 192.0.2.10
+8: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 9: (peer_hash): 1787a325b86857cdcb82e46d2e919780
 10: (peer_ip): 10.0.0.1
 11: (peer_asn): 100000
@@ -453,8 +453,8 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 4: (base_attr_hash): 17fcffffffffffff0000000000000000
 5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (transport_ip):
-8: (transport_hash):
+7: (transport_ip): 192.0.2.10
+8: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 9: (peer_hash): 30b1ce11e0c436dc3e37dc7342b12be8
 10: (peer_ip): 10.0.0.0
 11: (peer_asn): 100000
@@ -539,8 +539,8 @@ BGP-LS TLVs:
 3: (hash): 332047c6ca64451ed6f5ddb92710a29a
 4: (router_hash): b684810f26f15fa57c62abae34d3ef07
 5: (router_ip): 10.1.34.1
-6: (transport_ip):
-7: (transport_hash):
+6: (transport_ip): 192.0.2.10
+7: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 8: (base_attr_hash): 22155edb81a03c848f36193dfd3e48f3
 9: (peer_hash): d67b274c33ea1ff0ffe9dd781938b0de
 10: (peer_ip): 10.0.0.7
@@ -577,8 +577,8 @@ BGP-LS TLVs:
 3: (hash): 332047c6ca64451ed6f5ddb92710a29a
 4: (router_hash): b684810f26f15fa57c62abae34d3ef07
 5: (router_ip): 10.1.34.1
-6: (transport_ip):
-7: (transport_hash):
+6: (transport_ip): 192.0.2.10
+7: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 8: (base_attr_hash):
 9: (peer_hash): d67b274c33ea1ff0ffe9dd781938b0de
 10: (peer_ip): 10.0.0.7
@@ -617,8 +617,8 @@ BGP-LS TLVs:
 3: (hash):
 4: (router_hash):
 5: (router_ip):
-6: (transport_ip):
-7: (transport_hash):
+6: (transport_ip): 192.0.2.10
+7: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 8: (peer_hash):
 9: (peer_type):
 10: (peer_ip):
@@ -664,8 +664,8 @@ BGP-LS TLVs:
 3: (hash): b44a84e415927f20ff3e6edf7103875c
 4: (router_hash): b684810f26f15fa57c62abae34d3ef07
 5: (router_ip): 10.1.34.1
-6: (transport_ip):
-7: (transport_hash):
+6: (transport_ip): 192.0.2.10
+7: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 8: (base_attr_hash): e0895cf0bc3391438d43cdc7e43aae36
 9: (peer_hash): 0146fce99cbd730d787487de31452f88
 10: (peer_ip): 2001:1:1:f003::1                        // this is ok
@@ -761,8 +761,8 @@ Wed Mar 25 22:52:03.008 UTC
 3: (hash): 2f358ba42cb0a8a00c210b0accbf1af4
 4: (router_hash): b684810f26f15fa57c62abae34d3ef07
 5: (router_ip): 10.1.34.1
-6: (transport_ip):
-7: (transport_hash):
+6: (transport_ip): 192.0.2.10
+7: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
 8: (base_attr_hash):
 9: (peer_hash): 0146fce99cbd730d787487de31452f88
 10: (peer_ip): 2001:1:1:f003::1

@@ -87,8 +87,6 @@ func TestUnicastPrefixEqual_Nil(t *testing.T) {
 // TestMVPN_RIBFlags_AllFive verifies MVPN handler extracts all 5 RIB flags.
 func TestMVPN_RIBFlags_AllFive(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	// AdjRIBOut Post-Policy (O=1, L=1)
 	phAdjOut := makePeerHeader(t, bmp.PeerType0, 0x50)
@@ -141,8 +139,6 @@ func TestMVPN_RIBFlags_AllFive(t *testing.T) {
 // TestL3VPN_TableName verifies L3VPN handler sets TableName for LocRIB peers.
 func TestL3VPN_TableName(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
@@ -195,8 +191,6 @@ func TestL3VPN_TableName(t *testing.T) {
 // TestUnicast_TableName verifies unicast handler sets TableName for LocRIB peers.
 func TestUnicast_TableName(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
@@ -243,8 +237,6 @@ func TestUnicast_TableName(t *testing.T) {
 // TestBaseNLRI_TableName verifies legacy IPv4 NLRI handler sets TableName for LocRIB peers.
 func TestBaseNLRI_TableName(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
@@ -284,8 +276,6 @@ func TestBaseNLRI_TableName(t *testing.T) {
 // TestBaseNLRI_EoR verifies legacy IPv4 EoR debug logging path.
 func TestBaseNLRI_EoR(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	update := &bgp.Update{
@@ -308,8 +298,6 @@ func TestBaseNLRI_EoR(t *testing.T) {
 // TestMVPN_LocRIB_TableName verifies MVPN handler sets TableName for LocRIB peers.
 func TestMVPN_LocRIB_TableName(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
@@ -359,8 +347,6 @@ func TestMVPN_LocRIB_TableName(t *testing.T) {
 // TestProcessMPUpdate_L3VPN_EoR verifies L3VPN EoR is handled at debug level.
 func TestProcessMPUpdate_L3VPN_EoR(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
@@ -382,8 +368,6 @@ func TestProcessMPUpdate_L3VPN_EoR(t *testing.T) {
 // TestUnicast_EoR_RIBFlags verifies EoR messages carry RIB flags and IsIPv4.
 func TestUnicast_EoR_RIBFlags(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	// AdjRIBOut Post-Policy (O=1, L=1) — flags byte 0x50
 	ph := makePeerHeader(t, bmp.PeerType0, 0x50)
@@ -419,8 +403,6 @@ func TestUnicast_EoR_RIBFlags(t *testing.T) {
 // TestUnicast_EoR_LocRIB verifies EoR sets TableName for LocRIB peers.
 func TestUnicast_EoR_LocRIB(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType3, 0x00)
 	tableKey := ph.GetPeerBGPIDString() + ph.GetPeerDistinguisherString()
@@ -462,8 +444,6 @@ func TestUnicast_EoR_LocRIB(t *testing.T) {
 // TestMVPN_EoR_RIBFlags verifies MVPN EoR messages carry RIB flags.
 func TestMVPN_EoR_RIBFlags(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	// AdjRIBOut Post-Policy (O=1, L=1)
 	ph := makePeerHeader(t, bmp.PeerType0, 0x50)
@@ -504,8 +484,6 @@ func TestMVPN_EoR_RIBFlags(t *testing.T) {
 // TestProcessMPUpdate_UnknownAFISAFI verifies default case logs warning for unknown types.
 func TestProcessMPUpdate_UnknownAFISAFI(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}

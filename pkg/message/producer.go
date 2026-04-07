@@ -47,20 +47,18 @@ type producer struct {
 	publisher     pub.Publisher
 	transportIP   string
 	transportHash string
-	speakerIP     string
-	speakerHash   string
-	// speakerReady is closed exactly once (by speakerReadyOnce) when the first
-	// PeerUp message has been processed and speakerIP/speakerHash are populated.
-	// RouteMonitor and StatsReport goroutines block here before reading speakerIP,
-	// eliminating the race against FRR's initial Loc-RIB burst in active mode.
-	// After the channel is closed, all subsequent receives are immediately non-blocking.
-	speakerReady     chan struct{}
-	speakerReadyOnce sync.Once
 	// stopCh is set to the stop channel passed to Producer() before the dispatch
-	// loop starts.  producingWorker goroutines select on it alongside speakerReady
-	// so they can exit cleanly if the producer is shut down before any PeerUp
-	// arrives (e.g. the connection drops before BGP session establishment).
+	// loop starts. producingWorker goroutines select on it alongside per-table
+	// ready channels so they can exit cleanly if the producer is shut down before
+	// the relevant PeerUp arrives.
 	stopCh chan struct{}
+	// tableReady maps table keys to channels that are closed once the table's
+	// PeerUp goroutine has fully populated tableProperties for that key.
+	// RouteMonitor and StatsReport goroutines block on the per-table channel
+	// rather than a single global channel, so a route burst for one VRF cannot
+	// be unblocked by a PeerUp for a different VRF.
+	tableReady     map[string]chan struct{}
+	tableReadyLock sync.Mutex
 	// Per-VRF table properties tracking (replaces global addPathCapable)
 	// Key format: BGP-ID + Peer Distinguisher (e.g., "10.0.0.10:0")
 	// Per RFC 9069 Section 4: uniquely identifies each Loc-RIB instance
@@ -74,9 +72,47 @@ type producer struct {
 	adminHash string
 }
 
+// tableReadyCh returns the ready channel for the given table key, creating it
+// if it does not yet exist. The returned channel is closed by markTableReady
+// once PeerUp for that table has fully populated tableProperties.
+func (p *producer) tableReadyCh(tableKey string) chan struct{} {
+	p.tableReadyLock.Lock()
+	defer p.tableReadyLock.Unlock()
+	if ch, ok := p.tableReady[tableKey]; ok {
+		return ch
+	}
+	ch := make(chan struct{})
+	p.tableReady[tableKey] = ch
+	return ch
+}
+
+// markTableReady closes the per-table ready channel for tableKey, unblocking
+// any RouteMonitor/StatsReport goroutines waiting for that table's PeerUp.
+// Must be called after tableProperties[tableKey] has been written.
+func (p *producer) markTableReady(tableKey string) {
+	p.tableReadyLock.Lock()
+	ch, ok := p.tableReady[tableKey]
+	if !ok {
+		ch = make(chan struct{})
+		p.tableReady[tableKey] = ch
+	}
+	p.tableReadyLock.Unlock()
+	close(ch)
+}
+
+// resetTableReady replaces the per-table ready channel with a new open channel
+// so that goroutines for the next session wait for the next PeerUp rather than
+// passing through a stale closed channel. Called from PeerDown before
+// tableProperties is deleted.
+func (p *producer) resetTableReady(tableKey string) {
+	p.tableReadyLock.Lock()
+	defer p.tableReadyLock.Unlock()
+	p.tableReady[tableKey] = make(chan struct{})
+}
+
 // Producer dispatches kafka workers upon request received from the channel
 func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
-	// Store stop before spawning any goroutine.  The Go memory model guarantees
+	// Store stop before spawning any goroutine. The Go memory model guarantees
 	// that all goroutines created inside the loop below observe this write.
 	p.stopCh = stop
 	for {
@@ -97,25 +133,26 @@ func (p *producer) producingWorker(msg bmp.Message) {
 	case *bmp.PeerDownMessage:
 		p.producePeerMessage(peerDown, msg)
 	case *bmp.RouteMonitor:
-		// Wait until PeerUp has populated speakerIP/speakerHash before producing
-		// any route message.  In active mode (gobmp dials the router) FRR floods
-		// its full Loc-RIB in a burst that races the PeerUp goroutine.  Blocking
-		// here costs nothing after the channel is closed: a closed-channel receive
-		// is a single no-op instruction with no lock or syscall involved.
-		// The stopCh arm handles the case where the connection is terminated before
-		// any PeerUp arrives, preventing these goroutines from leaking forever.
-		select {
-		case <-p.speakerReady:
-		case <-p.stopCh:
-			return
+		// Wait until PeerUp for this specific table has populated tableProperties
+		// before producing any route message. Using a per-table channel ensures
+		// a route burst for one VRF cannot be unblocked by a PeerUp for a
+		// different VRF. After the channel is closed, receives are non-blocking.
+		if msg.PeerHeader != nil {
+			select {
+			case <-p.tableReadyCh(msg.PeerHeader.GetTableKey()):
+			case <-p.stopCh:
+				return
+			}
 		}
 		p.produceRouteMonitorMessage(msg)
 	case *bmp.StatsReport:
-		// Same cancellable wait as RouteMonitor above.
-		select {
-		case <-p.speakerReady:
-		case <-p.stopCh:
-			return
+		// Same per-table wait as RouteMonitor above.
+		if msg.PeerHeader != nil {
+			select {
+			case <-p.tableReadyCh(msg.PeerHeader.GetTableKey()):
+			case <-p.stopCh:
+				return
+			}
 		}
 		p.produceStatsMessage(msg)
 	case *bmp.RawMessage:
@@ -211,6 +248,6 @@ func NewProducer(publisher pub.Publisher, splitAF bool) Producer {
 		publisher:       publisher,
 		splitAF:         splitAF,
 		tableProperties: make(map[string]PerTableProperties),
-		speakerReady:    make(chan struct{}),
+		tableReady:      make(map[string]chan struct{}),
 	}
 }
