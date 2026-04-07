@@ -168,23 +168,9 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		_ = client.Close()
 	}()
 	var err error
-	prod := message.NewProducer(srv.publisher, srv.splitAF)
-
-	// Configure producer with admin ID for RAW message support
-	if err := prod.SetConfig(&message.Config{
-		AdminID: srv.adminID,
-	}); err != nil {
-		glog.Errorf("failed to configure producer with error: %+v", err)
-		return
-	}
-
-	prodStop := make(chan struct{})
-	producerQueue := make(chan bmp.Message)
-	// Starting messages producer per client with dedicated work queue
-	go prod.Producer(producerQueue, prodStop)
-
-	// Extract speaker IP from the TCP connection. Set on all BMP messages
-	// to provide a consistent router identity regardless of message type.
+	// Extract speaker IP from the TCP connection before starting the producer.
+	// transportIP is connection-scoped and immutable — set once at construction
+	// time so all goroutines can read it without synchronization.
 	// Type-assert to *net.TCPAddr to get a clean IP string free of
 	// ports, brackets, and IPv6 zone identifiers.
 	var speakerIP string
@@ -212,6 +198,20 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 			}
 		}
 	}
+
+	prod := message.NewProducer(srv.publisher, srv.splitAF)
+	if err := prod.SetConfig(&message.Config{
+		AdminID:     srv.adminID,
+		TransportIP: speakerIP,
+	}); err != nil {
+		glog.Errorf("failed to configure producer with error: %+v", err)
+		return
+	}
+
+	prodStop := make(chan struct{})
+	producerQueue := make(chan bmp.Message)
+	// Starting messages producer per client with dedicated work queue
+	go prod.Producer(producerQueue, prodStop)
 
 	parserQueue := make(chan []byte)
 	parsStop := make(chan struct{})

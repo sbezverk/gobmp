@@ -12,6 +12,7 @@ import (
 // l3vpn process MP_REACH_NLRI AFI 1/2 SAFI 128 update message and returns
 // L3VPN prefix object.
 func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]L3VPNPrefix, error) {
+	localIP, localHash := p.peerLocal(ph.GetTableKey())
 	nlril3vpn, err := nlri.GetNLRIL3VPN()
 	if err != nil {
 		return nil, err
@@ -30,8 +31,10 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 	for _, e := range nlril3vpn.NLRI {
 		prfx := L3VPNPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     localHash,
+			RouterIP:       localIP,
+			TransportIP:    p.transportIP,
+			TransportHash:  p.transportHash,
 			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,

@@ -14,6 +14,7 @@ import (
 // a slice of UnicatPrefix.
 // Used Only by Legacy IPv4 Unicast
 func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*UnicastPrefix, error) {
+	localIP, localHash := p.peerLocal(ph.GetTableKey())
 	var operation string
 	var routes []base.Route
 	// Use per-table AddPath capability
@@ -43,22 +44,26 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 		glog.Infof("><SB> Suspected EoR message for Unicast ipv4")
 		return []*UnicastPrefix{
 			{
-				Action:     operation,
-				RouterHash: p.speakerHash,
-				RouterIP:   p.speakerIP,
-				PeerHash:   ph.GetPeerHash(),
-				PeerASN:    ph.PeerAS,
-				Timestamp:  ph.GetPeerTimestamp(),
-				PeerType:   uint8(ph.PeerType),
-				IsEOR:      true,
+				Action:        operation,
+				RouterHash:    localHash,
+				RouterIP:      localIP,
+				TransportIP:   p.transportIP,
+				TransportHash: p.transportHash,
+				PeerHash:      ph.GetPeerHash(),
+				PeerASN:       ph.PeerAS,
+				Timestamp:     ph.GetPeerTimestamp(),
+				PeerType:      uint8(ph.PeerType),
+				IsEOR:         true,
 			},
 		}, nil
 	}
 	for _, pr := range routes {
 		prfx := &UnicastPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     localHash,
+			RouterIP:       localIP,
+			TransportIP:    p.transportIP,
+			TransportHash:  p.transportHash,
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),

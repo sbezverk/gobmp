@@ -33,10 +33,10 @@ https://www.snas.io/docs/
 1: (action): down
 2: (sequence): 84
 3: (hash): d67b274c33ea1ff0ffe9dd781938b0de
-4: (router_hash): fb5d34c594dff80c59019b6d132185f7
+4: (router_hash): 9e1a9a3663f25a297ed16a834b473eb0
 5: (name):
 6: (remote_bgp_id): 10.0.0.7
-7: (router_ip): 10.1.34.1
+7: (router_ip): 10.0.0.10
 8: (timestamp): 2020-03-18 14:36:54.114438
 9: (remote_asn): 100000
 10: (remote_ip): 10.0.0.7
@@ -44,33 +44,36 @@ https://www.snas.io/docs/
 12: (remote_port):
 13: (local_asn):
 14: (local_ip):
-15: (local_port):
-16: (local_bgp_id):
-17: (info_data):
-18: (adv_cap):
-19: (recv_cap):
-20: (remote_holddown):
-21: (adv_holddown):
-22: (bmp_reason): 1
-23: (bgp_error_code): 6
-24: (bgp_error_sub_code): 4
-25: (error_text): Administratively reset
-26: (is_l): 0
-27: (is_prepolicy): 1
-28: (is_ipv4): 1
-29: (is_locrib): 0
-30: (is_locrib_filtered): 0
-31: (table_name):
+15: (local_hash):
+16: (transport_ip): 10.1.34.1
+17: (transport_hash): b684810f26f15fa57c62abae34d3ef07
+18: (local_port):
+19: (local_bgp_id):
+20: (info_data):
+21: (adv_cap):
+22: (recv_cap):
+23: (remote_holddown):
+24: (adv_holddown):
+25: (bmp_reason): 1
+26: (bgp_error_code): 6
+27: (bgp_error_sub_code): 4
+28: (error_text): Administratively reset
+29: (is_l): 0
+30: (is_prepolicy): 1
+31: (is_ipv4): 1
+32: (is_locrib): 0
+33: (is_locrib_filtered): 0
+34: (table_name):
 
 // Peer Up
 
 1: (action): up
 2: (sequence): 93
 3: (hash): d67b274c33ea1ff0ffe9dd781938b0de
-4: (router_hash): fb5d34c594dff80c59019b6d132185f7
+4: (router_hash): 9e1a9a3663f25a297ed16a834b473eb0
 5: (name):
 6: (remote_bgp_id): 10.0.0.7
-7: (router_ip): 10.1.34.1
+7: (router_ip): 10.0.0.10
 8: (timestamp): 2020-03-18 14:37:13.836872
 9: (remote_asn): 100000
 10: (remote_ip): 10.0.0.7
@@ -78,23 +81,26 @@ https://www.snas.io/docs/
 12: (remote_port): 45085
 13: (local_asn): 100000
 14: (local_ip): 10.0.0.10
-15: (local_port): 179
-16: (local_bgp_id): 10.0.0.10
-17: (info_data):
-18: (adv_cap): MPBGP (1) : afi=1 safi=1 : Unicast IPv4, MPBGP (1) : afi=1 safi=4 : Labeled Unicast IPv4, MPBGP (1) : afi=1 safi=128 : MPLS-Labeled VPN IPv4, MPBGP (1) : afi=2 safi=1 : Unicast IPv6, MPBGP (1) : afi=2 safi=128 : MPLS-Labeled VPN IPv6, MPBGP (1) : afi=16388 safi=71 : BGP-LS BGP-LS, MPBGP (1) : afi=1 safi=73 :  IPv4, Route Refresh Old (128), Route Refresh (2), 4 Octet ASN (65), ADD Path (69) : afi=1 safi=1 send/receive=3 : Unicast IPv4 Send/Receive, ADD Path (69) : afi=1 safi=4 send/receive=3 : Labeled Unicast IPv4 Send/Receive, ADD Path (69) : afi=2 safi=1 send/receive=3 : Unicast IPv6 Send/Receive, 5
-19: (recv_cap): MPBGP (1) : afi=1 safi=1 : Unicast IPv4, MPBGP (1) : afi=1 safi=4 : Labeled Unicast IPv4, MPBGP (1) : afi=1 safi=128 : MPLS-Labeled VPN IPv4, MPBGP (1) : afi=2 safi=1 : Unicast IPv6, MPBGP (1) : afi=2 safi=128 : MPLS-Labeled VPN IPv6, MPBGP (1) : afi=16388 safi=71 : BGP-LS BGP-LS, MPBGP (1) : afi=1 safi=73 :  IPv4, Route Refresh Old (128), Route Refresh (2), 4 Octet ASN (65), ADD Path (69) : afi=1 safi=1 send/receive=3 : Unicast IPv4 Send/Receive, ADD Path (69) : afi=1 safi=4 send/receive=3 : Labeled Unicast IPv4 Send/Receive, ADD Path (69) : afi=2 safi=1 send/receive=3 : Unicast IPv6 Send/Receive, 5
-20: (remote_holddown): 180
-21: (adv_holddown): 180
-22: (bmp_reason):
-23: (bgp_error_code):
-24: (bgp_error_sub_code):
-25: (error_text):
-26: (is_l): 0
-27: (is_prepolicy): 1
-28: (is_ipv4): 1
-29: (is_locrib): 0
-30: (is_locrib_filtered): 0
-31: (table_name):
+15: (local_hash): 9e1a9a3663f25a297ed16a834b473eb0
+16: (transport_ip): 10.1.34.1
+17: (transport_hash): b684810f26f15fa57c62abae34d3ef07
+18: (local_port): 179
+19: (local_bgp_id): 10.0.0.10
+20: (info_data):
+21: (adv_cap): MPBGP (1) : afi=1 safi=1 : Unicast IPv4, MPBGP (1) : afi=1 safi=4 : Labeled Unicast IPv4, MPBGP (1) : afi=1 safi=128 : MPLS-Labeled VPN IPv4, MPBGP (1) : afi=2 safi=1 : Unicast IPv6, MPBGP (1) : afi=2 safi=128 : MPLS-Labeled VPN IPv6, MPBGP (1) : afi=16388 safi=71 : BGP-LS BGP-LS, MPBGP (1) : afi=1 safi=73 :  IPv4, Route Refresh Old (128), Route Refresh (2), 4 Octet ASN (65), ADD Path (69) : afi=1 safi=1 send/receive=3 : Unicast IPv4 Send/Receive, ADD Path (69) : afi=1 safi=4 send/receive=3 : Labeled Unicast IPv4 Send/Receive, ADD Path (69) : afi=2 safi=1 send/receive=3 : Unicast IPv6 Send/Receive, 5
+22: (recv_cap): MPBGP (1) : afi=1 safi=1 : Unicast IPv4, MPBGP (1) : afi=1 safi=4 : Labeled Unicast IPv4, MPBGP (1) : afi=1 safi=128 : MPLS-Labeled VPN IPv4, MPBGP (1) : afi=2 safi=1 : Unicast IPv6, MPBGP (1) : afi=2 safi=128 : MPLS-Labeled VPN IPv6, MPBGP (1) : afi=16388 safi=71 : BGP-LS BGP-LS, MPBGP (1) : afi=1 safi=73 :  IPv4, Route Refresh Old (128), Route Refresh (2), 4 Octet ASN (65), ADD Path (69) : afi=1 safi=1 send/receive=3 : Unicast IPv4 Send/Receive, ADD Path (69) : afi=1 safi=4 send/receive=3 : Labeled Unicast IPv4 Send/Receive, ADD Path (69) : afi=2 safi=1 send/receive=3 : Unicast IPv6 Send/Receive, 5
+23: (remote_holddown): 180
+24: (adv_holddown): 180
+25: (bmp_reason):
+26: (bgp_error_code):
+27: (bgp_error_sub_code):
+28: (error_text):
+29: (is_l): 0
+30: (is_prepolicy): 1
+31: (is_ipv4): 1
+32: (is_locrib): 0
+33: (is_locrib_filtered): 0
+34: (table_name):
 
 // Peer initialization - any peer message that comes in with action "first" is not needed and should be dropped
 
@@ -109,68 +115,72 @@ https://www.snas.io/docs/
 1: (action): del
 2: (sequence): 44
 3: (hash): 5214a8eb996f030b3d96784c1890ab3d
-4: (router_hash): 963b507b39731b0675d3422e6f6be44c
+4: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 5: (router_ip): 10.1.62.1
-6: (base_attr_hash):
-7: (peer_hash): a4935a0f520cd5f72ed483d2b37f58ae
-8: (peer_ip): 2.2.71.1
-9: (peer_asn): 7100
-10: (timestamp): 2020-03-25 22:00:53.891932
-11: (prefix): 71.71.8.0
-12: (prefix_len): 22
-13: (is_ipv4): 1
-14: (origin):
-15: (as_path):
-16: (as_path_count):
-17: (origin_as):
-18: (nexthop):
-19: (med):
-20: (local_pref):
-21: (aggregator):
-22: (community_list):
-23: (ext_community_list):
-24: (cluster_list):
-25: (isatomicagg):
-26: (is_nexthop_ipv4):
-27: (originator_id):
-28: (path_id): 0
-29: (labels):
-30: (is_prepolicy): 1
-31: (is_adj_rib_in): 1
+6: (transport_ip): 192.0.2.10
+7: (transport_hash): 9f86d081884c7d659a2feaa0c55ad015
+8: (base_attr_hash): 6d7fce9fee471194aa8b5b6e47267f03
+9: (peer_hash): a4935a0f520cd5f72ed483d2b37f58ae
+10: (peer_ip): 2.2.71.1
+11: (peer_asn): 7100
+12: (timestamp): 2020-03-25 22:00:53.891932
+13: (prefix): 71.71.8.0
+14: (prefix_len): 22
+15: (is_ipv4): 1
+16: (origin):
+17: (as_path):
+18: (as_path_count):
+19: (origin_as):
+20: (nexthop):
+21: (med):
+22: (local_pref):
+23: (aggregator):
+24: (community_list):
+25: (ext_community_list):
+26: (cluster_list):
+27: (isatomicagg):
+28: (is_nexthop_ipv4):
+29: (originator_id):
+30: (path_id): 0
+31: (labels):
+32: (is_prepolicy): 1
+33: (is_adj_rib_in): 1
 
 // add unicast_prefix
 
 1: (action): add
 2: (sequence): 46
 3: (hash): 5214a8eb996f030b3d96784c1890ab3d
-4: (router_hash): 963b507b39731b0675d3422e6f6be44c
+4: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 5: (router_ip): 10.1.62.1
-6: (base_attr_hash): 3479c4959c47a2cf634a72ce2c416fb9
-7: (peer_hash): a4935a0f520cd5f72ed483d2b37f58ae
-8: (peer_ip): 2.2.71.1
-9: (peer_asn): 7100
-10: (timestamp): 2020-03-25 22:01:33.167989
-11: (prefix): 71.71.8.0
-12: (prefix_len): 22
-13: (is_ipv4): 1
-14: (origin): igp
-15: (as_path): 7100
-16: (as_path_count): 1
-17: (origin_as): 7100
-18: (nexthop): 2.2.71.1
-19: (med): 0
-20: (local_pref): 0
-21: (aggregator):
-22: (community_list):
-23: (ext_community_list):
-24: (cluster_list):
-25: (isatomicagg): 0
-26: (is_nexthop_ipv4): 1
-27: (originator_id):
-28: (path_id): 0
-29: (labels):
-30: (is_prepolicy): 1
-31: (is_adj_rib_in): 1
+6: (transport_ip):
+7: (transport_hash):
+8: (base_attr_hash): 3479c4959c47a2cf634a72ce2c416fb9
+9: (peer_hash): a4935a0f520cd5f72ed483d2b37f58ae
+10: (peer_ip): 2.2.71.1
+11: (peer_asn): 7100
+12: (timestamp): 2020-03-25 22:01:33.167989
+13: (prefix): 71.71.8.0
+14: (prefix_len): 22
+15: (is_ipv4): 1
+16: (origin): igp
+17: (as_path): 7100
+18: (as_path_count): 1
+19: (origin_as): 7100
+20: (nexthop): 2.2.71.1
+21: (med): 0
+22: (local_pref): 0
+23: (aggregator):
+24: (community_list):
+25: (ext_community_list):
+26: (cluster_list):
+27: (isatomicagg): 0
+28: (is_nexthop_ipv4): 1
+29: (originator_id):
+30: (path_id): 0
+31: (labels):
+32: (is_prepolicy): 1
+33: (is_adj_rib_in): 1
 ```
 
 #### BMP ls_node message:
@@ -181,28 +191,30 @@ https://www.snas.io/docs/
 2: (sequence): 21
 3: (hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
 4: (base_attr_hash): f7e177580a2209c7af48c6a90f707cc9
-5: (router_hash): 963b507b39731b0675d3422e6f6be44c
+5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (peer_hash): 1787a325b86857cdcb82e46d2e919780
-8: (peer_ip): 10.0.0.1
-9: (peer_asn): 100000
-10: (timestamp): 2020-03-25 22:20:18.804927
-11: (igp_router_id): 0000.0000.0000.0000
-12: (router_id): 10.0.0.0
-13: (routing_id): 0
-14: (ls_id): 0
-15: (mt_id): 0, 2
-16: (area_id):
-17: (protocol): IS-IS_L2
-18: (flags):
-19: (as_path):
-20: (local_pref): 100
-21: (med): 0
-22: (nexthop): 10.0.0.1
-23: (name): R00
-24: (is_prepolicy): 1
-25: (is_adj_rib_in): 1
-26: (ls_sr_capabilities): I 64000 100000
+7: (transport_ip): 10.1.62.1
+8: (transport_hash): 367321d1bb7194e1f0f57f8ce99e7316
+9: (peer_hash): 1787a325b86857cdcb82e46d2e919780
+10: (peer_ip): 10.0.0.1
+11: (peer_asn): 100000
+12: (timestamp): 2020-03-25 22:20:18.804927
+13: (igp_router_id): 0000.0000.0000.0000
+14: (router_id): 10.0.0.0
+15: (routing_id): 0
+16: (ls_id): 0
+17: (mt_id): 0, 2
+18: (area_id):
+19: (protocol): IS-IS_L2
+20: (flags):
+21: (as_path):
+22: (local_pref): 100
+23: (med): 0
+24: (nexthop): 10.0.0.1
+25: (name): R00
+26: (is_prepolicy): 1
+27: (is_adj_rib_in): 1
+28: (ls_sr_capabilities): I 64000 100000
 
 Additional segment routing and SRv6 items not accounted for by OpenBMP:
 
@@ -228,28 +240,30 @@ Future:
 2: (sequence): 23
 3: (hash): 9b20947913e9b23f4d5ccf4174e9eba4
 4: (base_attr_hash): 17fcffffffffffff0000000000000000
-5: (router_hash): 963b507b39731b0675d3422e6f6be44c
+5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (peer_hash): 6c6ba2119bddb79001663deb1801dfcc
-8: (peer_ip): 10.0.0.2
-9: (peer_asn): 100000
-10: (timestamp): 2020-03-25 22:25:05.143072
-11: (igp_router_id): 0000.0000.0001.0000
-12: (router_id): 0.0.0.0
-13: (routing_id): 0
-14: (ls_id): 0
-15: (mt_id):
-16: (area_id):
-17: (protocol): IS-IS_L2
-18: (flags):
-19: (as_path):
-20: (local_pref): 0
-21: (med): 0
-22: (nexthop):
-23: (name):
-24: (is_prepolicy): 1
-25: (is_adj_rib_in): 1
-26: (ls_sr_capabilities):
+7: (transport_ip):
+8: (transport_hash):
+9: (peer_hash): 6c6ba2119bddb79001663deb1801dfcc
+10: (peer_ip): 10.0.0.2
+11: (peer_asn): 100000
+12: (timestamp): 2020-03-25 22:25:05.143072
+13: (igp_router_id): 0000.0000.0001.0000
+14: (router_id): 0.0.0.0
+15: (routing_id): 0
+16: (ls_id): 0
+17: (mt_id):
+18: (area_id):
+19: (protocol): IS-IS_L2
+20: (flags):
+21: (as_path):
+22: (local_pref): 0
+23: (med): 0
+24: (nexthop):
+25: (name):
+26: (is_prepolicy): 1
+27: (is_adj_rib_in): 1
+28: (ls_sr_capabilities):
 
 ```
 #### BMP ls_link message:
@@ -260,50 +274,52 @@ Future:
 2: (sequence): 193
 3: (hash): 35c2476bc696eda06bda5837da79b16d
 4: (base_attr_hash): f7e177580a2209c7af48c6a90f707cc9
-5: (router_hash): 963b507b39731b0675d3422e6f6be44c
+5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (peer_hash): 1787a325b86857cdcb82e46d2e919780
-8: (peer_ip): 10.0.0.1
-9: (peer_asn): 100000
-10: (timestamp): 2020-03-25 22:30:09.747268
-11: (igp_router_id): 0000.0000.0002.0000
-12: (router_id): 10.0.0.2
-13: (routing_id): 0
-14: (ls_id): 0
-15: (area_id): 0
-16: (protocol): IS-IS_L2
-17: (as_path):
-18: (local_pref): 100
-19: (med): 0
-20: (nexthop): 10.0.0.1
-21: (mt_id): 0
-22: (local_link_id): 0
-23: (remote_link_id): 0
-24: (intf_ip): 10.1.1.3
-25: (nei_ip): 10.1.1.2
-26: (igp_metric): 1
-27: (admin_group): 0
-28: (max_link_bw): 0
-29: (max_resv_bw): 0
-30: (unresv_bw):
-31: (max_link_bw_kbps): 1000000
-32: (max_resv_bw_kbps): 0
-33: (unresv_bw_kbps): 0, 0, 0, 0, 0, 0, 0, 0
-34: (te_default_metric): 1
-35: (link_protection):
-36: (mpls_proto_mask):
-37: (srlg):
-38: (link_name):
-39: (remote_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
-40: (local_node_hash): c2679dc1c0d5615c23b3ec45f59f6b15
-41: (remote_igp_router_id): 0000.0000.0000.0000
-42: (remote_router_id): 10.0.0.0
-43: (local_node_asn): 100000
-44: (remote_node_asn): 100000
-45: (peer_node_sid):
-46: (is_prepolicy): 1
-47: (is_adj_rib_in): 1
-48: (ls_adjacency_sid): BVL 0 24004, VL 0 24005
+7: (transport_ip):
+8: (transport_hash):
+9: (peer_hash): 1787a325b86857cdcb82e46d2e919780
+10: (peer_ip): 10.0.0.1
+11: (peer_asn): 100000
+12: (timestamp): 2020-03-25 22:30:09.747268
+13: (igp_router_id): 0000.0000.0002.0000
+14: (router_id): 10.0.0.2
+15: (routing_id): 0
+16: (ls_id): 0
+17: (area_id): 0
+18: (protocol): IS-IS_L2
+19: (as_path):
+20: (local_pref): 100
+21: (med): 0
+22: (nexthop): 10.0.0.1
+23: (mt_id): 0
+24: (local_link_id): 0
+25: (remote_link_id): 0
+26: (intf_ip): 10.1.1.3
+27: (nei_ip): 10.1.1.2
+28: (igp_metric): 1
+29: (admin_group): 0
+30: (max_link_bw): 0
+31: (max_resv_bw): 0
+32: (unresv_bw):
+33: (max_link_bw_kbps): 1000000
+34: (max_resv_bw_kbps): 0
+35: (unresv_bw_kbps): 0, 0, 0, 0, 0, 0, 0, 0
+36: (te_default_metric): 1
+37: (link_protection):
+38: (mpls_proto_mask):
+39: (srlg):
+40: (link_name):
+41: (remote_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
+42: (local_node_hash): c2679dc1c0d5615c23b3ec45f59f6b15
+43: (remote_igp_router_id): 0000.0000.0000.0000
+44: (remote_router_id): 10.0.0.0
+45: (local_node_asn): 100000
+46: (remote_node_asn): 100000
+47: (peer_node_sid):
+48: (is_prepolicy): 1
+49: (is_adj_rib_in): 1
+50: (ls_adjacency_sid): BVL 0 24004, VL 0 24005
 
 Additional segment routing not accounted for by OpenBMP:
 
@@ -340,50 +356,52 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 2: (sequence): 102
 3: (hash): 9f60356cda03f1850cdbc818c9440a60
 4: (base_attr_hash): 17fcffffffffffff0000000000000000
-5: (router_hash): 963b507b39731b0675d3422e6f6be44c
+5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (peer_hash): 6c6ba2119bddb79001663deb1801dfcc
-8: (peer_ip): 10.0.0.2
-9: (peer_asn): 100000
-10: (timestamp): 2020-03-25 22:25:00.023351
-11: (igp_router_id): 0000.0000.0000.0000
-12: (router_id): ::
-13: (routing_id): 0
-14: (ls_id): 0
-15: (area_id):
-16: (protocol): IS-IS_L2
-17: (as_path):
-18: (local_pref): 0
-19: (med): 0
-20: (nexthop):
-21: (mt_id): 2
-22: (local_link_id): 0
-23: (remote_link_id): 0
-24: (intf_ip): 10:1:1::
-25: (nei_ip): 10:1:1::1
-26: (igp_metric): 0
-27: (admin_group): 0
-28: (max_link_bw): 0
-29: (max_resv_bw): 0
-30: (unresv_bw):
-31: (max_link_bw_kbps): 0
-32: (max_resv_bw_kbps): 0
-33: (unresv_bw_kbps):
-34: (te_default_metric): 0
-35: (link_protection):
-36: (mpls_proto_mask):
-37: (srlg):
-38: (link_name):
-39: (remote_node_hash): 9b20947913e9b23f4d5ccf4174e9eba4
-40: (local_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
-41: (remote_igp_router_id): 0000.0000.0001.0000
-42: (remote_router_id): ::
-43: (local_node_asn): 100000
-44: (remote_node_asn): 100000
-45: (peer_node_sid):
-46: (is_prepolicy): 1
-47: (is_adj_rib_in): 1
-48: (ls_adjacency_sid):
+7: (transport_ip):
+8: (transport_hash):
+9: (peer_hash): 6c6ba2119bddb79001663deb1801dfcc
+10: (peer_ip): 10.0.0.2
+11: (peer_asn): 100000
+12: (timestamp): 2020-03-25 22:25:00.023351
+13: (igp_router_id): 0000.0000.0000.0000
+14: (router_id): ::
+15: (routing_id): 0
+16: (ls_id): 0
+17: (area_id):
+18: (protocol): IS-IS_L2
+19: (as_path):
+20: (local_pref): 0
+21: (med): 0
+22: (nexthop):
+23: (mt_id): 2
+24: (local_link_id): 0
+25: (remote_link_id): 0
+26: (intf_ip): 10:1:1::
+27: (nei_ip): 10:1:1::1
+28: (igp_metric): 0
+29: (admin_group): 0
+30: (max_link_bw): 0
+31: (max_resv_bw): 0
+32: (unresv_bw):
+33: (max_link_bw_kbps): 0
+34: (max_resv_bw_kbps): 0
+35: (unresv_bw_kbps):
+36: (te_default_metric): 0
+37: (link_protection):
+38: (mpls_proto_mask):
+39: (srlg):
+40: (link_name):
+41: (remote_node_hash): 9b20947913e9b23f4d5ccf4174e9eba4
+42: (local_node_hash): 6ed5aeb7f5ca0bbea84bdbadb61996e9
+43: (remote_igp_router_id): 0000.0000.0001.0000
+44: (remote_router_id): ::
+45: (local_node_asn): 100000
+46: (remote_node_asn): 100000
+47: (peer_node_sid):
+48: (is_prepolicy): 1
+49: (is_adj_rib_in): 1
+50: (ls_adjacency_sid):
 
 ```
 #### BMP ls_prefix message:
@@ -395,35 +413,37 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 2: (sequence): 201
 3: (hash): 47d904fe7803fa73c61ff126dd8c27d2
 4: (base_attr_hash): f7e177580a2209c7af48c6a90f707cc9
-5: (router_hash): 963b507b39731b0675d3422e6f6be44c
+5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (peer_hash): 1787a325b86857cdcb82e46d2e919780
-8: (peer_ip): 10.0.0.1
-9: (peer_asn): 100000
-10: (timestamp): 2020-03-25 22:30:09.739779
-11: (igp_router_id): 0000.0000.0002.0000
-12: (router_id): 0.0.0.0
-13: (routing_id): 0
-14: (ls_id): 0
-15: (area_id):
-16: (protocol): IS-IS_L2
-17: (as_path):
-18: (local_pref): 100
-19: (med): 0
-20: (nexthop): 10.0.0.1
-21: (local_node_hash): c2679dc1c0d5615c23b3ec45f59f6b15
-22: (mt_id): 0
-23: (ospf_route_type):
-24: (igp_flags):
-25: (route_tag): 0
-26: (ext_route_tag): 0
-27: (ospf_fwd_addr): 0.0.0.0
-28: (igp_metric): 0
-29: (prefix): 10.0.0.2
-30: (prefix_len): 32
-31: (is_prepolicy): 1
-32: (is_adj_rib_in): 1
-33: (ls_prefix_sid): N SPF 2
+7: (transport_ip):
+8: (transport_hash):
+9: (peer_hash): 1787a325b86857cdcb82e46d2e919780
+10: (peer_ip): 10.0.0.1
+11: (peer_asn): 100000
+12: (timestamp): 2020-03-25 22:30:09.739779
+13: (igp_router_id): 0000.0000.0002.0000
+14: (router_id): 0.0.0.0
+15: (routing_id): 0
+16: (ls_id): 0
+17: (area_id):
+18: (protocol): IS-IS_L2
+19: (as_path):
+20: (local_pref): 100
+21: (med): 0
+22: (nexthop): 10.0.0.1
+23: (local_node_hash): c2679dc1c0d5615c23b3ec45f59f6b15
+24: (mt_id): 0
+25: (ospf_route_type):
+26: (igp_flags):
+27: (route_tag): 0
+28: (ext_route_tag): 0
+29: (ospf_fwd_addr): 0.0.0.0
+30: (igp_metric): 0
+31: (prefix): 10.0.0.2
+32: (prefix_len): 32
+33: (is_prepolicy): 1
+34: (is_adj_rib_in): 1
+35: (ls_prefix_sid): N SPF 2
 
 // delete ls_prefix
 
@@ -431,35 +451,37 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 2: (sequence): 136
 3: (hash): 8b3daeb20e905895d8cfab34220b5689
 4: (base_attr_hash): 17fcffffffffffff0000000000000000
-5: (router_hash): 963b507b39731b0675d3422e6f6be44c
+5: (router_hash): 367321d1bb7194e1f0f57f8ce99e7316
 6: (router_ip): 10.1.62.1
-7: (peer_hash): 30b1ce11e0c436dc3e37dc7342b12be8
-8: (peer_ip): 10.0.0.0
-9: (peer_asn): 100000
-10: (timestamp): 2020-03-25 22:25:05.134138
-11: (igp_router_id): 0000.0000.0001.0000
-12: (router_id): 0.0.0.0
-13: (routing_id): 0
-14: (ls_id): 0
-15: (area_id):
-16: (protocol): IS-IS_L2
-17: (as_path):
-18: (local_pref): 0
-29: (med): 0
-20: (nexthop):
-21: (local_node_hash): 9b20947913e9b23f4d5ccf4174e9eba4
-22: (mt_id): 0
-23: (ospf_route_type):
-24: (igp_flags):
-25: (route_tag): 0
-26: (ext_route_tag): 0
-27: (ospf_fwd_addr): 0.0.0.0
-28: (igp_metric): 0
-39: (prefix): 10.0.0.1
-30: (prefix_len): 32
-31: (is_prepolicy): 1
-32: (is_adj_rib_in): 1
-33: (ls_prefix_sid):
+7: (transport_ip):
+8: (transport_hash):
+9: (peer_hash): 30b1ce11e0c436dc3e37dc7342b12be8
+10: (peer_ip): 10.0.0.0
+11: (peer_asn): 100000
+12: (timestamp): 2020-03-25 22:25:05.134138
+13: (igp_router_id): 0000.0000.0001.0000
+14: (router_id): 0.0.0.0
+15: (routing_id): 0
+16: (ls_id): 0
+17: (area_id):
+18: (protocol): IS-IS_L2
+19: (as_path):
+20: (local_pref): 0
+31: (med): 0
+22: (nexthop):
+23: (local_node_hash): 9b20947913e9b23f4d5ccf4174e9eba4
+24: (mt_id): 0
+25: (ospf_route_type):
+26: (igp_flags):
+27: (route_tag): 0
+28: (ext_route_tag): 0
+29: (ospf_fwd_addr): 0.0.0.0
+30: (igp_metric): 0
+41: (prefix): 10.0.0.1
+32: (prefix_len): 32
+33: (is_prepolicy): 1
+34: (is_adj_rib_in): 1
+35: (ls_prefix_sid):
 
 ```
 #### BMP ls_srv6_sid message:
@@ -515,111 +537,122 @@ BGP-LS TLVs:
 1: (action): add
 2: (sequence): 35
 3: (hash): 332047c6ca64451ed6f5ddb92710a29a
-4: (router_hash): fb5d34c594dff80c59019b6d132185f7
+4: (router_hash): b684810f26f15fa57c62abae34d3ef07
 5: (router_ip): 10.1.34.1
-6: (base_attr_hash): 22155edb81a03c848f36193dfd3e48f3
-7: (peer_hash): d67b274c33ea1ff0ffe9dd781938b0de
-8: (peer_ip): 10.0.0.7
-9: (peer_asn): 100000
-10: (timestamp): 2020-03-25 22:39:04.023783
-11: (prefix): 100.100.100.0
-12: (prefix_len): 24
-13: (is_ipv4): 1
-14: (origin): incomplete
-15: (as_path):
-16: (as_path_count): 0
-17: (origin_as): 0
-18: (nexthop): 10.0.0.7
-19: (med): 0
-20: (local_pref): 100
-21: (aggregator):
-22: (community_list):
-23: (ext_community_list): rt=100:100
-24: (cluster_list):
-25: (isatomicagg): 0
-26: (is_nexthop_ipv4): 1
-27: (originator_id):
-28: (path_id): 0
-29: (labels): 24000
-30: (is_prepolicy): 1
-31: (is_adj_rib_in): 1
-32: (vpn_rd): 100100:100
-33: (vpn_rd_type): 0
+6: (transport_ip):
+7: (transport_hash):
+8: (base_attr_hash): 22155edb81a03c848f36193dfd3e48f3
+9: (peer_hash): d67b274c33ea1ff0ffe9dd781938b0de
+10: (peer_ip): 10.0.0.7
+11: (peer_asn): 100000
+12: (timestamp): 2020-03-25 22:39:04.023783
+13: (prefix): 100.100.100.0
+14: (prefix_len): 24
+15: (is_ipv4): 1
+16: (origin): incomplete
+17: (as_path):
+18: (as_path_count): 0
+19: (origin_as): 0
+20: (nexthop): 10.0.0.7
+21: (med): 0
+22: (local_pref): 100
+23: (aggregator):
+24: (community_list):
+25: (ext_community_list): rt=100:100
+26: (cluster_list):
+27: (isatomicagg): 0
+28: (is_nexthop_ipv4): 1
+29: (originator_id):
+30: (path_id): 0
+31: (labels): 24000
+32: (is_prepolicy): 1
+33: (is_adj_rib_in): 1
+34: (vpn_rd): 100100:100
+35: (vpn_rd_type): 0
 
 // delete l3vpn (prefix) message
 
 1: (action): del
 2: (sequence): 34
 3: (hash): 332047c6ca64451ed6f5ddb92710a29a
-4: (router_hash): fb5d34c594dff80c59019b6d132185f7
+4: (router_hash): b684810f26f15fa57c62abae34d3ef07
 5: (router_ip): 10.1.34.1
-6: (base_attr_hash):
-7: (peer_hash): d67b274c33ea1ff0ffe9dd781938b0de
-8: (peer_ip): 10.0.0.7
-9: (peer_asn): 100000
-10: (timestamp): 2020-03-25 22:37:53.516968
-11: (prefix): 100.100.100.0
-12: (prefix_len): 24
-13: (is_ipv4): 1
-14: (origin):
-15: (as_path):
-16: (as_path_count):
-17: (origin_as):
-18: (nexthop):
-19: (med):
-20: (local_pref):
-21: (aggregator):
-22: (community_list):
-23: (ext_community_list):
-24: (cluster_list):
-25: (isatomicagg):
-26: (is_nexthop_ipv4):
-27: (originator_id):
-28: (path_id): 0
-29: (labels): 524288
-30: (is_prepolicy): 1
-31: (is_adj_rib_in): 1
-32: (vpn_rd): 100100:100
-33: (vpn_rd_type): 0
+6: (transport_ip):
+7: (transport_hash):
+8: (base_attr_hash):
+9: (peer_hash): d67b274c33ea1ff0ffe9dd781938b0de
+10: (peer_ip): 10.0.0.7
+11: (peer_asn): 100000
+12: (timestamp): 2020-03-25 22:37:53.516968
+13: (prefix): 100.100.100.0
+14: (prefix_len): 24
+15: (is_ipv4): 1
+16: (origin):
+17: (as_path):
+18: (as_path_count):
+19: (origin_as):
+20: (nexthop):
+21: (med):
+22: (local_pref):
+23: (aggregator):
+24: (community_list):
+25: (ext_community_list):
+26: (cluster_list):
+27: (isatomicagg):
+28: (is_nexthop_ipv4):
+29: (originator_id):
+30: (path_id): 0
+31: (labels): 524288
+32: (is_prepolicy): 1
+33: (is_adj_rib_in): 1
+34: (vpn_rd): 100100:100
+35: (vpn_rd_type): 0
 
 ```
 
 #### BMP evpn message:
 ```
 1: (action): add/del
+2: (sequence):
+3: (hash):
+4: (router_hash):
 5: (router_ip):
-8: (peer_ip):
-9: (peer_asn):
-10: (timestamp):
-11: (origin):
-12: (as_path):
-13: (as_path_count):
-14: (origin_as):
-15: (nexthop):
-16: (med):
-17: (local_pref):
-18: (aggregator):
-19: (community_list):
-20: (ext_community_list)
-21: (cluster_list):
-22: (isatomicagg):
-23: (is_nexthop_ipv4):
-24: (originator_id):
-25: (path_id):
-26: (is_prepolicy):
-27: (is_adj_rib_in):
-28: (rd):
-29: (rd_type):
-30: (rd_type):
-31: (orig_router_ip_len):
-32: (eth_tag):
-33: (eth_segment_id):
-34: (mac_len):
-35: (mac):
-36: (ip_len):
-37: (ip):
-38: (label):
-39: (label):
+6: (transport_ip):
+7: (transport_hash):
+8: (peer_hash):
+9: (peer_type):
+10: (peer_ip):
+11: (peer_asn):
+12: (timestamp):
+13: (origin):
+14: (as_path):
+15: (as_path_count):
+16: (origin_as):
+17: (nexthop):
+18: (med):
+19: (local_pref):
+20: (aggregator):
+21: (community_list):
+22: (ext_community_list)
+23: (cluster_list):
+24: (isatomicagg):
+25: (is_nexthop_ipv4):
+26: (originator_id):
+27: (path_id):
+28: (is_prepolicy):
+29: (is_adj_rib_in):
+30: (rd):
+31: (rd_type):
+32: (rd_type):
+33: (orig_router_ip_len):
+34: (eth_tag):
+35: (eth_segment_id):
+36: (mac_len):
+37: (mac):
+38: (ip_len):
+39: (ip):
+40: (label):
+41: (label):
 ```
 ### SRv6 L3VPN Message (v4 overlay, SRv6 underlay)
 
@@ -629,36 +662,38 @@ BGP-LS TLVs:
 1: (action): add
 2: (sequence): 38
 3: (hash): b44a84e415927f20ff3e6edf7103875c
-4: (router_hash): fb5d34c594dff80c59019b6d132185f7
+4: (router_hash): b684810f26f15fa57c62abae34d3ef07
 5: (router_ip): 10.1.34.1
-6: (base_attr_hash): e0895cf0bc3391438d43cdc7e43aae36
-7: (peer_hash): 0146fce99cbd730d787487de31452f88
-8: (peer_ip): 2001:1:1:f003::1                        // this is ok
-9: (peer_asn): 100000                                 // this is ok
-10: (timestamp): 2020-03-25 22:41:32.861004
-11: (prefix): 0.0.0.0                                 // should be 3.30.30.0/24
-12: (prefix_len): 0
-13: (is_ipv4): 1
-14: (origin): incomplete
-15: (as_path):
-16: (as_path_count): 0
-17: (origin_as): 0
-18: (nexthop): 32.1.0.1                               // wrong
-19: (med): 0
-20: (local_pref): 100
-21: (aggregator):
-22: (community_list):
-23: (ext_community_list): rt=300:10                   // this is ok
-24: (cluster_list):
-25: (isatomicagg): 0
-26: (is_nexthop_ipv4): 1
-27: (originator_id):
-28: (path_id): 0
-29: (labels): 1072,0                                  // VPN label should be replaced with SRv6-VPN SID: 2001:1:1:f003:43::/128
-30: (is_prepolicy): 1
-31: (is_adj_rib_in): 1
-32: (vpn_rd): 1679764780:167976478                    // ? should be 300:10
-33: (vpn_rd_type): 0
+6: (transport_ip):
+7: (transport_hash):
+8: (base_attr_hash): e0895cf0bc3391438d43cdc7e43aae36
+9: (peer_hash): 0146fce99cbd730d787487de31452f88
+10: (peer_ip): 2001:1:1:f003::1                        // this is ok
+11: (peer_asn): 100000                                 // this is ok
+12: (timestamp): 2020-03-25 22:41:32.861004
+13: (prefix): 0.0.0.0                                 // should be 3.30.30.0/24
+14: (prefix_len): 0
+15: (is_ipv4): 1
+16: (origin): incomplete
+17: (as_path):
+18: (as_path_count): 0
+19: (origin_as): 0
+20: (nexthop): 32.1.0.1                               // wrong
+21: (med): 0
+22: (local_pref): 100
+23: (aggregator):
+24: (community_list):
+25: (ext_community_list): rt=300:10                   // this is ok
+26: (cluster_list):
+27: (isatomicagg): 0
+28: (is_nexthop_ipv4): 1
+29: (originator_id):
+30: (path_id): 0
+31: (labels): 1072,0                                  // VPN label should be replaced with SRv6-VPN SID: 2001:1:1:f003:43::/128
+32: (is_prepolicy): 1
+33: (is_adj_rib_in): 1
+34: (vpn_rd): 1679764780:167976478                    // ? should be 300:10
+35: (vpn_rd_type): 0
 
 // show BGP command output for the above SRv6 l3vpn message:
 
@@ -724,33 +759,35 @@ Wed Mar 25 22:52:03.008 UTC
 1: (action): del
 2: (sequence): 37
 3: (hash): 2f358ba42cb0a8a00c210b0accbf1af4
-4: (router_hash): fb5d34c594dff80c59019b6d132185f7
+4: (router_hash): b684810f26f15fa57c62abae34d3ef07
 5: (router_ip): 10.1.34.1
-6: (base_attr_hash):
-7: (peer_hash): 0146fce99cbd730d787487de31452f88
-8: (peer_ip): 2001:1:1:f003::1
-9: (peer_asn): 100000
-10: (timestamp): 2020-03-25 22:41:03.602687
-11: (prefix): 3.30.30.0
-12: (prefix_len): 24
-13: (is_ipv4): 1
-14: (origin):
-15: (as_path):
-16: (as_path_count):
-17: (origin_as):
-18: (nexthop):
-19: (med):
-20: (local_pref):
-21: (aggregator):
-22: (community_list):
-23: (ext_community_list):
-24: (cluster_list):
-25: (isatomicagg):
-26: (is_nexthop_ipv4):
-27: (originator_id):
-28: (path_id): 0
-29: (labels): 524288
-30: (is_prepolicy): 1
-31: (is_adj_rib_in): 1
-32: (vpn_rd): 10300:10
-33: (vpn_rd_type): 0
+6: (transport_ip):
+7: (transport_hash):
+8: (base_attr_hash):
+9: (peer_hash): 0146fce99cbd730d787487de31452f88
+10: (peer_ip): 2001:1:1:f003::1
+11: (peer_asn): 100000
+12: (timestamp): 2020-03-25 22:41:03.602687
+13: (prefix): 3.30.30.0
+14: (prefix_len): 24
+15: (is_ipv4): 1
+16: (origin):
+17: (as_path):
+18: (as_path_count):
+19: (origin_as):
+20: (nexthop):
+21: (med):
+22: (local_pref):
+23: (aggregator):
+24: (community_list):
+25: (ext_community_list):
+26: (cluster_list):
+27: (isatomicagg):
+28: (is_nexthop_ipv4):
+29: (originator_id):
+30: (path_id): 0
+31: (labels): 524288
+32: (is_prepolicy): 1
+33: (is_adj_rib_in): 1
+34: (vpn_rd): 10300:10
+35: (vpn_rd_type): 0

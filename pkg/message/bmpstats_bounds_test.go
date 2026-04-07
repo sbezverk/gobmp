@@ -21,8 +21,8 @@ func statsTestPeerHeader() *bmp.PerPeerHeader {
 // TestProduceStatsMessage_AllTypes exercises produceStatsMessage with all stat types
 func TestProduceStatsMessage_AllTypes(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
+		transportHash: "test-hash",
+		transportIP:   "10.0.0.1",
 		publisher:   &mockPublisher{},
 	}
 
@@ -61,8 +61,8 @@ func TestProduceStatsMessage_AllTypes(t *testing.T) {
 // TestProduceStatsMessage_TruncatedUint32 exercises the length guard for 4-byte stats
 func TestProduceStatsMessage_TruncatedUint32(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
+		transportHash: "test-hash",
+		transportIP:   "10.0.0.1",
 		publisher:   &mockPublisher{},
 	}
 
@@ -84,8 +84,8 @@ func TestProduceStatsMessage_TruncatedUint32(t *testing.T) {
 // TestProduceStatsMessage_TruncatedUint64 exercises the length guard for 8-byte stats
 func TestProduceStatsMessage_TruncatedUint64(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
+		transportHash: "test-hash",
+		transportIP:   "10.0.0.1",
 		publisher:   &mockPublisher{},
 	}
 
@@ -107,8 +107,8 @@ func TestProduceStatsMessage_TruncatedUint64(t *testing.T) {
 // TestProduceStatsMessage_NilPeerHeader exercises the nil PeerHeader guard
 func TestProduceStatsMessage_NilPeerHeader(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
+		transportHash: "test-hash",
+		transportIP:   "10.0.0.1",
 		publisher:   &mockPublisher{},
 	}
 	msg := bmp.Message{
@@ -121,8 +121,8 @@ func TestProduceStatsMessage_NilPeerHeader(t *testing.T) {
 // TestProduceStatsMessage_InvalidPayload exercises the type assertion guard
 func TestProduceStatsMessage_InvalidPayload(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
+		transportHash: "test-hash",
+		transportIP:   "10.0.0.1",
 		publisher:   &mockPublisher{},
 	}
 	msg := bmp.Message{
@@ -135,8 +135,8 @@ func TestProduceStatsMessage_InvalidPayload(t *testing.T) {
 // TestProduceStatsMessage_EmptyTLV exercises the empty TLV guard
 func TestProduceStatsMessage_EmptyTLV(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
+		transportHash: "test-hash",
+		transportIP:   "10.0.0.1",
 		publisher:   &mockPublisher{},
 	}
 	msg := bmp.Message{
@@ -149,8 +149,8 @@ func TestProduceStatsMessage_EmptyTLV(t *testing.T) {
 // TestProduceStatsMessage_UnknownType exercises the default case
 func TestProduceStatsMessage_UnknownType(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
+		transportHash: "test-hash",
+		transportIP:   "10.0.0.1",
 		publisher:   &mockPublisher{},
 	}
 	statsMsg := &bmp.StatsReport{

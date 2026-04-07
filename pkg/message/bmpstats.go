@@ -29,6 +29,7 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 		glog.Errorf("perPeerHeader is missing, cannot construct Stats message")
 		return
 	}
+	localIP, localHash := p.peerLocal(msg.PeerHeader.GetTableKey())
 	StatsMsg, ok := msg.Payload.(*bmp.StatsReport)
 	if !ok {
 		glog.Errorf("got invalid Payload type in bmp.StatsReport %+v", msg.Payload)
@@ -41,12 +42,14 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 	}
 
 	m := Stats{
-		RemoteASN:  msg.PeerHeader.PeerAS,
-		PeerRD:     msg.PeerHeader.GetPeerDistinguisherString(),
-		Timestamp:  msg.PeerHeader.GetPeerTimestamp(),
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
-		PeerType:   uint8(msg.PeerHeader.PeerType),
+		RemoteASN:     msg.PeerHeader.PeerAS,
+		PeerRD:        msg.PeerHeader.GetPeerDistinguisherString(),
+		Timestamp:     msg.PeerHeader.GetPeerTimestamp(),
+		RouterHash:    localHash,
+		RouterIP:      localIP,
+		TransportIP:   p.transportIP,
+		TransportHash: p.transportHash,
+		PeerType:      uint8(msg.PeerHeader.PeerType),
 	}
 	m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
 	m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()

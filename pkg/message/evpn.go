@@ -17,6 +17,7 @@ const (
 // evpn process MP_REACH_NLRI AFI 25 SAFI 70 update message and returns
 // EVPN prefix object.
 func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]EVPNPrefix, error) {
+	localIP, localHash := p.peerLocal(ph.GetTableKey())
 	if glog.V(6) {
 		glog.Infof("All attributes in evpn update: %+v", update.GetAllAttributeID())
 	}
@@ -39,8 +40,10 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 		prfx := EVPNPrefix{
 			Action:         operation,
 			PeerType:       uint8(ph.PeerType),
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     localHash,
+			RouterIP:       localIP,
+			TransportIP:    p.transportIP,
+			TransportHash:  p.transportHash,
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),

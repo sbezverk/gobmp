@@ -12,6 +12,7 @@ import (
 
 // mcastvpn processes MP_REACH_NLRI/MP_UNREACH_NLRI AFI 1/2 SAFI 5 (MCAST-VPN)
 func (p *producer) mcastvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*MCASTVPNPrefix, error) {
+	localIP, localHash := p.peerLocal(ph.GetTableKey())
 	var operation string
 	switch op {
 	case 0:
@@ -32,14 +33,16 @@ func (p *producer) mcastvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	if len(mcastvpnRoute.Route) == 0 {
 		return []*MCASTVPNPrefix{
 			{
-				Action:     operation,
-				RouterHash: p.speakerHash,
-				RouterIP:   p.speakerIP,
-				PeerHash:   ph.GetPeerHash(),
-				PeerASN:    ph.PeerAS,
-				Timestamp:  ph.GetPeerTimestamp(),
-				PeerType:   uint8(ph.PeerType),
-				IsEOR:      true,
+				Action:        operation,
+				RouterHash:    localHash,
+				RouterIP:      localIP,
+				TransportIP:   p.transportIP,
+				TransportHash: p.transportHash,
+				PeerHash:      ph.GetPeerHash(),
+				PeerASN:       ph.PeerAS,
+				Timestamp:     ph.GetPeerTimestamp(),
+				PeerType:      uint8(ph.PeerType),
+				IsEOR:         true,
 			},
 		}, nil
 	}
@@ -47,8 +50,10 @@ func (p *producer) mcastvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	for _, route := range mcastvpnRoute.Route {
 		prfx := &MCASTVPNPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     localHash,
+			RouterIP:       localIP,
+			TransportIP:    p.transportIP,
+			TransportHash:  p.transportHash,
 			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,

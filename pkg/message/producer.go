@@ -3,6 +3,7 @@ package message
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"sync"
 
 	"github.com/golang/glog"
@@ -22,6 +23,8 @@ const (
 type PerTableProperties struct {
 	addPathCapable map[int]bool
 	tableInfoTLVs  []bmp.InformationalTLV
+	localIP        string
+	localHash      string
 }
 
 // Config holds producer configuration options
@@ -29,6 +32,9 @@ type Config struct {
 	// AdminID is the collector identifier for RAW messages
 	// Used to generate collector hash for OpenBMP compatibility
 	AdminID string
+	// TransportIP is the TCP source IP of the BMP speaker. It is known at
+	// connection time and immutable for the lifetime of this producer.
+	TransportIP string
 }
 
 // Producer defines methods to act as a message producer
@@ -38,7 +44,9 @@ type Producer interface {
 }
 
 type producer struct {
-	publisher   pub.Publisher
+	publisher     pub.Publisher
+	transportIP   string
+	transportHash string
 	speakerIP   string
 	speakerHash string
 	// speakerReady is closed exactly once (by speakerReadyOnce) when the first
@@ -132,6 +140,17 @@ func (p *producer) SetConfig(config *Config) error {
 		p.adminHash = hex.EncodeToString(hash[:])
 	}
 
+	if config.TransportIP != "" {
+		if p.transportIP != "" && p.transportIP != config.TransportIP {
+			return fmt.Errorf("TransportIP is immutable: already set to %q, cannot change to %q", p.transportIP, config.TransportIP)
+		}
+		if p.transportIP == "" {
+			p.transportIP = config.TransportIP
+			hash := md5.Sum([]byte(config.TransportIP))
+			p.transportHash = hex.EncodeToString(hash[:])
+		}
+	}
+
 	return nil
 }
 
@@ -172,6 +191,18 @@ func (p *producer) GetTableName(bgpID, rd string) string {
 	}
 
 	return tn
+}
+
+// peerLocal returns the BGP local peering address and its hash for the given
+// table key. Returns empty strings if the peer is not yet known.
+func (p *producer) peerLocal(tableKey string) (localIP, localHash string) {
+	p.tableLock.RLock()
+	defer p.tableLock.RUnlock()
+	if props, ok := p.tableProperties[tableKey]; ok {
+		localIP = props.localIP
+		localHash = props.localHash
+	}
+	return
 }
 
 // NewProducer instantiates a new instance of a producer with Publisher interface

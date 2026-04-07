@@ -57,12 +57,15 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
 		m.IsIPv4 = !msg.PeerHeader.IsRemotePeerIPv6()
 		m.LocalIP = peerUpMsg.GetLocalAddressString()
-		// Saving local bgp speaker identities.
+		localSum := md5.Sum([]byte(m.LocalIP))
+		m.LocalHash = hex.EncodeToString(localSum[:])
+		m.RouterIP = m.LocalIP
+		m.RouterHash = m.LocalHash
+		m.TransportIP = p.transportIP
+		m.TransportHash = p.transportHash
+		// Saving local bgp speaker identities for the speakerReady mechanism.
 		p.speakerIP = m.LocalIP
-		md5Sum := md5.Sum([]byte(p.speakerIP))
-		p.speakerHash = hex.EncodeToString(md5Sum[:])
-		m.RouterIP = p.speakerIP
-		m.RouterHash = p.speakerHash
+		p.speakerHash = m.LocalHash
 		// Signal all goroutines waiting in producingWorker that speakerIP is now
 		// populated.  sync.Once guarantees the channel is closed exactly once even
 		// if multiple PeerUp messages arrive (e.g. reconnections).
@@ -80,6 +83,8 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		p.tableLock.Lock()
 		ptp := PerTableProperties{
 			addPathCapable: make(map[int]bool),
+			localIP:        m.LocalIP,
+			localHash:      m.LocalHash,
 		}
 
 		// Check AddPath capability for this specific peer/table
@@ -116,15 +121,19 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 			glog.Errorf("got invalid Payload type in bmp.Message")
 			return
 		}
+		// Fetch per-peer router identity before deleting table properties.
+		routerIP, routerHash := p.peerLocal(msg.PeerHeader.GetTableKey())
 		m = PeerStateChange{
-			Action:     "down",
-			RouterIP:   p.speakerIP,
-			PeerType:   uint8(msg.PeerHeader.PeerType),
-			RouterHash: p.speakerHash,
-			BMPReason:  int(peerDownMsg.Reason),
-			RemoteASN:  msg.PeerHeader.PeerAS,
-			PeerRD:     msg.PeerHeader.GetPeerDistinguisherString(),
-			Timestamp:  msg.PeerHeader.GetPeerTimestamp(),
+			Action:        "down",
+			RouterIP:      routerIP,
+			RouterHash:    routerHash,
+			TransportIP:   p.transportIP,
+			TransportHash: p.transportHash,
+			PeerType:      uint8(msg.PeerHeader.PeerType),
+			BMPReason:     int(peerDownMsg.Reason),
+			RemoteASN:     msg.PeerHeader.PeerAS,
+			PeerRD:        msg.PeerHeader.GetPeerDistinguisherString(),
+			Timestamp:     msg.PeerHeader.GetPeerTimestamp(),
 		}
 		m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
 		m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()

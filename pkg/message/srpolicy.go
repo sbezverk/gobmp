@@ -8,9 +8,10 @@ import (
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 )
 
-// evpn process MP_REACH_NLRI AFI 25 SAFI 70 update message and returns
-// EVPN prefix object.
+// srpolicy processes MP_REACH_NLRI AFI 1 SAFI 73 update messages and returns
+// SR Policy prefix objects per draft-ietf-idr-segment-routing-te-policy.
 func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*SRPolicy, error) {
+	localIP, localHash := p.peerLocal(ph.GetTableKey())
 	sr, err := nlri.GetNLRI73()
 	if err != nil {
 		return nil, err
@@ -26,8 +27,10 @@ func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	}
 	prfx := SRPolicy{
 		Action:         operation,
-		RouterHash:     p.speakerHash,
-		RouterIP:       p.speakerIP,
+		RouterHash:     localHash,
+		RouterIP:       localIP,
+		TransportIP:    p.transportIP,
+		TransportHash:  p.transportHash,
 		PeerType:       uint8(ph.PeerType),
 		PeerHash:       ph.GetPeerHash(),
 		PeerASN:        ph.PeerAS,

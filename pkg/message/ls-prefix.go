@@ -10,6 +10,7 @@ import (
 )
 
 func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update, ipv4 bool) (*LSPrefix, error) {
+	localIP, localHash := p.peerLocal(ph.GetTableKey())
 	var operation string
 	switch op {
 	case 0:
@@ -20,14 +21,16 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSPrefix{
-		Action:     operation,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
-		PeerType:   uint8(ph.PeerType),
-		PeerHash:   ph.GetPeerHash(),
-		PeerASN:    ph.PeerAS,
-		Timestamp:  ph.GetPeerTimestamp(),
-		DomainID:   prfx.GetIdentifier(),
+		Action:        operation,
+		RouterHash:    localHash,
+		RouterIP:      localIP,
+		TransportIP:   p.transportIP,
+		TransportHash: p.transportHash,
+		PeerType:      uint8(ph.PeerType),
+		PeerHash:      ph.GetPeerHash(),
+		PeerASN:       ph.PeerAS,
+		Timestamp:     ph.GetPeerTimestamp(),
+		DomainID:      prfx.GetIdentifier(),
 	}
 	if f, err := ph.IsAdjRIBInPost(); err == nil {
 		msg.IsAdjRIBInPost = f

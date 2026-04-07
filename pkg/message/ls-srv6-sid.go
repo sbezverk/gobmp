@@ -9,6 +9,7 @@ import (
 )
 
 func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSSRv6SID, error) {
+	localIP, localHash := p.peerLocal(ph.GetTableKey())
 	var operation string
 	switch op {
 	case 0:
@@ -19,14 +20,16 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	msg := LSSRv6SID{
-		Action:     operation,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
-		PeerType:   uint8(ph.PeerType),
-		PeerHash:   ph.GetPeerHash(),
-		PeerASN:    ph.PeerAS,
-		Timestamp:  ph.GetPeerTimestamp(),
-		DomainID:   nlri6.GetIdentifier(),
+		Action:        operation,
+		RouterHash:    localHash,
+		RouterIP:      localIP,
+		TransportIP:   p.transportIP,
+		TransportHash: p.transportHash,
+		PeerType:      uint8(ph.PeerType),
+		PeerHash:      ph.GetPeerHash(),
+		PeerASN:       ph.PeerAS,
+		Timestamp:     ph.GetPeerTimestamp(),
+		DomainID:      nlri6.GetIdentifier(),
 	}
 	if f, err := ph.IsAdjRIBInPost(); err == nil {
 		msg.IsAdjRIBInPost = f

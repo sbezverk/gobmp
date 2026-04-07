@@ -12,6 +12,7 @@ import (
 
 // mvpn processes MP_REACH_NLRI/MP_UNREACH_NLRI AFI 1/2 SAFI 129 (MVPN)
 func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*MVPNPrefix, error) {
+	localIP, localHash := p.peerLocal(ph.GetTableKey())
 	var operation string
 	switch op {
 	case 0:
@@ -32,14 +33,16 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	if len(mvpnRoute.Route) == 0 {
 		return []*MVPNPrefix{
 			{
-				Action:     operation,
-				RouterHash: p.speakerHash,
-				RouterIP:   p.speakerIP,
-				PeerHash:   ph.GetPeerHash(),
-				PeerASN:    ph.PeerAS,
-				Timestamp:  ph.GetPeerTimestamp(),
-				PeerType:   uint8(ph.PeerType),
-				IsEOR:      true,
+				Action:        operation,
+				RouterHash:    localHash,
+				RouterIP:      localIP,
+				TransportIP:   p.transportIP,
+				TransportHash: p.transportHash,
+				PeerHash:      ph.GetPeerHash(),
+				PeerASN:       ph.PeerAS,
+				Timestamp:     ph.GetPeerTimestamp(),
+				PeerType:      uint8(ph.PeerType),
+				IsEOR:         true,
 			},
 		}, nil
 	}
@@ -47,8 +50,10 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	for _, route := range mvpnRoute.Route {
 		prfx := &MVPNPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     localHash,
+			RouterIP:       localIP,
+			TransportIP:    p.transportIP,
+			TransportHash:  p.transportHash,
 			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,

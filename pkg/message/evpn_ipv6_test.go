@@ -16,6 +16,16 @@ import (
 	"github.com/sbezverk/gobmp/pkg/vpls"
 )
 
+const (
+	evpnTransportIP   = "10.0.0.1"
+	evpnTransportHash = "test-hash"
+	evpnLocalIP       = "10.0.0.2"
+	evpnLocalHash     = "b026324c6904b2a9cb4b88d6d61c81d1" // md5(10.0.0.2)
+	// evpnTableKey is GetTableKey() for a PerPeerHeader with all-zero PeerBGPID
+	// and all-zero PeerDistinguisher (PeerType0): "0.0.0.0" + "0:0" = "0.0.0.00:0".
+	evpnTableKey = "0.0.0.00:0"
+)
+
 type evpnMockNLRI struct {
 	route   *evpn.Route
 	nextHop string
@@ -80,9 +90,16 @@ func buildEVPNType5IPv6Wire() []byte {
 
 func TestEvpnIPv6Address(t *testing.T) {
 	prod := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		transportIP:   evpnTransportIP,
+		transportHash: evpnTransportHash,
+		publisher:     &mockPublisher{},
+		tableProperties: map[string]PerTableProperties{
+			evpnTableKey: {
+				addPathCapable: make(map[int]bool),
+				localIP:        evpnLocalIP,
+				localHash:      evpnLocalHash,
+			},
+		},
 	}
 
 	route, err := evpn.UnmarshalEVPNNLRI(buildEVPNType5IPv6Wire())
@@ -125,6 +142,18 @@ func TestEvpnIPv6Address(t *testing.T) {
 	if prfxs[0].IPLength != 128 {
 		t.Errorf("IPLength = %d, want 128", prfxs[0].IPLength)
 	}
+	if prfxs[0].RouterIP != evpnLocalIP {
+		t.Errorf("RouterIP = %q, want %q", prfxs[0].RouterIP, evpnLocalIP)
+	}
+	if prfxs[0].RouterHash != evpnLocalHash {
+		t.Errorf("RouterHash = %q, want %q", prfxs[0].RouterHash, evpnLocalHash)
+	}
+	if prfxs[0].TransportIP != evpnTransportIP {
+		t.Errorf("TransportIP = %q, want %q", prfxs[0].TransportIP, evpnTransportIP)
+	}
+	if prfxs[0].TransportHash != evpnTransportHash {
+		t.Errorf("TransportHash = %q, want %q", prfxs[0].TransportHash, evpnTransportHash)
+	}
 }
 
 func buildEVPNType5IPv4Wire() []byte {
@@ -159,9 +188,16 @@ func buildEVPNType5IPv4Wire() []byte {
 
 func TestEvpnIPv4Address(t *testing.T) {
 	prod := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		transportIP:   evpnTransportIP,
+		transportHash: evpnTransportHash,
+		publisher:     &mockPublisher{},
+		tableProperties: map[string]PerTableProperties{
+			evpnTableKey: {
+				addPathCapable: make(map[int]bool),
+				localIP:        evpnLocalIP,
+				localHash:      evpnLocalHash,
+			},
+		},
 	}
 
 	route, err := evpn.UnmarshalEVPNNLRI(buildEVPNType5IPv4Wire())
@@ -204,5 +240,17 @@ func TestEvpnIPv4Address(t *testing.T) {
 	}
 	if prfxs[0].IPLength != 24 {
 		t.Errorf("IPLength = %d, want 24", prfxs[0].IPLength)
+	}
+	if prfxs[0].RouterIP != evpnLocalIP {
+		t.Errorf("RouterIP = %q, want %q", prfxs[0].RouterIP, evpnLocalIP)
+	}
+	if prfxs[0].RouterHash != evpnLocalHash {
+		t.Errorf("RouterHash = %q, want %q", prfxs[0].RouterHash, evpnLocalHash)
+	}
+	if prfxs[0].TransportIP != evpnTransportIP {
+		t.Errorf("TransportIP = %q, want %q", prfxs[0].TransportIP, evpnTransportIP)
+	}
+	if prfxs[0].TransportHash != evpnTransportHash {
+		t.Errorf("TransportHash = %q, want %q", prfxs[0].TransportHash, evpnTransportHash)
 	}
 }

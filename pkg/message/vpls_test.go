@@ -18,6 +18,15 @@ import (
 	"github.com/sbezverk/gobmp/pkg/vpls"
 )
 
+// Distinct transport vs local identity values used across VPLS tests.
+// transportIP = TCP source IP; localIP = BGP local peering address (router_ip).
+const (
+	vplsTransportIP   = "192.0.2.1"
+	vplsTransportHash = "d0f88d6c87767262ba8e93d6acccd784" // md5(192.0.2.1)
+	vplsLocalIP       = "10.0.0.10"
+	vplsLocalHash     = "9e1a9a3663f25a297ed16a834b473eb0" // md5(10.0.0.10)
+)
+
 // TestVPLSMessageProducer_RFC4761 tests VPLS message production for RFC 4761 format
 func TestVPLSMessageProducer_RFC4761(t *testing.T) {
 	// Create mock NLRI (RFC 4761 - 17 bytes)
@@ -71,10 +80,16 @@ func TestVPLSMessageProducer_RFC4761(t *testing.T) {
 		},
 	}
 
-	// Create producer
 	p := &producer{
-		speakerHash: "test-speaker-hash",
-		speakerIP:   "10.1.1.1",
+		transportIP:   vplsTransportIP,
+		transportHash: vplsTransportHash,
+		tableProperties: map[string]PerTableProperties{
+			"10.0.0.20:0": {
+				addPathCapable: make(map[int]bool),
+				localIP:        vplsLocalIP,
+				localHash:      vplsLocalHash,
+			},
+		},
 	}
 
 	// Call vpls producer
@@ -94,8 +109,17 @@ func TestVPLSMessageProducer_RFC4761(t *testing.T) {
 	if msg.Action != "add" {
 		t.Errorf("Action = %s, want add", msg.Action)
 	}
-	if msg.RouterHash != "test-speaker-hash" {
-		t.Errorf("RouterHash = %s, want test-speaker-hash", msg.RouterHash)
+	if msg.RouterIP != vplsLocalIP {
+		t.Errorf("RouterIP = %s, want %s", msg.RouterIP, vplsLocalIP)
+	}
+	if msg.RouterHash != vplsLocalHash {
+		t.Errorf("RouterHash = %s, want %s", msg.RouterHash, vplsLocalHash)
+	}
+	if msg.TransportIP != vplsTransportIP {
+		t.Errorf("TransportIP = %s, want %s", msg.TransportIP, vplsTransportIP)
+	}
+	if msg.TransportHash != vplsTransportHash {
+		t.Errorf("TransportHash = %s, want %s", msg.TransportHash, vplsTransportHash)
 	}
 	if msg.PeerASN != 65000 {
 		t.Errorf("PeerASN = %d, want 65000", msg.PeerASN)
@@ -186,9 +210,17 @@ func TestVPLSMessageProducer_RFC6074(t *testing.T) {
 		},
 	}
 
+	// Use distinct transport vs local values (same constants as RFC4761 test).
 	p := &producer{
-		speakerHash: "test-speaker-hash",
-		speakerIP:   "10.1.1.1",
+		transportIP:   vplsTransportIP,
+		transportHash: vplsTransportHash,
+		tableProperties: map[string]PerTableProperties{
+			"10.0.0.30:0": {
+				addPathCapable: make(map[int]bool),
+				localIP:        vplsLocalIP,
+				localHash:      vplsLocalHash,
+			},
+		},
 	}
 
 	msgs, err := p.vpls(mockNLRI, 0, peerHeader, update)

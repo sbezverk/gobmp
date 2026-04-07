@@ -11,6 +11,7 @@ import (
 
 // multicast process nlri 14 afi 1/2 safi 2 messages and generates MulticastPrefix messages
 func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*MulticastPrefix, error) {
+	localIP, localHash := p.peerLocal(ph.GetTableKey())
 	var operation string
 	switch op {
 	case 0:
@@ -30,22 +31,26 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 	if len(u.NLRI) == 0 {
 		return []*MulticastPrefix{
 			{
-				Action:     operation,
-				RouterHash: p.speakerHash,
-				RouterIP:   p.speakerIP,
-				PeerHash:   ph.GetPeerHash(),
-				PeerASN:    ph.PeerAS,
-				Timestamp:  ph.GetPeerTimestamp(),
-				PeerType:   uint8(ph.PeerType),
-				IsEOR:      true,
+				Action:        operation,
+				RouterHash:    localHash,
+				RouterIP:      localIP,
+				TransportIP:   p.transportIP,
+				TransportHash: p.transportHash,
+				PeerHash:      ph.GetPeerHash(),
+				PeerASN:       ph.PeerAS,
+				Timestamp:     ph.GetPeerTimestamp(),
+				PeerType:      uint8(ph.PeerType),
+				IsEOR:         true,
 			},
 		}, nil
 	}
 	for _, e := range u.NLRI {
 		prfx := &MulticastPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     localHash,
+			RouterIP:       localIP,
+			TransportIP:    p.transportIP,
+			TransportHash:  p.transportHash,
 			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,

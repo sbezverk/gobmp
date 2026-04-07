@@ -10,6 +10,7 @@ import (
 
 // rtc processes MP_REACH_NLRI/MP_UNREACH_NLRI AFI 1/2 SAFI 132 (Route Target Constraint)
 func (p *producer) rtc(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*RTCPrefix, error) {
+	localIP, localHash := p.peerLocal(ph.GetTableKey())
 	var operation string
 	switch op {
 	case 0:
@@ -30,14 +31,16 @@ func (p *producer) rtc(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 	if len(rtcRoute.NLRI) == 0 {
 		return []*RTCPrefix{
 			{
-				Action:     operation,
-				RouterHash: p.speakerHash,
-				RouterIP:   p.speakerIP,
-				PeerHash:   ph.GetPeerHash(),
-				PeerASN:    ph.PeerAS,
-				Timestamp:  ph.GetPeerTimestamp(),
-				PeerType:   uint8(ph.PeerType),
-				IsEOR:      true,
+				Action:        operation,
+				RouterHash:    localHash,
+				RouterIP:      localIP,
+				TransportIP:   p.transportIP,
+				TransportHash: p.transportHash,
+				PeerHash:      ph.GetPeerHash(),
+				PeerASN:       ph.PeerAS,
+				Timestamp:     ph.GetPeerTimestamp(),
+				PeerType:      uint8(ph.PeerType),
+				IsEOR:         true,
 			},
 		}, nil
 	}
@@ -45,8 +48,10 @@ func (p *producer) rtc(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 	for _, e := range rtcRoute.NLRI {
 		prfx := &RTCPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     localHash,
+			RouterIP:       localIP,
+			TransportIP:    p.transportIP,
+			TransportHash:  p.transportHash,
 			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,

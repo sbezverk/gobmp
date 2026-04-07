@@ -17,6 +17,31 @@ import (
 	"github.com/sbezverk/gobmp/pkg/vpls"
 )
 
+// Distinct transport vs local identity values used across flowspec producer tests.
+// transportIP = TCP source IP; localIP = BGP local peering address (router_ip/router_hash).
+const (
+	fsTransportIP   = "192.0.2.1"
+	fsTransportHash = "d0f88d6c87767262ba8e93d6acccd784" // md5(192.0.2.1)
+	fsLocalIP       = "10.0.0.10"
+	fsLocalHash     = "9e1a9a3663f25a297ed16a834b473eb0" // md5(10.0.0.10)
+)
+
+// fsProducer returns a producer configured with distinct transport and local
+// identity values for the table key used by minimalPeerHeader().
+func fsProducer() *producer {
+	return &producer{
+		transportIP:   fsTransportIP,
+		transportHash: fsTransportHash,
+		tableProperties: map[string]PerTableProperties{
+			"10.0.0.10:0": {
+				addPathCapable: make(map[int]bool),
+				localIP:        fsLocalIP,
+				localHash:      fsLocalHash,
+			},
+		},
+	}
+}
+
 func TestFlowspecUnmarshalJSON_PrefixSpec(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -224,7 +249,7 @@ func parseOneNLRI(t *testing.T) *flowspec.NLRI {
 func TestFlowspecProducer_AddSingleNLRI(t *testing.T) {
 	nlri := parseOneNLRI(t)
 	mock := &flowspecMockNLRI{allNLRI: []*flowspec.NLRI{nlri}}
-	p := &producer{speakerIP: "10.1.1.1"}
+	p := fsProducer()
 
 	msgs, err := p.flowspec(mock, 0, minimalPeerHeader(), minimalUpdate())
 	if err != nil {
@@ -245,8 +270,17 @@ func TestFlowspecProducer_AddSingleNLRI(t *testing.T) {
 	if msgs[0].PeerIP != "10.0.0.1" {
 		t.Errorf("PeerIP = %q, want %q", msgs[0].PeerIP, "10.0.0.1")
 	}
-	if msgs[0].RouterIP != "10.1.1.1" {
-		t.Errorf("RouterIP = %q, want %q", msgs[0].RouterIP, "10.1.1.1")
+	if msgs[0].RouterIP != fsLocalIP {
+		t.Errorf("RouterIP = %q, want %q", msgs[0].RouterIP, fsLocalIP)
+	}
+	if msgs[0].RouterHash != fsLocalHash {
+		t.Errorf("RouterHash = %q, want %q", msgs[0].RouterHash, fsLocalHash)
+	}
+	if msgs[0].TransportIP != fsTransportIP {
+		t.Errorf("TransportIP = %q, want %q", msgs[0].TransportIP, fsTransportIP)
+	}
+	if msgs[0].TransportHash != fsTransportHash {
+		t.Errorf("TransportHash = %q, want %q", msgs[0].TransportHash, fsTransportHash)
 	}
 	if !msgs[0].IsIPv4 {
 		t.Error("IsIPv4 should be true for IPv4 flowspec")
@@ -267,7 +301,7 @@ func TestFlowspecProducer_AddMultiNLRI(t *testing.T) {
 		t.Fatalf("failed to parse second NLRI: %v", err)
 	}
 	mock := &flowspecMockNLRI{allNLRI: []*flowspec.NLRI{nlri1, nlri2}}
-	p := &producer{speakerIP: "10.1.1.1"}
+	p := fsProducer()
 
 	msgs, err := p.flowspec(mock, 0, minimalPeerHeader(), minimalUpdate())
 	if err != nil {
@@ -290,7 +324,7 @@ func TestFlowspecProducer_WithdrawAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &flowspecMockNLRI{allNLRI: nil, isIPv6: tt.isIPv6}
-			p := &producer{speakerIP: "10.1.1.1"}
+			p := fsProducer()
 
 			msgs, err := p.flowspec(mock, 1, minimalPeerHeader(), minimalUpdate())
 			if err != nil {
@@ -311,7 +345,7 @@ func TestFlowspecProducer_WithdrawAll(t *testing.T) {
 
 func TestFlowspecProducer_UnknownOp(t *testing.T) {
 	mock := &flowspecMockNLRI{}
-	p := &producer{speakerIP: "10.1.1.1"}
+	p := fsProducer()
 
 	_, err := p.flowspec(mock, 99, minimalPeerHeader(), minimalUpdate())
 	if err == nil {
@@ -321,7 +355,7 @@ func TestFlowspecProducer_UnknownOp(t *testing.T) {
 
 func TestFlowspecProducer_GetAllFlowspecNLRI_Error(t *testing.T) {
 	mock := &flowspecMockNLRI{err: errors.New("simulated parse failure")}
-	p := &producer{speakerIP: "10.1.1.1"}
+	p := fsProducer()
 
 	_, err := p.flowspec(mock, 0, minimalPeerHeader(), minimalUpdate())
 	if err == nil {
