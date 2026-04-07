@@ -63,14 +63,6 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m.RouterHash = m.LocalHash
 		m.TransportIP = p.transportIP
 		m.TransportHash = p.transportHash
-		// Saving local bgp speaker identities for the speakerReady mechanism.
-		p.speakerIP = m.LocalIP
-		p.speakerHash = m.LocalHash
-		// Signal all goroutines waiting in producingWorker that speakerIP is now
-		// populated.  sync.Once guarantees the channel is closed exactly once even
-		// if multiple PeerUp messages arrive (e.g. reconnections).
-		p.speakerReadyOnce.Do(func() { close(p.speakerReady) })
-
 		m.LocalASN = uint32(peerUpMsg.SentOpen.MyAS)
 		if lasn, ok := peerUpMsg.SentOpen.Is4BytesASCapable(); ok {
 			// Local BGP speaker is 4 bytes AS capable
@@ -103,9 +95,16 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		ptp.tableInfoTLVs = make([]bmp.InformationalTLV, len(peerUpMsg.Information))
 		copy(ptp.tableInfoTLVs, peerUpMsg.Information)
 
-		// Store properties for this table
+		// Store properties for this table before signalling speakerReady, so
+		// that RouteMonitor goroutines unblocked by the channel close below can
+		// immediately call peerLocal() and find the entry.
 		p.tableProperties[msg.PeerHeader.GetTableKey()] = ptp
 		p.tableLock.Unlock()
+
+		// Signal all goroutines waiting in producingWorker that the table entry
+		// is now populated.  sync.Once guarantees the channel is closed exactly
+		// once even if multiple PeerUp messages arrive (e.g. reconnections).
+		p.speakerReadyOnce.Do(func() { close(p.speakerReady) })
 
 		m.AdvCapabilities = peerUpMsg.SentOpen.GetCapabilities()
 		m.RcvCapabilities = peerUpMsg.ReceivedOpen.GetCapabilities()
