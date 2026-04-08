@@ -1,7 +1,7 @@
 package message
 
 import (
-	"fmt"
+	"net"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -110,12 +110,15 @@ func TestL3VPN_EoR_LocRIB(t *testing.T) {
 		isIPv6:   false,
 	}
 
-	msgs, err := p.l3vpn(nlri, 0, ph, &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}})
+	msgs, err := p.l3vpn(nlri, 1, ph, &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}})
 	if err != nil {
 		t.Fatalf("l3vpn() error: %v", err)
 	}
 	if len(msgs) != 1 {
 		t.Fatalf("l3vpn() returned %d messages, want 1", len(msgs))
+	}
+	if msgs[0].Action != "del" {
+		t.Errorf("Action = %q, want \"del\"", msgs[0].Action)
 	}
 	if !msgs[0].IsLocRIB {
 		t.Error("IsLocRIB = false, want true")
@@ -138,12 +141,15 @@ func TestL3VPN_EoR_IPv6(t *testing.T) {
 		isIPv6:   true,
 	}
 
-	msgs, err := p.l3vpn(nlri, 0, ph, &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}})
+	msgs, err := p.l3vpn(nlri, 1, ph, &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}})
 	if err != nil {
 		t.Fatalf("l3vpn() error: %v", err)
 	}
 	if len(msgs) != 1 {
 		t.Fatalf("l3vpn() returned %d messages, want 1", len(msgs))
+	}
+	if msgs[0].Action != "del" {
+		t.Errorf("Action = %q, want \"del\"", msgs[0].Action)
 	}
 	if msgs[0].IsIPv4 {
 		t.Error("IsIPv4 = true, want false for IPv6")
@@ -164,9 +170,9 @@ func TestSRPolicy_NexthopIPv4_IndependentOfAFI(t *testing.T) {
 
 	// IPv4 AFI with IPv6 nexthop
 	nlri := &mockMPNLRI{
-		isIPv6:         false,
-		isNextHopIPv6_: true,
-		srpolicyRoute:  &srpolicy.NLRI73{Endpoint: []byte{10, 0, 0, 1}},
+		isIPv6:        false,
+		isNextHopIPv6: true,
+		srpolicyRoute: &srpolicy.NLRI73{Endpoint: []byte{10, 0, 0, 1}},
 	}
 
 	msgs, err := p.srpolicy(nlri, 0, ph, update)
@@ -233,7 +239,7 @@ func buildPeerUpMessage(t *testing.T, localIP string) *bmp.PeerUpMessage {
 	localAddr := make([]byte, 16)
 	ip := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff}
 	// Parse localIP as IPv4
-	parts := parseIPv4(localIP)
+	parts := parseIPv4(t, localIP)
 	ip = append(ip, parts...)
 	copy(localAddr, ip)
 
@@ -247,17 +253,13 @@ func buildPeerUpMessage(t *testing.T, localIP string) *bmp.PeerUpMessage {
 }
 
 // parseIPv4 parses a dotted-quad IPv4 into 4 bytes.
-func parseIPv4(s string) []byte {
-	result := make([]byte, 4)
-	var a, b, c, d int
-	n, _ := fmt.Sscanf(s, "%d.%d.%d.%d", &a, &b, &c, &d)
-	if n == 4 {
-		result[0] = byte(a)
-		result[1] = byte(b)
-		result[2] = byte(c)
-		result[3] = byte(d)
+func parseIPv4(t *testing.T, s string) []byte {
+	t.Helper()
+	ip := net.ParseIP(s).To4()
+	if ip == nil {
+		t.Fatalf("parseIPv4: invalid address %q", s)
 	}
-	return result
+	return []byte(ip)
 }
 
 // TestUnicast_ValidNLRI_Publishes verifies a valid unicast NLRI produces a
