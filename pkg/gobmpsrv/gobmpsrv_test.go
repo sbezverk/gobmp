@@ -1291,3 +1291,65 @@ func TestConnectSpeaker_ClosingFlag_ExitsAfterSuccessfulDial(t *testing.T) {
 	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 1 * time.Second}
 	assertExitsWithin(t, runConnectSpeaker(srv, speaker), 3*time.Second)
 }
+
+// TestConnectionLimit_RejectsAtCapacity verifies that connections beyond
+// maxConnections are rejected immediately.
+func TestConnectionLimit_RejectsAtCapacity(t *testing.T) {
+	// Semaphore of size 1 — first connection succeeds, second is rejected.
+	srv := &bmpServer{
+		clients:   make(map[net.Conn]struct{}),
+		publisher: newMockPublisher(),
+		connSem:   make(chan struct{}, 1),
+	}
+
+	// Fill the semaphore (simulate one active connection).
+	srv.connSem <- struct{}{}
+
+	// Second connection should be rejected.
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
+
+	// Simulate what server() does: try to acquire, fail, close.
+	select {
+	case srv.connSem <- struct{}{}:
+		t.Fatal("semaphore should be full")
+	default:
+		_ = serverConn.Close()
+	}
+
+	// Verify client sees the close.
+	_ = clientConn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	buf := make([]byte, 1)
+	_, err := clientConn.Read(buf)
+	if err == nil {
+		t.Error("expected read error after rejected connection close")
+	}
+}
+
+// TestStartWorker_WhenClosing_ReleasesSemaphore verifies the semaphore slot
+// is released when startWorker returns early due to srv.closing.
+func TestStartWorker_WhenClosing_ReleasesSemaphore(t *testing.T) {
+	srv := &bmpServer{
+		clients:   make(map[net.Conn]struct{}),
+		publisher: newMockPublisher(),
+		connSem:   make(chan struct{}, 1),
+	}
+	srv.closing = true
+
+	// Simulate server() acquiring the semaphore before calling startWorker.
+	srv.connSem <- struct{}{}
+
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
+
+	srv.startWorker(serverConn)
+
+	// Semaphore should be drained (released by startWorker's early-return path).
+	select {
+	case srv.connSem <- struct{}{}:
+		// Successfully acquired — slot was released. Pass.
+		<-srv.connSem
+	default:
+		t.Error("semaphore slot not released after startWorker early return")
+	}
+}
