@@ -44,7 +44,7 @@ func UnmarshalType3(b []byte) (*Type3, error) {
 	p++
 
 	// Parse Multicast Source (variable length based on bit length)
-	sourceBytes := int((t.MulticastSourceLen + 7) / 8)
+	sourceBytes := (int(t.MulticastSourceLen) + 7) / 8
 	if p+sourceBytes > len(b) {
 		return nil, fmt.Errorf("not enough data for multicast source: need %d bytes at position %d", sourceBytes, p)
 	}
@@ -62,7 +62,7 @@ func UnmarshalType3(b []byte) (*Type3, error) {
 	p++
 
 	// Parse Multicast Group (variable length based on bit length)
-	groupBytes := int((t.MulticastGroupLen + 7) / 8)
+	groupBytes := (int(t.MulticastGroupLen) + 7) / 8
 	if p+groupBytes > len(b) {
 		return nil, fmt.Errorf("not enough data for multicast group: need %d bytes at position %d", groupBytes, p)
 	}

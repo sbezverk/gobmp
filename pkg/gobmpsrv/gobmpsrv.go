@@ -21,6 +21,13 @@ import (
 // maxBMPMessagePayload is the maximum allowed BMP message payload size (1 MB).
 const maxBMPMessagePayload = 1 << 20
 
+// maxConnections is the default upper bound on concurrent BMP sessions.
+const maxConnections = 1024
+
+// readTimeout is the deadline for each io.ReadFull call on a BMP connection.
+// A peer that sends no data for this duration is disconnected.
+const readTimeout = 5 * time.Minute
+
 // BMPServer defines methods to manage BMP Server
 type BMPServer interface {
 	Start()
@@ -42,6 +49,7 @@ type bmpServer struct {
 	stopOnce  sync.Once
 	clients   map[net.Conn]struct{} // active bmpWorker connections
 	closing   bool                  // set to true in Stop() before iterating clients
+	connSem   chan struct{}         // semaphore limiting concurrent connections
 	bmpRaw    bool
 	adminID   string
 	// Active-mode fields — all nil/zero in passive mode.
@@ -114,6 +122,14 @@ func (srv *bmpServer) server() {
 			glog.Errorf("fail to accept client connection with error: %+v", err)
 			continue
 		}
+		// Enforce connection limit — reject if at capacity.
+		select {
+		case srv.connSem <- struct{}{}:
+		default:
+			glog.Warningf("connection limit reached (%d), rejecting %v", maxConnections, client.RemoteAddr())
+			client.Close()
+			continue
+		}
 		glog.V(5).Infof("client %+v accepted, calling bmpWorker", client.RemoteAddr())
 		srv.startWorker(client)
 	}
@@ -148,6 +164,10 @@ func (srv *bmpServer) startWorker(client net.Conn) {
 			delete(srv.clients, client)
 			srv.mu.Unlock()
 			srv.wg.Done()
+			// Release connection semaphore slot (passive mode only).
+			if srv.connSem != nil {
+				<-srv.connSem
+			}
 		}()
 		srv.bmpWorker(client)
 	}()
@@ -229,6 +249,8 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	}()
 	var headerBuf [bmp.CommonHeaderLength]byte
 	for {
+		// Set read deadline to detect idle/malicious connections.
+		_ = client.SetReadDeadline(time.Now().Add(readTimeout))
 		// Read the fixed-size common header into a stack-allocated array — no heap alloc.
 		if _, err := io.ReadFull(client, headerBuf[:]); err != nil {
 			// io.ErrUnexpectedEOF here means the peer closed mid-header (e.g.
@@ -271,6 +293,7 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		// When msgLen == 0 the slice is header-only and ReadFull is a no-op.
 		fullMsg := make([]byte, totalLen)
 		copy(fullMsg, headerBuf[:])
+		_ = client.SetReadDeadline(time.Now().Add(readTimeout))
 		if _, err := io.ReadFull(client, fullMsg[bmp.CommonHeaderLength:]); err != nil {
 			// io.ErrUnexpectedEOF here means the peer sent a valid header but
 			// disconnected before delivering the full payload — a truncated BMP
@@ -444,6 +467,7 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 			return nil, err
 		}
 		bmpSrv.incoming = incoming
+		bmpSrv.connSem = make(chan struct{}, maxConnections)
 	}
 	if bmpSrv.isActive && len(bmpSrv.bgpSpeakers) == 0 {
 		return nil, errors.New("active_mode is true but speakers_list is empty")

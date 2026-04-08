@@ -30,7 +30,7 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 	}
 	te := NLRI{}
 	p := 0
-	if p+1 >= len(b) {
+	if p+1 > len(b) {
 		return nil, fmt.Errorf("not enough bytes to process TE Policy NLRI")
 	}
 	te.ProtocolID = base.ProtoID(b[p])
@@ -42,13 +42,13 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 		return nil, fmt.Errorf("unrecognized protocol ID %d in TE Policy NLRI", te.ProtocolID)
 	}
 	p++
-	if p+8 >= len(b) {
+	if p+8 > len(b) {
 		return nil, fmt.Errorf("not enough bytes to process TE Policy NLRI")
 	}
 	te.Identifier = make([]byte, 8)
 	copy(te.Identifier, b[p:p+8])
 	p += 8
-	if p+4 >= len(b) {
+	if p+4 > len(b) {
 		return nil, fmt.Errorf("not enough bytes to process TE Policy NLRI")
 	}
 	// Get Node Descriptor's length, skip Node Descriptor Type
