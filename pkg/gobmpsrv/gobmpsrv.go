@@ -127,7 +127,7 @@ func (srv *bmpServer) server() {
 		case srv.connSem <- struct{}{}:
 		default:
 			glog.Warningf("connection limit reached (%d), rejecting %v", maxConnections, client.RemoteAddr())
-			client.Close()
+			_ = client.Close()
 			continue
 		}
 		glog.V(5).Infof("client %+v accepted, calling bmpWorker", client.RemoteAddr())
