@@ -30,9 +30,7 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 	}
 	te := NLRI{}
 	p := 0
-	if p+1 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to process TE Policy NLRI")
-	}
+	// len(b) >= 1 is guaranteed by the zero-length check above.
 	te.ProtocolID = base.ProtoID(b[p])
 	switch te.ProtocolID {
 	case base.RSVPTE, base.SR:
@@ -43,18 +41,18 @@ func UnmarshalTEPolicyNLRI(b []byte) (*NLRI, error) {
 	}
 	p++
 	if p+8 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to process TE Policy NLRI")
+		return nil, fmt.Errorf("TE Policy NLRI: need %d bytes for identifier, have %d", p+8, len(b))
 	}
 	te.Identifier = make([]byte, 8)
 	copy(te.Identifier, b[p:p+8])
 	p += 8
 	if p+4 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to process TE Policy NLRI")
+		return nil, fmt.Errorf("TE Policy NLRI: need %d bytes for node descriptor header, have %d", p+4, len(b))
 	}
 	// Get Node Descriptor's length, skip Node Descriptor Type
 	l := binary.BigEndian.Uint16(b[p+2 : p+4])
 	if p+int(l)+4 > len(b) {
-		return nil, fmt.Errorf("not enough bytes to process TE Policy NLRI")
+		return nil, fmt.Errorf("TE Policy NLRI: need %d bytes for node descriptor, have %d", p+int(l)+4, len(b))
 	}
 	he, err := base.UnmarshalNodeDescriptor(b[p : p+int(l)+4])
 	if err != nil {
