@@ -1326,6 +1326,45 @@ func TestConnectionLimit_RejectsAtCapacity(t *testing.T) {
 	}
 }
 
+// TestBMPServer_ConnectionLimit_ServerRejects exercises the default branch of
+// the semaphore select in server(): when connSem is full the accepted connection
+// is closed and the loop continues without calling startWorker.
+func TestBMPServer_ConnectionLimit_ServerRejects(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	srv := &bmpServer{
+		clients:   make(map[net.Conn]struct{}),
+		publisher: newMockPublisher(),
+		incoming:  ln,
+		connSem:   make(chan struct{}, 1),
+	}
+	// Pre-fill the semaphore — all capacity consumed, next connection will be rejected.
+	srv.connSem <- struct{}{}
+
+	srv.Start()
+
+	port := ln.Addr().(*net.TCPAddr).Port
+	client, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(port))
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	// Server should close the connection immediately — client reads EOF or error.
+	_ = client.SetReadDeadline(time.Now().Add(time.Second))
+	buf := make([]byte, 1)
+	_, err = client.Read(buf)
+	if err == nil {
+		t.Error("expected connection to be rejected, but read succeeded")
+	}
+
+	// Drain the semaphore so Stop() does not hang waiting for bmpWorker exits.
+	<-srv.connSem
+	srv.Stop()
+}
+
 // TestStartWorker_WhenClosing_ReleasesSemaphore verifies the semaphore slot
 // is released when startWorker returns early due to srv.closing.
 func TestStartWorker_WhenClosing_ReleasesSemaphore(t *testing.T) {
