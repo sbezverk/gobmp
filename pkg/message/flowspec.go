@@ -133,6 +133,11 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(objmap["router_ip"], &o.RouterIP); err != nil {
 		return err
 	}
+	if rh, ok := objmap["router_hash"]; ok {
+		if err := json.Unmarshal(rh, &o.RouterHash); err != nil {
+			return err
+		}
+	}
 	if err := json.Unmarshal(objmap["timestamp"], &o.Timestamp); err != nil {
 		return err
 	}

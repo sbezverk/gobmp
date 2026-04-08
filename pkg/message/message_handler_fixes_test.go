@@ -7,6 +7,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
+	"github.com/sbezverk/gobmp/pkg/srpolicy"
 )
 
 // TestEqual_NilReceiver verifies Equal() does not panic on nil receiver (N10).
@@ -161,29 +162,26 @@ func TestSRPolicy_NexthopIPv4_IndependentOfAFI(t *testing.T) {
 		TunnelEncapAttr: nil,
 	}}
 
-	// IPv4 AFI but IPv6 nexthop
+	// IPv4 AFI with IPv6 nexthop
 	nlri := &mockMPNLRI{
-		isIPv6:         false, // IPv4 AFI
-		isNextHopIPv6_: true,  // but IPv6 nexthop
+		isIPv6:         false,
+		isNextHopIPv6_: true,
+		srpolicyRoute:  &srpolicy.NLRI73{Endpoint: []byte{10, 0, 0, 1}},
 	}
 
-	// We need a GetNLRI73 mock — srpolicy calls nlri.GetNLRI73()
-	// Since the mock returns nil, srpolicy will return an error.
-	// Instead, test the logic by calling srpolicy directly and checking the error message
-	// contains the expected behavior. Actually, let's just verify the mock field was
-	// used correctly by checking IsNextHopIPv6 returns the separate field.
-	if !nlri.IsNextHopIPv6() {
-		t.Fatal("mock IsNextHopIPv6() should return true")
+	msgs, err := p.srpolicy(nlri, 0, ph, update)
+	if err != nil {
+		t.Fatalf("srpolicy() error: %v", err)
 	}
-	if nlri.IsIPv6NLRI() {
-		t.Fatal("mock IsIPv6NLRI() should return false")
+	if len(msgs) != 1 {
+		t.Fatalf("srpolicy() returned %d messages, want 1", len(msgs))
 	}
-	// This confirms the mock separates AFI from nexthop correctly.
-	// The srpolicy.go fix uses nlri.IsNextHopIPv6() for IsNexthopIPv4,
-	// which is now decoupled from nlri.IsIPv6NLRI() for IsIPv4.
-	_ = p
-	_ = ph
-	_ = update
+	if !msgs[0].IsIPv4 {
+		t.Error("IsIPv4 = false, want true (IPv4 AFI)")
+	}
+	if msgs[0].IsNexthopIPv4 {
+		t.Error("IsNexthopIPv4 = true, want false (IPv6 nexthop with IPv4 AFI)")
+	}
 }
 
 // TestSpeakerIP_SetOnce verifies speakerIP/speakerHash are set exactly once
@@ -262,12 +260,9 @@ func parseIPv4(s string) []byte {
 	return result
 }
 
-// TestUnicast_ErrorContinuesPublishing verifies that a unicast error does not
-// prevent publishing of already-parsed messages (H2).
-func TestUnicast_ErrorContinuesPublishing(t *testing.T) {
-	// The fix changes `return` to continue-on-error in processMPUpdate.
-	// We verify the pattern: p.unicast returns partial results + error,
-	// and the caller still publishes the partial results.
+// TestUnicast_ValidNLRI_Publishes verifies a valid unicast NLRI produces a
+// message with correct fields, exercising the non-error publish path (H2).
+func TestUnicast_ValidNLRI_Publishes(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
 	p.speakerIP = "10.0.0.1"
 	p.speakerHash = "abc123"
@@ -275,7 +270,6 @@ func TestUnicast_ErrorContinuesPublishing(t *testing.T) {
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
 
-	// Build a valid unicast NLRI with one prefix
 	reachBytes := []byte{
 		0x00, 0x01, // AFI: 1
 		0x01,                   // SAFI: 1
@@ -291,12 +285,21 @@ func TestUnicast_ErrorContinuesPublishing(t *testing.T) {
 
 	msgs, err := p.unicast(nlri, 0, ph, update, false)
 	if err != nil {
-		// Even if there's an error, msgs should be usable
-		if msgs == nil {
-			t.Error("unicast() returned nil msgs on error — partial results should be preserved")
-		}
+		t.Fatalf("unicast() error: %v", err)
 	}
-
-	// Verify the caller (processMPUpdate) doesn't panic on partial results
-	p.processMPUpdate(nlri, 0, ph, update)
+	if len(msgs) != 1 {
+		t.Fatalf("unicast() returned %d messages, want 1", len(msgs))
+	}
+	if msgs[0].Prefix != "192.168.1.0" {
+		t.Errorf("Prefix = %q, want %q", msgs[0].Prefix, "192.168.1.0")
+	}
+	if msgs[0].PrefixLen != 24 {
+		t.Errorf("PrefixLen = %d, want 24", msgs[0].PrefixLen)
+	}
+	if !msgs[0].IsIPv4 {
+		t.Error("IsIPv4 = false, want true")
+	}
+	if msgs[0].RouterHash != "abc123" {
+		t.Errorf("RouterHash = %q, want %q", msgs[0].RouterHash, "abc123")
+	}
 }
