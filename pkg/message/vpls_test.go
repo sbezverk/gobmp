@@ -312,11 +312,14 @@ func TestRoundTripVPLSPrefix(t *testing.T) {
 
 // mockMPNLRI implements bgp.MPNLRI interface for testing
 type mockMPNLRI struct {
-	vplsRoute    *vpls.Route
-	unicastRoute *base.MPNLRI
-	mvpnRoute    *mcastvpn.Route
-	nextHop      string
-	isIPv6       bool
+	vplsRoute      *vpls.Route
+	unicastRoute   *base.MPNLRI
+	l3vpnRoute     *base.MPNLRI
+	l3vpnErr       error
+	mvpnRoute      *mcastvpn.Route
+	nextHop        string
+	isIPv6         bool
+	isNextHopIPv6_ bool
 }
 
 func (m *mockMPNLRI) GetAFISAFIType() int {
@@ -336,14 +339,14 @@ func (m *mockMPNLRI) IsIPv6NLRI() bool {
 }
 
 func (m *mockMPNLRI) IsNextHopIPv6() bool {
-	return m.isIPv6
+	return m.isNextHopIPv6_
 }
 
 // Implement other required MPNLRI methods (not used in vpls tests)
 func (m *mockMPNLRI) GetNLRILU() (*base.MPNLRI, error)              { return nil, nil }
 func (m *mockMPNLRI) GetNLRIUnicast() (*base.MPNLRI, error)         { return m.unicastRoute, nil }
 func (m *mockMPNLRI) GetNLRIEVPN() (*evpn.Route, error)             { return nil, nil }
-func (m *mockMPNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)           { return nil, nil }
+func (m *mockMPNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)           { return m.l3vpnRoute, m.l3vpnErr }
 func (m *mockMPNLRI) GetNLRI71() (*ls.NLRI71, error)                { return nil, nil }
 func (m *mockMPNLRI) GetNLRI73() (*srpolicy.NLRI73, error)          { return nil, nil }
 func (m *mockMPNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error)      { return nil, nil }

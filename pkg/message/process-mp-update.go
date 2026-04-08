@@ -1,7 +1,6 @@
 package message
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
-	"github.com/sbezverk/gobmp/pkg/l3vpn"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 )
 
@@ -87,9 +85,8 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		msgs, err := p.unicast(nlri, operation, ph, update, labeled)
 		if err != nil {
 			glog.Errorf("failed to produce unicast messages with error: %+v", err)
-			return
 		}
-		// Loop through and publish all collected messages
+		// Publish whatever messages were successfully parsed (may be partial on error)
 		for _, m := range msgs {
 			// Extract Color EC for RFC 9723 CPR
 			m.Color = extractColorEC(update.BaseAttributes)
@@ -114,15 +111,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 	case 19:
 		msgs, err := p.l3vpn(nlri, operation, ph, update)
 		if err != nil {
-			// L3VPN parser returns ErrEmptyNLRI for empty NLRI (EoR signal per RFC 4724 §2).
-			// Log at debug level for expected empty NLRI; error level for real failures.
-			if errors.Is(err, l3vpn.ErrEmptyNLRI) {
-				if glog.V(6) {
-					glog.Infof("L3VPN EoR: %v", err)
-				}
-			} else {
-				glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
-			}
+			glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
 			return
 		}
 		for _, m := range msgs {
