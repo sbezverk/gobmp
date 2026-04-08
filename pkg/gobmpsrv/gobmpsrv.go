@@ -153,6 +153,10 @@ func (srv *bmpServer) startWorker(client net.Conn) {
 	if srv.closing {
 		srv.mu.Unlock()
 		_ = client.Close()
+		// Release semaphore slot acquired by server() before this call.
+		if srv.connSem != nil {
+			<-srv.connSem
+		}
 		return
 	}
 	srv.wg.Add(1)
