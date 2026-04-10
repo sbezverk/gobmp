@@ -16,6 +16,13 @@ const (
 	peerDown
 )
 
+// tableReadyEntry holds a readiness channel and a flag to prevent double-close
+// if duplicate PeerUp messages arrive for the same table key.
+type tableReadyEntry struct {
+	ch     chan struct{}
+	closed bool
+}
+
 // PerTableProperties holds per-VRF/per-table properties
 // Each VRF (identified by BGP-ID + Peer Distinguisher) has its own:
 // - AddPath capability map (per AFI/SAFI)
@@ -52,12 +59,14 @@ type producer struct {
 	// ready channels so they can exit cleanly if the producer is shut down before
 	// the relevant PeerUp arrives.
 	stopCh chan struct{}
-	// tableReady maps table keys to channels that are closed once the table's
-	// PeerUp goroutine has fully populated tableProperties for that key.
+	// tableReady maps table keys to per-table readiness entries.
+	// Each entry holds an open channel that is closed exactly once when the
+	// table's PeerUp goroutine has fully populated tableProperties. The closed
+	// flag prevents a double-close panic if duplicate PeerUp messages arrive.
 	// RouteMonitor and StatsReport goroutines block on the per-table channel
 	// rather than a single global channel, so a route burst for one VRF cannot
 	// be unblocked by a PeerUp for a different VRF.
-	tableReady     map[string]chan struct{}
+	tableReady     map[string]*tableReadyEntry
 	tableReadyLock sync.Mutex
 	// Per-VRF table properties tracking (replaces global addPathCapable)
 	// Key format: BGP-ID + Peer Distinguisher (e.g., "10.0.0.10:0")
@@ -78,36 +87,50 @@ type producer struct {
 func (p *producer) tableReadyCh(tableKey string) chan struct{} {
 	p.tableReadyLock.Lock()
 	defer p.tableReadyLock.Unlock()
-	if ch, ok := p.tableReady[tableKey]; ok {
-		return ch
+	if e, ok := p.tableReady[tableKey]; ok {
+		return e.ch
 	}
-	ch := make(chan struct{})
-	p.tableReady[tableKey] = ch
-	return ch
+	e := &tableReadyEntry{ch: make(chan struct{})}
+	p.tableReady[tableKey] = e
+	return e.ch
 }
 
 // markTableReady closes the per-table ready channel for tableKey, unblocking
 // any RouteMonitor/StatsReport goroutines waiting for that table's PeerUp.
 // Must be called after tableProperties[tableKey] has been written.
+// Safe to call multiple times for the same generation: duplicate PeerUp
+// messages are silently ignored after the first close.
 func (p *producer) markTableReady(tableKey string) {
 	p.tableReadyLock.Lock()
-	ch, ok := p.tableReady[tableKey]
+	e, ok := p.tableReady[tableKey]
 	if !ok {
-		ch = make(chan struct{})
-		p.tableReady[tableKey] = ch
+		e = &tableReadyEntry{ch: make(chan struct{})}
+		p.tableReady[tableKey] = e
+	}
+	if !e.closed {
+		e.closed = true
+		p.tableReadyLock.Unlock()
+		close(e.ch)
+		return
 	}
 	p.tableReadyLock.Unlock()
-	close(ch)
 }
 
-// resetTableReady replaces the per-table ready channel with a new open channel
-// so that goroutines for the next session wait for the next PeerUp rather than
-// passing through a stale closed channel. Called from PeerDown before
+// resetTableReady closes the current per-table channel (if not already closed)
+// to unblock any goroutines that are still waiting on it, then installs a new
+// open channel for the next PeerUp session. Called from PeerDown before
 // tableProperties is deleted.
 func (p *producer) resetTableReady(tableKey string) {
 	p.tableReadyLock.Lock()
 	defer p.tableReadyLock.Unlock()
-	p.tableReady[tableKey] = make(chan struct{})
+	if e, ok := p.tableReady[tableKey]; ok && !e.closed {
+		// Close the channel so goroutines blocked on this generation wake up.
+		// They will subsequently detect that tableProperties is gone and drop
+		// their message rather than emitting it with empty router identity.
+		e.closed = true
+		close(e.ch)
+	}
+	p.tableReady[tableKey] = &tableReadyEntry{ch: make(chan struct{})}
 }
 
 // Producer dispatches kafka workers upon request received from the channel
@@ -118,7 +141,18 @@ func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
 	for {
 		select {
 		case msg := <-queue:
-			go p.producingWorker(msg)
+			// Snapshot the per-table ready channel at dequeue time for
+			// RouteMonitor/StatsReport messages. This ensures the goroutine
+			// waits on the channel generation that was current when the message
+			// was received, not a newer one installed by a later PeerDown+PeerUp.
+			var readyCh chan struct{}
+			switch msg.Payload.(type) {
+			case *bmp.RouteMonitor, *bmp.StatsReport:
+				if msg.PeerHeader != nil {
+					readyCh = p.tableReadyCh(msg.PeerHeader.GetTableKey())
+				}
+			}
+			go p.producingWorker(msg, readyCh)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
@@ -126,31 +160,39 @@ func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
 	}
 }
 
-func (p *producer) producingWorker(msg bmp.Message) {
+func (p *producer) producingWorker(msg bmp.Message, readyCh chan struct{}) {
 	switch obj := msg.Payload.(type) {
 	case *bmp.PeerUpMessage:
 		p.producePeerMessage(peerUP, msg)
 	case *bmp.PeerDownMessage:
 		p.producePeerMessage(peerDown, msg)
 	case *bmp.RouteMonitor:
-		// Wait until PeerUp for this specific table has populated tableProperties
-		// before producing any route message. Using a per-table channel ensures
-		// a route burst for one VRF cannot be unblocked by a PeerUp for a
-		// different VRF. After the channel is closed, receives are non-blocking.
-		if msg.PeerHeader != nil {
+		// Wait until PeerUp for this specific table has populated tableProperties.
+		// readyCh was snapshotted at dequeue time in Producer(), so we wait on
+		// the channel generation that was current when this message was received.
+		if readyCh != nil {
 			select {
-			case <-p.tableReadyCh(msg.PeerHeader.GetTableKey()):
+			case <-readyCh:
 			case <-p.stopCh:
+				return
+			}
+			// PeerDown may have woken us by closing the old channel before a new
+			// PeerUp arrived. If tableProperties is gone, drop the message rather
+			// than producing it with empty router identity.
+			if localIP, _ := p.peerLocal(msg.PeerHeader.GetTableKey()); localIP == "" {
 				return
 			}
 		}
 		p.produceRouteMonitorMessage(msg)
 	case *bmp.StatsReport:
-		// Same per-table wait as RouteMonitor above.
-		if msg.PeerHeader != nil {
+		// Same per-table wait and stale-table check as RouteMonitor above.
+		if readyCh != nil {
 			select {
-			case <-p.tableReadyCh(msg.PeerHeader.GetTableKey()):
+			case <-readyCh:
 			case <-p.stopCh:
+				return
+			}
+			if localIP, _ := p.peerLocal(msg.PeerHeader.GetTableKey()); localIP == "" {
 				return
 			}
 		}
@@ -248,6 +290,6 @@ func NewProducer(publisher pub.Publisher, splitAF bool) Producer {
 		publisher:       publisher,
 		splitAF:         splitAF,
 		tableProperties: make(map[string]PerTableProperties),
-		tableReady:      make(map[string]chan struct{}),
+		tableReady:      make(map[string]*tableReadyEntry),
 	}
 }
