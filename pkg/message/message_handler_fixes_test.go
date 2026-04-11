@@ -34,6 +34,29 @@ func TestEqual_NilReceiver(t *testing.T) {
 	}
 }
 
+// TestEqual_BaseAttributesNilMismatch verifies Equal() does not panic when one side
+// has BaseAttributes set and the other is nil.
+func TestEqual_BaseAttributesNilMismatch(t *testing.T) {
+	withAttrs := &UnicastPrefix{BaseAttributes: &bgp.BaseAttributes{}}
+	noAttrs := &UnicastPrefix{}
+
+	eq, diffs := withAttrs.Equal(noAttrs)
+	if eq {
+		t.Error("Equal() = true, want false when u has BaseAttributes but ou does not")
+	}
+	if len(diffs) == 0 {
+		t.Error("Equal() returned no diffs, want at least one")
+	}
+
+	eq, diffs = noAttrs.Equal(withAttrs)
+	if eq {
+		t.Error("Equal() = true, want false when u has no BaseAttributes but ou does")
+	}
+	if len(diffs) == 0 {
+		t.Error("Equal() returned no diffs, want at least one")
+	}
+}
+
 // TestFlowspec_RouterHash verifies flowspec messages include RouterHash (P3-20).
 func TestFlowspec_RouterHash(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)

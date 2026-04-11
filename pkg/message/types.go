@@ -114,10 +114,11 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		if ou.BaseAttributes == nil {
 			equal = false
 			diffs = append(diffs, "bgp base attributes mismatch expected BGP BaseAttribute object is not nil, but received object is nil")
-		}
-		if eq, df := u.BaseAttributes.Equal(ou.BaseAttributes); !eq {
-			equal = false
-			diffs = append(diffs, df...)
+		} else {
+			if eq, df := u.BaseAttributes.Equal(ou.BaseAttributes); !eq {
+				equal = false
+				diffs = append(diffs, df...)
+			}
 		}
 	} else {
 		if ou.BaseAttributes != nil {
