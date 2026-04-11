@@ -122,13 +122,17 @@ func (srv *bmpServer) server() {
 			glog.Errorf("fail to accept client connection with error: %+v", err)
 			continue
 		}
-		// Enforce connection limit — reject if at capacity.
-		select {
-		case srv.connSem <- struct{}{}:
-		default:
-			glog.Warningf("connection limit reached (%d), rejecting %v", cap(srv.connSem), client.RemoteAddr())
-			_ = client.Close()
-			continue
+		// Enforce connection limit when a semaphore is configured.
+		// A nil connSem means no limit — skip the select so tests and
+		// in-package construction paths do not reject every connection.
+		if srv.connSem != nil {
+			select {
+			case srv.connSem <- struct{}{}:
+			default:
+				glog.Warningf("connection limit reached (%d), rejecting %v", cap(srv.connSem), client.RemoteAddr())
+				_ = client.Close()
+				continue
+			}
 		}
 		glog.V(5).Infof("client %+v accepted, calling bmpWorker", client.RemoteAddr())
 		srv.startWorker(client)
