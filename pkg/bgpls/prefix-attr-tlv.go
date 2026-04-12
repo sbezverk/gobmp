@@ -139,18 +139,20 @@ func UnmarshalPrefixAttrFlags(b []byte, proto base.ProtoID) (PrefixAttrFlags, er
 	if glog.V(6) {
 		glog.Infof("Prefix Attr Flags Raw: %s for proto: %+v", tools.MessageHex(b), proto)
 	}
-	p := 0
+	if len(b) == 0 {
+		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Attr Flags")
+	}
 	switch proto {
 	case base.ISISL1:
 		fallthrough
 	case base.ISISL2:
-		return UnmarshalISISFlags(b[p : p+1])
+		return UnmarshalISISFlags(b[:1])
 	case base.OSPFv2:
-		return UnmarshalOSPFFlags(b[p : p+1])
+		return UnmarshalOSPFFlags(b[:1])
 	case base.OSPFv3:
-		return UnmarshalOSPFv3Flags(b[p : p+1])
+		return UnmarshalOSPFv3Flags(b[:1])
 	default:
-		return UnmarshalUnknownProtoFlags(b[p : p+1])
+		return UnmarshalUnknownProtoFlags(b[:1])
 	}
 }
 
