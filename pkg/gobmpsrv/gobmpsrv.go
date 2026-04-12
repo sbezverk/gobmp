@@ -389,9 +389,8 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 		}
 		speaker.mu.Lock()
 		speaker.isConnected = true
-		speaker.retryDelay = 1 * time.Second // reset backoff on a successful connection
-		speaker.nextAttempt = time.Time{}    // allow immediate reconnect after a clean disconnect
 		speaker.mu.Unlock()
+		connectedAt := time.Now()
 		srv.wg.Add(1)
 		srv.clients[client] = struct{}{}
 		srv.mu.Unlock()
@@ -414,8 +413,20 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 			defer func() { _ = client.Close() }()
 			srv.bmpWorker(client)
 		}()
-		// bmpWorker returned — the connection dropped; schedule reconnect with backoff.
+		// bmpWorker returned — the connection dropped; schedule reconnect.
+		// If the session was stable (ran long enough to be a real BMP session),
+		// reset backoff so the next reconnect is fast.  If it was short-lived
+		// (e.g. a proxy accepted the TCP dial but immediately dropped the BMP
+		// session), apply exponential backoff to avoid a tight retry loop.
 		speaker.mu.Lock()
+		if time.Since(connectedAt) >= 30*time.Second {
+			// Stable session — reset backoff on clean disconnect.
+			speaker.retryDelay = 1 * time.Second
+		} else {
+			// Unstable / proxy-terminated session — back off.
+			newDelay := speaker.retryDelay * 2
+			speaker.retryDelay = min(newDelay, 5*time.Minute)
+		}
 		speaker.nextAttempt = time.Now().Add(speaker.retryDelay)
 		speaker.mu.Unlock()
 		glog.Infof("connectSpeaker(%s): bmpWorker exited, scheduling reconnect in %v", speaker.Address, speaker.retryDelay)
