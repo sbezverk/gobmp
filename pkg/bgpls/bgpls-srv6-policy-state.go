@@ -602,19 +602,19 @@ type SRSegmentListSubTLV interface {
 
 // SRSegmentList defines SR Segment List objects which reports the SID-List(s) of a candidate path.
 type SRSegmentList struct {
-	FlagD  bool                           `json:"d_flag"`
-	FlagE  bool                           `json:"e_flag"`
-	FlagC  bool                           `json:"c_flag"`
-	FlagV  bool                           `json:"v_flag"`
-	FlagR  bool                           `json:"r_flag"`
-	FlagF  bool                           `json:"f_flag"`
-	FlagA  bool                           `json:"a_flag"`
-	FlagT  bool                           `json:"t_flag"`
-	FlagM  bool                           `json:"m_flag"`
-	MTID   uint16                         `json:"mtid"`
-	Algo   uint8                          `json:"algo"`
-	Weight uint32                         `json:"weight"`
-	SubTLV map[uint16]SRSegmentListSubTLV `json:"subtlv,omitempty"`
+	FlagD  bool                  `json:"d_flag"`
+	FlagE  bool                  `json:"e_flag"`
+	FlagC  bool                  `json:"c_flag"`
+	FlagV  bool                  `json:"v_flag"`
+	FlagR  bool                  `json:"r_flag"`
+	FlagF  bool                  `json:"f_flag"`
+	FlagA  bool                  `json:"a_flag"`
+	FlagT  bool                  `json:"t_flag"`
+	FlagM  bool                  `json:"m_flag"`
+	MTID   uint16                `json:"mtid"`
+	Algo   uint8                 `json:"algo"`
+	Weight uint32                `json:"weight"`
+	SubTLV []SRSegmentListSubTLV `json:"subtlv,omitempty"`
 }
 
 // UnmarshalSRSegmentList instantiates SRSegmentList from a slice of bytes
@@ -660,15 +660,16 @@ func UnmarshalSRSegmentList(b []byte) (*SRSegmentList, error) {
 	return s, nil
 }
 
-// UnmarshalSRSegmentListSubTLV instantiates a map of SR Segment List Sub TLVs from a slice of bytes
-func UnmarshalSRSegmentListSubTLV(b []byte) (map[uint16]SRSegmentListSubTLV, error) {
+// UnmarshalSRSegmentListSubTLV instantiates a slice of SR Segment List Sub TLVs from a slice of bytes.
+// Multiple SRSegment sub-TLVs (type 1206) are valid per RFC 9256 §2.4.4 — each is appended in order.
+func UnmarshalSRSegmentListSubTLV(b []byte) ([]SRSegmentListSubTLV, error) {
 	if glog.V(6) {
 		glog.Infof("SR Segment List Sub TLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 4 {
 		return nil, fmt.Errorf("not enough bytes to decode SR Segment List Sub TLV")
 	}
-	s := make(map[uint16]SRSegmentListSubTLV)
+	s := make([]SRSegmentListSubTLV, 0)
 	p := 0
 	for p < len(b) {
 		t := binary.BigEndian.Uint16(b[p : p+2])
@@ -684,13 +685,13 @@ func UnmarshalSRSegmentListSubTLV(b []byte) (map[uint16]SRSegmentListSubTLV, err
 			if err != nil {
 				return nil, err
 			}
-			s[SRSegmentType] = stlv
+			s = append(s, stlv)
 		case SRSegmentListMetricType:
 			stlv, err := UnmarshalSRSegmentListMetric(b[p : p+int(l)])
 			if err != nil {
 				return nil, err
 			}
-			s[SRSegmentListMetricType] = stlv
+			s = append(s, stlv)
 		}
 		p += int(l)
 	}
