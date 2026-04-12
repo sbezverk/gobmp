@@ -1186,9 +1186,12 @@ func TestConnectSpeaker_NextAttemptInFutureAfterFailure(t *testing.T) {
 	}
 }
 
-// TestConnectSpeaker_BackoffResetOnSuccess verifies that retryDelay is reset
-// to 1 second after a successful dial, regardless of how high it had grown.
-func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
+// TestConnectSpeaker_BackoffNotResetDuringActiveSession verifies that
+// retryDelay is NOT reset at connection time — it is only reset after
+// bmpWorker exits following a stable session (≥ 30s).  This prevents a
+// proxy that accepts TCP but immediately drops the BMP session from
+// resetting the backoff and causing a 1-second retry loop.
+func TestConnectSpeaker_BackoffNotResetDuringActiveSession(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
@@ -1198,7 +1201,7 @@ func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
 	srv, cleanup := newConnectSpeakerSrv()
 	defer cleanup()
 
-	// Pre-set a high retryDelay to verify it gets reset on success.
+	// Pre-set a high retryDelay; it must NOT be reset while the session is live.
 	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
 	done := runConnectSpeaker(srv, speaker)
 
@@ -1215,8 +1218,10 @@ func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
 	delay := speaker.retryDelay
 	speaker.mu.Unlock()
 
-	if delay != 1*time.Second {
-		t.Errorf("retryDelay after successful connect = %v, want 1s", delay)
+	// retryDelay must be unchanged: the reset only happens post-disconnect
+	// for sessions that lasted ≥ 30s.
+	if delay != 3*time.Minute {
+		t.Errorf("retryDelay during active session = %v, want 3m (should not be reset at connect time)", delay)
 	}
 
 	cleanup()
