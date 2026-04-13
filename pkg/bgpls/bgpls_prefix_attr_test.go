@@ -66,8 +66,15 @@ func TestUnmarshalPrefixAttrFlags(t *testing.T) {
 		name     string
 		proto    base.ProtoID
 		input    []byte
+		wantErr  bool
 		wantByte byte
 	}{
+		{
+			name:    "empty input returns error",
+			proto:   base.ISISL1,
+			input:   []byte{},
+			wantErr: true,
+		},
 		{
 			name:     "ISIS L1 X+R flags",
 			proto:    base.ISISL1,
@@ -103,8 +110,11 @@ func TestUnmarshalPrefixAttrFlags(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := UnmarshalPrefixAttrFlags(tt.input, tt.proto)
-			if err != nil {
-				t.Fatalf("UnmarshalPrefixAttrFlags() error = %v", err)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("UnmarshalPrefixAttrFlags() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
 			}
 			if got.GetPrefixAttrFlagsByte() != tt.wantByte {
 				t.Errorf("GetPrefixAttrFlagsByte() = 0x%X, want 0x%X", got.GetPrefixAttrFlagsByte(), tt.wantByte)

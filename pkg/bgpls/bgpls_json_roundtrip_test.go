@@ -520,6 +520,13 @@ func TestUnmarshalSRSegmentListSubTLV(t *testing.T) {
 		if _, ok := got[0].(*SRSegment); !ok {
 			t.Errorf("got[0] type = %T, want *SRSegment", got[0])
 		}
+		seg, ok := got[0].(*SRSegment)
+		if !ok {
+			t.Fatalf("value type = %T, want *SRSegment", got[0])
+		}
+		if seg.Segment != 1 {
+			t.Errorf("SegmentType = %d, want 1", seg.Segment)
+		}
 	})
 
 	t.Run("SRSegmentListMetricType", func(t *testing.T) {
