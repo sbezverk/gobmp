@@ -1186,9 +1186,12 @@ func TestConnectSpeaker_NextAttemptInFutureAfterFailure(t *testing.T) {
 	}
 }
 
-// TestConnectSpeaker_BackoffResetOnSuccess verifies that retryDelay is reset
-// to 1 second after a successful dial, regardless of how high it had grown.
-func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
+// TestConnectSpeaker_BackoffPreservedOnConnect verifies that a successful TCP
+// dial does NOT reset retryDelay. The reset happens only after a stable BMP
+// session ends (see TestConnectSpeaker_StableSession_ResetsRetryDelay), so that
+// a proxy that accepts TCP but immediately drops the session still accumulates
+// exponential backoff across attempts.
+func TestConnectSpeaker_BackoffPreservedOnConnect(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
@@ -1198,8 +1201,8 @@ func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
 	srv, cleanup := newConnectSpeakerSrv()
 	defer cleanup()
 
-	// Pre-set a high retryDelay to verify it gets reset on success.
-	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
+	const initial = 3 * time.Minute
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: initial}
 	done := runConnectSpeaker(srv, speaker)
 
 	conn, err := acceptWithTimeout(ln, 3*time.Second)
@@ -1215,8 +1218,9 @@ func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
 	delay := speaker.retryDelay
 	speaker.mu.Unlock()
 
-	if delay != 1*time.Second {
-		t.Errorf("retryDelay after successful connect = %v, want 1s", delay)
+	// retryDelay must not be reset by a TCP connect alone.
+	if delay != initial {
+		t.Errorf("retryDelay after TCP connect = %v, want %v (should be unchanged)", delay, initial)
 	}
 
 	cleanup()
@@ -1257,6 +1261,88 @@ func TestConnectSpeaker_PostDisconnect_NextAttemptInFuture(t *testing.T) {
 
 	if !next.After(time.Now()) {
 		t.Errorf("nextAttempt = %v is not in the future after disconnect", next)
+	}
+}
+
+// TestConnectSpeaker_UnstableSession_DoublesRetryDelay verifies that a
+// short-lived BMP session (e.g. a proxy that accepts TCP but drops BMP
+// immediately) causes retryDelay to double rather than reset to 1 s.
+func TestConnectSpeaker_UnstableSession_DoublesRetryDelay(t *testing.T) {
+	old := stableSessionThreshold
+	stableSessionThreshold = 5 * time.Second // far longer than the test session
+	t.Cleanup(func() { stableSessionThreshold = old })
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	// Set an elevated retryDelay to verify the doubling starts from the
+	// pre-connection value, not from a reset-to-1s on TCP connect.
+	const initial = 3 * time.Second
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: initial}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+	_ = conn.Close() // immediate drop — simulates proxy behaviour
+
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	got := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	// Unstable session: retryDelay must double from its pre-connection value.
+	if got != initial*2 {
+		t.Errorf("retryDelay after unstable session = %v, want %v", got, initial*2)
+	}
+}
+
+// TestConnectSpeaker_StableSession_ResetsRetryDelay verifies that a long-lived
+// BMP session resets retryDelay to 1 s on disconnect, enabling a fast reconnect.
+func TestConnectSpeaker_StableSession_ResetsRetryDelay(t *testing.T) {
+	old := stableSessionThreshold
+	stableSessionThreshold = 50 * time.Millisecond // short enough for a unit test
+	t.Cleanup(func() { stableSessionThreshold = old })
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond) // exceed the 50 ms threshold
+	_ = conn.Close()
+
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	got := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	if got != 1*time.Second {
+		t.Errorf("retryDelay after stable session = %v, want 1s", got)
 	}
 }
 
