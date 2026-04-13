@@ -1188,9 +1188,9 @@ func TestConnectSpeaker_NextAttemptInFutureAfterFailure(t *testing.T) {
 
 // TestConnectSpeaker_BackoffNotResetDuringActiveSession verifies that
 // retryDelay is NOT reset at connection time — it is only reset after
-// bmpWorker exits following a stable session (≥ 30s).  This prevents a
-// proxy that accepts TCP but immediately drops the BMP session from
-// resetting the backoff and causing a 1-second retry loop.
+// bmpWorker exits following a stable session (≥ stableSessionThreshold).
+// This prevents a proxy that accepts TCP but immediately drops the BMP
+// session from resetting the backoff and causing a 1-second retry loop.
 func TestConnectSpeaker_BackoffNotResetDuringActiveSession(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
