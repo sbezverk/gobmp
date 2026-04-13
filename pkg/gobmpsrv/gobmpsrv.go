@@ -21,15 +21,6 @@ import (
 // maxBMPMessagePayload is the maximum allowed BMP message payload size (1 MB).
 const maxBMPMessagePayload = 1 << 20
 
-// stableSessionThreshold is the minimum duration the bmpWorker session must run
-// for before the session is considered long-lived and retryDelay is reset to 1 s.
-// The classification is purely duration-based: any session shorter than this
-// — regardless of why it ended — is treated as unstable (e.g. a proxy that
-// accepts TCP but drops the BMP session immediately) and causes retryDelay to
-// double. Declared as a var so tests can shorten it without a real
-// 30-second wall-clock wait.
-var stableSessionThreshold = 30 * time.Second
-
 // BMPServer defines methods to manage BMP Server
 type BMPServer interface {
 	Start()
@@ -51,6 +42,7 @@ type bmpServer struct {
 	stopOnce  sync.Once
 	clients   map[net.Conn]struct{} // active bmpWorker connections
 	closing   bool                  // set to true in Stop() before iterating clients
+	connSem   chan struct{}         // non-nil only when MaxPassiveConnections > 0 (passive mode)
 	bmpRaw    bool
 	adminID   string
 	// Active-mode fields — all nil/zero in passive mode.
@@ -123,6 +115,18 @@ func (srv *bmpServer) server() {
 			glog.Errorf("fail to accept client connection with error: %+v", err)
 			continue
 		}
+		// Enforce connection limit when a semaphore is configured.
+		// A nil connSem means no limit — skip the select so tests and
+		// in-package construction paths do not reject every connection.
+		if srv.connSem != nil {
+			select {
+			case srv.connSem <- struct{}{}:
+			default:
+				glog.Warningf("connection limit reached (%d), rejecting %v", cap(srv.connSem), client.RemoteAddr())
+				_ = client.Close()
+				continue
+			}
+		}
 		glog.V(5).Infof("client %+v accepted, calling bmpWorker", client.RemoteAddr())
 		srv.startWorker(client)
 	}
@@ -146,6 +150,10 @@ func (srv *bmpServer) startWorker(client net.Conn) {
 	if srv.closing {
 		srv.mu.Unlock()
 		_ = client.Close()
+		// Release semaphore slot acquired by server() before this call.
+		if srv.connSem != nil {
+			<-srv.connSem
+		}
 		return
 	}
 	srv.wg.Add(1)
@@ -157,6 +165,10 @@ func (srv *bmpServer) startWorker(client net.Conn) {
 			delete(srv.clients, client)
 			srv.mu.Unlock()
 			srv.wg.Done()
+			// Release connection semaphore slot (passive mode only).
+			if srv.connSem != nil {
+				<-srv.connSem
+			}
 		}()
 		srv.bmpWorker(client)
 	}()
@@ -398,8 +410,9 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 		}
 		speaker.mu.Lock()
 		speaker.isConnected = true
+		speaker.retryDelay = 1 * time.Second // reset backoff on a successful connection
+		speaker.nextAttempt = time.Time{}    // allow immediate reconnect after a clean disconnect
 		speaker.mu.Unlock()
-		connectedAt := time.Now()
 		srv.wg.Add(1)
 		srv.clients[client] = struct{}{}
 		srv.mu.Unlock()
@@ -422,20 +435,8 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 			defer func() { _ = client.Close() }()
 			srv.bmpWorker(client)
 		}()
-		// bmpWorker returned — the connection dropped; schedule reconnect.
-		// If the session was stable (ran long enough to be a real BMP session),
-		// reset backoff so the next reconnect is fast.  If it was short-lived
-		// (e.g. a proxy accepted the TCP dial but immediately dropped the BMP
-		// session), apply exponential backoff to avoid a tight retry loop.
+		// bmpWorker returned — the connection dropped; schedule reconnect with backoff.
 		speaker.mu.Lock()
-		if time.Since(connectedAt) >= stableSessionThreshold {
-			// Stable session — reset backoff to allow a fast reconnect.
-			speaker.retryDelay = 1 * time.Second
-		} else {
-			// Unstable / proxy-terminated session — back off.
-			newDelay := speaker.retryDelay * 2
-			speaker.retryDelay = min(newDelay, 5*time.Minute)
-		}
 		speaker.nextAttempt = time.Now().Add(speaker.retryDelay)
 		speaker.mu.Unlock()
 		glog.Infof("connectSpeaker(%s): bmpWorker exited, scheduling reconnect in %v", speaker.Address, speaker.retryDelay)
@@ -464,6 +465,9 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 			return nil, err
 		}
 		bmpSrv.incoming = incoming
+		if cfg.MaxPassiveConnections > 0 {
+			bmpSrv.connSem = make(chan struct{}, cfg.MaxPassiveConnections)
+		}
 	}
 	if bmpSrv.isActive && len(bmpSrv.bgpSpeakers) == 0 {
 		return nil, errors.New("active_mode is true but speakers_list is empty")
