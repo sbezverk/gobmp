@@ -48,6 +48,7 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *bmp.PerPeerHeader, update *bgp.Update, fsnlri *flowspec.NLRI) *Flowspec {
 	fs := &Flowspec{
 		Action:         operation,
+		RouterHash:     p.speakerHash,
 		RouterIP:       p.speakerIP,
 		PeerType:       uint8(ph.PeerType),
 		PeerASN:        ph.PeerAS,
@@ -131,6 +132,11 @@ func (fs *Flowspec) UnmarshalJSON(b []byte) error {
 	}
 	if err := json.Unmarshal(objmap["router_ip"], &o.RouterIP); err != nil {
 		return err
+	}
+	if rh, ok := objmap["router_hash"]; ok {
+		if err := json.Unmarshal(rh, &o.RouterHash); err != nil {
+			return err
+		}
 	}
 	if err := json.Unmarshal(objmap["timestamp"], &o.Timestamp); err != nil {
 		return err

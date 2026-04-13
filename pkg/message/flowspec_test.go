@@ -450,3 +450,33 @@ func TestFlowspecUnmarshalJSON_NoRD(t *testing.T) {
 		t.Errorf("RD = %q, want empty for non-VPN flowspec", fs.RD)
 	}
 }
+
+// TestFlowspec_RouterHash_RoundTrip verifies RouterHash survives JSON marshal/unmarshal.
+func TestFlowspec_RouterHash_RoundTrip(t *testing.T) {
+	orig := Flowspec{
+		Action:         "add",
+		RouterHash:     "deadbeef12345678",
+		RouterIP:       "10.0.0.1",
+		SpecHash:       "abc123",
+		IsIPv4:         true,
+		Nexthop:        "10.0.0.2",
+		PeerASN:        65000,
+		Timestamp:      "2026-01-01T00:00:00Z",
+		BaseAttributes: &bgp.BaseAttributes{},
+		IsNexthopIPv4:  true,
+	}
+	b, err := json.Marshal(&orig)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var got Flowspec
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if got.RouterHash != "deadbeef12345678" {
+		t.Errorf("RouterHash = %q, want %q", got.RouterHash, "deadbeef12345678")
+	}
+	if got.RouterIP != "10.0.0.1" {
+		t.Errorf("RouterIP = %q, want %q", got.RouterIP, "10.0.0.1")
+	}
+}

@@ -57,16 +57,18 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
 		m.IsIPv4 = !msg.PeerHeader.IsRemotePeerIPv6()
 		m.LocalIP = peerUpMsg.GetLocalAddressString()
-		// Saving local bgp speaker identities.
-		p.speakerIP = m.LocalIP
-		md5Sum := md5.Sum([]byte(p.speakerIP))
-		p.speakerHash = hex.EncodeToString(md5Sum[:])
+		// Saving local bgp speaker identities inside sync.Once so the writes
+		// happen exactly once and happen-before the channel close.  After the
+		// first PeerUp the fields are immutable — no data race with readers
+		// that wait on speakerReady.
+		p.speakerReadyOnce.Do(func() {
+			p.speakerIP = m.LocalIP
+			md5Sum := md5.Sum([]byte(p.speakerIP))
+			p.speakerHash = hex.EncodeToString(md5Sum[:])
+			close(p.speakerReady)
+		})
 		m.RouterIP = p.speakerIP
 		m.RouterHash = p.speakerHash
-		// Signal all goroutines waiting in producingWorker that speakerIP is now
-		// populated.  sync.Once guarantees the channel is closed exactly once even
-		// if multiple PeerUp messages arrive (e.g. reconnections).
-		p.speakerReadyOnce.Do(func() { close(p.speakerReady) })
 
 		m.LocalASN = uint32(peerUpMsg.SentOpen.MyAS)
 		if lasn, ok := peerUpMsg.SentOpen.Is4BytesASCapable(); ok {

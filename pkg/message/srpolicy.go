@@ -59,12 +59,8 @@ func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		prfx.OriginAS = ases[len(ases)-1]
 	}
 	prfx.PeerIP = ph.GetPeerAddrString()
-	prfx.IsIPv4 = true
-	prfx.IsNexthopIPv4 = true
-	if nlri.IsIPv6NLRI() {
-		prfx.IsIPv4 = false
-		prfx.IsNexthopIPv4 = false
-	}
+	prfx.IsIPv4 = !nlri.IsIPv6NLRI()
+	prfx.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
 	prfx.Distinguisher = sr.Distinguisher
 	prfx.Color = sr.Color
 	prfx.Endpoint = make([]byte, len(sr.Endpoint))

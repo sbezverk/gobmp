@@ -98,6 +98,9 @@ type UnicastPrefix struct {
 }
 
 func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
+	if u == nil {
+		return ou == nil, nil
+	}
 	if ou == nil {
 		return false, nil
 	}
@@ -111,10 +114,11 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 		if ou.BaseAttributes == nil {
 			equal = false
 			diffs = append(diffs, "bgp base attributes mismatch expected BGP BaseAttribute object is not nil, but received object is nil")
-		}
-		if eq, df := u.BaseAttributes.Equal(ou.BaseAttributes); !eq {
-			equal = false
-			diffs = append(diffs, df...)
+		} else {
+			if eq, df := u.BaseAttributes.Equal(ou.BaseAttributes); !eq {
+				equal = false
+				diffs = append(diffs, df...)
+			}
 		}
 	} else {
 		if ou.BaseAttributes != nil {
@@ -462,6 +466,7 @@ type L3VPNPrefix struct {
 	VPNRD            string              `json:"vpn_rd,omitempty"`
 	VPNRDType        uint16              `json:"vpn_rd_type"`
 	PrefixSID        *prefixsid.PSid     `json:"prefix_sid,omitempty"`
+	IsEOR            bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -711,6 +716,7 @@ type Flowspec struct {
 	Rev            string              `json:"_rev,omitempty"`
 	Action         string              `json:"action,omitempty"` // Action can be "add" or "del"
 	Sequence       int                 `json:"sequence,omitempty"`
+	RouterHash     string              `json:"router_hash,omitempty"`
 	RouterIP       string              `json:"router_ip,omitempty"`
 	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
 	PeerIP         string              `json:"peer_ip,omitempty"`
