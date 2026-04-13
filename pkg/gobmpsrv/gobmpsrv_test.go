@@ -1298,8 +1298,9 @@ func TestConnectSpeaker_ClosingFlag_ExitsAfterSuccessfulDial(t *testing.T) {
 }
 
 // TestConnectSpeaker_ShortLivedSession_BackoffDoubles verifies that when
-// bmpWorker exits quickly (< 30 s — simulating a proxy that accepts TCP but
-// drops the BMP session), retryDelay is doubled rather than reset.
+// bmpWorker exits before stableSessionThreshold elapses (simulating a proxy
+// that accepts TCP but drops the BMP session), retryDelay is doubled rather
+// than reset.
 func TestConnectSpeaker_ShortLivedSession_BackoffDoubles(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -1317,7 +1318,7 @@ func TestConnectSpeaker_ShortLivedSession_BackoffDoubles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("accepting connection: %v", err)
 	}
-	// Drop the connection immediately — session lasts < 30 s.
+	// Drop the connection immediately — session lasts < stableSessionThreshold.
 	_ = conn.Close()
 
 	// Give connectSpeaker time to process the disconnect and apply backoff.
@@ -1356,7 +1357,7 @@ func TestConnectSpeaker_ShortLivedSession_BackoffCapped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("accepting connection: %v", err)
 	}
-	// Drop the connection immediately — session lasts < 30 s.
+	// Drop the connection immediately — session lasts < stableSessionThreshold.
 	_ = conn.Close()
 
 	// Give connectSpeaker time to process the disconnect and apply backoff.
@@ -1370,5 +1371,52 @@ func TestConnectSpeaker_ShortLivedSession_BackoffCapped(t *testing.T) {
 
 	if delay != 5*time.Minute {
 		t.Errorf("retryDelay after short-lived disconnect = %v, want 5m (capped from 8m)", delay)
+	}
+}
+
+// TestConnectSpeaker_StableSession_BackoffResets verifies that when bmpWorker
+// runs for at least stableSessionThreshold before disconnecting, retryDelay is
+// reset to 1 s regardless of how high it had grown.
+// The test temporarily lowers stableSessionThreshold to 50 ms so no real
+// wall-clock wait is necessary.
+func TestConnectSpeaker_StableSession_BackoffResets(t *testing.T) {
+	// Shorten the threshold for this test and restore it on exit.
+	orig := stableSessionThreshold
+	stableSessionThreshold = 50 * time.Millisecond
+	defer func() { stableSessionThreshold = orig }()
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	// Pre-set a high retryDelay; it should be reset after a stable session.
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+
+	// Hold the connection open long enough to exceed stableSessionThreshold.
+	time.Sleep(150 * time.Millisecond)
+	_ = conn.Close()
+
+	// Give connectSpeaker time to process the disconnect and compute backoff.
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	delay := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	if delay != 1*time.Second {
+		t.Errorf("retryDelay after stable session = %v, want 1s (reset from 3m)", delay)
 	}
 }

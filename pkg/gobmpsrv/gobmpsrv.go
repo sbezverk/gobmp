@@ -21,6 +21,13 @@ import (
 // maxBMPMessagePayload is the maximum allowed BMP message payload size (1 MB).
 const maxBMPMessagePayload = 1 << 20
 
+// stableSessionThreshold is the minimum duration a bmpWorker session must run
+// before its disconnect is treated as a clean drop (backoff reset to 1 s).
+// Sessions shorter than this are assumed unstable (e.g. proxy drop) and cause
+// the retryDelay to double.  Declared as a var so tests can shorten it without
+// a real 30-second wall-clock wait.
+var stableSessionThreshold = 30 * time.Second
+
 // BMPServer defines methods to manage BMP Server
 type BMPServer interface {
 	Start()
@@ -419,7 +426,7 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 		// (e.g. a proxy accepted the TCP dial but immediately dropped the BMP
 		// session), apply exponential backoff to avoid a tight retry loop.
 		speaker.mu.Lock()
-		if time.Since(connectedAt) >= 30*time.Second {
+		if time.Since(connectedAt) >= stableSessionThreshold {
 			// Stable session — reset backoff to allow a fast reconnect.
 			speaker.retryDelay = 1 * time.Second
 		} else {
