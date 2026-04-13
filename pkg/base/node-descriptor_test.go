@@ -24,6 +24,11 @@ func TestNodeDescriptorGetASN(t *testing.T) {
 			nd:   makeNodeDesc(nil),
 			want: 0,
 		},
+		{
+			name: "TLV present but short value",
+			nd:   makeNodeDesc(map[uint16]TLV{512: {Type: 512, Length: 2, Value: []byte{0x00, 0x01}}}),
+			want: 0,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -50,6 +55,11 @@ func TestNodeDescriptorGetLSID(t *testing.T) {
 			nd:   makeNodeDesc(nil),
 			want: 0,
 		},
+		{
+			name: "TLV present but short value",
+			nd:   makeNodeDesc(map[uint16]TLV{513: {Type: 513, Length: 1, Value: []byte{0x01}}}),
+			want: 0,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -74,6 +84,11 @@ func TestNodeDescriptorGetOSPFAreaID(t *testing.T) {
 		{
 			name: "TLV absent",
 			nd:   makeNodeDesc(nil),
+			want: "",
+		},
+		{
+			name: "TLV present but short value",
+			nd:   makeNodeDesc(map[uint16]TLV{514: {Type: 514, Length: 3, Value: []byte{0x00, 0x00, 0x07}}}),
 			want: "",
 		},
 	}
@@ -135,6 +150,11 @@ func TestNodeDescriptorGetConfedMemberASN(t *testing.T) {
 		{
 			name: "TLV absent",
 			nd:   makeNodeDesc(nil),
+			want: 0,
+		},
+		{
+			name: "TLV present but short value",
+			nd:   makeNodeDesc(map[uint16]TLV{517: {Type: 517, Length: 2, Value: []byte{0x00, 0x05}}}),
 			want: 0,
 		},
 	}

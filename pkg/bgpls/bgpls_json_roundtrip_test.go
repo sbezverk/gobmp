@@ -514,8 +514,11 @@ func TestUnmarshalSRSegmentListSubTLV(t *testing.T) {
 		if err != nil {
 			t.Fatalf("UnmarshalSRSegmentListSubTLV() error = %v", err)
 		}
-		if _, ok := got[SRSegmentType]; !ok {
-			t.Error("SRSegmentType key missing from result")
+		if len(got) != 1 {
+			t.Fatalf("len(got) = %d, want 1", len(got))
+		}
+		if _, ok := got[0].(*SRSegment); !ok {
+			t.Errorf("got[0] type = %T, want *SRSegment", got[0])
 		}
 	})
 
@@ -534,13 +537,12 @@ func TestUnmarshalSRSegmentListSubTLV(t *testing.T) {
 		if err != nil {
 			t.Fatalf("UnmarshalSRSegmentListSubTLV() error = %v", err)
 		}
-		tlv, ok := got[SRSegmentListMetricType]
-		if !ok {
-			t.Fatal("SRSegmentListMetricType key missing from result")
+		if len(got) != 1 {
+			t.Fatalf("len(got) = %d, want 1", len(got))
 		}
-		m, ok := tlv.(*SRSegmentListMetric)
+		m, ok := got[0].(*SRSegmentListMetric)
 		if !ok {
-			t.Fatalf("value type = %T, want *SRSegmentListMetric", tlv)
+			t.Fatalf("got[0] type = %T, want *SRSegmentListMetric", got[0])
 		}
 		if m.Metric != SRMetricTE {
 			t.Errorf("Metric = %d, want %d", m.Metric, SRMetricTE)
@@ -550,6 +552,30 @@ func TestUnmarshalSRSegmentListSubTLV(t *testing.T) {
 		}
 		if m.Margin != 100 || m.Bound != 200 || m.Value != 300 {
 			t.Errorf("Margin/Bound/Value = %d/%d/%d, want 100/200/300", m.Margin, m.Bound, m.Value)
+		}
+	})
+
+	// P3-15 regression: multiple SRSegment sub-TLVs must all be preserved.
+	// Before the fix, s[SRSegmentType] was overwritten on each iteration so
+	// only the last segment survived.
+	t.Run("MultipleSegments_AllPreserved", func(t *testing.T) {
+		seg := []byte{
+			0x04, 0xB6, 0x00, 0x04, // sub-TLV type=1206, length=4
+			0x01, 0x00, 0x00, 0x00, // SegmentType1
+		}
+		// Three identical segments back-to-back.
+		b := append(append(seg, seg...), seg...)
+		got, err := UnmarshalSRSegmentListSubTLV(b)
+		if err != nil {
+			t.Fatalf("UnmarshalSRSegmentListSubTLV() error = %v", err)
+		}
+		if len(got) != 3 {
+			t.Fatalf("len(got) = %d, want 3 (all segments must be preserved)", len(got))
+		}
+		for i, v := range got {
+			if _, ok := v.(*SRSegment); !ok {
+				t.Errorf("got[%d] type = %T, want *SRSegment", i, v)
+			}
 		}
 	})
 }

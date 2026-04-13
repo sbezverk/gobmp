@@ -113,6 +113,15 @@ func TestUnmarshalPrefixAttrFlags(t *testing.T) {
 	}
 }
 
+func TestUnmarshalPrefixAttrFlags_EmptyInput(t *testing.T) {
+	// B4: empty input must return an error, not panic with an index out-of-range.
+	for _, proto := range []base.ProtoID{base.ISISL1, base.ISISL2, base.OSPFv2, base.OSPFv3, base.BGP} {
+		if _, err := UnmarshalPrefixAttrFlags([]byte{}, proto); err == nil {
+			t.Errorf("proto %v: expected error for empty input, got nil", proto)
+		}
+	}
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Individual prefix attr flag unmarshalers
 // ─────────────────────────────────────────────────────────────────────────────

@@ -26,7 +26,7 @@ type NodeDescriptor struct {
 
 // GetASN returns Autonomous System Number used to uniqely identify BGP-LS domain
 func (nd *NodeDescriptor) GetASN() uint32 {
-	if tlv, ok := nd.SubTLV[512]; ok {
+	if tlv, ok := nd.SubTLV[512]; ok && len(tlv.Value) >= 4 {
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
 	return 0
@@ -34,7 +34,7 @@ func (nd *NodeDescriptor) GetASN() uint32 {
 
 // GetLSID returns BGP-LS Identifier found in Node Descriptor sub tlv
 func (nd *NodeDescriptor) GetLSID() uint32 {
-	if tlv, ok := nd.SubTLV[513]; ok {
+	if tlv, ok := nd.SubTLV[513]; ok && len(tlv.Value) >= 4 {
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
 	return 0
@@ -42,7 +42,7 @@ func (nd *NodeDescriptor) GetLSID() uint32 {
 
 // GetOSPFAreaID returns OSPF Area-ID found in Node Descriptor sub tlv
 func (nd *NodeDescriptor) GetOSPFAreaID() string {
-	if tlv, ok := nd.SubTLV[514]; ok {
+	if tlv, ok := nd.SubTLV[514]; ok && len(tlv.Value) >= 4 {
 		return strconv.Itoa(int(binary.BigEndian.Uint32(tlv.Value)))
 	}
 	return ""
@@ -76,7 +76,7 @@ func (nd *NodeDescriptor) GetBGPRouterID() []byte {
 
 // GetConfedMemberASN returns Confederation Member ASN (Member-ASN)
 func (nd *NodeDescriptor) GetConfedMemberASN() uint32 {
-	if tlv, ok := nd.SubTLV[517]; ok {
+	if tlv, ok := nd.SubTLV[517]; ok && len(tlv.Value) >= 4 {
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
 	return 0
