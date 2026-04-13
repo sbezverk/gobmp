@@ -1,6 +1,7 @@
 package te
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -183,5 +184,8 @@ func TestUnmarshalTEPolicyNLRI_TruncatedNodeDescBody(t *testing.T) {
 	_, err := UnmarshalTEPolicyNLRI(testData)
 	if err == nil {
 		t.Fatal("expected error for truncated node descriptor body")
+	}
+	if !strings.Contains(err.Error(), "node descriptor") {
+		t.Fatalf("expected node descriptor bounds error, got: %v", err)
 	}
 }
