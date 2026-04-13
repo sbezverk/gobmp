@@ -101,23 +101,28 @@ func TestMPReachNLRI_IsIPv6NLRI(t *testing.T) {
 
 func TestMPReachNLRI_IsNextHopIPv6(t *testing.T) {
 	tests := []struct {
-		nhLen uint8
-		want  bool
+		name    string
+		nhLen   uint8
+		nhBytes []byte
+		want    bool
 	}{
-		{4, false},
-		{8, false},
-		{12, false},
-		{16, true},
-		{24, true},
-		{32, true},
-		{48, true},
-		{0, false},
+		{"IPv4 4-byte", 4, nil, false},
+		{"RD+IPv4 8-byte", 8, nil, false},
+		{"RD+IPv4 12-byte", 12, nil, false},
+		{"IPv6 16-byte", 16, []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, true},
+		{"IPv4-mapped-IPv6 16-byte", 16, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 168, 1, 1}, false},
+		{"RD+IPv6 24-byte", 24, nil, true},
+		{"IPv6+LL 32-byte", 32, nil, true},
+		{"RD+IPv6+LL 48-byte", 48, nil, true},
+		{"zero length", 0, nil, false},
 	}
 	for _, tt := range tests {
-		mp := &MPReachNLRI{NextHopAddressLength: tt.nhLen}
-		if got := mp.IsNextHopIPv6(); got != tt.want {
-			t.Errorf("IsNextHopIPv6() nhLen=%d = %v, want %v", tt.nhLen, got, tt.want)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			mp := &MPReachNLRI{NextHopAddressLength: tt.nhLen, NextHopAddress: tt.nhBytes}
+			if got := mp.IsNextHopIPv6(); got != tt.want {
+				t.Errorf("IsNextHopIPv6() nhLen=%d = %v, want %v", tt.nhLen, got, tt.want)
+			}
+		})
 	}
 }
 
@@ -155,6 +160,12 @@ func TestMPReachNLRI_GetNextHop(t *testing.T) {
 			nhLen:   16,
 			nhBytes: []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			want:    "2001:db8::1",
+		},
+		{
+			name:    "IPv4-mapped-IPv6 (len=16)",
+			nhLen:   16,
+			nhBytes: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 10, 0, 0, 1},
+			want:    "10.0.0.1",
 		},
 		{
 			name:  "RD+IPv6 (len=24)",
@@ -268,6 +279,32 @@ func TestMPReachNLRI_NLRINotFound(t *testing.T) {
 		_, err := mp.GetNLRIRTC()
 		if !errors.As(err, &notFound) {
 			t.Errorf("expected NLRINotFoundError, got %T: %v", err, err)
+		}
+	})
+
+	// N11: Verify wrong AFI with correct SAFI is rejected
+	t.Run("GetNLRI71 wrong AFI correct SAFI", func(t *testing.T) {
+		mp71 := &MPReachNLRI{
+			AddressFamilyID:    1, // should be 16388
+			SubAddressFamilyID: 71,
+			NLRI:               []byte{},
+			addPath:            map[int]bool{},
+		}
+		_, err := mp71.GetNLRI71()
+		if !errors.As(err, &notFound) {
+			t.Errorf("expected NLRINotFoundError for wrong AFI, got %T: %v", err, err)
+		}
+	})
+	t.Run("GetNLRI73 wrong AFI correct SAFI", func(t *testing.T) {
+		mp73 := &MPReachNLRI{
+			AddressFamilyID:    16388, // should be 1 or 2
+			SubAddressFamilyID: 73,
+			NLRI:               []byte{},
+			addPath:            map[int]bool{},
+		}
+		_, err := mp73.GetNLRI73()
+		if !errors.As(err, &notFound) {
+			t.Errorf("expected NLRINotFoundError for wrong AFI, got %T: %v", err, err)
 		}
 	})
 }

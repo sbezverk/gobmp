@@ -44,12 +44,14 @@ func (mp *MPReachNLRI) IsIPv6NLRI() bool {
 	return mp.AddressFamilyID == 2
 }
 
-// IsNextHopIPv6 return true if the next hop is IPv6 address, otherwise it returns flase
+// IsNextHopIPv6 returns true if the next hop is an IPv6 address; otherwise, it returns false.
+// A 16-byte next-hop that is an IPv4-mapped-IPv6 address (::ffff:x.x.x.x per RFC 4291 §2.5.5.2)
+// is treated as IPv4.
 func (mp *MPReachNLRI) IsNextHopIPv6() bool {
-	// https://tools.ietf.org/id/draft-mishra-bess-ipv4nlri-ipv6nh-use-cases-00.html#rfc.section.3
+	// Per RFC 4291 §2.5.5.2 and draft-mishra-bess-ipv4nlri-ipv6nh-use-cases §3
 	switch mp.NextHopAddressLength {
 	case 16:
-		fallthrough
+		return net.IP(mp.NextHopAddress).To4() == nil
 	case 32:
 		fallthrough
 	case 24:
@@ -74,7 +76,10 @@ func (mp *MPReachNLRI) GetNextHop() string {
 		// RD (8 bytes) + IPv4
 		return net.IP(mp.NextHopAddress[8:]).To4().String()
 	case 16:
-		// IPv6
+		// IPv4-mapped-IPv6 (::ffff:x.x.x.x per RFC 4291 §2.5.5.2) → return IPv4 string
+		if v4 := net.IP(mp.NextHopAddress).To4(); v4 != nil {
+			return v4.String()
+		}
 		return net.IP(mp.NextHopAddress).To16().String()
 	case 24:
 		// RD (8 bytes) + IPv6
@@ -93,7 +98,7 @@ func (mp *MPReachNLRI) GetNextHop() string {
 
 // GetNLRI71 check for presence of NLRI 71 in the NLRI 14 NLRI data and if exists, instantiate NLRI71 object
 func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
-	if mp.SubAddressFamilyID == 71 {
+	if mp.AddressFamilyID == 16388 && mp.SubAddressFamilyID == 71 {
 		nlri71, err := ls.UnmarshalLSNLRI71(mp.NLRI)
 		if err != nil {
 			return nil, err
@@ -106,7 +111,7 @@ func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 
 // GetNLRI73 check for presence of NLRI 73 in the NLRI 14 NLRI data and if exists, instantiate NLRI73 object
 func (mp *MPReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
-	if mp.SubAddressFamilyID == 73 {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 73 {
 		nlri73, err := srpolicy.UnmarshalLSNLRI73(mp.NLRI)
 		if err != nil {
 			return nil, err
@@ -157,7 +162,7 @@ func (mp *MPReachNLRI) GetNLRIVPLS() (*vpls.Route, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRIUnicast check for presence of NLRI EVPN AFI 1 or 2  and SAFI 1 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
+// GetNLRIUnicast check for presence of Unicast AFI 1 or 2 and SAFI 1 in the MP_REACH_NLRI data and if exists, instantiate Unicast object
 func (mp *MPReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 1 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
@@ -185,7 +190,7 @@ func (mp *MPReachNLRI) GetNLRIMulticast() (*base.MPNLRI, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
-// GetNLRILU check for presence of NLRI EVPN AFI 1 or 2  and SAFI 4 in the NLRI 14 NLRI data and if exists, instantiate Unicast object
+// GetNLRILU check for presence of Labeled Unicast AFI 1 or 2 and SAFI 4 in the MP_REACH_NLRI data and if exists, instantiate LU object
 func (mp *MPReachNLRI) GetNLRILU() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 4 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]

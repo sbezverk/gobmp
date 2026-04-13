@@ -56,7 +56,8 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		// MP_UNREACH_NLRI - Use per-table AddPath capability
 		nlri, err := bgp.UnmarshalMPUnReachNLRI(
 			routeMonitorMsg.Update.PathAttributes[index].Attribute,
-			p.GetAddPathCapability(msg.PeerHeader.GetTableKey()))
+			p.GetAddPathCapability(msg.PeerHeader.GetTableKey()),
+			routeMonitorMsg.Update.HasPrefixSID())
 		if err != nil {
 			glog.Errorf("failed to process MP_UNREACH_NLRI with error: %+v", err)
 			return

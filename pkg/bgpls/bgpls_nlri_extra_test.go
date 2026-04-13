@@ -123,6 +123,12 @@ func TestGetPrefixIGPRouteTag(t *testing.T) {
 	if len(got) != 2 || got[0] != 100 || got[1] != 200 {
 		t.Errorf("GetPrefixIGPRouteTag() = %v, want [100 200]", got)
 	}
+	// Test non-multiple-of-4 value length
+	nlriOdd := &NLRI{LS: []TLV{{Type: 1153, Value: []byte{0, 0, 0, 1, 0xFF, 0xFF}}}}
+	tagsOdd := nlriOdd.GetPrefixIGPRouteTag()
+	if len(tagsOdd) != 1 || tagsOdd[0] != 1 {
+		t.Errorf("GetPrefixIGPRouteTag() non-multiple-of-4 = %v, want [1]", tagsOdd)
+	}
 }
 
 func TestGetPrefixIGPExtRouteTag(t *testing.T) {
@@ -137,6 +143,12 @@ func TestGetPrefixIGPExtRouteTag(t *testing.T) {
 	got := nlri.GetPrefixIGPExtRouteTag()
 	if len(got) != 1 || got[0] != 0xDEADBEEFCAFE0001 {
 		t.Errorf("GetPrefixIGPExtRouteTag() = %v", got)
+	}
+	// Test non-multiple-of-8 value length
+	nlriOdd := &NLRI{LS: []TLV{{Type: 1154, Value: []byte{0, 0, 0, 0, 0, 0, 0, 1, 0xFF, 0xFF}}}}
+	tagsOdd := nlriOdd.GetPrefixIGPExtRouteTag()
+	if len(tagsOdd) != 1 || tagsOdd[0] != 1 {
+		t.Errorf("GetPrefixIGPExtRouteTag() non-multiple-of-8 = %v, want [1]", tagsOdd)
 	}
 }
 
@@ -155,6 +167,11 @@ func TestGetPrefixOSPFForwardAddr(t *testing.T) {
 	nlri2 := &NLRI{LS: []TLV{{Type: 1156, Length: 16, Value: ipv6}}}
 	if got := nlri2.GetPrefixOSPFForwardAddr(); got != "2001:db8::5" {
 		t.Errorf("GetPrefixOSPFForwardAddr() IPv6 = %q, want 2001:db8::5", got)
+	}
+	// Test invalid length (not 4 or 16)
+	nlriInvalid := &NLRI{LS: []TLV{{Type: 1156, Value: []byte{1, 2, 3, 4, 5}}}}
+	if got := nlriInvalid.GetPrefixOSPFForwardAddr(); got != "" {
+		t.Errorf("GetPrefixOSPFForwardAddr() invalid length = %q, want empty", got)
 	}
 }
 
@@ -395,9 +412,9 @@ func TestGetSRCandidatePathName_Present(t *testing.T) {
 
 func TestGetSRCandidatePathConstraints_Present(t *testing.T) {
 	val := make([]byte, 8)
-	val[0] = 0x80 // FlagD
+	val[0] = 0x80                           // FlagD
 	binary.BigEndian.PutUint16(val[2:4], 5) // MTID=5
-	val[4] = 128                             // Algo
+	val[4] = 128                            // Algo
 	nlri := &NLRI{LS: []TLV{{Type: SRCandidatePathConstraintsType, Length: 8, Value: val}}}
 	got, err := nlri.GetSRCandidatePathConstraints()
 	if err != nil {
@@ -481,7 +498,7 @@ func TestUnmarshalAppSpecLinkAttr(t *testing.T) {
 				0x04, 0x04,
 				0x00, 0x00,
 				0x01, 0x02, 0x03, 0x04, // SAIBM
-				0xA, 0xB, 0xC, 0xD,     // UDAIBM
+				0xA, 0xB, 0xC, 0xD, // UDAIBM
 			},
 			checkFn: func(t *testing.T, a *AppSpecLinkAttr) {
 				if len(a.SAIBM) != 4 || len(a.UDAIBM) != 4 {
@@ -530,11 +547,11 @@ func TestUnmarshalBGPLSNLRI_Valid(t *testing.T) {
 func TestUnmarshalBGPLSNLRI_MultiTLV(t *testing.T) {
 	// TLV 1026 "r1" + TLV 1028 (local IPv4) 10.0.0.1
 	b := []byte{
-		0x04, 0x02,             // type = 1026
-		0x00, 0x02,             // length = 2
-		0x72, 0x31,             // value = "r1"
-		0x04, 0x04,             // type = 1028
-		0x00, 0x04,             // length = 4
+		0x04, 0x02, // type = 1026
+		0x00, 0x02, // length = 2
+		0x72, 0x31, // value = "r1"
+		0x04, 0x04, // type = 1028
+		0x00, 0x04, // length = 4
 		0x0A, 0x00, 0x00, 0x01, // value = 10.0.0.1
 	}
 	nlri, err := UnmarshalBGPLSNLRI(b)

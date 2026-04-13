@@ -84,6 +84,9 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		if f, err := ph.IsLocRIBFiltered(); err == nil {
 			prfx.IsLocRIBFiltered = f
 		}
+		if prfx.IsLocRIB {
+			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		}
 		prfx.Labels = make([]uint32, 0)
 		for _, l := range e.Label {
 			prfx.Labels = append(prfx.Labels, l.Value)

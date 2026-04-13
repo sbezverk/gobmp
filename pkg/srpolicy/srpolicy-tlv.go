@@ -87,8 +87,17 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 		switch st {
 		case SEGMENTLISTSTLV:
 			glog.Infof("Segment List Sub TLV")
+			if p+2 > len(b) {
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 2 bytes for length, have %d", st, p, len(b)-p)
+			}
 			sl = int(binary.BigEndian.Uint16(b[p : p+2]))
 			p += 2
+			if sl < 1 {
+				return nil, fmt.Errorf("SR Policy segment list sub-TLV at offset %d: invalid length %d", p-2, sl)
+			}
+			if p+sl > len(b) {
+				return nil, fmt.Errorf("SR Policy segment list sub-TLV truncated at offset %d: need %d bytes, have %d", p, sl, len(b)-p)
+			}
 			// Skip reserved byte
 			p++
 			sl--
@@ -99,8 +108,14 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			tlv.SegmentList = append(tlv.SegmentList, l)
 		case BSIDSTLV:
 			glog.Infof("Binding SID Sub TLV")
+			if p >= len(b) {
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
+			}
 			sl = int(b[p])
 			p++
+			if p+sl > len(b) {
+				return nil, fmt.Errorf("SR Policy BSID sub-TLV truncated at offset %d: need %d bytes, have %d", p, sl, len(b)-p)
+			}
 			tlv.BindingSID = &BindingSID{}
 			if tlv.BindingSID.BSID, err = UnmarshalBSIDSTLV(b[p : p+sl]); err != nil {
 				return nil, err
@@ -108,8 +123,14 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			tlv.BindingSID.Type = tlv.BindingSID.BSID.GetType()
 		case PREFERENCESTLV:
 			glog.Infof("Preference Sub TLV")
+			if p >= len(b) {
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
+			}
 			sl = int(b[p])
 			p++
+			if p+sl > len(b) {
+				return nil, fmt.Errorf("SR Policy preference sub-TLV truncated at offset %d: need %d bytes, have %d", p, sl, len(b)-p)
+			}
 			if tlv.Preference, err = UnmarshalPreferenceSTLV(b[p : p+sl]); err != nil {
 				return nil, err
 			}
@@ -118,26 +139,66 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 				return nil, fmt.Errorf("only 1 instance of ENLP allowed in SR Policy attributes")
 			}
 			glog.Infof("ENLP Sub TLV")
+			if p >= len(b) {
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
+			}
 			sl = int(b[p])
 			p++
+			if sl < 3 {
+				return nil, fmt.Errorf("SR Policy ENLP sub-TLV too short: need at least 3 bytes, have %d", sl)
+			}
+			if p+sl > len(b) {
+				return nil, fmt.Errorf("SR Policy ENLP sub-TLV truncated at offset %d: need %d bytes, have %d", p, sl, len(b)-p)
+			}
 			tlv.ENLP = &ENLP{
 				Flags: b[p],
 				ENLP:  b[p+2],
 			}
 		case PRIORITYSTLV:
 			glog.Infof("Priority Sub TLV")
+			if p >= len(b) {
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
+			}
 			sl = int(b[p])
 			p++
+			if sl < 1 {
+				return nil, fmt.Errorf("SR Policy priority sub-TLV too short: need at least 1 byte, have %d", sl)
+			}
+			if p+sl > len(b) {
+				return nil, fmt.Errorf("SR Policy priority sub-TLV truncated at offset %d: need %d bytes, have %d", p, sl, len(b)-p)
+			}
 			tlv.Priority = b[p]
 		case PATHNAMESTLV:
 			glog.Infof("Policy Candidate Path Name Sub TLV")
-			sl = int(b[p])
-			p++
+			// Per RFC 9256 Section 2.4.1, sub-TLV types 128-255 use 2-byte length.
+			if p+2 > len(b) {
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 2 bytes for length, have %d", st, p, len(b)-p)
+			}
+			sl = int(binary.BigEndian.Uint16(b[p : p+2]))
+			p += 2
+			if p+sl > len(b) {
+				return nil, fmt.Errorf("SR Policy pathname sub-TLV truncated at offset %d: need %d bytes, have %d", p, sl, len(b)-p)
+			}
 			tlv.PathName = string(b[p : p+sl])
 		default:
 			glog.Warningf("SR Policy Sub TLV %+v is not supported", st)
-			sl = int(b[p])
-			p++
+			// Per RFC 9256 Section 2.4.1, sub-TLV types 128-255 use 2-byte length.
+			if st >= 128 {
+				if p+2 > len(b) {
+					return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 2 bytes for length, have %d", st, p, len(b)-p)
+				}
+				sl = int(binary.BigEndian.Uint16(b[p : p+2]))
+				p += 2
+			} else {
+				if p >= len(b) {
+					return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
+				}
+				sl = int(b[p])
+				p++
+			}
+			if p+sl > len(b) {
+				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need %d bytes, have %d", st, p, sl, len(b)-p)
+			}
 		}
 		p += sl
 	}

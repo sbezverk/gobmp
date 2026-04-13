@@ -3,7 +3,7 @@ package bgp
 import (
 	"crypto/md5"
 	"encoding/binary"
-	"encoding/json"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -30,7 +30,7 @@ type Update struct {
 
 // GetAllAttributeID returns a slice of uint8 with all attribute type codes found in BGP Update
 func (up *Update) GetAllAttributeID() []uint8 {
-	attrs := make([]uint8, 0)
+	attrs := make([]uint8, 0, len(up.PathAttributes))
 	for _, attr := range up.PathAttributes {
 		attrs = append(attrs, attr.AttributeType)
 	}
@@ -40,13 +40,11 @@ func (up *Update) GetAllAttributeID() []uint8 {
 
 // GetBaseAttrHash calculates 16 bytes MD5 Hash of all available base attributes.
 func (up *Update) GetBaseAttrHash() string {
-	data, err := json.Marshal(&up.PathAttributes)
-	if err != nil {
-		data = []byte{0, 1, 0, 1, 0, 1, 0, 1}
+	h := md5.New()
+	for _, attr := range up.PathAttributes {
+		h.Write(attr.Attribute)
 	}
-	s := fmt.Sprintf("%x", md5.Sum(data))
-
-	return s
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // GetNLRI29 check for presence of NLRI 29 in the update and if exists, instantiate NLRI29 object

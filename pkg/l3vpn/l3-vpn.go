@@ -3,11 +3,21 @@ package l3vpn
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/tools"
+)
+
+// ErrEmptyNLRI is returned when L3VPN NLRI data has zero length,
+// signaling an End-of-RIB marker per RFC 4724 §2.
+var ErrEmptyNLRI = errors.New("NLRI length is 0")
+
+var (
+	compatLabel = []byte{0x80, 0x00, 0x00}
+	zeroLabel   = []byte{0x00, 0x00, 0x00}
 )
 
 // UnmarshalL3VPNNLRI parses VPNv4/VPNv6 NLRI according to the caller-provided pathID flag.
@@ -21,7 +31,7 @@ func UnmarshalL3VPNNLRI(b []byte, pathID bool, srv6 ...bool) (*base.MPNLRI, erro
 		glog.Infof("L3VPN NLRI Raw: %s, pathID: %t, srv6: %t", tools.MessageHex(b), pathID, srv6Flag)
 	}
 	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
+		return nil, ErrEmptyNLRI
 	}
 
 	// First attempt with the provided pathID flag
@@ -70,8 +80,8 @@ func parseL3VPNNLRI(b []byte, pathID bool, srv6Flag bool) (*base.MPNLRI, error) 
 			return nil, fmt.Errorf("not enough bytes for label/compat field at pos %d", p)
 		}
 		labelField := b[p : p+3]
-		if bytes.Equal(labelField, []byte{0x80, 0x00, 0x00}) ||
-			bytes.Equal(labelField, []byte{0x00, 0x00, 0x00}) {
+		if bytes.Equal(labelField, compatLabel) ||
+			bytes.Equal(labelField, zeroLabel) {
 			up.Label = nil
 			p += 3
 		} else {

@@ -143,6 +143,119 @@ func TestUnmarshalSRPolicyTLV(t *testing.T) {
 	}
 }
 
+func TestUnmarshalSRPolicyTLV_SubTLVBounds(t *testing.T) {
+	// Helper: wrap sub-TLV bytes in a valid tunnel type header
+	wrap := func(stlvBytes []byte) []byte {
+		hdr := make([]byte, 4)
+		binary.BigEndian.PutUint16(hdr[0:2], SRPOLICYTUNNELTYPE)
+		binary.BigEndian.PutUint16(hdr[2:4], uint16(len(stlvBytes)))
+		return append(hdr, stlvBytes...)
+	}
+
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{
+			name:  "segment list truncated length",
+			input: wrap([]byte{SEGMENTLISTSTLV}), // type byte only, no length
+		},
+		{
+			name: "segment list zero length",
+			input: wrap([]byte{
+				SEGMENTLISTSTLV,
+				0x00, 0x00, // Length: 0
+			}),
+		},
+		{
+			name: "segment list truncated value",
+			input: wrap([]byte{
+				SEGMENTLISTSTLV,
+				0x00, 0x20, // Length: 32 bytes but none available
+			}),
+		},
+		{
+			name:  "BSID no length byte",
+			input: wrap([]byte{BSIDSTLV}),
+		},
+		{
+			name: "BSID truncated value",
+			input: wrap([]byte{
+				BSIDSTLV,
+				0x10, // Length: 16 but 0 available
+			}),
+		},
+		{
+			name:  "preference no length byte",
+			input: wrap([]byte{PREFERENCESTLV}),
+		},
+		{
+			name: "preference truncated value",
+			input: wrap([]byte{
+				PREFERENCESTLV,
+				0x10, // Length: 16 but 0 available
+			}),
+		},
+		{
+			name:  "ENLP no length byte",
+			input: wrap([]byte{ENLPSTLV}),
+		},
+		{
+			name: "ENLP too short value",
+			input: wrap([]byte{
+				ENLPSTLV,
+				0x01, // Length: 1, need at least 3
+				0x00,
+			}),
+		},
+		{
+			name:  "priority no length byte",
+			input: wrap([]byte{PRIORITYSTLV}),
+		},
+		{
+			name:  "pathname no length byte",
+			input: wrap([]byte{PATHNAMESTLV}),
+		},
+		{
+			name:  "unknown type <128 no length byte",
+			input: wrap([]byte{0x63}), // type 99
+		},
+		{
+			name: "unknown type <128 truncated value",
+			input: wrap([]byte{
+				0x63, // Unknown type 99
+				0x10, // Length: 16 but 0 available
+			}),
+		},
+		{
+			name:  "unknown type >=128 no length bytes",
+			input: wrap([]byte{0xFF}), // type 255, needs 2-byte length
+		},
+		{
+			name: "unknown type >=128 only one length byte",
+			input: wrap([]byte{
+				0xFF, // Unknown type 255
+				0x00, // Only 1 of 2 length bytes
+			}),
+		},
+		{
+			name: "unknown type >=128 truncated value",
+			input: wrap([]byte{
+				0xFF,       // Unknown type 255
+				0x00, 0x10, // Length: 16 but 0 available
+			}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalSRPolicyTLV(tt.input)
+			if err == nil {
+				t.Fatal("expected error for truncated sub-TLV")
+			}
+		})
+	}
+}
+
 // ============================================================================
 // Additional UnmarshalSRPolicyTLV Tests - Wire Format Parsing
 // ============================================================================
@@ -430,9 +543,9 @@ func TestUnmarshalSRPolicyTLV_PathName(t *testing.T) {
 			name: "PathName 'primary-path'",
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
-				0x00, 0x0E, // Length: 14 bytes
-				0x81, // Sub-TLV Type: PathName (129)
-				0x0C, // Length: 12 bytes
+				0x00, 0x0F, // Length: 15 bytes (1 type + 2 len + 12 value)
+				0x81,       // Sub-TLV Type: PathName (129)
+				0x00, 0x0C, // Length: 12 bytes (2-byte per RFC 9256 §2.4.1)
 				// "primary-path"
 				0x70, 0x72, 0x69, 0x6D, 0x61, 0x72, 0x79, 0x2D, 0x70, 0x61, 0x74, 0x68,
 			},
@@ -442,9 +555,9 @@ func TestUnmarshalSRPolicyTLV_PathName(t *testing.T) {
 			name: "PathName 'backup'",
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
-				0x00, 0x08, // Length: 8 bytes
-				0x81, // Sub-TLV Type: PathName (129)
-				0x06, // Length: 6 bytes
+				0x00, 0x09, // Length: 9 bytes (1 type + 2 len + 6 value)
+				0x81,       // Sub-TLV Type: PathName (129)
+				0x00, 0x06, // Length: 6 bytes (2-byte per RFC 9256 §2.4.1)
 				// "backup"
 				0x62, 0x61, 0x63, 0x6B, 0x75, 0x70,
 			},
@@ -454,9 +567,9 @@ func TestUnmarshalSRPolicyTLV_PathName(t *testing.T) {
 			name: "PathName single char 'A'",
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
-				0x00, 0x03, // Length: 3 bytes
-				0x81, // Sub-TLV Type: PathName (129)
-				0x01, // Length: 1 byte
+				0x00, 0x04, // Length: 4 bytes (1 type + 2 len + 1 value)
+				0x81,       // Sub-TLV Type: PathName (129)
+				0x00, 0x01, // Length: 1 byte (2-byte per RFC 9256 §2.4.1)
 				0x41, // "A"
 			},
 			wantPathName: "A",
@@ -465,9 +578,9 @@ func TestUnmarshalSRPolicyTLV_PathName(t *testing.T) {
 			name: "PathName empty",
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
-				0x00, 0x02, // Length: 2 bytes
-				0x81, // Sub-TLV Type: PathName (129)
-				0x00, // Length: 0 bytes
+				0x00, 0x03, // Length: 3 bytes (1 type + 2 len)
+				0x81,       // Sub-TLV Type: PathName (129)
+				0x00, 0x00, // Length: 0 bytes (2-byte per RFC 9256 §2.4.1)
 			},
 			wantPathName: "",
 		},
@@ -499,23 +612,33 @@ func TestUnmarshalSRPolicyTLV_UnknownSubTLV(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Unknown sub-TLV 200 - should skip gracefully",
+			name: "Unknown sub-TLV 200 (>=128) - should skip gracefully",
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
-				0x00, 0x06, // Length: 6 bytes
-				0xC8,                   // Sub-TLV Type: 200 (unknown)
-				0x04,                   // Length: 4 bytes
+				0x00, 0x07, // Length: 7 bytes (1 type + 2 len + 4 value)
+				0xC8,       // Sub-TLV Type: 200 (unknown, >=128 so 2-byte length)
+				0x00, 0x04, // Length: 4 bytes (2-byte per RFC 9256 §2.4.1)
 				0x01, 0x02, 0x03, 0x04, // Data
 			},
 			wantErr: false, // Should skip unknown sub-TLVs
 		},
 		{
-			name: "Unknown sub-TLV 99 with zero length",
+			name: "Unknown sub-TLV 99 (<128) with zero length",
 			input: []byte{
 				0x00, 0x0F, // Tunnel Type: 15
 				0x00, 0x02, // Length: 2 bytes
-				0x63, // Sub-TLV Type: 99 (unknown)
+				0x63, // Sub-TLV Type: 99 (unknown, <128 so 1-byte length)
 				0x00, // Length: 0 bytes
+			},
+			wantErr: false,
+		},
+		{
+			name: "Unknown sub-TLV 250 (>=128) with zero length",
+			input: []byte{
+				0x00, 0x0F, // Tunnel Type: 15
+				0x00, 0x03, // Length: 3 bytes (1 type + 2 len)
+				0xFA,       // Sub-TLV Type: 250 (unknown, >=128 so 2-byte length)
+				0x00, 0x00, // Length: 0 bytes
 			},
 			wantErr: false,
 		},
@@ -544,7 +667,7 @@ func TestUnmarshalSRPolicyTLV_MultipleSubTLVs(t *testing.T) {
 	// Preference + BSID + ENLP + Priority + PathName
 	input := []byte{
 		0x00, 0x0F, // Tunnel Type: 15
-		0x00, 0x1B, // Length: 27 bytes
+		0x00, 0x1C, // Length: 28 bytes (PathName uses 2-byte length now)
 
 		// Preference sub-TLV
 		0x0C,                   // Type: Preference (12)
@@ -571,9 +694,9 @@ func TestUnmarshalSRPolicyTLV_MultipleSubTLVs(t *testing.T) {
 		0x01, // Length: 1 byte
 		0x32, // Priority: 50
 
-		// PathName sub-TLV
-		0x81,                   // Type: PathName (129)
-		0x04,                   // Length: 4 bytes
+		// PathName sub-TLV (2-byte length per RFC 9256 §2.4.1)
+		0x81,       // Type: PathName (129)
+		0x00, 0x04, // Length: 4 bytes
 		0x6D, 0x61, 0x69, 0x6E, // "main"
 	}
 
