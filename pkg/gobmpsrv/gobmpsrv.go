@@ -21,12 +21,12 @@ import (
 // maxBMPMessagePayload is the maximum allowed BMP message payload size (1 MB).
 const maxBMPMessagePayload = 1 << 20
 
-// stableSessionThreshold is the minimum duration a bmpWorker session must run
-// before its session is considered long-lived and retryDelay is reset to 1 s.
+// stableSessionThreshold is the minimum duration the bmpWorker session must run
+// for before the session is considered long-lived and retryDelay is reset to 1 s.
 // The classification is purely duration-based: any session shorter than this
 // — regardless of why it ended — is treated as unstable (e.g. a proxy that
 // accepts TCP but drops the BMP session immediately) and causes retryDelay to
-// double.  Declared as a var so tests can shorten it without a real
+// double. Declared as a var so tests can shorten it without a real
 // 30-second wall-clock wait.
 var stableSessionThreshold = 30 * time.Second
 
