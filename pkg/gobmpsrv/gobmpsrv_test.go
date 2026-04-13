@@ -1296,3 +1296,79 @@ func TestConnectSpeaker_ClosingFlag_ExitsAfterSuccessfulDial(t *testing.T) {
 	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 1 * time.Second}
 	assertExitsWithin(t, runConnectSpeaker(srv, speaker), 3*time.Second)
 }
+
+// TestConnectSpeaker_ShortLivedSession_BackoffDoubles verifies that when
+// bmpWorker exits quickly (< 30 s — simulating a proxy that accepts TCP but
+// drops the BMP session), retryDelay is doubled rather than reset.
+func TestConnectSpeaker_ShortLivedSession_BackoffDoubles(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 1 * time.Second}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+	// Drop the connection immediately — session lasts < 30 s.
+	_ = conn.Close()
+
+	// Give connectSpeaker time to process the disconnect and apply backoff.
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	delay := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	if delay != 2*time.Second {
+		t.Errorf("retryDelay after short-lived disconnect = %v, want 2s (doubled from 1s)", delay)
+	}
+}
+
+// TestConnectSpeaker_ShortLivedSession_BackoffCapped verifies that the
+// doubled retryDelay is capped at 5 minutes, even when the raw double would
+// exceed that ceiling.
+func TestConnectSpeaker_ShortLivedSession_BackoffCapped(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	// retryDelay is already at 4 minutes; doubling gives 8 minutes which
+	// exceeds the 5-minute cap.
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 4 * time.Minute}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+	// Drop the connection immediately — session lasts < 30 s.
+	_ = conn.Close()
+
+	// Give connectSpeaker time to process the disconnect and apply backoff.
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	delay := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	if delay != 5*time.Minute {
+		t.Errorf("retryDelay after short-lived disconnect = %v, want 5m (capped from 8m)", delay)
+	}
+}

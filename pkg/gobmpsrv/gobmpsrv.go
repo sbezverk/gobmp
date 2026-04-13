@@ -420,7 +420,7 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 		// session), apply exponential backoff to avoid a tight retry loop.
 		speaker.mu.Lock()
 		if time.Since(connectedAt) >= 30*time.Second {
-			// Stable session — reset backoff on clean disconnect.
+			// Stable session — reset backoff to allow a fast reconnect.
 			speaker.retryDelay = 1 * time.Second
 		} else {
 			// Unstable / proxy-terminated session — back off.
