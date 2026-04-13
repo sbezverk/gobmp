@@ -1219,7 +1219,7 @@ func TestConnectSpeaker_BackoffNotResetDuringActiveSession(t *testing.T) {
 	speaker.mu.Unlock()
 
 	// retryDelay must be unchanged: the reset only happens post-disconnect
-	// for sessions that lasted ≥ 30s.
+	// for sessions that lasted ≥ stableSessionThreshold.
 	if delay != 3*time.Minute {
 		t.Errorf("retryDelay during active session = %v, want 3m (should not be reset at connect time)", delay)
 	}
