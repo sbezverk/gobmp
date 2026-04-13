@@ -1186,9 +1186,12 @@ func TestConnectSpeaker_NextAttemptInFutureAfterFailure(t *testing.T) {
 	}
 }
 
-// TestConnectSpeaker_BackoffResetOnSuccess verifies that retryDelay is reset
-// to 1 second after a successful dial, regardless of how high it had grown.
-func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
+// TestConnectSpeaker_BackoffNotResetDuringActiveSession verifies that
+// retryDelay is NOT reset at connection time — it is only reset after
+// bmpWorker exits following a stable session (≥ stableSessionThreshold).
+// This prevents a proxy that accepts TCP but immediately drops the BMP
+// session from resetting the backoff and causing a 1-second retry loop.
+func TestConnectSpeaker_BackoffNotResetDuringActiveSession(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
@@ -1198,7 +1201,7 @@ func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
 	srv, cleanup := newConnectSpeakerSrv()
 	defer cleanup()
 
-	// Pre-set a high retryDelay to verify it gets reset on success.
+	// Pre-set a high retryDelay; it must NOT be reset while the session is live.
 	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
 	done := runConnectSpeaker(srv, speaker)
 
@@ -1215,8 +1218,10 @@ func TestConnectSpeaker_BackoffResetOnSuccess(t *testing.T) {
 	delay := speaker.retryDelay
 	speaker.mu.Unlock()
 
-	if delay != 1*time.Second {
-		t.Errorf("retryDelay after successful connect = %v, want 1s", delay)
+	// retryDelay must be unchanged: the reset only happens post-disconnect
+	// for sessions that lasted ≥ stableSessionThreshold.
+	if delay != 3*time.Minute {
+		t.Errorf("retryDelay during active session = %v, want 3m (should not be reset at connect time)", delay)
 	}
 
 	cleanup()
@@ -1290,4 +1295,128 @@ func TestConnectSpeaker_ClosingFlag_ExitsAfterSuccessfulDial(t *testing.T) {
 
 	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 1 * time.Second}
 	assertExitsWithin(t, runConnectSpeaker(srv, speaker), 3*time.Second)
+}
+
+// TestConnectSpeaker_ShortLivedSession_BackoffDoubles verifies that when
+// bmpWorker exits before stableSessionThreshold elapses (simulating a proxy
+// that accepts TCP but drops the BMP session), retryDelay is doubled rather
+// than reset.
+func TestConnectSpeaker_ShortLivedSession_BackoffDoubles(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 1 * time.Second}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+	// Drop the connection immediately — session lasts < stableSessionThreshold.
+	_ = conn.Close()
+
+	// Give connectSpeaker time to process the disconnect and apply backoff.
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	delay := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	if delay != 2*time.Second {
+		t.Errorf("retryDelay after short-lived disconnect = %v, want 2s (doubled from 1s)", delay)
+	}
+}
+
+// TestConnectSpeaker_ShortLivedSession_BackoffCapped verifies that the
+// doubled retryDelay is capped at 5 minutes, even when the raw double would
+// exceed that ceiling.
+func TestConnectSpeaker_ShortLivedSession_BackoffCapped(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	// retryDelay is already at 4 minutes; doubling gives 8 minutes which
+	// exceeds the 5-minute cap.
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 4 * time.Minute}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+	// Drop the connection immediately — session lasts < stableSessionThreshold.
+	_ = conn.Close()
+
+	// Give connectSpeaker time to process the disconnect and apply backoff.
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	delay := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	if delay != 5*time.Minute {
+		t.Errorf("retryDelay after short-lived disconnect = %v, want 5m (capped from 8m)", delay)
+	}
+}
+
+// TestConnectSpeaker_StableSession_BackoffResets verifies that when bmpWorker
+// runs for at least stableSessionThreshold before disconnecting, retryDelay is
+// reset to 1 s regardless of how high it had grown.
+// The test temporarily lowers stableSessionThreshold to 50 ms so no real
+// wall-clock wait is necessary.
+func TestConnectSpeaker_StableSession_BackoffResets(t *testing.T) {
+	// Shorten the threshold for this test and restore it on exit.
+	orig := stableSessionThreshold
+	stableSessionThreshold = 50 * time.Millisecond
+	defer func() { stableSessionThreshold = orig }()
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	// Pre-set a high retryDelay; it should be reset after a stable session.
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+
+	// Hold the connection open long enough to exceed stableSessionThreshold.
+	time.Sleep(150 * time.Millisecond)
+	_ = conn.Close()
+
+	// Give connectSpeaker time to process the disconnect and compute backoff.
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	delay := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	if delay != 1*time.Second {
+		t.Errorf("retryDelay after stable session = %v, want 1s (reset from 3m)", delay)
+	}
 }
