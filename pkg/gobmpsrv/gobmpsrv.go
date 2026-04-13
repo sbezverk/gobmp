@@ -22,10 +22,12 @@ import (
 const maxBMPMessagePayload = 1 << 20
 
 // stableSessionThreshold is the minimum duration a bmpWorker session must run
-// before its disconnect is treated as a clean drop (backoff reset to 1 s).
-// Sessions shorter than this are assumed unstable (e.g. proxy drop) and cause
-// the retryDelay to double.  Declared as a var so tests can shorten it without
-// a real 30-second wall-clock wait.
+// before its session is considered long-lived and retryDelay is reset to 1 s.
+// The classification is purely duration-based: any session shorter than this
+// — regardless of why it ended — is treated as unstable (e.g. a proxy that
+// accepts TCP but drops the BMP session immediately) and causes retryDelay to
+// double.  Declared as a var so tests can shorten it without a real
+// 30-second wall-clock wait.
 var stableSessionThreshold = 30 * time.Second
 
 // BMPServer defines methods to manage BMP Server
