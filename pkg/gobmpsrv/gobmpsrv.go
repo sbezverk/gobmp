@@ -3,6 +3,7 @@ package gobmpsrv
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -473,6 +474,9 @@ func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 	}
 	if cfg.Publisher == nil {
 		return nil, errors.New("publisher cannot be nil")
+	}
+	if cfg.MaxPassiveConnections < 0 {
+		return nil, fmt.Errorf("max_passive_connections must be >= 0, got %d", cfg.MaxPassiveConnections)
 	}
 	bmpSrv := bmpServer{
 		isActive:    cfg.ActiveMode,

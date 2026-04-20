@@ -1412,6 +1412,24 @@ func TestNewBMPServer_MaxPassiveConnections_Zero_NoConnSem(t *testing.T) {
 	srv.Stop()
 }
 
+// TestNewBMPServer_MaxPassiveConnections_Negative rejects a negative
+// MaxPassiveConnections before it reaches make(chan struct{}, n), which would panic.
+func TestNewBMPServer_MaxPassiveConnections_Negative(t *testing.T) {
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:             newMockPublisher(),
+		MaxPassiveConnections: -1,
+	})
+	if err == nil {
+		if srv != nil {
+			srv.Stop()
+		}
+		t.Fatal("expected error for negative MaxPassiveConnections, got nil")
+	}
+	if srv != nil {
+		t.Errorf("expected nil server on validation error, got %v", srv)
+	}
+}
+
 // TestConnectionLimit_RejectsAtCapacity verifies that connections beyond
 // MaxPassiveConnections are rejected immediately.
 func TestConnectionLimit_RejectsAtCapacity(t *testing.T) {
@@ -1464,6 +1482,14 @@ func TestBMPServer_ConnectionLimit_ServerRejects(t *testing.T) {
 	srv.connSem <- struct{}{}
 
 	srv.Start()
+	defer func() {
+		// Drain the semaphore so Stop() does not hang waiting for bmpWorker exits.
+		select {
+		case <-srv.connSem:
+		default:
+		}
+		srv.Stop()
+	}()
 
 	port := ln.Addr().(*net.TCPAddr).Port
 	client, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(port))
@@ -1472,17 +1498,18 @@ func TestBMPServer_ConnectionLimit_ServerRejects(t *testing.T) {
 	}
 	defer func() { _ = client.Close() }()
 
-	// Server should close the connection immediately — client reads EOF or error.
+	// Server should close the connection immediately — client reads EOF or reset,
+	// not a timeout. A timeout would mean the server never closed the connection.
 	_ = client.SetReadDeadline(time.Now().Add(time.Second))
 	buf := make([]byte, 1)
 	_, err = client.Read(buf)
 	if err == nil {
-		t.Error("expected connection to be rejected, but read succeeded")
+		t.Fatal("expected connection to be rejected, but read succeeded")
 	}
-
-	// Drain the semaphore so Stop() does not hang waiting for bmpWorker exits.
-	<-srv.connSem
-	srv.Stop()
+	var nerr net.Error
+	if errors.As(err, &nerr) && nerr.Timeout() {
+		t.Fatalf("expected server to close connection, but read timed out: %v", err)
+	}
 }
 
 // TestStartWorker_WhenClosing_ReleasesSemaphore verifies the semaphore slot
