@@ -565,7 +565,7 @@ func TestStartWorker_WhenClosing_ClosesConnection(t *testing.T) {
 		publisher: newMockPublisher(),
 	}
 	srv.closing = true // pre-set as Stop() would have done
-	srv.startWorker(serverConn)
+	srv.startWorker(serverConn, false)
 
 	// serverConn must be closed by startWorker; reading from clientConn returns an error.
 	_ = clientConn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
@@ -1528,7 +1528,7 @@ func TestStartWorker_WhenClosing_ReleasesSemaphore(t *testing.T) {
 	serverConn, clientConn := net.Pipe()
 	defer func() { _ = clientConn.Close() }()
 
-	srv.startWorker(serverConn)
+	srv.startWorker(serverConn, true)
 
 	// Semaphore should be drained (released by startWorker's early-return path).
 	select {
@@ -1554,7 +1554,7 @@ func TestStartWorker_ConnSem_ReleasedOnWorkerExit(t *testing.T) {
 	// Simulate server() acquiring the semaphore before startWorker.
 	srv.connSem <- struct{}{}
 
-	srv.startWorker(serverConn)
+	srv.startWorker(serverConn, true)
 
 	// Closing the client causes bmpWorker to see io.EOF and return,
 	// triggering the defer that releases the semaphore slot.

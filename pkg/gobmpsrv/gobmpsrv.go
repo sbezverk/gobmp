@@ -128,9 +128,11 @@ func (srv *bmpServer) server() {
 		// Enforce connection limit when a semaphore is configured.
 		// A nil connSem means no limit — skip the select so tests and
 		// in-package construction paths do not reject every connection.
+		hasSem := false
 		if srv.connSem != nil {
 			select {
 			case srv.connSem <- struct{}{}:
+				hasSem = true
 			default:
 				glog.Warningf("connection limit reached (%d), rejecting %v", cap(srv.connSem), client.RemoteAddr())
 				_ = client.Close()
@@ -138,12 +140,17 @@ func (srv *bmpServer) server() {
 			}
 		}
 		glog.V(5).Infof("client %+v accepted, calling bmpWorker", client.RemoteAddr())
-		srv.startWorker(client)
+		srv.startWorker(client, hasSem)
 	}
 }
 
 // startWorker registers the new connection with the WaitGroup and the active
 // client set, then spawns a bmpWorker goroutine.
+//
+// hasSem records whether the caller already acquired a connSem slot for this
+// client. Only the caller that acquired a slot is allowed to release it:
+// draining the channel on every call with connSem != nil would consume tokens
+// that belong to other in-flight workers.
 //
 // Both the wg.Add and the map insertion are performed under mu, the same lock
 // that Stop() holds when it sets closing=true and iterates the clients map.
@@ -155,13 +162,12 @@ func (srv *bmpServer) server() {
 //   - If Stop() acquires mu first (sets closing=true, iterates) → startWorker
 //     sees closing=true, closes the connection immediately, and returns without
 //     touching the WaitGroup.
-func (srv *bmpServer) startWorker(client net.Conn) {
+func (srv *bmpServer) startWorker(client net.Conn, hasSem bool) {
 	srv.mu.Lock()
 	if srv.closing {
 		srv.mu.Unlock()
 		_ = client.Close()
-		// Release semaphore slot acquired by server() before this call.
-		if srv.connSem != nil {
+		if hasSem {
 			<-srv.connSem
 		}
 		return
@@ -175,8 +181,7 @@ func (srv *bmpServer) startWorker(client net.Conn) {
 			delete(srv.clients, client)
 			srv.mu.Unlock()
 			srv.wg.Done()
-			// Release connection semaphore slot (passive mode only).
-			if srv.connSem != nil {
+			if hasSem {
 				<-srv.connSem
 			}
 		}()
