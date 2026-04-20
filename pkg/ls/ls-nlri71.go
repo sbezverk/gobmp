@@ -17,7 +17,7 @@ type Element struct {
 	Type   uint16
 	Length uint16 // Not including Type and itself
 	LS     interface{}
-	PathID uint32 // Add Path Path-ID (RFC 7911 §3); 0 when Add Path is not in use
+	PathID uint32 // Add Path Path-ID (RFC 7911 §3); populated only when Add Path parsing is enabled, otherwise zero-valued
 }
 
 // NLRI71 defines Link State NLRI object for SAFI 71

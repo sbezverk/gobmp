@@ -224,8 +224,7 @@ func TestUnmarshalLSNLRI71_RFC7752_ErrorCases(t *testing.T) {
 			input:   []byte{},
 			wantErr: true,
 		},
-		// Note: Truncated input causes panic in current implementation
-		// This is acceptable for malformed BGP messages
+		// Truncated input is caught by bounds checks and returns a truncation error.
 		{
 			name: "Unknown NLRI type (stored as raw)",
 			input: []byte{
