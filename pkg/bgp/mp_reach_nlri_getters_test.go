@@ -583,8 +583,8 @@ func TestMPReachNLRI_GetNLRI71_NoAddPath(t *testing.T) {
 	if nlri == nil || len(nlri.NLRI) == 0 {
 		t.Fatal("GetNLRI71() returned nil or empty NLRI")
 	}
-	if nlri.PathID != 0 {
-		t.Errorf("expected PathID=0, got %d", nlri.PathID)
+	if nlri.NLRI[0].PathID != 0 {
+		t.Errorf("expected PathID=0, got %d", nlri.NLRI[0].PathID)
 	}
 }
 
@@ -601,8 +601,8 @@ func TestMPReachNLRI_GetNLRI71_WithAddPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNLRI71() with Add Path unexpected error: %v", err)
 	}
-	if nlri.PathID != 7 {
-		t.Errorf("expected PathID=7, got %d", nlri.PathID)
+	if nlri.NLRI[0].PathID != 7 {
+		t.Errorf("expected PathID=7, got %d", nlri.NLRI[0].PathID)
 	}
 	if len(nlri.NLRI) == 0 {
 		t.Fatal("GetNLRI71() with Add Path returned empty NLRI")

@@ -174,9 +174,6 @@ func TestUnmarshalLSNLRI71_AddPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UnmarshalLSNLRI71 with Add Path failed: %v", err)
 	}
-	if nlri.PathID != 1 {
-		t.Fatalf("expected PathID=1, got %d", nlri.PathID)
-	}
 	if len(nlri.NLRI) != 1 {
 		t.Fatalf("expected 1 NLRI element, got %d", len(nlri.NLRI))
 	}
@@ -193,7 +190,7 @@ func TestUnmarshalLSNLRI71_AddPath(t *testing.T) {
 	if link.RemoteNode == nil {
 		t.Fatal("RemoteNode should not be nil")
 	}
-	t.Logf("Add Path Link NLRI: PathID=%d local=%+v remote=%+v", nlri.PathID, link.LocalNode, link.RemoteNode)
+	t.Logf("Add Path Link NLRI: local=%+v remote=%+v", link.LocalNode, link.RemoteNode)
 }
 
 // TestUnmarshalLSNLRI71_Type3_IPv4Prefix covers the case=3 (IPv4 Prefix NLRI) branch.
@@ -355,10 +352,6 @@ func TestUnmarshalLSNLRI71_AddPath_MultiNLRI(t *testing.T) {
 	}
 	if nlri.NLRI[1].Type != 1 {
 		t.Errorf("NLRI[1]: expected type=1 (Node), got %d — Path-ID misread as TLV?", nlri.NLRI[1].Type)
-	}
-	// NLRI71.PathID should reflect the last element's Path-ID
-	if nlri.PathID != 2 {
-		t.Errorf("expected NLRI71.PathID=2 (last seen), got %d", nlri.PathID)
 	}
 	t.Logf("Multi-NLRI Add Path: NLRI[0].PathID=%d type=%d, NLRI[1].PathID=%d type=%d",
 		nlri.NLRI[0].PathID, nlri.NLRI[0].Type, nlri.NLRI[1].PathID, nlri.NLRI[1].Type)
