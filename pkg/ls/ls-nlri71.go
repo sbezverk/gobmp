@@ -36,6 +36,19 @@ func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
+	// Some router implementations (e.g. IOS-XR) prepend a 4-byte vendor-specific
+	// prefix before the standard RFC 7752 NLRI TLVs. Type 0 is unassigned and not
+	// a valid BGP-LS NLRI type, so when it appears at the start and the bytes at
+	// offset 4 carry a known NLRI type (1–6), treat the first 4 bytes as an opaque
+	// vendor prefix and skip them.
+	if len(b) >= 6 && binary.BigEndian.Uint16(b[0:2]) == 0 {
+		if t := binary.BigEndian.Uint16(b[4:6]); t >= 1 && t <= 6 {
+			if glog.V(5) {
+				glog.Infof("NLRI71: skipping 4-byte vendor prefix %s", tools.MessageHex(b[0:4]))
+			}
+			b = b[4:]
+		}
+	}
 	ls := NLRI71{
 		NLRI: make([]Element, 0),
 	}
