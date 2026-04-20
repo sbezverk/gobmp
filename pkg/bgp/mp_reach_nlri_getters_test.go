@@ -557,3 +557,54 @@ func TestMPReachNLRI_GetNLRIUnicast_match(t *testing.T) {
 		t.Fatal("GetNLRIUnicast() returned nil")
 	}
 }
+
+// nodeNLRI71Payload is a minimal valid BGP-LS Node NLRI (type=1) byte slice
+// used by GetNLRI71 tests. It matches the RFC 7752 Node NLRI test data.
+var nodeNLRI71Payload = []byte{
+	0x00, 0x01, 0x00, 0x27, // type=1 (Node), length=39
+	0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // proto=2, ident=0
+	0x01, 0x00, 0x00, 0x1a, // LocalNode desc type=256, len=26
+	0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0xfd, 0xe8, // AS=65000
+	0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, // BGP-LS ID=0
+	0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Router-ID
+}
+
+func TestMPReachNLRI_GetNLRI71_NoAddPath(t *testing.T) {
+	mp := &MPReachNLRI{
+		AddressFamilyID:    16388,
+		SubAddressFamilyID: 71,
+		NLRI:               nodeNLRI71Payload,
+		addPath:            map[int]bool{71: false},
+	}
+	nlri, err := mp.GetNLRI71()
+	if err != nil {
+		t.Fatalf("GetNLRI71() unexpected error: %v", err)
+	}
+	if nlri == nil || len(nlri.NLRI) == 0 {
+		t.Fatal("GetNLRI71() returned nil or empty NLRI")
+	}
+	if nlri.NLRI[0].PathID != 0 {
+		t.Errorf("expected PathID=0, got %d", nlri.NLRI[0].PathID)
+	}
+}
+
+func TestMPReachNLRI_GetNLRI71_WithAddPath(t *testing.T) {
+	// Prepend 4-byte Path-ID=7 before the Node NLRI payload
+	payload := append([]byte{0x00, 0x00, 0x00, 0x07}, nodeNLRI71Payload...)
+	mp := &MPReachNLRI{
+		AddressFamilyID:    16388,
+		SubAddressFamilyID: 71,
+		NLRI:               payload,
+		addPath:            map[int]bool{71: true},
+	}
+	nlri, err := mp.GetNLRI71()
+	if err != nil {
+		t.Fatalf("GetNLRI71() with Add Path unexpected error: %v", err)
+	}
+	if len(nlri.NLRI) == 0 {
+		t.Fatal("GetNLRI71() with Add Path returned empty NLRI")
+	}
+	if nlri.NLRI[0].PathID != 7 {
+		t.Errorf("expected PathID=7, got %d", nlri.NLRI[0].PathID)
+	}
+}
