@@ -142,9 +142,9 @@ func TestUnmarshalLSNLRI71_TruncatedValue(t *testing.T) {
 	}
 }
 
-// TestUnmarshalLSNLRI71_AddPath verifies that when Add Path (RFC 7911) is enabled
-// for BGP-LS SAFI 71, the leading 4-byte Path-ID is consumed and stored in
-// NLRI71.PathID rather than being misinterpreted as an NLRI TLV.
+// TestUnmarshalLSNLRI71_AddPath verifies that when Add Path (RFC 7911 §3) is enabled
+// for BGP-LS SAFI 71, the leading 4-byte Path-ID of each NLRI entry is consumed and
+// stored in nlri.NLRI[i].PathID rather than being misinterpreted as an NLRI TLV header.
 // This covers the real-world case reported where IOS-XR sends Path-ID=1
 // prepended to a Link NLRI (IS-IS L1, local 01:68:02:54:00:11, remote 01:68:02:54:00:01).
 func TestUnmarshalLSNLRI71_AddPath(t *testing.T) {
@@ -176,6 +176,9 @@ func TestUnmarshalLSNLRI71_AddPath(t *testing.T) {
 	}
 	if len(nlri.NLRI) != 1 {
 		t.Fatalf("expected 1 NLRI element, got %d", len(nlri.NLRI))
+	}
+	if nlri.NLRI[0].PathID != 1 {
+		t.Fatalf("expected nlri.NLRI[0].PathID=1, got %d", nlri.NLRI[0].PathID)
 	}
 	if nlri.NLRI[0].Type != 2 {
 		t.Fatalf("expected Link NLRI type 2, got %d", nlri.NLRI[0].Type)

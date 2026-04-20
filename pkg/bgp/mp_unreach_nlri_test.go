@@ -600,10 +600,10 @@ func TestMPUnReachNLRI_GetNLRI71_WithAddPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNLRI71() with Add Path unexpected error: %v", err)
 	}
-	if nlri.NLRI[0].PathID != 3 {
-		t.Errorf("expected PathID=3, got %d", nlri.NLRI[0].PathID)
-	}
 	if len(nlri.NLRI) == 0 {
 		t.Fatal("GetNLRI71() with Add Path returned empty NLRI")
+	}
+	if nlri.NLRI[0].PathID != 3 {
+		t.Errorf("expected PathID=3, got %d", nlri.NLRI[0].PathID)
 	}
 }
