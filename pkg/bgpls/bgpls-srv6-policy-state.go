@@ -1400,21 +1400,25 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 // MarshalJSON serializes SRSegment into a slice of bytes
 func (s *SRSegment) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Segment SegmentType `json:"segment_type"`
-		FlagS   bool        `json:"s_flag"`
-		FlagE   bool        `json:"e_flag"`
-		FlagV   bool        `json:"v_flag"`
-		FlagR   bool        `json:"r_flag"`
-		FlagA   bool        `json:"a_flag"`
-		SID     SID         `json:"sid"`
+		Segment           SegmentType                `json:"segment_type"`
+		FlagS             bool                       `json:"s_flag"`
+		FlagE             bool                       `json:"e_flag"`
+		FlagV             bool                       `json:"v_flag"`
+		FlagR             bool                       `json:"r_flag"`
+		FlagA             bool                       `json:"a_flag"`
+		SID               SID                        `json:"sid"`
+		SegmentDescriptor SegmentDescriptor          `json:"segment_descriptor,omitempty"`
+		SubTLV            map[uint16]SRSegmentSubTLV `json:"subtlv,omitempty"`
 	}{
-		Segment: s.Segment,
-		FlagS:   s.FlagS,
-		FlagE:   s.FlagE,
-		FlagV:   s.FlagV,
-		FlagR:   s.FlagR,
-		FlagA:   s.FlagA,
-		SID:     s.SID,
+		Segment:           s.Segment,
+		FlagS:             s.FlagS,
+		FlagE:             s.FlagE,
+		FlagV:             s.FlagV,
+		FlagR:             s.FlagR,
+		FlagA:             s.FlagA,
+		SID:               s.SID,
+		SegmentDescriptor: s.SegmentDescriptor,
+		SubTLV:            s.SubTLV,
 	})
 }
 

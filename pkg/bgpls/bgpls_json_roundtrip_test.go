@@ -524,8 +524,8 @@ func TestUnmarshalSRSegmentListSubTLV(t *testing.T) {
 		if !ok {
 			t.Fatalf("value type = %T, want *SRSegment", got[0])
 		}
-		if seg.Segment != 1 {
-			t.Errorf("SegmentType = %d, want 1", seg.Segment)
+		if seg.Segment != SegmentType1 {
+			t.Errorf("SegmentType = %d, want %d", seg.Segment, SegmentType1)
 		}
 	})
 
