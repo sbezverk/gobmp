@@ -31,7 +31,7 @@ type NLRI71 struct {
 
 // UnmarshalLSNLRI71 builds Link State NLRI object for SAFI 71.
 // When pathID is true the first four bytes are consumed as the Add Path
-// Path-ID (RFC 7911) and stored in NLRI71.PathID.
+// Path-ID (RFC 7911 §3) and stored in NLRI71.PathID.
 func UnmarshalLSNLRI71(b []byte, pathID bool) (*NLRI71, error) {
 	if glog.V(6) {
 		glog.Infof("LSNLRI71 Raw: %s ", tools.MessageHex(b))
@@ -42,14 +42,14 @@ func UnmarshalLSNLRI71(b []byte, pathID bool) (*NLRI71, error) {
 	ls := NLRI71{
 		NLRI: make([]Element, 0),
 	}
-	if pathID {
-		if len(b) < 4 {
-			return nil, fmt.Errorf("NLRI71 truncated: need 4 bytes for Add Path Path-ID, have %d", len(b))
-		}
-		ls.PathID = binary.BigEndian.Uint32(b[0:4])
-		b = b[4:]
-	}
 	for p := 0; p < len(b); {
+		if pathID {
+			if len(b) < 4 {
+				return nil, fmt.Errorf("NLRI71 truncated: need 4 bytes for Add Path Path-ID, have %d", len(b))
+			}
+			ls.PathID = binary.BigEndian.Uint32(b[0:4])
+			b = b[4:]
+		}
 		if p+4 > len(b) {
 			return nil, fmt.Errorf("NLRI71 truncated at offset %d: need 4 bytes for TLV header, have %d", p, len(b)-p)
 		}
