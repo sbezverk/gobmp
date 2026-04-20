@@ -99,7 +99,8 @@ func (mp *MPReachNLRI) GetNextHop() string {
 // GetNLRI71 check for presence of NLRI 71 in the NLRI 14 NLRI data and if exists, instantiate NLRI71 object
 func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 	if mp.AddressFamilyID == 16388 && mp.SubAddressFamilyID == 71 {
-		nlri71, err := ls.UnmarshalLSNLRI71(mp.NLRI)
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		nlri71, err := ls.UnmarshalLSNLRI71(mp.NLRI, pathID)
 		if err != nil {
 			return nil, err
 		}

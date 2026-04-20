@@ -26,31 +26,28 @@ type NLRI71 struct {
 	Length uint16 // Not including Type and itself
 	LS     []byte
 	NLRI   []Element
+	PathID uint32 // Add Path Path-ID (RFC 7911), 0 when Add Path is not in use
 }
 
-// UnmarshalLSNLRI71 builds Link State NLRI object for SAFI 71
-func UnmarshalLSNLRI71(b []byte) (*NLRI71, error) {
+// UnmarshalLSNLRI71 builds Link State NLRI object for SAFI 71.
+// When pathID is true the first four bytes are consumed as the Add Path
+// Path-ID (RFC 7911) and stored in NLRI71.PathID.
+func UnmarshalLSNLRI71(b []byte, pathID bool) (*NLRI71, error) {
 	if glog.V(6) {
 		glog.Infof("LSNLRI71 Raw: %s ", tools.MessageHex(b))
 	}
 	if len(b) == 0 {
 		return nil, fmt.Errorf("NLRI length is 0")
 	}
-	// Some router implementations (e.g. IOS-XR) prepend a 4-byte vendor-specific
-	// prefix before the standard RFC 7752 NLRI TLVs. Type 0 is unassigned and not
-	// a valid BGP-LS NLRI type, so when it appears at the start and the bytes at
-	// offset 4 carry a known NLRI type (1–6), treat the first 4 bytes as an opaque
-	// vendor prefix and skip them.
-	if len(b) >= 6 && binary.BigEndian.Uint16(b[0:2]) == 0 {
-		if t := binary.BigEndian.Uint16(b[4:6]); t >= 1 && t <= 6 {
-			if glog.V(5) {
-				glog.Infof("NLRI71: skipping 4-byte vendor prefix %s", tools.MessageHex(b[0:4]))
-			}
-			b = b[4:]
-		}
-	}
 	ls := NLRI71{
 		NLRI: make([]Element, 0),
+	}
+	if pathID {
+		if len(b) < 4 {
+			return nil, fmt.Errorf("NLRI71 truncated: need 4 bytes for Add Path Path-ID, have %d", len(b))
+		}
+		ls.PathID = binary.BigEndian.Uint32(b[0:4])
+		b = b[4:]
 	}
 	for p := 0; p < len(b); {
 		if p+4 > len(b) {

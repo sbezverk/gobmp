@@ -57,7 +57,7 @@ func TestUnmarshalLSNLRI71_RFC7752_Compliance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nlri, err := UnmarshalLSNLRI71(tt.input)
+			nlri, err := UnmarshalLSNLRI71(tt.input, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalLSNLRI71() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -134,7 +134,7 @@ func TestUnmarshalLSNLRI71_RFC7752_ProtocolIDs(t *testing.T) {
 				0x00, 0x00, 0x00,
 			}
 
-			nlri, err := UnmarshalLSNLRI71(input)
+			nlri, err := UnmarshalLSNLRI71(input, false)
 			if err != nil {
 				t.Fatalf("UnmarshalLSNLRI71() error = %v", err)
 			}
@@ -184,7 +184,7 @@ func TestUnmarshalLSNLRI71_RFC7752_MultipleNLRIs(t *testing.T) {
 		0x03, 0x01, 0x07, 0x00, 0x02, 0x00, 0x02,
 	}
 
-	nlri, err := UnmarshalLSNLRI71(input)
+	nlri, err := UnmarshalLSNLRI71(input, false)
 	if err != nil {
 		t.Fatalf("UnmarshalLSNLRI71() error = %v", err)
 	}
@@ -239,7 +239,7 @@ func TestUnmarshalLSNLRI71_RFC7752_ErrorCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := UnmarshalLSNLRI71(tt.input)
+			_, err := UnmarshalLSNLRI71(tt.input, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalLSNLRI71() error = %v, wantErr %v", err, tt.wantErr)
 			}

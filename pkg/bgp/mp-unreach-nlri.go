@@ -52,7 +52,8 @@ func (mp *MPUnReachNLRI) IsNextHopIPv6() bool {
 // GetNLRI71 check for presence of NLRI 71 in the NLRI 15 NLRI data and if exists, instantiate NLRI71 object
 func (mp *MPUnReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 	if mp.AddressFamilyID == 16388 && mp.SubAddressFamilyID == 71 {
-		nlri71, err := ls.UnmarshalLSNLRI71(mp.WithdrawnRoutes)
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		nlri71, err := ls.UnmarshalLSNLRI71(mp.WithdrawnRoutes, pathID)
 		if err != nil {
 			return nil, err
 		}
