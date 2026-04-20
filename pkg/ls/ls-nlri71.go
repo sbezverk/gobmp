@@ -17,6 +17,7 @@ type Element struct {
 	Type   uint16
 	Length uint16 // Not including Type and itself
 	LS     interface{}
+	PathID uint32 // Add Path Path-ID (RFC 7911 §3); 0 when Add Path is not in use
 }
 
 // NLRI71 defines Link State NLRI object for SAFI 71
@@ -43,17 +44,18 @@ func UnmarshalLSNLRI71(b []byte, pathID bool) (*NLRI71, error) {
 		NLRI: make([]Element, 0),
 	}
 	for p := 0; p < len(b); {
+		el := Element{}
 		if pathID {
-			if len(b) < 4 {
-				return nil, fmt.Errorf("NLRI71 truncated: need 4 bytes for Add Path Path-ID, have %d", len(b))
+			if p+4 > len(b) {
+				return nil, fmt.Errorf("NLRI71 truncated: need 4 bytes for Add Path Path-ID at offset %d, have %d", p, len(b)-p)
 			}
-			ls.PathID = binary.BigEndian.Uint32(b[0:4])
-			b = b[4:]
+			el.PathID = binary.BigEndian.Uint32(b[p : p+4])
+			ls.PathID = el.PathID
+			p += 4
 		}
 		if p+4 > len(b) {
 			return nil, fmt.Errorf("NLRI71 truncated at offset %d: need 4 bytes for TLV header, have %d", p, len(b)-p)
 		}
-		el := Element{}
 		el.Type = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		el.Length = binary.BigEndian.Uint16(b[p : p+2])

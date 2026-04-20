@@ -307,6 +307,63 @@ func TestUnmarshalLSNLRI71_Type6_SRv6SID(t *testing.T) {
 	}
 }
 
+// TestUnmarshalLSNLRI71_AddPath_MultiNLRI verifies that when Add Path (RFC 7911 §3) is
+// enabled and the input contains multiple BGP-LS NLRIs each prefixed by their own
+// 4-byte Path-ID, all NLRIs are parsed correctly and the Path-ID bytes are not
+// misinterpreted as NLRI TLV headers.
+func TestUnmarshalLSNLRI71_AddPath_MultiNLRI(t *testing.T) {
+	// Minimal Node NLRI value (39 bytes):
+	//   Protocol-ID=2, Identifier=0 (9 bytes)
+	//   Local Node Descriptors TLV (type=256, length=26, 4+26=30 bytes):
+	//     AS Number (type=512, length=4)
+	//     BGP-LS Identifier (type=513, length=4)
+	//     IGP Router-ID (type=515, length=6)
+	nodeNLRI := func(as byte, routerID byte) []byte {
+		return []byte{
+			0x00, 0x01, 0x00, 0x27, // Type=1 (Node), Length=39
+			0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Proto=2, Ident=0
+			0x01, 0x00, 0x00, 0x1a, // Local Node Desc type=256, len=26
+			0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0xfd, as, // AS
+			0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, // BGP-LS ID=0
+			0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, routerID, // Router-ID
+		}
+	}
+
+	// Two Node NLRIs with Path-ID=1 and Path-ID=2 concatenated.
+	input := append(
+		append([]byte{0x00, 0x00, 0x00, 0x01}, nodeNLRI(0xe8, 0x01)...),    // PathID=1, AS=65000, RID=...01
+		append([]byte{0x00, 0x00, 0x00, 0x02}, nodeNLRI(0xe9, 0x02)...)..., // PathID=2, AS=65001, RID=...02
+	)
+
+	nlri, err := UnmarshalLSNLRI71(input, true)
+	if err != nil {
+		t.Fatalf("UnmarshalLSNLRI71 with two Add Path NLRIs failed: %v", err)
+	}
+	if len(nlri.NLRI) != 2 {
+		t.Fatalf("expected 2 NLRI elements, got %d", len(nlri.NLRI))
+	}
+	// Verify first NLRI: PathID=1, type=Node
+	if nlri.NLRI[0].PathID != 1 {
+		t.Errorf("NLRI[0]: expected PathID=1, got %d", nlri.NLRI[0].PathID)
+	}
+	if nlri.NLRI[0].Type != 1 {
+		t.Errorf("NLRI[0]: expected type=1 (Node), got %d — Path-ID misread as TLV?", nlri.NLRI[0].Type)
+	}
+	// Verify second NLRI: PathID=2, type=Node
+	if nlri.NLRI[1].PathID != 2 {
+		t.Errorf("NLRI[1]: expected PathID=2, got %d", nlri.NLRI[1].PathID)
+	}
+	if nlri.NLRI[1].Type != 1 {
+		t.Errorf("NLRI[1]: expected type=1 (Node), got %d — Path-ID misread as TLV?", nlri.NLRI[1].Type)
+	}
+	// NLRI71.PathID should reflect the last element's Path-ID
+	if nlri.PathID != 2 {
+		t.Errorf("expected NLRI71.PathID=2 (last seen), got %d", nlri.PathID)
+	}
+	t.Logf("Multi-NLRI Add Path: NLRI[0].PathID=%d type=%d, NLRI[1].PathID=%d type=%d",
+		nlri.NLRI[0].PathID, nlri.NLRI[0].Type, nlri.NLRI[1].PathID, nlri.NLRI[1].Type)
+}
+
 // TestUnmarshalLSNLRI71_UnmarshalErrors covers error propagation from each type-specific unmarshaler.
 func TestUnmarshalLSNLRI71_UnmarshalErrors(t *testing.T) {
 	tests := []struct {
