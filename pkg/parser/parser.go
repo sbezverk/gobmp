@@ -121,12 +121,15 @@ func (p *parser) parsingWorker(b []byte) {
 			perPerHeaderLen = bmp.PerPeerHeaderLength
 			// Pass the BMP A flag (RFC 7854 §4.2) so AS_PATH width is authoritative
 			// rather than heuristic. Is4ByteASN returns an error for PeerType3 — fall
-			// back to the heuristic in that case by passing no argument.
-			var as4opt []bool
+			// back to the heuristic in that case by passing no argument. Branching
+			// avoids per-message slice allocation for the variadic parameter.
+			rmBody := b[pos+perPerHeaderLen : pos+msgLen-bmp.CommonHeaderLength]
+			var rm *bmp.RouteMonitor
 			if is4, e := bmpMsg.PeerHeader.Is4ByteASN(); e == nil {
-				as4opt = []bool{is4}
+				rm, err = bmp.UnmarshalBMPRouteMonitorMessage(rmBody, is4)
+			} else {
+				rm, err = bmp.UnmarshalBMPRouteMonitorMessage(rmBody)
 			}
-			rm, err := bmp.UnmarshalBMPRouteMonitorMessage(b[pos+perPerHeaderLen:pos+msgLen-bmp.CommonHeaderLength], as4opt...)
 			if err != nil {
 				if errors.Is(err, bmp.ErrNotAnUpdate) {
 					glog.V(5).Infof("skipping non-Update BGP message in route monitor: %+v", err)

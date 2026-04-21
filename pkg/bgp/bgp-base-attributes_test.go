@@ -228,10 +228,11 @@ func TestUnmarshalAttrASPathAs4Hint(t *testing.T) {
 	})
 
 	// Ambiguous 6 bytes: parses as either one 4-byte ASN or one 2-byte ASN
-	// depending on the hint. The second segment in 2-byte mode has count=0 so
-	// it is consumed cleanly by the loop.
-	// Byte layout: {AS_SEQ=0x02, count=0x01, 0xAA, 0xBB, 0xCC, 0x00}
-	ambiguous := []byte{0x02, 0x01, 0xAA, 0xBB, 0xCC, 0x00}
+	// depending on the hint. The trailing {0x02, 0x00} is a valid empty AS_SEQ
+	// segment so 2-byte mode consumes cleanly without tripping segment-type
+	// validation.
+	// Byte layout: {AS_SEQ=0x02, count=0x01, 0xAA, 0xBB, AS_SEQ=0x02, count=0x00}
+	ambiguous := []byte{0x02, 0x01, 0xAA, 0xBB, 0x02, 0x00}
 
 	t.Run("as4=true on ambiguous data yields single 4-byte ASN", func(t *testing.T) {
 		hint := true
@@ -239,7 +240,7 @@ func TestUnmarshalAttrASPathAs4Hint(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		want := []uint32{0xAABBCC00}
+		want := []uint32{0xAABB0200}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
 		}

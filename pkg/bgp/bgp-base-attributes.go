@@ -44,7 +44,7 @@ type BaseAttributes struct {
 	// PEDistinguisherLable
 	LgCommunityList []string      `json:"large_community_list,omitempty"`
 	BGPPrefixSID    *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
-	OTC uint32 `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
+	OTC             uint32        `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
 	// SecPath
 	AttrSet *AttrSet `json:"attr_set,omitempty"` // RFC 6368 ATTR_SET Attribute (Type 128)
 }
@@ -319,8 +319,9 @@ func unmarshalAttrASPath(b []byte, as4hint *bool) ([]uint32, error) {
 	if as4hint != nil {
 		as4 = *as4hint
 	} else {
-		// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 only inspects the
-		// first segment, so full per-segment bounds validation is done in the loop below.
+		// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 walks the whole
+		// buffer; the loop below re-checks segment type and per-segment bounds so
+		// the hinted path is validated identically.
 		var err error
 		as4, err = isASPath4(b)
 		if err != nil {
@@ -332,9 +333,13 @@ func unmarshalAttrASPath(b []byte, as4hint *bool) ([]uint32, error) {
 		asSize = 4
 	}
 	for p := 0; p < len(b); {
-		// Segment type byte
+		// Segment type byte — must be one of 0x01..0x04 per RFC 4271 §4.3 / RFC 5065.
 		if p+1 > len(b) {
 			return nil, fmt.Errorf("AS_PATH attribute truncated: cannot read segment type at offset %d", p)
+		}
+		segType := b[p]
+		if segType < 0x01 || segType > 0x04 {
+			return nil, fmt.Errorf("AS_PATH attribute invalid segment type 0x%02x at offset %d", segType, p)
 		}
 		p++ // skip segment type
 		// Segment length (number of ASNs in this segment)
