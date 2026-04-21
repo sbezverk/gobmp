@@ -7,6 +7,26 @@ import (
 	"github.com/go-test/deep"
 )
 
+func TestMPReachNLRIGetNLRIRTC(t *testing.T) {
+	// Valid: AFI 1, SAFI 132, wildcard RTC NLRI (length=0 per RFC 4684 §4)
+	reach := &MPReachNLRI{AddressFamilyID: 1, SubAddressFamilyID: 132, NLRI: []byte{0x00}}
+	if _, err := reach.GetNLRIRTC(); err != nil {
+		t.Errorf("AFI=1 SAFI=132: unexpected error: %v", err)
+	}
+
+	// Valid: AFI 2, SAFI 132
+	reach2 := &MPReachNLRI{AddressFamilyID: 2, SubAddressFamilyID: 132, NLRI: []byte{0x00}}
+	if _, err := reach2.GetNLRIRTC(); err != nil {
+		t.Errorf("AFI=2 SAFI=132: unexpected error: %v", err)
+	}
+
+	// Invalid: wrong AFI (25 = L2VPN), SAFI 132 — must be rejected
+	reach3 := &MPReachNLRI{AddressFamilyID: 25, SubAddressFamilyID: 132, NLRI: []byte{0x00}}
+	if _, err := reach3.GetNLRIRTC(); err == nil {
+		t.Error("AFI=25 SAFI=132: expected error, got nil")
+	}
+}
+
 func TestUnmarshalMPReachNLRI(t *testing.T) {
 	tests := []struct {
 		name    string
