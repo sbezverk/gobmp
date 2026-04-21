@@ -47,53 +47,62 @@ type publisher struct {
 	js nats.JetStreamContext
 }
 
-func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
+// topicForMessage maps a BMP message type to its NATS subject.
+// Returns ("", false) for unknown types.
+func topicForMessage(t int) (string, bool) {
 	switch t {
 	case bmp.PeerStateChangeMsg:
-		return p.produceMessage(peerTopic, key, msg)
+		return peerTopic, true
 	case bmp.UnicastPrefixMsg:
-		return p.produceMessage(unicastMessageTopic, key, msg)
+		return unicastMessageTopic, true
 	case bmp.UnicastPrefixV4Msg:
-		return p.produceMessage(unicastMessageV4Topic, key, msg)
+		return unicastMessageV4Topic, true
 	case bmp.UnicastPrefixV6Msg:
-		return p.produceMessage(unicastMessageV6Topic, key, msg)
+		return unicastMessageV6Topic, true
 	case bmp.LSNodeMsg:
-		return p.produceMessage(lsNodeMessageTopic, key, msg)
+		return lsNodeMessageTopic, true
 	case bmp.LSLinkMsg:
-		return p.produceMessage(lsLinkMessageTopic, key, msg)
+		return lsLinkMessageTopic, true
 	case bmp.L3VPNMsg:
-		return p.produceMessage(l3vpnMessageTopic, key, msg)
+		return l3vpnMessageTopic, true
 	case bmp.L3VPNV4Msg:
-		return p.produceMessage(l3vpnMessageV4Topic, key, msg)
+		return l3vpnMessageV4Topic, true
 	case bmp.L3VPNV6Msg:
-		return p.produceMessage(l3vpnMessageV6Topic, key, msg)
+		return l3vpnMessageV6Topic, true
 	case bmp.LSPrefixMsg:
-		return p.produceMessage(lsPrefixMessageTopic, key, msg)
+		return lsPrefixMessageTopic, true
 	case bmp.LSSRv6SIDMsg:
-		return p.produceMessage(lsSRv6SIDMessageTopic, key, msg)
+		return lsSRv6SIDMessageTopic, true
 	case bmp.EVPNMsg:
-		return p.produceMessage(evpnMessageTopic, key, msg)
+		return evpnMessageTopic, true
 	case bmp.SRPolicyMsg:
-		return p.produceMessage(srPolicyMessageTopic, key, msg)
+		return srPolicyMessageTopic, true
 	case bmp.SRPolicyV4Msg:
-		return p.produceMessage(srPolicyMessageV4Topic, key, msg)
+		return srPolicyMessageV4Topic, true
 	case bmp.SRPolicyV6Msg:
-		return p.produceMessage(srPolicyMessageV6Topic, key, msg)
+		return srPolicyMessageV6Topic, true
 	case bmp.FlowspecMsg:
-		return p.produceMessage(flowspecMessageTopic, key, msg)
+		return flowspecMessageTopic, true
 	case bmp.FlowspecV4Msg:
-		return p.produceMessage(flowspecMessageV4Topic, key, msg)
+		return flowspecMessageV4Topic, true
 	case bmp.FlowspecV6Msg:
-		return p.produceMessage(flowspecMessageV6Topic, key, msg)
+		return flowspecMessageV6Topic, true
 	case bmp.VPLSMsg:
-		return p.produceMessage(vplsMessageTopic, key, msg)
+		return vplsMessageTopic, true
 	case bmp.StatsReportMsg:
-		return p.produceMessage(statsMessageTopic, key, msg)
+		return statsMessageTopic, true
 	case bmp.BMPRawMsg:
-		return p.produceMessage(rawMessageTopic, key, msg)
+		return rawMessageTopic, true
 	}
+	return "", false
+}
 
-	return fmt.Errorf("not implemented")
+func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
+	topic, ok := topicForMessage(t)
+	if !ok {
+		return fmt.Errorf("not implemented")
+	}
+	return p.produceMessage(topic, key, msg)
 }
 
 func (p *publisher) produceMessage(subject string, key []byte, data []byte) error {
