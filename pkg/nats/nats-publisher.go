@@ -31,7 +31,9 @@ const (
 	flowspecMessageTopic   = "gobmp.parsed.flowspec"
 	flowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
 	flowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
+	vplsMessageTopic       = "gobmp.parsed.vpls"
 	statsMessageTopic      = "gobmp.parsed.statistics"
+	rawMessageTopic        = "gobmp.raw"
 )
 
 var (
@@ -83,8 +85,12 @@ func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 		return p.produceMessage(flowspecMessageV4Topic, key, msg)
 	case bmp.FlowspecV6Msg:
 		return p.produceMessage(flowspecMessageV6Topic, key, msg)
+	case bmp.VPLSMsg:
+		return p.produceMessage(vplsMessageTopic, key, msg)
 	case bmp.StatsReportMsg:
 		return p.produceMessage(statsMessageTopic, key, msg)
+	case bmp.BMPRawMsg:
+		return p.produceMessage(rawMessageTopic, key, msg)
 	}
 
 	return fmt.Errorf("not implemented")
@@ -117,7 +123,7 @@ func (p *publisher) createStreams() error {
 	// Define the stream configuration
 	streamConfig := &nats.StreamConfig{
 		Name:      "goBMP",
-		Subjects:  []string{"gobmp.parsed.*"},
+		Subjects:  []string{"gobmp.parsed.*", "gobmp.raw"},
 		Storage:   nats.FileStorage,
 		Retention: nats.InterestPolicy,
 		MaxMsgs:   -1, // No limit
@@ -126,9 +132,12 @@ func (p *publisher) createStreams() error {
 		Replicas:  1,
 	}
 
-	// Try to create the stream, ignore if it already exists
 	_, err := p.js.AddStream(streamConfig)
-	if err != nil && !errors.Is(err, nats.ErrStreamNameAlreadyInUse) {
+	if errors.Is(err, nats.ErrStreamNameAlreadyInUse) {
+		if _, err = p.js.UpdateStream(streamConfig); err != nil {
+			return fmt.Errorf("failed to update stream: %w", err)
+		}
+	} else if err != nil {
 		return fmt.Errorf("failed to create stream: %w", err)
 	}
 
