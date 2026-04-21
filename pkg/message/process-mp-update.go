@@ -53,35 +53,10 @@ func extractOriginValidation(attrs *bgp.BaseAttributes) *string {
 }
 
 func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
-	labeled := false
-	labeledSet := false
 	switch nlri.GetAFISAFIType() {
-	case 1:
-		// MP_REACH_NLRI AFI 1 SAFI 1
-		if !labeledSet {
-			labeledSet = true
-			labeled = false
-		}
-		fallthrough
-	case 2:
-		// MP_REACH_NLRI AFI 2 SAFI 1
-		if !labeledSet {
-			labeledSet = true
-			labeled = false
-		}
-		fallthrough
-	case 16:
-		// MP_REACH_NLRI AFI 1 SAFI 4
-		if !labeledSet {
-			labeledSet = true
-			labeled = true
-		}
-		fallthrough
-	case 17:
-		// MP_REACH_NLRI AFI 2 SAFI 4
-		if !labeledSet {
-			labeled = true
-		}
+	case 1, 2, 16, 17:
+		// AFI 1/2 SAFI 1 = Unicast, AFI 1/2 SAFI 4 = Labeled Unicast
+		labeled := nlri.GetAFISAFIType() >= 16
 		msgs, err := p.unicast(nlri, operation, ph, update, labeled)
 		if err != nil {
 			glog.Errorf("failed to produce unicast messages with error: %+v", err)
@@ -106,9 +81,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
-	case 18:
-		fallthrough
-	case 19:
+	case 18, 19:
 		msgs, err := p.l3vpn(nlri, operation, ph, update)
 		if err != nil {
 			glog.Errorf("failed to produce l3vpn messages with error: %+v", err)
@@ -155,9 +128,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
-	case 25:
-		fallthrough
-	case 26:
+	case 25, 26:
 		msgs, err := p.srpolicy(nlri, operation, ph, update)
 		if err != nil {
 			glog.Errorf("failed to produce srpolicy messages with error: %+v", err)
@@ -197,9 +168,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
-	case 28:
-		fallthrough
-	case 29:
+	case 28, 29:
 		msgs, err := p.multicast(nlri, operation, ph, update)
 		if err != nil {
 			glog.Errorf("failed to produce multicast messages with error: %+v", err)
@@ -215,9 +184,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
-	case 32:
-		fallthrough
-	case 33:
+	case 32, 33:
 		msgs, err := p.mcastvpn(nlri, operation, ph, update)
 		if err != nil {
 			glog.Errorf("failed to produce mcastvpn messages with error: %+v", err)
@@ -233,9 +200,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
-	case 34:
-		fallthrough
-	case 35:
+	case 34, 35:
 		msgs, err := p.mvpn(nlri, operation, ph, update)
 		if err != nil {
 			glog.Errorf("failed to produce mvpn messages with error: %+v", err)
@@ -251,9 +216,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
-	case 30:
-		fallthrough
-	case 31:
+	case 30, 31:
 		msgs, err := p.rtc(nlri, operation, ph, update)
 		if err != nil {
 			glog.Errorf("failed to produce rtc messages with error: %+v", err)
@@ -324,10 +287,8 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to process LSLink message with error: %+v", err)
 				continue
 			}
-		case 3:
-			ipv4Flag = true
-			fallthrough
-		case 4:
+		case 3, 4:
+			ipv4Flag = e.Type == 3
 			prfx, ok := e.LS.(*base.PrefixNLRI)
 			if !ok {
 				glog.Errorf("NLRI 71 type %d: expected *base.PrefixNLRI, got %T", e.Type, e.LS)
