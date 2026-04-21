@@ -157,7 +157,7 @@ func TestUnmarshalASPath(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		r, err := unmarshalAttrASPath(tt.input)
+		r, err := unmarshalAttrASPath(tt.input, nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -165,4 +165,95 @@ func TestUnmarshalASPath(t *testing.T) {
 			t.Fatalf("expected %+v and result %+v as path do not match", tt.asPath, r)
 		}
 	}
+}
+
+func TestUnmarshalBGPBaseAttributesAs4Hint(t *testing.T) {
+	// ORIGIN(igp) + AS_PATH AS4 with two ASNs [1, 2]
+	// flags=0x40, type=0x01, len=0x01, val=0x00
+	// flags=0x40, type=0x02, len=0x0a, val={AS_SEQ, count=2, 0x00000001, 0x00000002}
+	raw := []byte{
+		0x40, 0x01, 0x01, 0x00,
+		0x40, 0x02, 0x0a, 0x02, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02,
+	}
+	as4hint := true
+	got, err := UnmarshalBGPBaseAttributes(raw, as4hint)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []uint32{1, 2}
+	if !reflect.DeepEqual(got.ASPath, want) {
+		t.Errorf("ASPath: got %v, want %v", got.ASPath, want)
+	}
+}
+
+func TestUnmarshalAttrASPathAs4Hint(t *testing.T) {
+	// AS_SEQUENCE with two 4-byte ASNs: [0x02 type, 0x02 count, 0x00000001, 0x00000002]
+	as4bytes := []byte{0x02, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02}
+	// AS_SEQUENCE with two 2-byte ASNs: [0x02 type, 0x02 count, 0x0001, 0x0002]
+	as2bytes := []byte{0x02, 0x02, 0x00, 0x01, 0x00, 0x02}
+
+	t.Run("as4=true hint parses 4-byte ASNs correctly", func(t *testing.T) {
+		hint := true
+		got, err := unmarshalAttrASPath(as4bytes, &hint)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := []uint32{1, 2}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("as4=false hint parses 2-byte ASNs correctly", func(t *testing.T) {
+		hint := false
+		got, err := unmarshalAttrASPath(as2bytes, &hint)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := []uint32{1, 2}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("nil hint falls back to heuristic for 4-byte input", func(t *testing.T) {
+		got, err := unmarshalAttrASPath(as4bytes, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := []uint32{1, 2}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
+
+	// Ambiguous 6 bytes: parses as either one 4-byte ASN or one 2-byte ASN
+	// depending on the hint. The second segment in 2-byte mode has count=0 so
+	// it is consumed cleanly by the loop.
+	// Byte layout: {AS_SEQ=0x02, count=0x01, 0xAA, 0xBB, 0xCC, 0x00}
+	ambiguous := []byte{0x02, 0x01, 0xAA, 0xBB, 0xCC, 0x00}
+
+	t.Run("as4=true on ambiguous data yields single 4-byte ASN", func(t *testing.T) {
+		hint := true
+		got, err := unmarshalAttrASPath(ambiguous, &hint)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := []uint32{0xAABBCC00}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("as4=false on ambiguous data yields single 2-byte ASN", func(t *testing.T) {
+		hint := false
+		got, err := unmarshalAttrASPath(ambiguous, &hint)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := []uint32{0xAABB}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
 }

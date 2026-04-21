@@ -137,15 +137,18 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 // UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
 // and instantiates BaseAttributes object. It is a convenience wrapper that parses
 // the raw byte slice via UnmarshalBGPPathAttributes and then populates BaseAttributes.
-func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
-	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b)
+// The optional as4 argument is the BMP Per-Peer Header A flag (RFC 7854 §4.2): when
+// provided it overrides the internal heuristic for 2-byte vs 4-byte AS_PATH encoding.
+func UnmarshalBGPBaseAttributes(b []byte, as4 ...bool) (*BaseAttributes, error) {
+	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b, as4...)
 	_ = attrs // raw slice not needed by this call-path
 	return baseAttrs, err
 }
 
 // unmarshalBaseAttrsFromSlice populates a BaseAttributes struct from an already-parsed
 // []PathAttribute slice, avoiding a second walk of the raw byte buffer.
-func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error) {
+// as4hint, when non-nil, overrides the AS_PATH width heuristic (RFC 7854 §4.2 flag A).
+func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAttributes, error) {
 	baseAttr := BaseAttributes{}
 	for _, attr := range attrs {
 		b := attr.Attribute
@@ -154,7 +157,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			baseAttr.Origin = unmarshalAttrOrigin(b)
 		case 2:
 			var err error
-			baseAttr.ASPath, err = unmarshalAttrASPath(b)
+			baseAttr.ASPath, err = unmarshalAttrASPath(b, as4hint)
 			if err != nil {
 				return nil, err
 			}
@@ -304,17 +307,25 @@ func unmarshalAttrOrigin(b []byte) string {
 	}
 }
 
-// unmarshalAttrASPath returns a slice with a list of ASes
-func unmarshalAttrASPath(b []byte) ([]uint32, error) {
+// unmarshalAttrASPath returns a slice with a list of ASes.
+// as4hint, when non-nil, overrides the heuristic: true means 4-byte ASNs, false means 2-byte.
+// Per RFC 7854 §4.2 the BMP Per-Peer A flag is authoritative for the encoding used.
+func unmarshalAttrASPath(b []byte, as4hint *bool) ([]uint32, error) {
 	if len(b) == 0 {
 		return []uint32{}, nil
 	}
 	path := make([]uint32, 0, len(b)/2)
-	// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 only inspects the
-	// first segment, so full per-segment bounds validation is done in the loop below.
-	as4, err := isASPath4(b)
-	if err != nil {
-		return nil, err
+	var as4 bool
+	if as4hint != nil {
+		as4 = *as4hint
+	} else {
+		// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 only inspects the
+		// first segment, so full per-segment bounds validation is done in the loop below.
+		var err error
+		as4, err = isASPath4(b)
+		if err != nil {
+			return nil, err
+		}
 	}
 	asSize := 2
 	if as4 {

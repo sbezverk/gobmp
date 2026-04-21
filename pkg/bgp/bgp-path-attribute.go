@@ -21,13 +21,20 @@ type PathAttribute struct {
 // Per RFC 4271 §4.3, TotalPathAttributeLength may be zero (pure withdrawal or
 // End-of-RIB marker per RFC 4724 §2); in that case an empty but non-nil
 // BaseAttributes is returned so callers can dereference it safely.
-func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, *BaseAttributes, error) {
+// The optional as4 argument is the BMP Per-Peer Header A flag (RFC 7854 §4.2):
+// when provided it overrides the heuristic for 2-byte vs 4-byte AS_PATH encoding.
+func UnmarshalBGPPathAttributes(b []byte, as4 ...bool) ([]PathAttribute, *BaseAttributes, error) {
 	attrs, err := unmarshalRawPathAttributes(b)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	baseAttrs, err := unmarshalBaseAttrsFromSlice(attrs)
+	var as4hint *bool
+	if len(as4) > 0 {
+		v := as4[0]
+		as4hint = &v
+	}
+	baseAttrs, err := unmarshalBaseAttrsFromSlice(attrs, as4hint)
 	if err != nil {
 		return nil, nil, err
 	}

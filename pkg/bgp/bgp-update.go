@@ -103,8 +103,10 @@ func (up *Update) GetNLRIType() (uint8, int) {
 	return BGP4_NLRI, 0
 }
 
-// UnmarshalBGPUpdate build BGP Update object from the byte slice provided
-func UnmarshalBGPUpdate(b []byte) (*Update, error) {
+// UnmarshalBGPUpdate build BGP Update object from the byte slice provided.
+// The optional as4 argument is the BMP Per-Peer Header A flag (RFC 7854 §4.2):
+// when provided it overrides the heuristic for 2-byte vs 4-byte AS_PATH encoding.
+func UnmarshalBGPUpdate(b []byte, as4 ...bool) (*Update, error) {
 	if glog.V(6) {
 		glog.Infof("BGPUpdate Raw: %s", tools.MessageHex(b))
 	}
@@ -130,7 +132,7 @@ func UnmarshalBGPUpdate(b []byte) (*Update, error) {
 		return nil, fmt.Errorf("not enough bytes to unmarshal Path Attributes: need %d bytes, have %d", u.TotalPathAttributeLength, len(b)-p)
 	}
 	// Single pass: parse path attributes and populate base attributes simultaneously
-	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b[p : p+int(u.TotalPathAttributeLength)])
+	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b[p:p+int(u.TotalPathAttributeLength)], as4...)
 	if err != nil {
 		return nil, err
 	}

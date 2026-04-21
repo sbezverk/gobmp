@@ -20,8 +20,10 @@ type RouteMonitor struct {
 	Update *bgp.Update
 }
 
-// UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
-func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
+// UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object.
+// The optional as4 argument is the BMP Per-Peer Header A flag (RFC 7854 §4.2):
+// when provided it overrides the heuristic for 2-byte vs 4-byte AS_PATH encoding.
+func UnmarshalBMPRouteMonitorMessage(b []byte, as4 ...bool) (*RouteMonitor, error) {
 	if glog.V(6) {
 		glog.Infof("BMP Route Monitor Message Raw: %s length: %d", tools.MessageHex(b), len(b))
 	}
@@ -46,7 +48,7 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 	p++
 	switch t {
 	case 2:
-		u, err := bgp.UnmarshalBGPUpdate(b[p:])
+		u, err := bgp.UnmarshalBGPUpdate(b[p:], as4...)
 		if err != nil {
 			return nil, err
 		}

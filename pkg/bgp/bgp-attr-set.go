@@ -100,7 +100,7 @@ func UnmarshalAttrSet(b []byte) (*AttrSet, error) {
 		}
 	}
 
-	baseAttrs, err := unmarshalBaseAttrsFromSlice(attrs)
+	baseAttrs, err := unmarshalBaseAttrsFromSlice(attrs, nil)
 	if err != nil {
 		return nil, fmt.Errorf("ATTR_SET: failed to build BaseAttributes from embedded attributes: %w", err)
 	}
