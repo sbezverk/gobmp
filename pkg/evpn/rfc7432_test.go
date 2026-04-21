@@ -598,8 +598,15 @@ func TestRFC7432_ErrorHandling(t *testing.T) {
 			},
 			expectError: false,
 		},
-		// Note: truncated route test removed - EVPN parser panics instead of returning error
-		// This is a pre-existing bug in pkg/evpn/evpn.go:109 outside scope of RFC compliance
+		{
+			name: "truncated route returns error",
+			input: []byte{
+				0x01,             // Ethernet Auto-Discovery Route Type
+				0x0a,             // Declared route length
+				0x00, 0x00, 0x00, // Truncated route body
+			},
+			expectError: true,
+		},
 	}
 
 	for _, tt := range tests {
