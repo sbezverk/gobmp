@@ -34,16 +34,25 @@ func (sr *SIDNLRI) GetSRv6SIDProtocolID() string {
 
 // GetSRv6SIDLSID returns a value of Local Node Descriptor TLV BGP-LS Identifier
 func (sr *SIDNLRI) GetSRv6SIDLSID() uint32 {
+	if sr.LocalNode == nil {
+		return 0
+	}
 	return sr.LocalNode.GetLSID()
 }
 
 // GetSRv6SIDIGPRouterID returns a value of a local node Descriptor TLV IGP Router ID
 func (sr *SIDNLRI) GetSRv6SIDIGPRouterID() string {
+	if sr.LocalNode == nil {
+		return ""
+	}
 	return sr.LocalNode.GetIGPRouterID()
 }
 
 // GetSRv6SIDASN returns Autonomous System Number used to uniqely identify BGP-LS domain
 func (sr *SIDNLRI) GetSRv6SIDASN() uint32 {
+	if sr.LocalNode == nil {
+		return 0
+	}
 	return sr.LocalNode.GetASN()
 }
 
@@ -61,7 +70,14 @@ func (sr *SIDNLRI) GetSRv6SIDMTID() *base.MultiTopologyIdentifier {
 
 // GetSRv6SID returns a slice of SIDs
 func (sr *SIDNLRI) GetSRv6SID() string {
-	return net.IP(sr.SRv6SID.SID).To16().String()
+	if sr.SRv6SID == nil {
+		return ""
+	}
+	ip := net.IP(sr.SRv6SID.SID).To16()
+	if ip == nil {
+		return ""
+	}
+	return ip.String()
 }
 
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object
