@@ -172,11 +172,13 @@ func (p *PerPeerHeader) IsPostPolicy() (bool, error) {
 	return false, ErrInvFlagRequestForPeerType
 }
 
-// Is4ByteASN returns true if AS_PATH uses 4-byte ASNs, false for 2-byte ASNs
-// Per RFC 7854: A flag (bit 5) indicates 2-byte AS (0) or 4-byte AS (1)
+// Is4ByteASN returns true if AS_PATH uses 4-byte ASNs, false for 2-byte ASNs.
+// Per RFC 7854 §4.2: A flag set to 1 indicates legacy 2-byte AS_PATH format;
+// A flag set to 0 indicates 4-byte AS_PATH format (RFC 6793). Returns
+// ErrInvFlagRequestForPeerType for PeerType3 where the flag is not defined.
 func (p *PerPeerHeader) Is4ByteASN() (bool, error) {
 	if p.PeerType != PeerType3 {
-		return p.flagA, nil
+		return !p.flagA, nil
 	}
 
 	return false, ErrInvFlagRequestForPeerType
