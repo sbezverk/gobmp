@@ -138,6 +138,49 @@ func TestMVPN_RIBFlags_AllFive(t *testing.T) {
 	}
 }
 
+// TestMCASTVPN_Nexthop verifies the mcastvpn handler extracts the nexthop correctly.
+func TestMCASTVPN_Nexthop(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	p.speakerIP = "10.0.0.1"
+	p.speakerHash = "abc123"
+
+	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	// MCAST-VPN (SAFI 5) Type 1 route: RD(8) + OriginatorIP(4) = 12 bytes
+	reachWithRoute := []byte{
+		0x00, 0x01, // AFI: 1
+		0x05,                   // SAFI: 5
+		0x04,                   // NH Length: 4
+		0x0a, 0x00, 0x00, 0x01, // NextHop: 10.0.0.1
+		0x00, // Reserved
+		0x01, // Route Type: 1 (Intra-AS I-PMSI A-D)
+		0x0C, // Length: 12
+		// RD (8 bytes)
+		0x00, 0x02, 0x00, 0x00, 0xFD, 0xE8, 0x00, 0x64,
+		// Originator IP (4 bytes)
+		0x0a, 0x00, 0x00, 0x01,
+	}
+	nlri, err := bgp.UnmarshalMPReachNLRI(reachWithRoute, false, map[int]bool{})
+	if err != nil {
+		t.Fatalf("UnmarshalMPReachNLRI: %v", err)
+	}
+
+	msgs, err := p.mcastvpn(nlri, 0, ph, update)
+	if err != nil {
+		t.Fatalf("mcastvpn() error: %v", err)
+	}
+	if len(msgs) < 1 {
+		t.Fatal("mcastvpn() returned 0 messages")
+	}
+	if msgs[0].Nexthop != "10.0.0.1" {
+		t.Errorf("Nexthop = %q, want '10.0.0.1'", msgs[0].Nexthop)
+	}
+	if !msgs[0].IsNexthopIPv4 {
+		t.Error("IsNexthopIPv4 = false, want true")
+	}
+}
+
 // TestL3VPN_TableName verifies L3VPN handler sets TableName for LocRIB peers.
 func TestL3VPN_TableName(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
