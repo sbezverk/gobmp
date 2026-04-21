@@ -308,6 +308,62 @@ func TestMPUnReachNLRI_NLRINotFound(t *testing.T) {
 	})
 }
 
+// TestMPUnReachNLRI_GetNLRIRTC covers the AFI guard on GetNLRIRTC.
+// Per RFC 4684 §4, RTC carries AFI=1 or AFI=2 with SAFI=132; any other AFI
+// must return NLRINotFoundError.
+func TestMPUnReachNLRI_GetNLRIRTC(t *testing.T) {
+	tests := []struct {
+		name    string
+		afi     uint16
+		safi    uint8
+		routes  []byte
+		wantErr bool
+	}{
+		{
+			name: "AFI=1 SAFI=132 wildcard RTC",
+			afi:  1, safi: 132,
+			routes:  []byte{0x00}, // RFC 4684 §4 wildcard RTC NLRI
+			wantErr: false,
+		},
+		{
+			name: "AFI=2 SAFI=132 wildcard RTC",
+			afi:  2, safi: 132,
+			routes:  []byte{0x00},
+			wantErr: false,
+		},
+		{
+			name: "wrong AFI (L2VPN) rejected",
+			afi:  25, safi: 132,
+			routes:  []byte{0x00},
+			wantErr: true,
+		},
+	}
+	notFound := &NLRINotFoundError{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mp := &MPUnReachNLRI{
+				AddressFamilyID:    tt.afi,
+				SubAddressFamilyID: tt.safi,
+				WithdrawnRoutes:    tt.routes,
+				addPath:            map[int]bool{},
+			}
+			_, err := mp.GetNLRIRTC()
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("AFI=%d SAFI=%d: expected error, got nil", tt.afi, tt.safi)
+				}
+				if !errors.As(err, &notFound) {
+					t.Errorf("AFI=%d SAFI=%d: expected NLRINotFoundError, got %T: %v", tt.afi, tt.safi, err, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("AFI=%d SAFI=%d: unexpected error: %v", tt.afi, tt.safi, err)
+			}
+		})
+	}
+}
+
 // TestMPUnReachNLRI_GetFlowspecNLRI covers the flowspec branching logic.
 func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 	tests := []struct {
