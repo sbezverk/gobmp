@@ -100,7 +100,7 @@ func topicForMessage(t int) (string, bool) {
 func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
 	topic, ok := topicForMessage(t)
 	if !ok {
-		return fmt.Errorf("not implemented")
+		return fmt.Errorf("nats publisher: unsupported BMP message type %d", t)
 	}
 	return p.produceMessage(topic, key, msg)
 }
