@@ -48,7 +48,7 @@ func (sr *SIDNLRI) GetSRv6SIDIGPRouterID() string {
 	return sr.LocalNode.GetIGPRouterID()
 }
 
-// GetSRv6SIDASN returns Autonomous System Number used to uniqely identify BGP-LS domain
+// GetSRv6SIDASN returns Autonomous System Number used to uniquely identify BGP-LS domain
 func (sr *SIDNLRI) GetSRv6SIDASN() uint32 {
 	if sr.LocalNode == nil {
 		return 0
@@ -68,7 +68,7 @@ func (sr *SIDNLRI) GetSRv6SIDMTID() *base.MultiTopologyIdentifier {
 	return sr.SRv6SID.GetMTID()[0]
 }
 
-// GetSRv6SID returns a slice of SIDs
+// GetSRv6SID returns the SRv6 SID as an IP string, or an empty string if it is missing or invalid.
 func (sr *SIDNLRI) GetSRv6SID() string {
 	if sr.SRv6SID == nil {
 		return ""
