@@ -44,7 +44,7 @@ func (mp *MPUnReachNLRI) GetNextHop() string {
 }
 
 // IsNextHopIPv6 return true if the next hop is IPv6 address, otherwise it returns false.
-// in case of MP_UNREACH_NLRI there is no Next Hope field and this func should not be used.
+// in case of MP_UNREACH_NLRI there is no Next Hop field and this function should not be used.
 func (mp *MPUnReachNLRI) IsNextHopIPv6() bool {
 	return false
 }
