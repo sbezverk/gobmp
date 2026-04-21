@@ -8,8 +8,8 @@ import (
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 )
 
-// evpn process MP_REACH_NLRI AFI 25 SAFI 70 update message and returns
-// EVPN prefix object.
+// srpolicy process MP_REACH_NLRI AFI 1/2 SAFI 73 update message and returns
+// SR Policy prefix object.
 func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*SRPolicy, error) {
 	sr, err := nlri.GetNLRI73()
 	if err != nil {
