@@ -969,3 +969,30 @@ func TestTEPolicy_ProtocolOriginConstants(t *testing.T) {
 		t.Errorf("Local = %d, want 3", Local)
 	}
 }
+
+// TestTEPolicy_FEC_TooShort verifies the minimum-length guard (< 2 bytes) in
+// UnmarshalLocalMPLSCrossConnectFEC (P3-14 bounds check).
+func TestTEPolicy_FEC_TooShort(t *testing.T) {
+	_, err := UnmarshalLocalMPLSCrossConnectFEC([]byte{})
+	if err == nil {
+		t.Fatal("expected error for empty FEC input")
+	}
+	_, err = UnmarshalLocalMPLSCrossConnectFEC([]byte{0x80})
+	if err == nil {
+		t.Fatal("expected error for 1-byte FEC input")
+	}
+}
+
+// TestTEPolicy_GetPolicyCandidatePathDescriptor_Missing verifies that
+// GetPolicyCandidatePathDescriptor returns (nil, nil) when the TLV is absent.
+func TestTEPolicy_GetPolicyCandidatePathDescriptor_Missing(t *testing.T) {
+	// nil TLV map: map lookup returns (nil, false) — no panic, returns (nil, nil).
+	pd := &PolicyDescriptor{}
+	cpd, err := pd.GetPolicyCandidatePathDescriptor()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cpd != nil {
+		t.Error("expected nil when PolicyCandidatePathDescriptor TLV is absent")
+	}
+}

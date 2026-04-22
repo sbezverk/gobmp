@@ -1,6 +1,7 @@
 package te
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -165,5 +166,26 @@ func TestUnmarshalTEPolicyNLRI_MissingBothTLVs(t *testing.T) {
 	expectedErr := "HeadEnd Node Descriptor missing mandatory TLV 512 (ASN)"
 	if err.Error() != expectedErr {
 		t.Fatalf("Expected error message '%s', got '%s'", expectedErr, err.Error())
+	}
+}
+
+// TestUnmarshalTEPolicyNLRI_TruncatedNodeDescBody verifies the bounds check
+// when ND length claims more bytes than actually available.
+func TestUnmarshalTEPolicyNLRI_TruncatedNodeDescBody(t *testing.T) {
+	// ProtocolID(1) + Identifier(8) + ND Type(2) + ND Length(2) claiming 16 bytes + only 4 bytes body
+	// p=9 after reading identifier; l=16; check: 9+16+4=29 > 17 bytes total
+	testData := []byte{
+		0x09,                                           // ProtocolID (SR)
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Identifier (8 bytes)
+		0x01, 0x00, // ND Type (256 = Local)
+		0x00, 0x10, // ND Length = 16, but we provide only 4 bytes of body
+		0x02, 0x00, 0x00, 0x04, // 4 bytes of ND body (16 needed)
+	}
+	_, err := UnmarshalTEPolicyNLRI(testData)
+	if err == nil {
+		t.Fatal("expected error for truncated node descriptor body")
+	}
+	if !strings.Contains(err.Error(), "node descriptor") {
+		t.Fatalf("expected node descriptor bounds error, got: %v", err)
 	}
 }

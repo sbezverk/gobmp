@@ -24,7 +24,7 @@ type NodeDescriptor struct {
 	SubTLV map[uint16]TLV
 }
 
-// GetASN returns Autonomous System Number used to uniqely identify BGP-LS domain
+// GetASN returns Autonomous System Number used to uniquely identify BGP-LS domain
 func (nd *NodeDescriptor) GetASN() uint32 {
 	if tlv, ok := nd.SubTLV[512]; ok && len(tlv.Value) >= 4 {
 		return binary.BigEndian.Uint32(tlv.Value)
