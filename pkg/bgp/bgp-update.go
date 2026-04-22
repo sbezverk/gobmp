@@ -104,8 +104,10 @@ func (up *Update) GetNLRIType() (uint8, int) {
 }
 
 // UnmarshalBGPUpdate build BGP Update object from the byte slice provided.
-// The optional as4 argument is the BMP Per-Peer Header A flag (RFC 7854 §4.2):
-// when provided it overrides the heuristic for 2-byte vs 4-byte AS_PATH encoding.
+// The optional as4 argument is the derived 4-byte-ASN indicator (typically
+// PeerHeader.Is4ByteASN() per RFC 7854 §4.2, i.e. !A): true = 4-byte,
+// false = 2-byte. When provided it overrides the heuristic for AS_PATH
+// encoding. Do not pass the raw A bit.
 func UnmarshalBGPUpdate(b []byte, as4 ...bool) (*Update, error) {
 	if glog.V(6) {
 		glog.Infof("BGPUpdate Raw: %s", tools.MessageHex(b))

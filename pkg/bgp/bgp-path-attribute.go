@@ -21,8 +21,10 @@ type PathAttribute struct {
 // Per RFC 4271 §4.3, TotalPathAttributeLength may be zero (pure withdrawal or
 // End-of-RIB marker per RFC 4724 §2); in that case an empty but non-nil
 // BaseAttributes is returned so callers can dereference it safely.
-// The optional as4 argument is the BMP Per-Peer Header A flag (RFC 7854 §4.2):
-// when provided it overrides the heuristic for 2-byte vs 4-byte AS_PATH encoding.
+// The optional as4 argument is the derived 4-byte-ASN indicator (typically
+// the result of PeerHeader.Is4ByteASN() per RFC 7854 §4.2, i.e. !A):
+// true = 4-byte ASNs, false = 2-byte. When provided it overrides the
+// heuristic for 2-byte vs 4-byte AS_PATH encoding. Do not pass the raw A bit.
 func UnmarshalBGPPathAttributes(b []byte, as4 ...bool) ([]PathAttribute, *BaseAttributes, error) {
 	attrs, err := unmarshalRawPathAttributes(b)
 	if err != nil {

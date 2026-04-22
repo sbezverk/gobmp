@@ -137,8 +137,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 // UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
 // and instantiates BaseAttributes object. It is a convenience wrapper that parses
 // the raw byte slice via UnmarshalBGPPathAttributes and then populates BaseAttributes.
-// The optional as4 argument is the BMP Per-Peer Header A flag (RFC 7854 §4.2): when
-// provided it overrides the internal heuristic for 2-byte vs 4-byte AS_PATH encoding.
+// The optional as4 argument is the derived 4-byte-ASN indicator (typically
+// PeerHeader.Is4ByteASN() per RFC 7854 §4.2, i.e. !A): true = 4-byte, false = 2-byte.
+// When provided it overrides the internal heuristic for AS_PATH encoding.
+// Do not pass the raw A bit.
 func UnmarshalBGPBaseAttributes(b []byte, as4 ...bool) (*BaseAttributes, error) {
 	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b, as4...)
 	_ = attrs // raw slice not needed by this call-path
@@ -147,7 +149,8 @@ func UnmarshalBGPBaseAttributes(b []byte, as4 ...bool) (*BaseAttributes, error) 
 
 // unmarshalBaseAttrsFromSlice populates a BaseAttributes struct from an already-parsed
 // []PathAttribute slice, avoiding a second walk of the raw byte buffer.
-// as4hint, when non-nil, overrides the AS_PATH width heuristic (RFC 7854 §4.2 flag A).
+// as4hint, when non-nil, is the derived 4-byte-ASN indicator (Is4ByteASN() = !A per
+// RFC 7854 §4.2): true = 4-byte, false = 2-byte. Overrides the AS_PATH width heuristic.
 func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAttributes, error) {
 	baseAttr := BaseAttributes{}
 	for _, attr := range attrs {
@@ -334,9 +337,7 @@ func unmarshalAttrASPath(b []byte, as4hint *bool) ([]uint32, error) {
 	}
 	for p := 0; p < len(b); {
 		// Segment type byte — must be one of 0x01..0x04 per RFC 4271 §4.3 / RFC 5065.
-		if p+1 > len(b) {
-			return nil, fmt.Errorf("AS_PATH attribute truncated: cannot read segment type at offset %d", p)
-		}
+		// Loop condition guarantees p < len(b), so the byte is always readable.
 		segType := b[p]
 		if segType < 0x01 || segType > 0x04 {
 			return nil, fmt.Errorf("AS_PATH attribute invalid segment type 0x%02x at offset %d", segType, p)
