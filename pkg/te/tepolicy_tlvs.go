@@ -276,6 +276,9 @@ func UnmarshalLocalMPLSCrossConnectFEC(b []byte) (*LocalMPLSCrossConnectFEC, err
 	if glog.V(6) {
 		glog.Infof("Local MPLS Cross Connect FEC Sub TLV Raw: %s", tools.MessageHex(b))
 	}
+	if len(b) < 2 {
+		return nil, fmt.Errorf("not enough bytes to unmarshal LocalMPLSCrossConnectFEC: need 2 bytes, have %d", len(b))
+	}
 	f := &LocalMPLSCrossConnectFEC{}
 	p := 0
 	f.Flag4 = b[p]&0x80 == 0x80

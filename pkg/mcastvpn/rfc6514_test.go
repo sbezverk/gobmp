@@ -1649,3 +1649,112 @@ func TestRFC6514_RDStringRepresentation(t *testing.T) {
 		})
 	}
 }
+
+// --- Boundary tests for uint8 overflow fix in Types 3, 5, 6, 7 ---
+// Prior to the fix, (uint8(255) + 7) / 8 overflowed to 0, causing the parser
+// to skip source/group data and corrupt subsequent NLRIs. These tests verify
+// that 255-bit lengths correctly produce 32-byte slices.
+
+func TestType3_MaxBitLength(t *testing.T) {
+	rd := makeRD(1, 1)
+	src := make([]byte, 32)
+	grp := make([]byte, 32)
+	origIP := []byte{10, 0, 0, 1}
+	b := rd
+	b = append(b, 255) // MulticastSourceLen = 255 bits → 32 bytes
+	b = append(b, src...)
+	b = append(b, 255) // MulticastGroupLen = 255 bits → 32 bytes
+	b = append(b, grp...)
+	b = append(b, origIP...)
+
+	got, err := UnmarshalType3(b)
+	if err != nil {
+		t.Fatalf("UnmarshalType3 with 255-bit lengths: %v", err)
+	}
+	if len(got.MulticastSource) != 32 {
+		t.Errorf("MulticastSource len = %d, want 32", len(got.MulticastSource))
+	}
+	if len(got.MulticastGroup) != 32 {
+		t.Errorf("MulticastGroup len = %d, want 32", len(got.MulticastGroup))
+	}
+}
+
+func TestType3_MaxBitLength_Truncated(t *testing.T) {
+	rd := makeRD(1, 1)
+	b := rd
+	b = append(b, 255) // claims 32-byte source but only 16 bytes follow
+	b = append(b, make([]byte, 16)...)
+	if _, err := UnmarshalType3(b); err == nil {
+		t.Fatal("expected error for truncated 255-bit source, got nil")
+	}
+}
+
+func TestType5_MaxBitLength(t *testing.T) {
+	rd := makeRD(1, 1)
+	src := make([]byte, 32)
+	grp := make([]byte, 32)
+	b := rd
+	b = append(b, 255)
+	b = append(b, src...)
+	b = append(b, 255)
+	b = append(b, grp...)
+
+	got, err := UnmarshalType5(b)
+	if err != nil {
+		t.Fatalf("UnmarshalType5 with 255-bit lengths: %v", err)
+	}
+	if len(got.MulticastSource) != 32 {
+		t.Errorf("MulticastSource len = %d, want 32", len(got.MulticastSource))
+	}
+	if len(got.MulticastGroup) != 32 {
+		t.Errorf("MulticastGroup len = %d, want 32", len(got.MulticastGroup))
+	}
+}
+
+func TestType6_MaxBitLength(t *testing.T) {
+	rd := makeRD(1, 1)
+	srcAS := []byte{0x00, 0x01, 0x00, 0x00}
+	src := make([]byte, 32)
+	grp := make([]byte, 32)
+	b := rd
+	b = append(b, srcAS...)
+	b = append(b, 255)
+	b = append(b, src...)
+	b = append(b, 255)
+	b = append(b, grp...)
+
+	got, err := UnmarshalType6(b)
+	if err != nil {
+		t.Fatalf("UnmarshalType6 with 255-bit lengths: %v", err)
+	}
+	if len(got.MulticastSource) != 32 {
+		t.Errorf("MulticastSource len = %d, want 32", len(got.MulticastSource))
+	}
+	if len(got.MulticastGroup) != 32 {
+		t.Errorf("MulticastGroup len = %d, want 32", len(got.MulticastGroup))
+	}
+}
+
+func TestType7_MaxBitLength(t *testing.T) {
+	rd := makeRD(1, 1)
+	srcAS := []byte{0x00, 0x01, 0x00, 0x00}
+	src := make([]byte, 32)
+	grp := make([]byte, 32)
+	b := rd
+	b = append(b, srcAS...)
+	b = append(b, 255)
+	b = append(b, src...)
+	b = append(b, 255)
+	b = append(b, grp...)
+
+	got, err := UnmarshalType7(b)
+	if err != nil {
+		t.Fatalf("UnmarshalType7 with 255-bit lengths: %v", err)
+	}
+	if len(got.MulticastSource) != 32 {
+		t.Errorf("MulticastSource len = %d, want 32", len(got.MulticastSource))
+	}
+	if len(got.MulticastGroup) != 32 {
+		t.Errorf("MulticastGroup len = %d, want 32", len(got.MulticastGroup))
+	}
+}
