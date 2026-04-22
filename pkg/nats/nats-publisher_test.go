@@ -50,9 +50,11 @@ func TestTopicForMessage(t *testing.T) {
 
 func TestRawTopicNotUnderParsedWildcard(t *testing.T) {
 	// gobmp.raw must be explicitly added to the stream Subjects because the
-	// gobmp.parsed.* wildcard only matches three-segment subjects.
-	if rawMessageTopic == "gobmp.parsed.raw" {
-		t.Error("rawMessageTopic must stay as gobmp.raw (Kafka parity); stream config covers it explicitly")
+	// gobmp.parsed.* wildcard only matches three-segment subjects. Assert
+	// the exact subject so accidental renames (e.g., to gobmp.parsed.raw)
+	// are caught rather than silently drifting from the Kafka topic.
+	if rawMessageTopic != "gobmp.raw" {
+		t.Errorf("rawMessageTopic=%q, want %q (Kafka parity); stream config covers it explicitly", rawMessageTopic, "gobmp.raw")
 	}
 	topic, ok := topicForMessage(bmp.BMPRawMsg)
 	if !ok || topic != rawMessageTopic {
