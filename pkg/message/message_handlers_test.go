@@ -544,6 +544,46 @@ func TestMVPN_EoR_RIBFlags(t *testing.T) {
 	}
 }
 
+// TestProcessMPUpdate_UnicastBranches exercises the consolidated
+// case 1, 2, 16, 17 branch of processMPUpdate for all AFI/SAFI combinations:
+// AFI=1/SAFI=1 (IPv4 Unicast), AFI=2/SAFI=1 (IPv6 Unicast),
+// AFI=1/SAFI=4 (IPv4 Labeled Unicast), AFI=2/SAFI=4 (IPv6 Labeled Unicast).
+// The `labeled := nlri.GetAFISAFIType() >= 16` shortcut must select the
+// right path for each combination.
+func TestProcessMPUpdate_UnicastBranches(t *testing.T) {
+	tests := []struct {
+		name string
+		afi  byte
+		safi byte
+	}{
+		{"IPv4 Unicast", 0x01, 0x01},
+		{"IPv6 Unicast", 0x02, 0x01},
+		{"IPv4 Labeled Unicast", 0x01, 0x04},
+		{"IPv6 Labeled Unicast", 0x02, 0x04},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewProducer(&mockPublisher{}, false).(*producer)
+			p.speakerIP = "10.0.0.1"
+			p.speakerHash = "abc123"
+
+			ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+			update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+			// MP_UNREACH_NLRI with empty withdrawn routes — EoR marker that
+			// still exercises the switch branch without requiring a full
+			// unicast parse.
+			unreachBytes := []byte{0x00, tt.afi, tt.safi}
+			nlri, err := bgp.UnmarshalMPUnReachNLRI(unreachBytes, map[int]bool{})
+			if err != nil {
+				t.Fatalf("UnmarshalMPUnReachNLRI: %v", err)
+			}
+
+			p.processMPUpdate(nlri, 1, ph, update)
+		})
+	}
+}
+
 // TestProcessMPUpdate_UnknownAFISAFI verifies default case logs warning for unknown types.
 func TestProcessMPUpdate_UnknownAFISAFI(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
