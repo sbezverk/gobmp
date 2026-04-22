@@ -40,6 +40,11 @@ func TestGetMaxLinkBandwidthKbps(t *testing.T) {
 	if got := (&NLRI{}).GetMaxLinkBandwidthKbps(); got != 0 {
 		t.Errorf("absent → %d, want 0", got)
 	}
+	// Short value (< 4 bytes) → 0, not a panic
+	nlriShort := &NLRI{LS: []TLV{{Type: 1089, Length: 3, Value: []byte{0x01, 0x02, 0x03}}}}
+	if got := nlriShort.GetMaxLinkBandwidthKbps(); got != 0 {
+		t.Errorf("short value → %d, want 0", got)
+	}
 	// Present: 125000 bytes/s = 125000*8/1000 kbps = 1000 kbps
 	val := float32Bytes(125000)
 	nlri := &NLRI{LS: []TLV{{Type: 1089, Length: 4, Value: val}}}
@@ -51,6 +56,11 @@ func TestGetMaxLinkBandwidthKbps(t *testing.T) {
 func TestGetMaxReservableLinkBandwidthKbps(t *testing.T) {
 	if got := (&NLRI{}).GetMaxReservableLinkBandwidthKbps(); got != 0 {
 		t.Errorf("absent → %d, want 0", got)
+	}
+	// Short value (< 4 bytes) → 0, not a panic
+	nlriShort := &NLRI{LS: []TLV{{Type: 1090, Length: 2, Value: []byte{0x01, 0x02}}}}
+	if got := nlriShort.GetMaxReservableLinkBandwidthKbps(); got != 0 {
+		t.Errorf("short value → %d, want 0", got)
 	}
 	val := float32Bytes(62500)
 	nlri := &NLRI{LS: []TLV{{Type: 1090, Length: 4, Value: val}}}

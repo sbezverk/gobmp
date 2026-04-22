@@ -472,6 +472,9 @@ func (ls *NLRI) GetMaxLinkBandwidthKbps() uint64 {
 		if tlv.Type != 1089 {
 			continue
 		}
+		if len(tlv.Value) < 4 {
+			continue
+		}
 		return uint64(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value)) * 8 / 1000)
 	}
 
@@ -482,6 +485,9 @@ func (ls *NLRI) GetMaxLinkBandwidthKbps() uint64 {
 func (ls *NLRI) GetMaxReservableLinkBandwidthKbps() uint64 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1090 {
+			continue
+		}
+		if len(tlv.Value) < 4 {
 			continue
 		}
 		return uint64(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value)) * 8 / 1000)
