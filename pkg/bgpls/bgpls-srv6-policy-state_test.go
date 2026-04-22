@@ -10,7 +10,7 @@ func TestGetSRBindingSID(t *testing.T) {
 	// 4-byte flags+reserved + 4-byte MPLS SID (FlagD clear = MPLS, FlagU clear = PSID present)
 	// flags byte: FlagB set (0x40), FlagU clear → PSID present
 	// So: flags=0x40, reserved=0x00, reserved2=0x00,0x00, BSID=4 bytes, PSID=4 bytes → total 12 bytes
-	flags := byte(0x40) // FlagB set, FlagD clear (MPLS), FlagU clear
+	flags := byte(0x40)                         // FlagB set, FlagD clear (MPLS), FlagU clear
 	bsidLabel := []byte{0x00, 0x10, 0x00, 0x00} // label 16
 	psidLabel := []byte{0x00, 0x20, 0x00, 0x00} // label 32
 	value := append([]byte{flags, 0x00, 0x00, 0x00}, bsidLabel...)
@@ -48,10 +48,10 @@ func TestGetSRCandidatePathState(t *testing.T) {
 	// 8-byte fixed: priority(1), reserved(1), flags(1), flags2(1), preference(4)
 	// flags byte: FlagA (0x40), FlagV (0x08)
 	value := []byte{
-		0x05,       // Priority = 5
-		0x00,       // reserved
-		0x40 | 0x08, // FlagA=1, FlagV=1
-		0x00,       // flags2
+		0x05,                   // Priority = 5
+		0x00,                   // reserved
+		0x40 | 0x08,            // FlagA=1, FlagV=1
+		0x00,                   // flags2
 		0x00, 0x00, 0x00, 0x64, // Preference = 100
 	}
 
@@ -122,9 +122,9 @@ func TestGetSRCandidatePathConstraints(t *testing.T) {
 	// 8-byte fixed header: flags(1), reserved(1), MTID(2), algo(1), reserved(3)
 	// Byte 0 flags: FlagD=0x80
 	value := []byte{
-		0x80,             // FlagD=1
-		0x00,             // reserved
-		0x00, 0x00,       // MTID = 0
+		0x80,       // FlagD=1
+		0x00,       // reserved
+		0x00, 0x00, // MTID = 0
 		0x80,             // Algo = 128 (FlexAlgo 128)
 		0x00, 0x00, 0x00, // 3 reserved bytes
 	}
@@ -161,11 +161,11 @@ func TestGetSRSegmentList(t *testing.T) {
 	// 12-byte minimum: reserved(1), flags(1), flags2(1), reserved(1), MTID(2), Algo(1), reserved(1), Weight(4)
 	// flags byte at offset 1: all clear
 	value := []byte{
-		0x00,                   // reserved
-		0x00,                   // flags byte
-		0x00,                   // flags2 (FlagM)
-		0x00,                   // reserved
-		0x00, 0x00,             // MTID = 0
+		0x00,       // reserved
+		0x00,       // flags byte
+		0x00,       // flags2 (FlagM)
+		0x00,       // reserved
+		0x00, 0x00, // MTID = 0
 		0x00,                   // Algo = 0
 		0x00,                   // reserved
 		0x00, 0x00, 0x00, 0x0a, // Weight = 10
@@ -193,8 +193,8 @@ func TestGetSRSegmentList(t *testing.T) {
 func TestGetSRSegmentList_Multiple(t *testing.T) {
 	value := []byte{
 		0x00, 0x00, 0x00, 0x00, // reserved + flags
-		0x00, 0x00,             // MTID
-		0x00, 0x00,             // Algo + reserved
+		0x00, 0x00, // MTID
+		0x00, 0x00, // Algo + reserved
 		0x00, 0x00, 0x00, 0x05, // Weight = 5
 	}
 
@@ -851,8 +851,8 @@ func TestSRType8Descriptor_RoundTrip(t *testing.T) {
 // TestUnmarshalSRSegmentListMetric verifies parsing of a 16-byte Segment List Metric sub-TLV.
 func TestUnmarshalSRSegmentListMetric(t *testing.T) {
 	b := make([]byte, 16)
-	b[0] = 1       // SRMetricMinUnidirLinkDelay
-	b[1] = 0x80    // FlagM set
+	b[0] = 1                                  // SRMetricMinUnidirLinkDelay
+	b[1] = 0x80                               // FlagM set
 	binary.BigEndian.PutUint32(b[4:8], 100)   // Margin
 	binary.BigEndian.PutUint32(b[8:12], 200)  // Bound
 	binary.BigEndian.PutUint32(b[12:16], 300) // Value
@@ -899,6 +899,39 @@ func TestUnmarshalSRSegmentSubTLV_UnknownType(t *testing.T) {
 	}
 	if len(m) != 0 {
 		t.Errorf("map len = %d, want 0 for unknown type", len(m))
+	}
+}
+
+// TestUnmarshalSRCandidatePathConstraintsSubTLV_TrailingBytes verifies that extra bytes
+// following a complete sub-TLV are rejected.
+func TestUnmarshalSRCandidatePathConstraintsSubTLV_TrailingBytes(t *testing.T) {
+	// Unknown type (0xFFFF), length=0: 4-byte TLV + 2 trailing bytes.
+	b := []byte{0xFF, 0xFF, 0x00, 0x00, 0xAB, 0xCD}
+	_, err := UnmarshalSRCandidatePathConstraintsSubTLV(b)
+	if err == nil {
+		t.Error("expected error for trailing bytes, got nil")
+	}
+}
+
+// TestUnmarshalSRSegmentListSubTLV_TrailingBytes verifies that extra bytes following
+// a complete sub-TLV are rejected.
+func TestUnmarshalSRSegmentListSubTLV_TrailingBytes(t *testing.T) {
+	// Unknown type (0xFFFF), length=0: 4-byte TLV + 2 trailing bytes.
+	b := []byte{0xFF, 0xFF, 0x00, 0x00, 0xAB, 0xCD}
+	_, err := UnmarshalSRSegmentListSubTLV(b)
+	if err == nil {
+		t.Error("expected error for trailing bytes, got nil")
+	}
+}
+
+// TestUnmarshalSRSegmentSubTLV_TrailingBytes verifies that extra bytes following
+// a complete sub-TLV are rejected.
+func TestUnmarshalSRSegmentSubTLV_TrailingBytes(t *testing.T) {
+	// Unknown type (0xFFFF), length=0: 4-byte TLV + 2 trailing bytes.
+	b := []byte{0xFF, 0xFF, 0x00, 0x00, 0xAB, 0xCD}
+	_, err := UnmarshalSRSegmentSubTLV(b)
+	if err == nil {
+		t.Error("expected error for trailing bytes, got nil")
 	}
 }
 
