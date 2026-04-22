@@ -348,7 +348,7 @@ func TestMPReachNLRI_GetNLRIRTC(t *testing.T) {
 				NLRI:               tt.nlri,
 				addPath:            map[int]bool{},
 			}
-			_, err := mp.GetNLRIRTC()
+			route, err := mp.GetNLRIRTC()
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("AFI=%d SAFI=%d: expected error, got nil", tt.afi, tt.safi)
@@ -360,6 +360,15 @@ func TestMPReachNLRI_GetNLRIRTC(t *testing.T) {
 			}
 			if err != nil {
 				t.Fatalf("AFI=%d SAFI=%d: unexpected error: %v", tt.afi, tt.safi, err)
+			}
+			if route == nil {
+				t.Fatalf("AFI=%d SAFI=%d: expected non-nil *rtc.Route", tt.afi, tt.safi)
+			}
+			if len(route.NLRI) != 1 {
+				t.Fatalf("AFI=%d SAFI=%d: expected 1 NLRI, got %d", tt.afi, tt.safi, len(route.NLRI))
+			}
+			if route.NLRI[0].Length != 0 {
+				t.Errorf("AFI=%d SAFI=%d: expected wildcard NLRI (Length=0), got Length=%d", tt.afi, tt.safi, route.NLRI[0].Length)
 			}
 		})
 	}
