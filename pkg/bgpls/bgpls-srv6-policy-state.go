@@ -246,7 +246,7 @@ func UnmarshalSRCandidatePathConstraintsSubTLV(b []byte) (map[uint16]SRCandidate
 	}
 	s := make(map[uint16]SRCandidatePathConstraintsSubTLV)
 	p := 0
-	for p < len(b) {
+	for p+4 <= len(b) {
 		t := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		l := binary.BigEndian.Uint16(b[p : p+2])
@@ -281,6 +281,9 @@ func UnmarshalSRCandidatePathConstraintsSubTLV(b []byte) (map[uint16]SRCandidate
 			s[SRDisjointGroupConstraintType] = stlv
 		}
 		p += int(l)
+	}
+	if p != len(b) {
+		return nil, fmt.Errorf("SR Candidate Path Constraints Sub TLV: %d trailing bytes", len(b)-p)
 	}
 
 	return s, nil
@@ -667,17 +670,17 @@ func UnmarshalSRSegmentListSubTLV(b []byte) ([]SRSegmentListSubTLV, error) {
 		glog.Infof("SR Segment List Sub TLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 4 {
-		return nil, fmt.Errorf("not enough bytes to decode SR Segment List Sub TLV")
+		return nil, fmt.Errorf("not enough bytes to decode SR Segment List Sub TLV, need at least 4 bytes, have %d", len(b))
 	}
 	s := make([]SRSegmentListSubTLV, 0)
 	p := 0
-	for p < len(b) {
+	for p+4 <= len(b) {
 		t := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		if p+int(l) > len(b) {
-			return nil, fmt.Errorf("not enough bytes to decode SR Segment List Sub TLV")
+			return nil, fmt.Errorf("not enough bytes to decode SR Segment List Sub TLV value at offset %d, need %d bytes, have %d", p, l, len(b)-p)
 		}
 		switch t {
 		case SRSegmentType:
@@ -694,6 +697,9 @@ func UnmarshalSRSegmentListSubTLV(b []byte) ([]SRSegmentListSubTLV, error) {
 			s = append(s, stlv)
 		}
 		p += int(l)
+	}
+	if p != len(b) {
+		return nil, fmt.Errorf("SR Segment List Sub TLV: %d trailing bytes", len(b)-p)
 	}
 	return s, nil
 }
@@ -1214,11 +1220,11 @@ func UnmarshalSRSegmentSubTLV(b []byte) (map[uint16]SRSegmentSubTLV, error) {
 		glog.Infof("SR Segment Sub TLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 4 {
-		return nil, fmt.Errorf("not enough bytes to decode SR Segment List Sub TLV")
+		return nil, fmt.Errorf("not enough bytes to decode SR Segment Sub TLV: need at least 4 bytes, have %d", len(b))
 	}
 	s := make(map[uint16]SRSegmentSubTLV)
 	p := 0
-	for p < len(b) {
+	for p+4 <= len(b) {
 		t := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		l := binary.BigEndian.Uint16(b[p : p+2])
@@ -1230,6 +1236,9 @@ func UnmarshalSRSegmentSubTLV(b []byte) (map[uint16]SRSegmentSubTLV, error) {
 		switch t {
 		}
 		p += int(l)
+	}
+	if p != len(b) {
+		return nil, fmt.Errorf("SR Segment Sub TLV: %d trailing bytes", len(b)-p)
 	}
 	return s, nil
 }
@@ -1391,21 +1400,25 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 // MarshalJSON serializes SRSegment into a slice of bytes
 func (s *SRSegment) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Segment SegmentType `json:"segment_type"`
-		FlagS   bool        `json:"s_flag"`
-		FlagE   bool        `json:"e_flag"`
-		FlagV   bool        `json:"v_flag"`
-		FlagR   bool        `json:"r_flag"`
-		FlagA   bool        `json:"a_flag"`
-		SID     SID         `json:"sid"`
+		Segment           SegmentType                `json:"segment_type"`
+		FlagS             bool                       `json:"s_flag"`
+		FlagE             bool                       `json:"e_flag"`
+		FlagV             bool                       `json:"v_flag"`
+		FlagR             bool                       `json:"r_flag"`
+		FlagA             bool                       `json:"a_flag"`
+		SID               SID                        `json:"sid"`
+		SegmentDescriptor SegmentDescriptor          `json:"segment_descriptor,omitempty"`
+		SubTLV            map[uint16]SRSegmentSubTLV `json:"subtlv,omitempty"`
 	}{
-		Segment: s.Segment,
-		FlagS:   s.FlagS,
-		FlagE:   s.FlagE,
-		FlagV:   s.FlagV,
-		FlagR:   s.FlagR,
-		FlagA:   s.FlagA,
-		SID:     s.SID,
+		Segment:           s.Segment,
+		FlagS:             s.FlagS,
+		FlagE:             s.FlagE,
+		FlagV:             s.FlagV,
+		FlagR:             s.FlagR,
+		FlagA:             s.FlagA,
+		SID:               s.SID,
+		SegmentDescriptor: s.SegmentDescriptor,
+		SubTLV:            s.SubTLV,
 	})
 }
 

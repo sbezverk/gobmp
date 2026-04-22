@@ -139,8 +139,8 @@ func UnmarshalPrefixAttrFlags(b []byte, proto base.ProtoID) (PrefixAttrFlags, er
 	if glog.V(6) {
 		glog.Infof("Prefix Attr Flags Raw: %s for proto: %+v", tools.MessageHex(b), proto)
 	}
-	if len(b) == 0 {
-		return nil, fmt.Errorf("not enough bytes to unmarshal Prefix Attr Flags")
+	if len(b) < 1 {
+		return nil, fmt.Errorf("prefix attr flags: need at least 1 byte, have %d", len(b))
 	}
 	switch proto {
 	case base.ISISL1:
