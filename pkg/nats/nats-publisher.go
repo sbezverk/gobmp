@@ -34,6 +34,7 @@ const (
 	vplsMessageTopic       = "gobmp.parsed.vpls"
 	statsMessageTopic      = "gobmp.parsed.statistics"
 	rawMessageTopic        = "gobmp.raw"
+	parsedWildcardSubject  = "gobmp.parsed.*"
 )
 
 var (
@@ -132,7 +133,7 @@ func (p *publisher) createStreams() error {
 	// Define the stream configuration
 	streamConfig := &nats.StreamConfig{
 		Name:      "goBMP",
-		Subjects:  []string{"gobmp.parsed.*", "gobmp.raw"},
+		Subjects:  []string{parsedWildcardSubject, rawMessageTopic},
 		Storage:   nats.FileStorage,
 		Retention: nats.InterestPolicy,
 		MaxMsgs:   -1, // No limit
