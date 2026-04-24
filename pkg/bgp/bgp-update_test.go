@@ -24,7 +24,7 @@ func TestUnmarshalBGPUpdate_AS4Hint(t *testing.T) {
 	update4 := append([]byte{0x00, 0x00, 0x00, byte(len(attrs4))}, attrs4...)
 
 	t.Run("hint=false forces 2-byte parsing", func(t *testing.T) {
-		u, err := UnmarshalBGPUpdate(update2, false)
+		u, err := UnmarshalBGPUpdateWithAS4Hint(update2, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -35,7 +35,7 @@ func TestUnmarshalBGPUpdate_AS4Hint(t *testing.T) {
 	})
 
 	t.Run("hint=true forces 4-byte parsing", func(t *testing.T) {
-		u, err := UnmarshalBGPUpdate(update4, true)
+		u, err := UnmarshalBGPUpdateWithAS4Hint(update4, true)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -48,7 +48,7 @@ func TestUnmarshalBGPUpdate_AS4Hint(t *testing.T) {
 	t.Run("hint=true on 2-byte payload fails", func(t *testing.T) {
 		// 2-byte payload under 4-byte interpretation needs 8 bytes per segment
 		// but only has 4 -> truncation error.
-		_, err := UnmarshalBGPUpdate(update2, true)
+		_, err := UnmarshalBGPUpdateWithAS4Hint(update2, true)
 		if err == nil {
 			t.Fatal("expected truncation error under 4-byte hint, got nil")
 		}

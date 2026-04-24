@@ -134,16 +134,21 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 
 }
 
-// UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
-// and instantiates BaseAttributes object. It is a convenience wrapper that parses
-// the raw byte slice via UnmarshalBGPPathAttributes and then populates BaseAttributes.
-// The optional as4 argument is the derived 4-byte-ASN indicator (typically
-// PeerHeader.Is4ByteASN() per RFC 7854 §4.2, i.e. !A): true = 4-byte, false = 2-byte.
-// When provided it overrides the internal heuristic for AS_PATH encoding.
-// Do not pass the raw A bit.
-func UnmarshalBGPBaseAttributes(b []byte, as4 ...bool) (*BaseAttributes, error) {
-	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b, as4...)
-	_ = attrs // raw slice not needed by this call-path
+// UnmarshalBGPBaseAttributes discovers all present Base Attributes in a BGP
+// Update and instantiates a BaseAttributes object. AS_PATH width is inferred
+// by heuristic; use UnmarshalBGPBaseAttributesWithAS4Hint when the caller has
+// an authoritative indicator.
+func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
+	_, baseAttrs, err := unmarshalBGPPathAttributes(b, nil)
+	return baseAttrs, err
+}
+
+// UnmarshalBGPBaseAttributesWithAS4Hint is UnmarshalBGPBaseAttributes with an
+// authoritative 4-byte-ASN indicator (typically PeerHeader.Is4ByteASN() per
+// RFC 7854 §4.2, i.e. !A): true = 4-byte, false = 2-byte. Do not pass the
+// raw A bit.
+func UnmarshalBGPBaseAttributesWithAS4Hint(b []byte, as4 bool) (*BaseAttributes, error) {
+	_, baseAttrs, err := unmarshalBGPPathAttributes(b, &as4)
 	return baseAttrs, err
 }
 

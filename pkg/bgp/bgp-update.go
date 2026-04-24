@@ -103,12 +103,21 @@ func (up *Update) GetNLRIType() (uint8, int) {
 	return BGP4_NLRI, 0
 }
 
-// UnmarshalBGPUpdate build BGP Update object from the byte slice provided.
-// The optional as4 argument is the derived 4-byte-ASN indicator (typically
-// PeerHeader.Is4ByteASN() per RFC 7854 §4.2, i.e. !A): true = 4-byte,
-// false = 2-byte. When provided it overrides the heuristic for AS_PATH
-// encoding. Do not pass the raw A bit.
-func UnmarshalBGPUpdate(b []byte, as4 ...bool) (*Update, error) {
+// UnmarshalBGPUpdate builds a BGP Update object from the byte slice provided.
+// AS_PATH width (2-byte vs 4-byte) is inferred by heuristic; use
+// UnmarshalBGPUpdateWithAS4Hint when the caller has an authoritative indicator.
+func UnmarshalBGPUpdate(b []byte) (*Update, error) {
+	return unmarshalBGPUpdate(b, nil)
+}
+
+// UnmarshalBGPUpdateWithAS4Hint is UnmarshalBGPUpdate with an authoritative
+// 4-byte-ASN indicator (typically PeerHeader.Is4ByteASN() per RFC 7854 §4.2,
+// i.e. !A): true = 4-byte, false = 2-byte. Do not pass the raw A bit.
+func UnmarshalBGPUpdateWithAS4Hint(b []byte, as4 bool) (*Update, error) {
+	return unmarshalBGPUpdate(b, &as4)
+}
+
+func unmarshalBGPUpdate(b []byte, as4hint *bool) (*Update, error) {
 	if glog.V(6) {
 		glog.Infof("BGPUpdate Raw: %s", tools.MessageHex(b))
 	}
@@ -134,7 +143,7 @@ func UnmarshalBGPUpdate(b []byte, as4 ...bool) (*Update, error) {
 		return nil, fmt.Errorf("not enough bytes to unmarshal Path Attributes: need %d bytes, have %d", u.TotalPathAttributeLength, len(b)-p)
 	}
 	// Single pass: parse path attributes and populate base attributes simultaneously
-	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b[p:p+int(u.TotalPathAttributeLength)], as4...)
+	attrs, baseAttrs, err := unmarshalBGPPathAttributes(b[p:p+int(u.TotalPathAttributeLength)], as4hint)
 	if err != nil {
 		return nil, err
 	}

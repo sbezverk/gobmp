@@ -192,3 +192,44 @@ func TestRouteMonitor_ErrNotAnUpdate(t *testing.T) {
 		t.Errorf("error %v does not wrap ErrNotAnUpdate", err)
 	}
 }
+
+// TestUnmarshalBMPRouteMonitorMessageWithAS4Hint_EmbeddedUpdate verifies the
+// hinted variant delegates to UnmarshalBGPUpdateWithAS4Hint by exercising a
+// 2-byte AS_PATH payload that only decodes correctly under the 2-byte hint.
+// Per RFC 7854 §4.2: Is4ByteASN()==false (A=1) means the 2-byte legacy format.
+func TestUnmarshalBMPRouteMonitorMessageWithAS4Hint_EmbeddedUpdate(t *testing.T) {
+	// BGP UPDATE body (without the 16-byte marker / 2-byte length / 1-byte type):
+	// WithdrawnRoutesLength=0, TotalPathAttributeLength=13,
+	// attrs: ORIGIN(0x40,0x01,0x01,0x00) + AS_PATH 2-byte (0x40,0x02,0x06,0x02,0x02,0xFC,0x00,0xFC,0x01)
+	bgpPayload := []byte{
+		0x00, 0x00, // WithdrawnRoutesLength
+		0x00, 0x0D, // TotalPathAttributeLength = 13
+		0x40, 0x01, 0x01, 0x00, // ORIGIN
+		0x40, 0x02, 0x06, 0x02, 0x02, 0xFC, 0x00, 0xFC, 0x01, // AS_PATH 2-byte [64512, 64513]
+	}
+	// 16-byte marker + 2-byte length + 1-byte type(=2 UPDATE) + bgpPayload.
+	bgpLen := 19 + len(bgpPayload)
+	rm := make([]byte, 0, bgpLen)
+	for i := 0; i < 16; i++ {
+		rm = append(rm, 0xFF)
+	}
+	rm = append(rm, byte(bgpLen>>8), byte(bgpLen&0xFF), 0x02)
+	rm = append(rm, bgpPayload...)
+
+	// as4=false forces 2-byte parsing (A=1 in BMP, RFC 7854 §4.2).
+	got, err := UnmarshalBMPRouteMonitorMessageWithAS4Hint(rm, false)
+	if err != nil {
+		t.Fatalf("UnmarshalBMPRouteMonitorMessageWithAS4Hint(as4=false): %v", err)
+	}
+	want := []uint32{64512, 64513}
+	if len(got.Update.BaseAttributes.ASPath) != len(want) ||
+		got.Update.BaseAttributes.ASPath[0] != want[0] ||
+		got.Update.BaseAttributes.ASPath[1] != want[1] {
+		t.Errorf("ASPath = %v, want %v", got.Update.BaseAttributes.ASPath, want)
+	}
+
+	// as4=true on a 2-byte payload must fail (segment needs 8 bytes but only 4 remain).
+	if _, err := UnmarshalBMPRouteMonitorMessageWithAS4Hint(rm, true); err == nil {
+		t.Error("UnmarshalBMPRouteMonitorMessageWithAS4Hint(as4=true) on 2-byte payload: want error, got nil")
+	}
+}

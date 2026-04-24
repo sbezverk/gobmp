@@ -121,13 +121,12 @@ func (p *parser) parsingWorker(b []byte) {
 			perPerHeaderLen = bmp.PerPeerHeaderLength
 			// Pass the interpreted 4-byte-ASN setting derived from the BMP per-peer
 			// header per RFC 7854 §4.2 so AS_PATH width is authoritative rather than
-			// heuristic. Is4ByteASN returns an error for PeerType3 — fall back to the
-			// heuristic in that case by passing no argument. Branching avoids
-			// per-message slice allocation for the variadic parameter.
+			// heuristic. Is4ByteASN returns an error for PeerType3 — fall back to
+			// the heuristic in that case via the no-hint variant.
 			rmBody := b[pos+perPerHeaderLen : pos+msgLen-bmp.CommonHeaderLength]
 			var rm *bmp.RouteMonitor
 			if is4, e := bmpMsg.PeerHeader.Is4ByteASN(); e == nil {
-				rm, err = bmp.UnmarshalBMPRouteMonitorMessage(rmBody, is4)
+				rm, err = bmp.UnmarshalBMPRouteMonitorMessageWithAS4Hint(rmBody, is4)
 			} else {
 				rm, err = bmp.UnmarshalBMPRouteMonitorMessage(rmBody)
 			}

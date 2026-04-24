@@ -175,14 +175,35 @@ func TestUnmarshalBGPBaseAttributesAs4Hint(t *testing.T) {
 		0x40, 0x01, 0x01, 0x00,
 		0x40, 0x02, 0x0a, 0x02, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02,
 	}
-	as4hint := true
-	got, err := UnmarshalBGPBaseAttributes(raw, as4hint)
+	got, err := UnmarshalBGPBaseAttributesWithAS4Hint(raw, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	want := []uint32{1, 2}
 	if !reflect.DeepEqual(got.ASPath, want) {
 		t.Errorf("ASPath: got %v, want %v", got.ASPath, want)
+	}
+}
+
+// TestUnmarshalBGPPathAttributesWithAS4Hint verifies the hinted variant
+// overrides the AS_PATH-width heuristic and returns both the raw attribute
+// slice and the populated BaseAttributes. 4-byte hint per RFC 7854 §4.2.
+func TestUnmarshalBGPPathAttributesWithAS4Hint(t *testing.T) {
+	// ORIGIN(igp) + AS_PATH AS4 with two ASNs [1, 2]
+	raw := []byte{
+		0x40, 0x01, 0x01, 0x00,
+		0x40, 0x02, 0x0a, 0x02, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02,
+	}
+	attrs, base, err := UnmarshalBGPPathAttributesWithAS4Hint(raw, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(attrs) != 2 {
+		t.Errorf("len(attrs) = %d, want 2", len(attrs))
+	}
+	want := []uint32{1, 2}
+	if !reflect.DeepEqual(base.ASPath, want) {
+		t.Errorf("ASPath: got %v, want %v", base.ASPath, want)
 	}
 }
 
