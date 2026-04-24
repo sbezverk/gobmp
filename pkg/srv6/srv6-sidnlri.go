@@ -68,16 +68,15 @@ func (sr *SIDNLRI) GetSRv6SIDMTID() *base.MultiTopologyIdentifier {
 	return sr.SRv6SID.GetMTID()[0]
 }
 
-// GetSRv6SID returns the SRv6 SID as an IP string, or an empty string if it is missing or invalid.
+// GetSRv6SID returns the SRv6 SID as an IP string, or an empty string if it
+// is missing or not a 16-byte SRv6 SID. A non-16-byte length (e.g. a 4-byte
+// IPv4 value that net.IP would otherwise expand to an IPv4-mapped IPv6
+// address) is treated as invalid.
 func (sr *SIDNLRI) GetSRv6SID() string {
-	if sr.SRv6SID == nil {
+	if sr.SRv6SID == nil || len(sr.SRv6SID.SID) != net.IPv6len {
 		return ""
 	}
-	ip := net.IP(sr.SRv6SID.SID).To16()
-	if ip == nil {
-		return ""
-	}
-	return ip.String()
+	return net.IP(sr.SRv6SID.SID).String()
 }
 
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object

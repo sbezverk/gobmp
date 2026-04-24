@@ -38,6 +38,13 @@ func TestSIDNLRINilGuards(t *testing.T) {
 	if got := emptySID.GetSRv6SID(); got != "" {
 		t.Errorf("GetSRv6SID with empty SID bytes: want \"\", got %q", got)
 	}
+
+	// A 4-byte value must be rejected: net.IP(...).To16() would otherwise
+	// return a valid IPv4-mapped IPv6 address, masking a malformed SID.
+	shortSID := &SIDNLRI{SRv6SID: &SIDDescriptor{SID: []byte{0x0a, 0x00, 0x00, 0x01}}}
+	if got := shortSID.GetSRv6SID(); got != "" {
+		t.Errorf("GetSRv6SID with 4-byte SID: want \"\", got %q", got)
+	}
 }
 
 func TestSIDNLRIGetters(t *testing.T) {
