@@ -1482,14 +1482,7 @@ func TestBMPServer_ConnectionLimit_ServerRejects(t *testing.T) {
 	srv.connSem <- struct{}{}
 
 	srv.Start()
-	defer func() {
-		// Drain the semaphore so Stop() does not hang waiting for bmpWorker exits.
-		select {
-		case <-srv.connSem:
-		default:
-		}
-		srv.Stop()
-	}()
+	defer srv.Stop()
 
 	port := ln.Addr().(*net.TCPAddr).Port
 	client, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(port))
