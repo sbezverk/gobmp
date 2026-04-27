@@ -426,7 +426,7 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 		}
 		speaker.mu.Lock()
 		speaker.isConnected = true
-		speaker.nextAttempt = time.Time{} // allow immediate reconnect after a clean disconnect
+		speaker.nextAttempt = time.Time{} // clear any stale backoff timestamp while the speaker is connected
 		speaker.mu.Unlock()
 		srv.wg.Add(1)
 		srv.clients[client] = struct{}{}
