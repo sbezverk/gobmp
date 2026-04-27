@@ -43,9 +43,18 @@ var (
 	waitReconnect = time.Second
 )
 
+// jetStreamClient is the subset of nats.JetStreamContext used by publisher.
+// Defining a narrow interface lets tests inject a fake without a full NATS server.
+type jetStreamClient interface {
+	PublishMsg(m *nats.Msg, opts ...nats.PubOpt) (*nats.PubAck, error)
+	AddStream(cfg *nats.StreamConfig, opts ...nats.JSOpt) (*nats.StreamInfo, error)
+	StreamInfo(stream string, opts ...nats.JSOpt) (*nats.StreamInfo, error)
+	UpdateStream(cfg *nats.StreamConfig, opts ...nats.JSOpt) (*nats.StreamInfo, error)
+}
+
 type publisher struct {
 	nc *nats.Conn
-	js nats.JetStreamContext
+	js jetStreamClient
 }
 
 // topicForMessage maps a BMP message type to its NATS subject.
@@ -129,6 +138,25 @@ func (p *publisher) Stop() {
 	p.nc.Close()
 }
 
+// mergeSubjects returns a new slice containing all elements of existing plus
+// any elements from required that are not already present, and a bool
+// indicating whether any subjects were added. existing is not modified.
+func mergeSubjects(existing, required []string) ([]string, bool) {
+	set := make(map[string]struct{}, len(existing))
+	for _, s := range existing {
+		set[s] = struct{}{}
+	}
+	result := append([]string(nil), existing...)
+	changed := false
+	for _, s := range required {
+		if _, ok := set[s]; !ok {
+			result = append(result, s)
+			changed = true
+		}
+	}
+	return result, changed
+}
+
 func (p *publisher) createStreams() error {
 	// Define the stream configuration
 	streamConfig := &nats.StreamConfig{
@@ -149,18 +177,9 @@ func (p *publisher) createStreams() error {
 			return fmt.Errorf("failed to get stream info for %q: %w", streamConfig.Name, infoErr)
 		}
 		existingConfig := info.Config
-		subjectSet := make(map[string]struct{}, len(existingConfig.Subjects))
-		for _, s := range existingConfig.Subjects {
-			subjectSet[s] = struct{}{}
-		}
-		updated := false
-		for _, required := range streamConfig.Subjects {
-			if _, ok := subjectSet[required]; !ok {
-				existingConfig.Subjects = append(existingConfig.Subjects, required)
-				updated = true
-			}
-		}
+		merged, updated := mergeSubjects(existingConfig.Subjects, streamConfig.Subjects)
 		if updated {
+			existingConfig.Subjects = merged
 			if _, err = p.js.UpdateStream(&existingConfig); err != nil {
 				return fmt.Errorf("failed to update stream subjects for %q: %w", streamConfig.Name, err)
 			}
