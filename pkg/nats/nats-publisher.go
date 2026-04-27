@@ -144,8 +144,26 @@ func (p *publisher) createStreams() error {
 
 	_, err := p.js.AddStream(streamConfig)
 	if errors.Is(err, nats.ErrStreamNameAlreadyInUse) {
-		if _, err = p.js.UpdateStream(streamConfig); err != nil {
-			return fmt.Errorf("failed to update stream: %w", err)
+		info, infoErr := p.js.StreamInfo(streamConfig.Name)
+		if infoErr != nil {
+			return fmt.Errorf("failed to get stream info for %q: %w", streamConfig.Name, infoErr)
+		}
+		existingConfig := info.Config
+		subjectSet := make(map[string]struct{}, len(existingConfig.Subjects))
+		for _, s := range existingConfig.Subjects {
+			subjectSet[s] = struct{}{}
+		}
+		updated := false
+		for _, required := range streamConfig.Subjects {
+			if _, ok := subjectSet[required]; !ok {
+				existingConfig.Subjects = append(existingConfig.Subjects, required)
+				updated = true
+			}
+		}
+		if updated {
+			if _, err = p.js.UpdateStream(&existingConfig); err != nil {
+				return fmt.Errorf("failed to update stream subjects for %q: %w", streamConfig.Name, err)
+			}
 		}
 	} else if err != nil {
 		return fmt.Errorf("failed to create stream: %w", err)
