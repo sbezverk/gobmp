@@ -472,7 +472,11 @@ func (srv *bmpServer) connectSpeaker(speaker *bgpSpeaker) {
 	}
 }
 
-// NewBMPServer instantiates a new instance of BMP Server
+// NewBMPServer instantiates a new instance of BMP server from cfg.
+// In passive mode it binds cfg.BmpListenPort. When cfg.MaxPassiveConnections > 0,
+// the server refuses additional TCP accepts beyond that cap (see max_passive_connections).
+// This constructor does not configure per-connection read timeouts; operators rely on
+// BMP peers or intermediates to drop idle sessions if needed.
 func NewBMPServer(cfg *config.Config) (BMPServer, error) {
 	if cfg == nil {
 		return nil, errors.New("config cannot be nil")
