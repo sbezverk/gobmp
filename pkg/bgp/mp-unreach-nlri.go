@@ -217,9 +217,9 @@ func (mp *MPUnReachNLRI) GetNLRIMVPN() (*mcastvpn.Route, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
 }
 
-// GetNLRIRTC checks for presence of NLRI 132 Route Target Constraint in the NLRI 15 NLRI data and if exists, instantiate RTC NLRI object
+// GetNLRIRTC checks whether MP_UNREACH_NLRI carries Route Target Constraint NLRI (SAFI 132) and, if so, instantiates an RTC NLRI object from withdrawn routes.
 func (mp *MPUnReachNLRI) GetNLRIRTC() (*rtc.Route, error) {
-	if mp.SubAddressFamilyID == 132 {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 132 {
 		return rtc.UnmarshalRTCNLRI(mp.WithdrawnRoutes)
 	}
 
