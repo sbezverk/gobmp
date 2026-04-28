@@ -1,6 +1,8 @@
 package message
 
 import (
+	"encoding/json"
+	"sync"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -8,6 +10,28 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/mcastvpn"
 )
+
+// recordingPublisher captures PublishMessage calls for test assertions.
+type recordingPublisher struct {
+	mu   sync.Mutex
+	msgs []recordedMsg
+}
+
+type recordedMsg struct {
+	msgType int
+	payload []byte
+}
+
+func (r *recordingPublisher) PublishMessage(msgType int, msgHash []byte, msg []byte) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	payload := make([]byte, len(msg))
+	copy(payload, msg)
+	r.msgs = append(r.msgs, recordedMsg{msgType: msgType, payload: payload})
+	return nil
+}
+
+func (r *recordingPublisher) Stop() {}
 
 // makePeerHeader constructs a PerPeerHeader with the given flags byte.
 func makePeerHeader(t *testing.T, peerType bmp.PeerType, flagsByte byte) *bmp.PerPeerHeader {
@@ -135,6 +159,49 @@ func TestMVPN_RIBFlags_AllFive(t *testing.T) {
 	}
 	if r.IsLocRIBFiltered {
 		t.Error("IsLocRIBFiltered = true, want false for PeerType0")
+	}
+}
+
+// TestMCASTVPN_Nexthop verifies the mcastvpn handler extracts the nexthop correctly.
+func TestMCASTVPN_Nexthop(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	p.speakerIP = "10.0.0.1"
+	p.speakerHash = "abc123"
+
+	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	// MCAST-VPN (SAFI 5) Type 1 route: RD(8) + OriginatorIP(4) = 12 bytes
+	reachWithRoute := []byte{
+		0x00, 0x01, // AFI: 1
+		0x05,                   // SAFI: 5
+		0x04,                   // NH Length: 4
+		0x0a, 0x00, 0x00, 0x01, // NextHop: 10.0.0.1
+		0x00, // Reserved
+		0x01, // Route Type: 1 (Intra-AS I-PMSI A-D)
+		0x0C, // Length: 12
+		// RD (8 bytes)
+		0x00, 0x02, 0x00, 0x00, 0xFD, 0xE8, 0x00, 0x64,
+		// Originator IP (4 bytes)
+		0x0a, 0x00, 0x00, 0x01,
+	}
+	nlri, err := bgp.UnmarshalMPReachNLRI(reachWithRoute, false, map[int]bool{})
+	if err != nil {
+		t.Fatalf("UnmarshalMPReachNLRI: %v", err)
+	}
+
+	msgs, err := p.mcastvpn(nlri, 0, ph, update)
+	if err != nil {
+		t.Fatalf("mcastvpn() error: %v", err)
+	}
+	if len(msgs) < 1 {
+		t.Fatal("mcastvpn() returned 0 messages")
+	}
+	if msgs[0].Nexthop != "10.0.0.1" {
+		t.Errorf("Nexthop = %q, want '10.0.0.1'", msgs[0].Nexthop)
+	}
+	if !msgs[0].IsNexthopIPv4 {
+		t.Error("IsNexthopIPv4 = false, want true")
 	}
 }
 
@@ -498,6 +565,91 @@ func TestMVPN_EoR_RIBFlags(t *testing.T) {
 	}
 	if r.IsLocRIB {
 		t.Error("IsLocRIB = true, want false for PeerType0")
+	}
+}
+
+// TestProcessMPUpdate_UnicastBranches exercises the consolidated
+// case 1, 2, 16, 17 branch of processMPUpdate for all AFI/SAFI combinations:
+// AFI=1/SAFI=1 (IPv4 Unicast), AFI=2/SAFI=1 (IPv6 Unicast),
+// AFI=1/SAFI=4 (IPv4 Labeled Unicast), AFI=2/SAFI=4 (IPv6 Labeled Unicast).
+// Each case feeds a non-EoR MP_REACH_NLRI through processMPUpdate and asserts
+// the recorded publish. The `labeled := nlri.GetAFISAFIType() >= 16` shortcut
+// is observable via the presence/absence of parsed Labels; splitAF topic
+// selection makes IPv4 vs IPv6 dispatch observable via the msg type.
+func TestProcessMPUpdate_UnicastBranches(t *testing.T) {
+	// IPv4 nexthop (1.1.1.1) and IPv6 nexthop (2001::1) for MP_REACH payloads.
+	nhV4 := []byte{0x01, 0x01, 0x01, 0x01}
+	nhV6 := []byte{0x20, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01}
+
+	// IPv4 unicast NLRI: 10.0.0.0/8 => [prefix_len_bits, prefix_bytes...]
+	nlriV4Unicast := []byte{0x08, 0x0A}
+	// IPv6 unicast NLRI: 2001::/16
+	nlriV6Unicast := []byte{0x10, 0x20, 0x01}
+	// IPv4 labeled unicast NLRI: length 56 bits (24 label + 32 prefix),
+	// label=3 BoS, prefix 10.0.0.0/32. Mirrors pkg/unicast/unicast_test.go fixture.
+	nlriV4Labeled := []byte{0x38, 0x00, 0x00, 0x31, 0x0a, 0x00, 0x00, 0x00}
+	// IPv6 labeled unicast NLRI: length 40 bits (24 label + 16 prefix),
+	// label=3 BoS, prefix 2001::/16.
+	nlriV6Labeled := []byte{0x28, 0x00, 0x00, 0x31, 0x20, 0x01}
+
+	buildReach := func(afi uint16, safi uint8, nh, nlri []byte) []byte {
+		b := []byte{byte(afi >> 8), byte(afi), safi, byte(len(nh))}
+		b = append(b, nh...)
+		b = append(b, 0x00) // reserved
+		b = append(b, nlri...)
+		return b
+	}
+
+	tests := []struct {
+		name          string
+		reach         []byte
+		wantIsIPv4    bool
+		wantTopicType int
+		wantLabeled   bool
+	}{
+		{"IPv4 Unicast", buildReach(1, 1, nhV4, nlriV4Unicast), true, bmp.UnicastPrefixV4Msg, false},
+		{"IPv6 Unicast", buildReach(2, 1, nhV6, nlriV6Unicast), false, bmp.UnicastPrefixV6Msg, false},
+		{"IPv4 Labeled Unicast", buildReach(1, 4, nhV4, nlriV4Labeled), true, bmp.UnicastPrefixV4Msg, true},
+		{"IPv6 Labeled Unicast", buildReach(2, 4, nhV6, nlriV6Labeled), false, bmp.UnicastPrefixV6Msg, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := &recordingPublisher{}
+			p := NewProducer(rec, true).(*producer)
+			p.speakerIP = "10.0.0.1"
+			p.speakerHash = "abc123"
+
+			ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+			update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+			nlri, err := bgp.UnmarshalMPReachNLRI(tt.reach, false, map[int]bool{})
+			if err != nil {
+				t.Fatalf("UnmarshalMPReachNLRI: %v", err)
+			}
+
+			p.processMPUpdate(nlri, 0, ph, update)
+
+			if len(rec.msgs) != 1 {
+				t.Fatalf("published %d messages, want 1", len(rec.msgs))
+			}
+			if rec.msgs[0].msgType != tt.wantTopicType {
+				t.Errorf("topic type = %d, want %d", rec.msgs[0].msgType, tt.wantTopicType)
+			}
+			var got UnicastPrefix
+			if err := json.Unmarshal(rec.msgs[0].payload, &got); err != nil {
+				t.Fatalf("Unmarshal published message: %v", err)
+			}
+			if got.IsIPv4 != tt.wantIsIPv4 {
+				t.Errorf("IsIPv4 = %v, want %v", got.IsIPv4, tt.wantIsIPv4)
+			}
+			if got.Action != "add" {
+				t.Errorf("Action = %q, want %q", got.Action, "add")
+			}
+			hasLabels := len(got.Labels) > 0
+			if hasLabels != tt.wantLabeled {
+				t.Errorf("labels present = %v (labels=%v), want %v", hasLabels, got.Labels, tt.wantLabeled)
+			}
+		})
 	}
 }
 

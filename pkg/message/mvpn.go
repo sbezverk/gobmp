@@ -100,8 +100,9 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 		prfx.IsIPv4 = !nlri.IsIPv6NLRI()
 
 		// Extract nexthop
-		prfx.Nexthop = nlri.GetNextHop()
-		prfx.IsNexthopIPv4 = len(nlri.GetNextHop()) > 0 && net.ParseIP(nlri.GetNextHop()).To4() != nil
+		nh := nlri.GetNextHop()
+		prfx.Nexthop = nh
+		prfx.IsNexthopIPv4 = len(nh) > 0 && net.ParseIP(nh).To4() != nil
 
 		// Extract Route Distinguisher if present
 		if rd := route.GetMCASTVPNRD(); rd != nil {

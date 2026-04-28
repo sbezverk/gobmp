@@ -3,6 +3,7 @@ package message
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -63,12 +64,14 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			prfx.RouteType = e.GetEVPNRouteType()
 			esi := e.GetEVPNESI()
 			if esi != nil {
+				var b strings.Builder
 				for i := 0; i < ESILength; i++ {
-					prfx.ESI += fmt.Sprintf("%02x", esi[i])
-					if i < ESILength-1 {
-						prfx.ESI += ":"
+					if i > 0 {
+						b.WriteByte(':')
 					}
+					fmt.Fprintf(&b, "%02x", esi[i])
 				}
+				prfx.ESI = b.String()
 			}
 			prfx.EthTag = e.GetEVPNTAG()
 			if ip := e.GetEVPNIPLength(); ip != nil {
@@ -94,12 +97,14 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			if mac := e.GetEVPNMACLength(); mac != nil {
 				prfx.MACLength = *mac
 				v := e.GetEVPNMAC()
+				var b strings.Builder
 				for i := 0; i < int(prfx.MACLength/8); i++ {
-					prfx.MAC += fmt.Sprintf("%02x", v[i])
-					if i < int(prfx.MACLength/8)-1 {
-						prfx.MAC += ":"
+					if i > 0 {
+						b.WriteByte(':')
 					}
+					fmt.Fprintf(&b, "%02x", v[i])
 				}
+				prfx.MAC = b.String()
 			}
 
 			for _, l := range e.GetEVPNLabel() {

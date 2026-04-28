@@ -22,23 +22,23 @@ type evpnMockNLRI struct {
 	isIPv6  bool
 }
 
-func (m *evpnMockNLRI) GetAFISAFIType() int                            { return 24 }
-func (m *evpnMockNLRI) GetNLRILU() (*base.MPNLRI, error)               { return nil, nil }
-func (m *evpnMockNLRI) GetNLRIUnicast() (*base.MPNLRI, error)          { return nil, nil }
-func (m *evpnMockNLRI) GetNLRIMulticast() (*base.MPNLRI, error)        { return nil, nil }
-func (m *evpnMockNLRI) GetNLRIEVPN() (*evpn.Route, error)              { return m.route, nil }
-func (m *evpnMockNLRI) GetNLRIVPLS() (*vpls.Route, error)              { return nil, nil }
-func (m *evpnMockNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)            { return nil, nil }
-func (m *evpnMockNLRI) GetNLRI71() (*ls.NLRI71, error)                 { return nil, nil }
-func (m *evpnMockNLRI) GetNLRI73() (*srpolicy.NLRI73, error)           { return nil, nil }
-func (m *evpnMockNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error)       { return nil, nil }
-func (m *evpnMockNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error)  { return nil, nil }
-func (m *evpnMockNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error)      { return nil, nil }
-func (m *evpnMockNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)          { return nil, nil }
-func (m *evpnMockNLRI) GetNLRIRTC() (*rtc.Route, error)                { return nil, nil }
-func (m *evpnMockNLRI) GetNextHop() string                             { return m.nextHop }
-func (m *evpnMockNLRI) IsIPv6NLRI() bool                               { return m.isIPv6 }
-func (m *evpnMockNLRI) IsNextHopIPv6() bool                            { return m.isIPv6 }
+func (m *evpnMockNLRI) GetAFISAFIType() int                           { return 24 }
+func (m *evpnMockNLRI) GetNLRILU() (*base.MPNLRI, error)              { return nil, nil }
+func (m *evpnMockNLRI) GetNLRIUnicast() (*base.MPNLRI, error)         { return nil, nil }
+func (m *evpnMockNLRI) GetNLRIMulticast() (*base.MPNLRI, error)       { return nil, nil }
+func (m *evpnMockNLRI) GetNLRIEVPN() (*evpn.Route, error)             { return m.route, nil }
+func (m *evpnMockNLRI) GetNLRIVPLS() (*vpls.Route, error)             { return nil, nil }
+func (m *evpnMockNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)           { return nil, nil }
+func (m *evpnMockNLRI) GetNLRI71() (*ls.NLRI71, error)                { return nil, nil }
+func (m *evpnMockNLRI) GetNLRI73() (*srpolicy.NLRI73, error)          { return nil, nil }
+func (m *evpnMockNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error)      { return nil, nil }
+func (m *evpnMockNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) { return nil, nil }
+func (m *evpnMockNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error)     { return nil, nil }
+func (m *evpnMockNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)         { return nil, nil }
+func (m *evpnMockNLRI) GetNLRIRTC() (*rtc.Route, error)               { return nil, nil }
+func (m *evpnMockNLRI) GetNextHop() string                            { return m.nextHop }
+func (m *evpnMockNLRI) IsIPv6NLRI() bool                              { return m.isIPv6 }
+func (m *evpnMockNLRI) IsNextHopIPv6() bool                           { return m.isIPv6 }
 
 func buildEVPNType5IPv6Wire() []byte {
 	// EVPN Type 5 IPv6: RD(8)+ESI(10)+EthTag(4)+IPLen(1)+IPv6(16)+GW(16)+Label(3) = 58
@@ -204,5 +204,67 @@ func TestEvpnIPv4Address(t *testing.T) {
 	}
 	if prfxs[0].IPLength != 24 {
 		t.Errorf("IPLength = %d, want 24", prfxs[0].IPLength)
+	}
+}
+
+// buildEVPNType2Wire builds a minimal Type 2 (MAC/IP Advertisement) EVPN wire message.
+// Wire: RouteType(1) + Length(1) + RD(8) + ESI(10) + EthTag(4) + MACLen(1) + MAC(6) + IPLen(1) + Label(3)
+func buildEVPNType2Wire(esi [10]byte, mac [6]byte) []byte {
+	data := make([]byte, 33) // RD+ESI+EthTag+MACLen+MAC+IPLen+Label
+	copy(data[8:18], esi[:])
+	data[22] = 48 // MACAddrLength in bits
+	copy(data[23:29], mac[:])
+	// data[29] = 0 (IPAddrLength = 0)
+	// data[30:33] = label = {0,0,0}
+	wire := make([]byte, 35)
+	wire[0] = 2  // RouteType
+	wire[1] = 33 // Length
+	copy(wire[2:], data)
+	return wire
+}
+
+func TestEvpnType2ESIAndMAC(t *testing.T) {
+	prod := &producer{
+		speakerHash: "test-hash",
+		speakerIP:   "10.0.0.1",
+		publisher:   &mockPublisher{},
+	}
+
+	esi := [10]byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99}
+	mac := [6]byte{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
+
+	route, err := evpn.UnmarshalEVPNNLRI(buildEVPNType2Wire(esi, mac))
+	if err != nil {
+		t.Fatalf("UnmarshalEVPNNLRI() error: %v", err)
+	}
+
+	nlri := &evpnMockNLRI{
+		route:   route,
+		nextHop: "10.0.0.1",
+		isIPv6:  false,
+	}
+
+	ph := &bmp.PerPeerHeader{
+		PeerType:          0,
+		PeerBGPID:         make([]byte, 4),
+		PeerAddress:       make([]byte, 16),
+		PeerDistinguisher: make([]byte, 8),
+		PeerTimestamp:     make([]byte, 8),
+	}
+
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	prfxs, err := prod.evpn(nlri, 0, ph, update)
+	if err != nil {
+		t.Fatalf("evpn() error: %v", err)
+	}
+	if len(prfxs) != 1 {
+		t.Fatalf("got %d prefixes, want 1", len(prfxs))
+	}
+	if prfxs[0].ESI != "00:11:22:33:44:55:66:77:88:99" {
+		t.Errorf("ESI = %q, want '00:11:22:33:44:55:66:77:88:99'", prfxs[0].ESI)
+	}
+	if prfxs[0].MAC != "aa:bb:cc:dd:ee:ff" {
+		t.Errorf("MAC = %q, want 'aa:bb:cc:dd:ee:ff'", prfxs[0].MAC)
 	}
 }
