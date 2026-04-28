@@ -7,6 +7,54 @@ import (
 	"github.com/go-test/deep"
 )
 
+// TestUnmarshalBGPUpdate_AS4Hint verifies the optional as4 hint forces
+// AS_PATH to parse as 2-byte or 4-byte ASNs, overriding the heuristic.
+func TestUnmarshalBGPUpdate_AS4Hint(t *testing.T) {
+	// 2-byte AS_PATH: segType=0x02 (AS_SEQUENCE), segLen=0x02, ASNs [64512, 64513].
+	// Attr: flags=0x40, type=2 (AS_PATH), len=6, segment (6 bytes).
+	as2Attr := []byte{0x40, 0x02, 0x06, 0x02, 0x02, 0xFC, 0x00, 0xFC, 0x01}
+	originAttr := []byte{0x40, 0x01, 0x01, 0x00} // Origin=IGP
+	attrs2 := append(append([]byte{}, originAttr...), as2Attr...)
+	update2 := append([]byte{0x00, 0x00, 0x00, byte(len(attrs2))}, attrs2...)
+
+	// 4-byte AS_PATH: segType=0x02, segLen=0x02, ASNs [131072, 131073].
+	// Attr: flags=0x40, type=2, len=10, segment (10 bytes).
+	as4Attr := []byte{0x40, 0x02, 0x0A, 0x02, 0x02, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01}
+	attrs4 := append(append([]byte{}, originAttr...), as4Attr...)
+	update4 := append([]byte{0x00, 0x00, 0x00, byte(len(attrs4))}, attrs4...)
+
+	t.Run("hint=false forces 2-byte parsing", func(t *testing.T) {
+		u, err := UnmarshalBGPUpdateWithAS4Hint(update2, false)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := []uint32{64512, 64513}
+		if !reflect.DeepEqual(u.BaseAttributes.ASPath, want) {
+			t.Errorf("ASPath=%v, want %v", u.BaseAttributes.ASPath, want)
+		}
+	})
+
+	t.Run("hint=true forces 4-byte parsing", func(t *testing.T) {
+		u, err := UnmarshalBGPUpdateWithAS4Hint(update4, true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := []uint32{131072, 131073}
+		if !reflect.DeepEqual(u.BaseAttributes.ASPath, want) {
+			t.Errorf("ASPath=%v, want %v", u.BaseAttributes.ASPath, want)
+		}
+	})
+
+	t.Run("hint=true on 2-byte payload fails", func(t *testing.T) {
+		// 2-byte payload under 4-byte interpretation needs 8 bytes per segment
+		// but only has 4 -> truncation error.
+		_, err := UnmarshalBGPUpdateWithAS4Hint(update2, true)
+		if err == nil {
+			t.Fatal("expected truncation error under 4-byte hint, got nil")
+		}
+	})
+}
+
 func TestUnmarshalBGPUpdate(t *testing.T) {
 	tests := []struct {
 		name   string

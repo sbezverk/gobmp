@@ -119,7 +119,17 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 			perPerHeaderLen = bmp.PerPeerHeaderLength
-			rm, err := bmp.UnmarshalBMPRouteMonitorMessage(b[pos+perPerHeaderLen : pos+msgLen-bmp.CommonHeaderLength])
+			// Pass the interpreted 4-byte-ASN setting derived from the BMP per-peer
+			// header per RFC 7854 §4.2 so AS_PATH width is authoritative rather than
+			// heuristic. Is4ByteASN returns an error for PeerType3 — fall back to
+			// the heuristic in that case via the no-hint variant.
+			rmBody := b[pos+perPerHeaderLen : pos+msgLen-bmp.CommonHeaderLength]
+			var rm *bmp.RouteMonitor
+			if is4, e := bmpMsg.PeerHeader.Is4ByteASN(); e == nil {
+				rm, err = bmp.UnmarshalBMPRouteMonitorMessageWithAS4Hint(rmBody, is4)
+			} else {
+				rm, err = bmp.UnmarshalBMPRouteMonitorMessage(rmBody)
+			}
 			if err != nil {
 				if errors.Is(err, bmp.ErrNotAnUpdate) {
 					glog.V(5).Infof("skipping non-Update BGP message in route monitor: %+v", err)

@@ -16,22 +16,35 @@ type PathAttribute struct {
 	Attribute          []byte
 }
 
-// UnmarshalBGPPathAttributes builds BGP Path attributes slice and populates
+// UnmarshalBGPPathAttributes builds a BGP Path attributes slice and populates
 // BaseAttributes in a single pass over the byte buffer.
 // Per RFC 4271 §4.3, TotalPathAttributeLength may be zero (pure withdrawal or
 // End-of-RIB marker per RFC 4724 §2); in that case an empty but non-nil
 // BaseAttributes is returned so callers can dereference it safely.
+// AS_PATH width (2-byte vs 4-byte) is inferred by heuristic; use
+// UnmarshalBGPPathAttributesWithAS4Hint when the caller has an authoritative
+// indicator.
 func UnmarshalBGPPathAttributes(b []byte) ([]PathAttribute, *BaseAttributes, error) {
+	return unmarshalBGPPathAttributes(b, nil)
+}
+
+// UnmarshalBGPPathAttributesWithAS4Hint is UnmarshalBGPPathAttributes with an
+// authoritative 4-byte-ASN indicator (typically PeerHeader.Is4ByteASN() per
+// RFC 7854 §4.2, i.e. !A): true = 4-byte, false = 2-byte. Do not pass the
+// raw A bit.
+func UnmarshalBGPPathAttributesWithAS4Hint(b []byte, as4 bool) ([]PathAttribute, *BaseAttributes, error) {
+	return unmarshalBGPPathAttributes(b, &as4)
+}
+
+func unmarshalBGPPathAttributes(b []byte, as4hint *bool) ([]PathAttribute, *BaseAttributes, error) {
 	attrs, err := unmarshalRawPathAttributes(b)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	baseAttrs, err := unmarshalBaseAttrsFromSlice(attrs)
+	baseAttrs, err := unmarshalBaseAttrsFromSlice(attrs, as4hint)
 	if err != nil {
 		return nil, nil, err
 	}
-
 	return attrs, baseAttrs, nil
 }
 

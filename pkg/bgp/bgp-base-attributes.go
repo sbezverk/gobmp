@@ -44,7 +44,7 @@ type BaseAttributes struct {
 	// PEDistinguisherLable
 	LgCommunityList []string      `json:"large_community_list,omitempty"`
 	BGPPrefixSID    *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
-	OTC uint32 `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
+	OTC             uint32        `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
 	// SecPath
 	AttrSet *AttrSet `json:"attr_set,omitempty"` // RFC 6368 ATTR_SET Attribute (Type 128)
 }
@@ -134,18 +134,29 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 
 }
 
-// UnmarshalBGPBaseAttributes discovers all present Base Attributes in BGP Update
-// and instantiates BaseAttributes object. It is a convenience wrapper that parses
-// the raw byte slice via UnmarshalBGPPathAttributes and then populates BaseAttributes.
+// UnmarshalBGPBaseAttributes discovers all present Base Attributes in a BGP
+// Update and instantiates a BaseAttributes object. AS_PATH width is inferred
+// by heuristic; use UnmarshalBGPBaseAttributesWithAS4Hint when the caller has
+// an authoritative indicator.
 func UnmarshalBGPBaseAttributes(b []byte) (*BaseAttributes, error) {
-	attrs, baseAttrs, err := UnmarshalBGPPathAttributes(b)
-	_ = attrs // raw slice not needed by this call-path
+	_, baseAttrs, err := unmarshalBGPPathAttributes(b, nil)
+	return baseAttrs, err
+}
+
+// UnmarshalBGPBaseAttributesWithAS4Hint is UnmarshalBGPBaseAttributes with an
+// authoritative 4-byte-ASN indicator (typically PeerHeader.Is4ByteASN() per
+// RFC 7854 §4.2, i.e. !A): true = 4-byte, false = 2-byte. Do not pass the
+// raw A bit.
+func UnmarshalBGPBaseAttributesWithAS4Hint(b []byte, as4 bool) (*BaseAttributes, error) {
+	_, baseAttrs, err := unmarshalBGPPathAttributes(b, &as4)
 	return baseAttrs, err
 }
 
 // unmarshalBaseAttrsFromSlice populates a BaseAttributes struct from an already-parsed
 // []PathAttribute slice, avoiding a second walk of the raw byte buffer.
-func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error) {
+// as4hint, when non-nil, is the derived 4-byte-ASN indicator (Is4ByteASN() = !A per
+// RFC 7854 §4.2): true = 4-byte, false = 2-byte. Overrides the AS_PATH width heuristic.
+func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAttributes, error) {
 	baseAttr := BaseAttributes{}
 	for _, attr := range attrs {
 		b := attr.Attribute
@@ -154,7 +165,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute) (*BaseAttributes, error)
 			baseAttr.Origin = unmarshalAttrOrigin(b)
 		case 2:
 			var err error
-			baseAttr.ASPath, err = unmarshalAttrASPath(b)
+			baseAttr.ASPath, err = unmarshalAttrASPath(b, as4hint)
 			if err != nil {
 				return nil, err
 			}
@@ -304,26 +315,37 @@ func unmarshalAttrOrigin(b []byte) string {
 	}
 }
 
-// unmarshalAttrASPath returns a slice with a list of ASes
-func unmarshalAttrASPath(b []byte) ([]uint32, error) {
+// unmarshalAttrASPath returns a slice with a list of ASes.
+// as4hint, when non-nil, overrides the heuristic: true means 4-byte ASNs, false means 2-byte.
+// Per RFC 7854 §4.2 the BMP Per-Peer A flag is authoritative for the encoding used.
+func unmarshalAttrASPath(b []byte, as4hint *bool) ([]uint32, error) {
 	if len(b) == 0 {
 		return []uint32{}, nil
 	}
 	path := make([]uint32, 0, len(b)/2)
-	// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 only inspects the
-	// first segment, so full per-segment bounds validation is done in the loop below.
-	as4, err := isASPath4(b)
-	if err != nil {
-		return nil, err
+	var as4 bool
+	if as4hint != nil {
+		as4 = *as4hint
+	} else {
+		// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 walks the whole
+		// buffer; the loop below re-checks segment type and per-segment bounds so
+		// the hinted path is validated identically.
+		var err error
+		as4, err = isASPath4(b)
+		if err != nil {
+			return nil, err
+		}
 	}
 	asSize := 2
 	if as4 {
 		asSize = 4
 	}
 	for p := 0; p < len(b); {
-		// Segment type byte
-		if p+1 > len(b) {
-			return nil, fmt.Errorf("AS_PATH attribute truncated: cannot read segment type at offset %d", p)
+		// Segment type byte — must be one of 0x01..0x04 per RFC 4271 §4.3 / RFC 5065.
+		// Loop condition guarantees p < len(b), so the byte is always readable.
+		segType := b[p]
+		if segType < 0x01 || segType > 0x04 {
+			return nil, fmt.Errorf("AS_PATH attribute invalid segment type 0x%02x at offset %d", segType, p)
 		}
 		p++ // skip segment type
 		// Segment length (number of ASNs in this segment)

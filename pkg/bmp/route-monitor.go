@@ -20,8 +20,23 @@ type RouteMonitor struct {
 	Update *bgp.Update
 }
 
-// UnmarshalBMPRouteMonitorMessage builds BMP Route Monitor object
+// UnmarshalBMPRouteMonitorMessage builds a BMP Route Monitor object. AS_PATH
+// width in the embedded BGP Update is inferred by heuristic; use
+// UnmarshalBMPRouteMonitorMessageWithAS4Hint when the caller has an
+// authoritative indicator (typically from the BMP Per-Peer Header).
 func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
+	return unmarshalBMPRouteMonitorMessage(b, nil)
+}
+
+// UnmarshalBMPRouteMonitorMessageWithAS4Hint is
+// UnmarshalBMPRouteMonitorMessage with an authoritative 4-byte-ASN indicator
+// (typically PeerHeader.Is4ByteASN() per RFC 7854 §4.2, i.e. !A): true =
+// 4-byte, false = 2-byte. Do not pass the raw A bit.
+func UnmarshalBMPRouteMonitorMessageWithAS4Hint(b []byte, as4 bool) (*RouteMonitor, error) {
+	return unmarshalBMPRouteMonitorMessage(b, &as4)
+}
+
+func unmarshalBMPRouteMonitorMessage(b []byte, as4hint *bool) (*RouteMonitor, error) {
 	if glog.V(6) {
 		glog.Infof("BMP Route Monitor Message Raw: %s length: %d", tools.MessageHex(b), len(b))
 	}
@@ -46,7 +61,15 @@ func UnmarshalBMPRouteMonitorMessage(b []byte) (*RouteMonitor, error) {
 	p++
 	switch t {
 	case 2:
-		u, err := bgp.UnmarshalBGPUpdate(b[p:])
+		var (
+			u   *bgp.Update
+			err error
+		)
+		if as4hint != nil {
+			u, err = bgp.UnmarshalBGPUpdateWithAS4Hint(b[p:], *as4hint)
+		} else {
+			u, err = bgp.UnmarshalBGPUpdate(b[p:])
+		}
 		if err != nil {
 			return nil, err
 		}
