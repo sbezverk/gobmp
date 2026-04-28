@@ -151,6 +151,7 @@ func mergeSubjects(existing, required []string) ([]string, bool) {
 	for _, s := range required {
 		if _, ok := set[s]; !ok {
 			result = append(result, s)
+			set[s] = struct{}{}
 			changed = true
 		}
 	}
