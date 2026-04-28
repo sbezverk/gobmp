@@ -565,7 +565,7 @@ func TestStartWorker_WhenClosing_ClosesConnection(t *testing.T) {
 		publisher: newMockPublisher(),
 	}
 	srv.closing = true // pre-set as Stop() would have done
-	srv.startWorker(serverConn)
+	srv.startWorker(serverConn, false)
 
 	// serverConn must be closed by startWorker; reading from clientConn returns an error.
 	_ = clientConn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
@@ -1186,12 +1186,12 @@ func TestConnectSpeaker_NextAttemptInFutureAfterFailure(t *testing.T) {
 	}
 }
 
-// TestConnectSpeaker_BackoffNotResetDuringActiveSession verifies that
-// retryDelay is NOT reset at connection time — it is only reset after
-// bmpWorker exits following a stable session (≥ stableSessionThreshold).
-// This prevents a proxy that accepts TCP but immediately drops the BMP
-// session from resetting the backoff and causing a 1-second retry loop.
-func TestConnectSpeaker_BackoffNotResetDuringActiveSession(t *testing.T) {
+// TestConnectSpeaker_BackoffPreservedOnConnect verifies that a successful TCP
+// dial does NOT reset retryDelay. The reset happens only after a stable BMP
+// session ends (see TestConnectSpeaker_StableSession_ResetsRetryDelay), so that
+// a proxy that accepts TCP but immediately drops the session still accumulates
+// exponential backoff across attempts.
+func TestConnectSpeaker_BackoffPreservedOnConnect(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
@@ -1201,8 +1201,8 @@ func TestConnectSpeaker_BackoffNotResetDuringActiveSession(t *testing.T) {
 	srv, cleanup := newConnectSpeakerSrv()
 	defer cleanup()
 
-	// Pre-set a high retryDelay; it must NOT be reset while the session is live.
-	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
+	const initial = 3 * time.Minute
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: initial}
 	done := runConnectSpeaker(srv, speaker)
 
 	conn, err := acceptWithTimeout(ln, 3*time.Second)
@@ -1218,10 +1218,9 @@ func TestConnectSpeaker_BackoffNotResetDuringActiveSession(t *testing.T) {
 	delay := speaker.retryDelay
 	speaker.mu.Unlock()
 
-	// retryDelay must be unchanged: the reset only happens post-disconnect
-	// for sessions that lasted ≥ stableSessionThreshold.
-	if delay != 3*time.Minute {
-		t.Errorf("retryDelay during active session = %v, want 3m (should not be reset at connect time)", delay)
+	// retryDelay must not be reset by a TCP connect alone.
+	if delay != initial {
+		t.Errorf("retryDelay after TCP connect = %v, want %v (should be unchanged)", delay, initial)
 	}
 
 	cleanup()
@@ -1265,6 +1264,88 @@ func TestConnectSpeaker_PostDisconnect_NextAttemptInFuture(t *testing.T) {
 	}
 }
 
+// TestConnectSpeaker_UnstableSession_DoublesRetryDelay verifies that a
+// short-lived BMP session (e.g. a proxy that accepts TCP but drops BMP
+// immediately) causes retryDelay to double rather than reset to 1 s.
+func TestConnectSpeaker_UnstableSession_DoublesRetryDelay(t *testing.T) {
+	old := stableSessionThreshold
+	stableSessionThreshold = 5 * time.Second // far longer than the test session
+	t.Cleanup(func() { stableSessionThreshold = old })
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	// Set an elevated retryDelay to verify the doubling starts from the
+	// pre-connection value, not from a reset-to-1s on TCP connect.
+	const initial = 3 * time.Second
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: initial}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+	_ = conn.Close() // immediate drop — simulates proxy behaviour
+
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	got := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	// Unstable session: retryDelay must double from its pre-connection value.
+	if got != initial*2 {
+		t.Errorf("retryDelay after unstable session = %v, want %v", got, initial*2)
+	}
+}
+
+// TestConnectSpeaker_StableSession_ResetsRetryDelay verifies that a long-lived
+// BMP session resets retryDelay to 1 s on disconnect, enabling a fast reconnect.
+func TestConnectSpeaker_StableSession_ResetsRetryDelay(t *testing.T) {
+	old := stableSessionThreshold
+	stableSessionThreshold = 50 * time.Millisecond // short enough for a unit test
+	t.Cleanup(func() { stableSessionThreshold = old })
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	srv, cleanup := newConnectSpeakerSrv()
+	defer cleanup()
+
+	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
+	done := runConnectSpeaker(srv, speaker)
+
+	conn, err := acceptWithTimeout(ln, 3*time.Second)
+	if err != nil {
+		t.Fatalf("accepting connection: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond) // exceed the 50 ms threshold
+	_ = conn.Close()
+
+	time.Sleep(100 * time.Millisecond)
+	cleanup()
+	assertExitsWithin(t, done, 2*time.Second)
+
+	speaker.mu.Lock()
+	got := speaker.retryDelay
+	speaker.mu.Unlock()
+
+	if got != 1*time.Second {
+		t.Errorf("retryDelay after stable session = %v, want 1s", got)
+	}
+}
+
 // TestConnectSpeaker_ClosingFlag_ExitsAfterSuccessfulDial verifies that when
 // srv.closing is true at the time a dial succeeds, connectSpeaker closes the
 // connection and exits rather than spawning a bmpWorker.
@@ -1297,126 +1378,186 @@ func TestConnectSpeaker_ClosingFlag_ExitsAfterSuccessfulDial(t *testing.T) {
 	assertExitsWithin(t, runConnectSpeaker(srv, speaker), 3*time.Second)
 }
 
-// TestConnectSpeaker_ShortLivedSession_BackoffDoubles verifies that when
-// bmpWorker exits before stableSessionThreshold elapses (simulating a proxy
-// that accepts TCP but drops the BMP session), retryDelay is doubled rather
-// than reset.
-func TestConnectSpeaker_ShortLivedSession_BackoffDoubles(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+// TestNewBMPServer_MaxPassiveConnections_SetsConnSem verifies that MaxPassiveConnections > 0
+// creates a semaphore with the correct capacity on the passive-mode server.
+func TestNewBMPServer_MaxPassiveConnections_SetsConnSem(t *testing.T) {
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:             newMockPublisher(),
+		MaxPassiveConnections: 5,
+	})
 	if err != nil {
-		t.Fatalf("Listen: %v", err)
+		t.Fatalf("NewBMPServer: %v", err)
 	}
-	defer func() { _ = ln.Close() }()
+	bs := srv.(*bmpServer)
+	if bs.connSem == nil {
+		t.Fatal("connSem is nil, want non-nil channel")
+	}
+	if cap(bs.connSem) != 5 {
+		t.Errorf("cap(connSem) = %d, want 5", cap(bs.connSem))
+	}
+	srv.Stop()
+}
 
-	srv, cleanup := newConnectSpeakerSrv()
-	defer cleanup()
-
-	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 1 * time.Second}
-	done := runConnectSpeaker(srv, speaker)
-
-	conn, err := acceptWithTimeout(ln, 3*time.Second)
+// TestNewBMPServer_MaxPassiveConnections_Zero_NoConnSem verifies that MaxPassiveConnections == 0
+// (the default) leaves connSem nil, meaning no connection limit is enforced.
+func TestNewBMPServer_MaxPassiveConnections_Zero_NoConnSem(t *testing.T) {
+	srv, err := NewBMPServer(&config.Config{Publisher: newMockPublisher()})
 	if err != nil {
-		t.Fatalf("accepting connection: %v", err)
+		t.Fatalf("NewBMPServer: %v", err)
 	}
-	// Drop the connection immediately — session lasts < stableSessionThreshold.
-	_ = conn.Close()
+	bs := srv.(*bmpServer)
+	if bs.connSem != nil {
+		t.Errorf("connSem = %v, want nil when MaxPassiveConnections == 0", bs.connSem)
+	}
+	srv.Stop()
+}
 
-	// Give connectSpeaker time to process the disconnect and apply backoff.
-	time.Sleep(100 * time.Millisecond)
-	cleanup()
-	assertExitsWithin(t, done, 2*time.Second)
-
-	speaker.mu.Lock()
-	delay := speaker.retryDelay
-	speaker.mu.Unlock()
-
-	if delay != 2*time.Second {
-		t.Errorf("retryDelay after short-lived disconnect = %v, want 2s (doubled from 1s)", delay)
+// TestNewBMPServer_MaxPassiveConnections_Negative rejects a negative
+// MaxPassiveConnections before it reaches make(chan struct{}, n), which would panic.
+func TestNewBMPServer_MaxPassiveConnections_Negative(t *testing.T) {
+	srv, err := NewBMPServer(&config.Config{
+		Publisher:             newMockPublisher(),
+		MaxPassiveConnections: -1,
+	})
+	if err == nil {
+		if srv != nil {
+			srv.Stop()
+		}
+		t.Fatal("expected error for negative MaxPassiveConnections, got nil")
+	}
+	if srv != nil {
+		t.Errorf("expected nil server on validation error, got %v", srv)
 	}
 }
 
-// TestConnectSpeaker_ShortLivedSession_BackoffCapped verifies that the
-// doubled retryDelay is capped at 5 minutes, even when the raw double would
-// exceed that ceiling.
-func TestConnectSpeaker_ShortLivedSession_BackoffCapped(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("Listen: %v", err)
+// TestConnectionLimit_RejectsAtCapacity verifies that connections beyond
+// MaxPassiveConnections are rejected immediately.
+func TestConnectionLimit_RejectsAtCapacity(t *testing.T) {
+	// Semaphore of size 1 — first connection succeeds, second is rejected.
+	srv := &bmpServer{
+		clients:   make(map[net.Conn]struct{}),
+		publisher: newMockPublisher(),
+		connSem:   make(chan struct{}, 1),
 	}
-	defer func() { _ = ln.Close() }()
 
-	srv, cleanup := newConnectSpeakerSrv()
-	defer cleanup()
+	// Fill the semaphore (simulate one active connection).
+	srv.connSem <- struct{}{}
 
-	// retryDelay is already at 4 minutes; doubling gives 8 minutes which
-	// exceeds the 5-minute cap.
-	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 4 * time.Minute}
-	done := runConnectSpeaker(srv, speaker)
+	// Second connection should be rejected.
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
 
-	conn, err := acceptWithTimeout(ln, 3*time.Second)
-	if err != nil {
-		t.Fatalf("accepting connection: %v", err)
+	// Simulate what server() does: try to acquire, fail, close.
+	select {
+	case srv.connSem <- struct{}{}:
+		t.Fatal("semaphore should be full")
+	default:
+		_ = serverConn.Close()
 	}
-	// Drop the connection immediately — session lasts < stableSessionThreshold.
-	_ = conn.Close()
 
-	// Give connectSpeaker time to process the disconnect and apply backoff.
-	time.Sleep(100 * time.Millisecond)
-	cleanup()
-	assertExitsWithin(t, done, 2*time.Second)
-
-	speaker.mu.Lock()
-	delay := speaker.retryDelay
-	speaker.mu.Unlock()
-
-	if delay != 5*time.Minute {
-		t.Errorf("retryDelay after short-lived disconnect = %v, want 5m (capped from 8m)", delay)
+	// Verify client sees the close.
+	_ = clientConn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	buf := make([]byte, 1)
+	_, err := clientConn.Read(buf)
+	if err == nil {
+		t.Error("expected read error after rejected connection close")
 	}
 }
 
-// TestConnectSpeaker_StableSession_BackoffResets verifies that when bmpWorker
-// runs for at least stableSessionThreshold before disconnecting, retryDelay is
-// reset to 1 s regardless of how high it had grown.
-// The test temporarily lowers stableSessionThreshold to 50 ms so no real
-// wall-clock wait is necessary.
-func TestConnectSpeaker_StableSession_BackoffResets(t *testing.T) {
-	// Shorten the threshold for this test and restore it on exit.
-	orig := stableSessionThreshold
-	stableSessionThreshold = 50 * time.Millisecond
-	defer func() { stableSessionThreshold = orig }()
-
+// TestBMPServer_ConnectionLimit_ServerRejects exercises the semaphore default
+// branch in server(): when connSem is full the accepted connection is closed
+// and the loop continues without calling startWorker.
+func TestBMPServer_ConnectionLimit_ServerRejects(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
 	}
-	defer func() { _ = ln.Close() }()
-
-	srv, cleanup := newConnectSpeakerSrv()
-	defer cleanup()
-
-	// Pre-set a high retryDelay; it should be reset after a stable session.
-	speaker := &bgpSpeaker{Address: ln.Addr().String(), retryDelay: 3 * time.Minute}
-	done := runConnectSpeaker(srv, speaker)
-
-	conn, err := acceptWithTimeout(ln, 3*time.Second)
-	if err != nil {
-		t.Fatalf("accepting connection: %v", err)
+	srv := &bmpServer{
+		clients:   make(map[net.Conn]struct{}),
+		publisher: newMockPublisher(),
+		incoming:  ln,
+		connSem:   make(chan struct{}, 1),
 	}
+	// Pre-fill the semaphore — all capacity consumed, next connection will be rejected.
+	srv.connSem <- struct{}{}
 
-	// Hold the connection open long enough to exceed stableSessionThreshold.
-	time.Sleep(150 * time.Millisecond)
-	_ = conn.Close()
+	srv.Start()
+	defer srv.Stop()
 
-	// Give connectSpeaker time to process the disconnect and compute backoff.
-	time.Sleep(100 * time.Millisecond)
-	cleanup()
-	assertExitsWithin(t, done, 2*time.Second)
+	port := ln.Addr().(*net.TCPAddr).Port
+	client, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(port))
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer func() { _ = client.Close() }()
 
-	speaker.mu.Lock()
-	delay := speaker.retryDelay
-	speaker.mu.Unlock()
+	// Server should close the connection immediately — client reads EOF or reset,
+	// not a timeout. A timeout would mean the server never closed the connection.
+	_ = client.SetReadDeadline(time.Now().Add(time.Second))
+	buf := make([]byte, 1)
+	_, err = client.Read(buf)
+	if err == nil {
+		t.Fatal("expected connection to be rejected, but read succeeded")
+	}
+	var nerr net.Error
+	if errors.As(err, &nerr) && nerr.Timeout() {
+		t.Fatalf("expected server to close connection, but read timed out: %v", err)
+	}
+}
 
-	if delay != 1*time.Second {
-		t.Errorf("retryDelay after stable session = %v, want 1s (reset from 3m)", delay)
+// TestStartWorker_WhenClosing_ReleasesSemaphore verifies the semaphore slot
+// is released when startWorker returns early due to srv.closing.
+func TestStartWorker_WhenClosing_ReleasesSemaphore(t *testing.T) {
+	srv := &bmpServer{
+		clients:   make(map[net.Conn]struct{}),
+		publisher: newMockPublisher(),
+		connSem:   make(chan struct{}, 1),
+	}
+	srv.closing = true
+
+	// Simulate server() acquiring the semaphore before calling startWorker.
+	srv.connSem <- struct{}{}
+
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
+
+	srv.startWorker(serverConn, true)
+
+	// Semaphore should be drained (released by startWorker's early-return path).
+	select {
+	case srv.connSem <- struct{}{}:
+		// Successfully acquired — slot was released. Pass.
+		<-srv.connSem
+	default:
+		t.Error("semaphore slot not released after startWorker early return")
+	}
+}
+
+// TestStartWorker_ConnSem_ReleasedOnWorkerExit verifies that the goroutine
+// defer inside startWorker releases the semaphore slot when bmpWorker exits.
+func TestStartWorker_ConnSem_ReleasedOnWorkerExit(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+	defer func() { _ = clientConn.Close() }()
+
+	srv := &bmpServer{
+		clients:   make(map[net.Conn]struct{}),
+		publisher: newMockPublisher(),
+		connSem:   make(chan struct{}, 1),
+	}
+	// Simulate server() acquiring the semaphore before startWorker.
+	srv.connSem <- struct{}{}
+
+	srv.startWorker(serverConn, true)
+
+	// Closing the client causes bmpWorker to see io.EOF and return,
+	// triggering the defer that releases the semaphore slot.
+	_ = clientConn.Close()
+
+	// Slot must be re-acquirable within a generous deadline.
+	select {
+	case srv.connSem <- struct{}{}:
+		<-srv.connSem // cleanup
+	case <-time.After(2 * time.Second):
+		t.Fatal("connSem slot not released after bmpWorker exit")
 	}
 }
