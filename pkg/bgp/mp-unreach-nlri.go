@@ -43,8 +43,9 @@ func (mp *MPUnReachNLRI) GetNextHop() string {
 	return ""
 }
 
-// IsNextHopIPv6 returns true if the next hop is IPv6 address, otherwise it returns false.
-// in case of MP_UNREACH_NLRI there is no Next Hop field and this function should not be used.
+// IsNextHopIPv6 always returns false: MP_UNREACH_NLRI (path attribute 15) carries withdrawn
+// routes only and has no Next Hop field (RFC 4760). Implementing MPNLRI keeps this method
+// for interface symmetry with MP_REACH_NLRI; callers must not infer nexthop from it.
 func (mp *MPUnReachNLRI) IsNextHopIPv6() bool {
 	return false
 }
