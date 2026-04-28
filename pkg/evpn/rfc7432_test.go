@@ -525,6 +525,22 @@ func TestRFC8365_MultiRoutes(t *testing.T) {
 		expectError bool
 	}{
 		{
+			// Verify that a known route followed by an unknown type returns only the
+			// known route and does not error or misadvance the parse pointer.
+			name: "known route followed by unknown type is skipped",
+			input: []byte{
+				// Type 5 IP Prefix Route (length 0x22 = 34)
+				0x05, 0x22, 0x00, 0x01, 0x0A, 0x22, 0x04, 0x01, 0x00, 0x03,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x18, 0x0A, 0x0A, 0x0A, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xFC,
+				// Unknown type 0x99, length 4
+				0x99, 0x04, 0x00, 0x00, 0x00, 0x00,
+			},
+			expectCount: 1,
+			expectError: false,
+		},
+		{
 			name: "two type 5 routes in one NLRI",
 			input: []byte{
 				0x05, 0x22, 0x00, 0x01, 0x0A, 0x22, 0x04, 0x01, 0x00, 0x03,
@@ -573,17 +589,24 @@ func TestRFC7432_ErrorHandling(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "unknown route type",
+			name: "unknown route type is skipped gracefully",
 			input: []byte{
 				0x99, // Unknown route type
 				0x10,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
+			expectError: false,
+		},
+		{
+			name: "truncated route returns error",
+			input: []byte{
+				0x01,             // Ethernet Auto-Discovery Route Type
+				0x0a,             // Declared route length
+				0x00, 0x00, 0x00, // Truncated route body
+			},
 			expectError: true,
 		},
-		// Note: truncated route test removed - EVPN parser panics instead of returning error
-		// This is a pre-existing bug in pkg/evpn/evpn.go:109 outside scope of RFC compliance
 	}
 
 	for _, tt := range tests {

@@ -171,7 +171,9 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("unknown route type %d", n.RouteType)
+			glog.V(4).Infof("skipping unknown EVPN route type %d at offset %d (length %d)", n.RouteType, p-2, l)
+			p += l
+			continue
 		}
 		r.Route = append(r.Route, n)
 		p += l
