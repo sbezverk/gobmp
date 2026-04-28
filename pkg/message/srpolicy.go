@@ -8,8 +8,8 @@ import (
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 )
 
-// srpolicy processes MP_REACH_NLRI AFI 1/2 SAFI 73 update message and returns
-// SR Policy prefix object.
+// srpolicy processes SR Policy NLRI (AFI 1 or 2, SAFI 73) from either MP_REACH_NLRI or
+// MP_UNREACH_NLRI in processMPUpdate and returns an SR Policy prefix object.
 func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*SRPolicy, error) {
 	sr, err := nlri.GetNLRI73()
 	if err != nil {
