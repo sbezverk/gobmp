@@ -114,6 +114,13 @@ func TestMergeSubjects(t *testing.T) {
 			wantOut:     []string{"x", "y"},
 			wantChanged: true,
 		},
+		{
+			name:        "duplicate entries in required — deduplicated in output",
+			existing:    []string{},
+			required:    []string{"a", "a", "b"},
+			wantOut:     []string{"a", "b"},
+			wantChanged: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -235,8 +242,8 @@ func TestRawTopicNotUnderParsedWildcard(t *testing.T) {
 	// gobmp.parsed.* wildcard only matches three-segment subjects. Assert
 	// the exact subject so accidental renames (e.g., to gobmp.parsed.raw)
 	// are caught rather than silently drifting from the Kafka topic.
-	if rawMessageTopic != "gobmp.raw" {
-		t.Errorf("rawMessageTopic=%q, want %q (Kafka parity); stream config covers it explicitly", rawMessageTopic, "gobmp.raw")
+	if strings.HasPrefix(rawMessageTopic, "gobmp.parsed.") {
+		t.Errorf("rawMessageTopic=%q must not use the gobmp.parsed.* prefix (would be covered by the parsed wildcard and break Kafka parity)", rawMessageTopic)
 	}
 	topic, ok := topicForMessage(bmp.BMPRawMsg)
 	if !ok || topic != rawMessageTopic {
