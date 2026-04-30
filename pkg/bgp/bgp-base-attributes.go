@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/pmsi"
 	"github.com/sbezverk/tools/sort"
 )
@@ -243,7 +244,15 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 		case 28:
 			// BGP Entropy Label Capability Attribute (deprecated) - RFC 6790, RFC 7447
 		case 29:
-			// BGP-LS Attribute - RFC 9552
+			// BGP-LS Attribute - RFC 9552 §5.3.
+			// Validate the TLV stream structure on receipt so a malformed
+			// attribute is detected centrally and discarded per RFC 7606 §3
+			// 'Attribute Discard' (mandated by RFC 9552 §5.3 for BGP-LS).
+			// The detailed per-TLV decoding is performed lazily by callers
+			// of GetBGPLSAttribute when a Link-State NLRI is being emitted.
+			if _, err := bgpls.UnmarshalBGPLSTLV(b); err != nil {
+				glog.Errorf("malformed BGP-LS Attribute (path attribute type 29), discarding per RFC 7606 §3 / RFC 9552 §5.3: %v", err)
+			}
 		case 30:
 			// Deprecated - RFC 8093
 		case 31:

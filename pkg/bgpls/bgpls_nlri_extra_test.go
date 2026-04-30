@@ -600,3 +600,94 @@ func TestGetMTID_EmptyValue(t *testing.T) {
 		t.Errorf("GetMTID() with empty value = %v, want nil", got)
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Opaque Node/Link/Prefix Attribute getters - RFC 9552 §5.3.1.5/§5.3.2.6/§5.3.3.6
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestGetOpaqueNodeAttribute(t *testing.T) {
+	tests := []struct {
+		name string
+		nlri *NLRI
+		want []string
+	}{
+		{
+			name: "absent returns nil",
+			nlri: &NLRI{},
+			want: nil,
+		},
+		{
+			name: "wrong-type TLV ignored",
+			nlri: &NLRI{LS: []TLV{{Type: 1097, Length: 2, Value: []byte{0xaa, 0xbb}}}},
+			want: nil,
+		},
+		{
+			name: "single TLV",
+			nlri: &NLRI{LS: []TLV{{Type: 1025, Length: 4, Value: []byte{0xde, 0xad, 0xbe, 0xef}}}},
+			want: []string{"deadbeef"},
+		},
+		{
+			name: "multiple TLVs preserve order",
+			nlri: &NLRI{LS: []TLV{
+				{Type: 1025, Length: 2, Value: []byte{0x01, 0x02}},
+				{Type: 1024, Length: 1, Value: []byte{0xff}}, // unrelated TLV between
+				{Type: 1025, Length: 2, Value: []byte{0x03, 0x04}},
+			}},
+			want: []string{"0102", "0304"},
+		},
+		{
+			name: "empty value encodes to empty hex",
+			nlri: &NLRI{LS: []TLV{{Type: 1025, Length: 0, Value: []byte{}}}},
+			want: []string{""},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.nlri.GetOpaqueNodeAttribute()
+			if !equalStringSlices(got, tc.want) {
+				t.Errorf("GetOpaqueNodeAttribute() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestGetOpaqueLinkAttribute(t *testing.T) {
+	// Different TLV type from Node, same shape: just verify dispatch is on 1097.
+	nlri := &NLRI{LS: []TLV{
+		{Type: 1025, Length: 1, Value: []byte{0xaa}}, // node opaque, must not match
+		{Type: 1097, Length: 3, Value: []byte{0x11, 0x22, 0x33}},
+		{Type: 1097, Length: 1, Value: []byte{0x44}},
+	}}
+	got := nlri.GetOpaqueLinkAttribute()
+	want := []string{"112233", "44"}
+	if !equalStringSlices(got, want) {
+		t.Errorf("GetOpaqueLinkAttribute() = %v, want %v", got, want)
+	}
+	if absent := (&NLRI{}).GetOpaqueLinkAttribute(); absent != nil {
+		t.Errorf("absent → %v, want nil", absent)
+	}
+}
+
+func TestGetOpaquePrefixAttribute(t *testing.T) {
+	nlri := &NLRI{LS: []TLV{{Type: 1157, Length: 2, Value: []byte{0xfe, 0xed}}}}
+	got := nlri.GetOpaquePrefixAttribute()
+	want := []string{"feed"}
+	if !equalStringSlices(got, want) {
+		t.Errorf("GetOpaquePrefixAttribute() = %v, want %v", got, want)
+	}
+	if absent := (&NLRI{}).GetOpaquePrefixAttribute(); absent != nil {
+		t.Errorf("absent → %v, want nil", absent)
+	}
+}
+
+func equalStringSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
