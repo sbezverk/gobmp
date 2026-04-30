@@ -636,9 +636,17 @@ func TestGetOpaqueNodeAttribute(t *testing.T) {
 			want: []string{"0102", "0304"},
 		},
 		{
-			name: "empty value encodes to empty hex",
+			name: "zero-length opaque TLV is skipped (no information per RFC 9552 §5.3.1.5)",
 			nlri: &NLRI{LS: []TLV{{Type: 1025, Length: 0, Value: []byte{}}}},
-			want: []string{""},
+			want: nil,
+		},
+		{
+			name: "zero-length opaque TLV interleaved with non-empty one returns only the non-empty value",
+			nlri: &NLRI{LS: []TLV{
+				{Type: 1025, Length: 0, Value: []byte{}},
+				{Type: 1025, Length: 1, Value: []byte{0xab}},
+			}},
+			want: []string{"ab"},
 		},
 	}
 	for _, tc := range tests {

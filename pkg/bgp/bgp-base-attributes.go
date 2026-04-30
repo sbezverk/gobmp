@@ -245,13 +245,18 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			// BGP Entropy Label Capability Attribute (deprecated) - RFC 6790, RFC 7447
 		case 29:
 			// BGP-LS Attribute - RFC 9552 §5.3.
-			// Validate the TLV stream structure on receipt so a malformed
-			// attribute is detected centrally and discarded per RFC 7606 §3
-			// 'Attribute Discard' (mandated by RFC 9552 §5.3 for BGP-LS).
-			// The detailed per-TLV decoding is performed lazily by callers
-			// of GetBGPLSAttribute when a Link-State NLRI is being emitted.
+			// Eagerly validate the TLV stream structure on receipt so a
+			// malformed attribute is detected and logged at a single, central
+			// site. Detailed per-TLV decoding is deferred to GetBGPLSAttribute,
+			// invoked by message producers when a Link-State NLRI is emitted;
+			// that call returns the same parse error and the producers skip
+			// the BGP-LS-derived fields, so a malformed attribute does not
+			// surface in published messages — the Attribute Discard outcome
+			// required by RFC 7606 §3 / RFC 9552 §5.3 from a consumer's
+			// perspective. The raw bytes remain in PathAttributes for
+			// forensics; we do not mutate the slice here.
 			if _, err := bgpls.UnmarshalBGPLSTLV(b); err != nil {
-				glog.Errorf("malformed BGP-LS Attribute (path attribute type 29), discarding per RFC 7606 §3 / RFC 9552 §5.3: %v", err)
+				glog.Errorf("malformed BGP-LS Attribute (path attribute type 29); content will be skipped in emitted messages per RFC 7606 §3 / RFC 9552 §5.3: %v", err)
 			}
 		case 30:
 			// Deprecated - RFC 8093
