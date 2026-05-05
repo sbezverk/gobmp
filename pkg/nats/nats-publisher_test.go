@@ -238,15 +238,17 @@ func TestCreateStreams(t *testing.T) {
 }
 
 func TestRawTopicNotUnderParsedWildcard(t *testing.T) {
-	// gobmp.raw must be explicitly added to the stream Subjects because the
-	// gobmp.parsed.* wildcard only matches three-segment subjects. Assert
-	// the exact subject so accidental renames (e.g., to gobmp.parsed.raw)
-	// are caught rather than silently drifting from the Kafka topic.
-	if strings.HasPrefix(rawMessageTopic, "gobmp.parsed.") {
-		t.Errorf("rawMessageTopic=%q must not use the gobmp.parsed.* prefix (would be covered by the parsed wildcard and break Kafka parity)", rawMessageTopic)
+	// gobmp.raw must remain the exact subject for raw messages — the
+	// gobmp.parsed.* wildcard only matches three-segment subjects, so
+	// gobmp.raw has to be added to the stream Subjects explicitly. Lock
+	// the literal value so a rename to gobmp.parsed.raw, gobmp.raw.v2, or
+	// anything else is caught and Kafka parity is preserved.
+	const wantRawTopic = "gobmp.raw"
+	if rawMessageTopic != wantRawTopic {
+		t.Errorf("rawMessageTopic=%q, want exactly %q (rename would break Kafka parity)", rawMessageTopic, wantRawTopic)
 	}
 	topic, ok := topicForMessage(bmp.BMPRawMsg)
-	if !ok || topic != rawMessageTopic {
-		t.Errorf("BMPRawMsg must map to rawMessageTopic, got %q ok=%v", topic, ok)
+	if !ok || topic != wantRawTopic {
+		t.Errorf("BMPRawMsg must map to %q, got %q ok=%v", wantRawTopic, topic, ok)
 	}
 }
