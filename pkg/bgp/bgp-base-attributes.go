@@ -37,7 +37,7 @@ type BaseAttributes struct {
 	AS4PathCount     int32            `json:"as4_path_count,omitempty"`
 	AS4Aggregator    []byte           `json:"as4_aggregator,omitempty"`
 	PMSITunnel       *pmsi.PMSITunnel `json:"pmsi_tunnel,omitempty"` // RFC 6514 PMSI Tunnel Attribute (Type 22)
-	TunnelEncapAttr  []byte           `json:"-"`
+	TunnelEncapAttr  []byte           `json:"tunnel_encap_attr,omitempty"`
 	// TraficEng
 	IPv6ExtCommunityList []string `json:"ipv6_ext_community_list,omitempty"` // RFC 5701
 	AIGP                 *AIGP    `json:"aigp,omitempty"`                    // RFC 7311 AIGP Attribute (Type 26)
@@ -112,6 +112,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if !bytes.Equal(ba.AS4Aggregator, oba.AS4Aggregator) {
 		equal = false
 		diffs = append(diffs, "as4_aggregator mismatch")
+	}
+	if !bytes.Equal(ba.TunnelEncapAttr, oba.TunnelEncapAttr) {
+		equal = false
+		diffs = append(diffs, "tunnel_encap_attr mismatch")
 	}
 	if !reflect.DeepEqual(sort.SortMergeComparableSlice(ba.LgCommunityList), sort.SortMergeComparableSlice(oba.LgCommunityList)) {
 		equal = false

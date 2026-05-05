@@ -1,6 +1,8 @@
 package bgp
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -162,6 +164,27 @@ func TestBaseAttributes_Equal(t *testing.T) {
 		equal, _ := base.Equal(&other)
 		if equal {
 			t.Error("Equal() = true for different CommunityList, want false")
+		}
+	})
+
+	t.Run("different TunnelEncapAttr", func(t *testing.T) {
+		a := *base
+		a.TunnelEncapAttr = []byte{0x00, 0x0d, 0x00, 0x06, 0x00, 0x0c, 0x00, 0x04, 0x00, 0x00, 0x00, 0x64}
+		b := *base
+		b.TunnelEncapAttr = []byte{0x00, 0x0d, 0x00, 0x06, 0x00, 0x0c, 0x00, 0x04, 0x00, 0x00, 0x00, 0xc8}
+		equal, diffs := a.Equal(&b)
+		if equal {
+			t.Error("Equal() = true for different TunnelEncapAttr, want false")
+		}
+		found := false
+		for _, d := range diffs {
+			if d == "tunnel_encap_attr mismatch" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected 'tunnel_encap_attr mismatch' in diffs, got %v", diffs)
 		}
 	})
 }
@@ -344,5 +367,42 @@ func TestUnmarshalAttrASPath(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestBaseAttributes_TunnelEncapAttr_JSON locks the JSON output contract for
+// the Tunnel Encapsulation Attribute (path attribute 23). The field is []byte
+// so encoding/json renders it as a base64 string; assert both that the field
+// appears under the expected name AND that the value round-trips, otherwise a
+// rename or accidental encoding change could pass silently.
+func TestBaseAttributes_TunnelEncapAttr_JSON(t *testing.T) {
+	raw := []byte{0x00, 0x01, 0x02, 0x03, 0xDE, 0xAD, 0xBE, 0xEF}
+	ba := BaseAttributes{TunnelEncapAttr: raw}
+	out, err := json.Marshal(&ba)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	wantField := `"tunnel_encap_attr":"` + base64.StdEncoding.EncodeToString(raw) + `"`
+	if !strings.Contains(string(out), wantField) {
+		t.Errorf("expected JSON to contain %s, got %s", wantField, out)
+	}
+
+	// Round-trip: decoded value must equal the input.
+	var back BaseAttributes
+	if err := json.Unmarshal(out, &back); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if string(back.TunnelEncapAttr) != string(raw) {
+		t.Errorf("round-trip mismatch: got %x, want %x", back.TunnelEncapAttr, raw)
+	}
+
+	// Absent field must omit due to omitempty.
+	empty := BaseAttributes{}
+	out, err = json.Marshal(&empty)
+	if err != nil {
+		t.Fatalf("json.Marshal(empty): %v", err)
+	}
+	if strings.Contains(string(out), "tunnel_encap_attr") {
+		t.Errorf("absent TunnelEncapAttr must be omitted, got %s", out)
 	}
 }

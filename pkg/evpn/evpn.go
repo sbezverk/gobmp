@@ -96,6 +96,7 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 	r := Route{
 		Route: make([]*NLRI, 0),
 	}
+	skipped := 0
 	for p := 0; p < len(b); {
 		if p+2 > len(b) {
 			return nil, fmt.Errorf("incomplete EVPN NLRI at offset %d: need 2 bytes for type+length, have %d", p, len(b)-p)
@@ -171,12 +172,18 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("unknown route type %d", n.RouteType)
+			glog.V(4).Infof("skipping unknown EVPN route type %d at offset %d (length %d)", n.RouteType, p-2, l)
+			skipped++
+			p += l
+			continue
 		}
 		r.Route = append(r.Route, n)
 		p += l
 	}
 
+	if len(r.Route) == 0 && skipped > 0 {
+		glog.Warningf("EVPN NLRI contained only unsupported route types: %d skipped, no routes decoded", skipped)
+	}
 	return &r, nil
 }
 

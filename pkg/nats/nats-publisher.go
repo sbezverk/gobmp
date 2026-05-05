@@ -31,7 +31,10 @@ const (
 	flowspecMessageTopic   = "gobmp.parsed.flowspec"
 	flowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
 	flowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
+	vplsMessageTopic       = "gobmp.parsed.vpls"
 	statsMessageTopic      = "gobmp.parsed.statistics"
+	rawMessageTopic        = "gobmp.raw"
+	parsedWildcardSubject  = "gobmp.parsed.*"
 )
 
 var (
@@ -40,54 +43,76 @@ var (
 	waitReconnect = time.Second
 )
 
+// jetStreamClient is the subset of nats.JetStreamContext used by publisher.
+// Defining a narrow interface lets tests inject a fake without a full NATS server.
+type jetStreamClient interface {
+	PublishMsg(m *nats.Msg, opts ...nats.PubOpt) (*nats.PubAck, error)
+	AddStream(cfg *nats.StreamConfig, opts ...nats.JSOpt) (*nats.StreamInfo, error)
+	StreamInfo(stream string, opts ...nats.JSOpt) (*nats.StreamInfo, error)
+	UpdateStream(cfg *nats.StreamConfig, opts ...nats.JSOpt) (*nats.StreamInfo, error)
+}
+
 type publisher struct {
 	nc *nats.Conn
-	js nats.JetStreamContext
+	js jetStreamClient
+}
+
+// topicForMessage maps a BMP message type to its NATS subject.
+// Returns ("", false) for unknown types.
+func topicForMessage(t int) (string, bool) {
+	switch t {
+	case bmp.PeerStateChangeMsg:
+		return peerTopic, true
+	case bmp.UnicastPrefixMsg:
+		return unicastMessageTopic, true
+	case bmp.UnicastPrefixV4Msg:
+		return unicastMessageV4Topic, true
+	case bmp.UnicastPrefixV6Msg:
+		return unicastMessageV6Topic, true
+	case bmp.LSNodeMsg:
+		return lsNodeMessageTopic, true
+	case bmp.LSLinkMsg:
+		return lsLinkMessageTopic, true
+	case bmp.L3VPNMsg:
+		return l3vpnMessageTopic, true
+	case bmp.L3VPNV4Msg:
+		return l3vpnMessageV4Topic, true
+	case bmp.L3VPNV6Msg:
+		return l3vpnMessageV6Topic, true
+	case bmp.LSPrefixMsg:
+		return lsPrefixMessageTopic, true
+	case bmp.LSSRv6SIDMsg:
+		return lsSRv6SIDMessageTopic, true
+	case bmp.EVPNMsg:
+		return evpnMessageTopic, true
+	case bmp.SRPolicyMsg:
+		return srPolicyMessageTopic, true
+	case bmp.SRPolicyV4Msg:
+		return srPolicyMessageV4Topic, true
+	case bmp.SRPolicyV6Msg:
+		return srPolicyMessageV6Topic, true
+	case bmp.FlowspecMsg:
+		return flowspecMessageTopic, true
+	case bmp.FlowspecV4Msg:
+		return flowspecMessageV4Topic, true
+	case bmp.FlowspecV6Msg:
+		return flowspecMessageV6Topic, true
+	case bmp.VPLSMsg:
+		return vplsMessageTopic, true
+	case bmp.StatsReportMsg:
+		return statsMessageTopic, true
+	case bmp.BMPRawMsg:
+		return rawMessageTopic, true
+	}
+	return "", false
 }
 
 func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
-	switch t {
-	case bmp.PeerStateChangeMsg:
-		return p.produceMessage(peerTopic, key, msg)
-	case bmp.UnicastPrefixMsg:
-		return p.produceMessage(unicastMessageTopic, key, msg)
-	case bmp.UnicastPrefixV4Msg:
-		return p.produceMessage(unicastMessageV4Topic, key, msg)
-	case bmp.UnicastPrefixV6Msg:
-		return p.produceMessage(unicastMessageV6Topic, key, msg)
-	case bmp.LSNodeMsg:
-		return p.produceMessage(lsNodeMessageTopic, key, msg)
-	case bmp.LSLinkMsg:
-		return p.produceMessage(lsLinkMessageTopic, key, msg)
-	case bmp.L3VPNMsg:
-		return p.produceMessage(l3vpnMessageTopic, key, msg)
-	case bmp.L3VPNV4Msg:
-		return p.produceMessage(l3vpnMessageV4Topic, key, msg)
-	case bmp.L3VPNV6Msg:
-		return p.produceMessage(l3vpnMessageV6Topic, key, msg)
-	case bmp.LSPrefixMsg:
-		return p.produceMessage(lsPrefixMessageTopic, key, msg)
-	case bmp.LSSRv6SIDMsg:
-		return p.produceMessage(lsSRv6SIDMessageTopic, key, msg)
-	case bmp.EVPNMsg:
-		return p.produceMessage(evpnMessageTopic, key, msg)
-	case bmp.SRPolicyMsg:
-		return p.produceMessage(srPolicyMessageTopic, key, msg)
-	case bmp.SRPolicyV4Msg:
-		return p.produceMessage(srPolicyMessageV4Topic, key, msg)
-	case bmp.SRPolicyV6Msg:
-		return p.produceMessage(srPolicyMessageV6Topic, key, msg)
-	case bmp.FlowspecMsg:
-		return p.produceMessage(flowspecMessageTopic, key, msg)
-	case bmp.FlowspecV4Msg:
-		return p.produceMessage(flowspecMessageV4Topic, key, msg)
-	case bmp.FlowspecV6Msg:
-		return p.produceMessage(flowspecMessageV6Topic, key, msg)
-	case bmp.StatsReportMsg:
-		return p.produceMessage(statsMessageTopic, key, msg)
+	topic, ok := topicForMessage(t)
+	if !ok {
+		return fmt.Errorf("nats publisher: unsupported BMP message type %d", t)
 	}
-
-	return fmt.Errorf("not implemented")
+	return p.produceMessage(topic, key, msg)
 }
 
 func (p *publisher) produceMessage(subject string, key []byte, data []byte) error {
@@ -113,11 +138,31 @@ func (p *publisher) Stop() {
 	p.nc.Close()
 }
 
+// mergeSubjects returns a new slice containing all elements of existing plus
+// any elements from required that are not already present, and a bool
+// indicating whether any subjects were added. existing is not modified.
+func mergeSubjects(existing, required []string) ([]string, bool) {
+	set := make(map[string]struct{}, len(existing))
+	for _, s := range existing {
+		set[s] = struct{}{}
+	}
+	result := append([]string(nil), existing...)
+	changed := false
+	for _, s := range required {
+		if _, ok := set[s]; !ok {
+			result = append(result, s)
+			set[s] = struct{}{}
+			changed = true
+		}
+	}
+	return result, changed
+}
+
 func (p *publisher) createStreams() error {
 	// Define the stream configuration
 	streamConfig := &nats.StreamConfig{
 		Name:      "goBMP",
-		Subjects:  []string{"gobmp.parsed.*"},
+		Subjects:  []string{parsedWildcardSubject, rawMessageTopic},
 		Storage:   nats.FileStorage,
 		Retention: nats.InterestPolicy,
 		MaxMsgs:   -1, // No limit
@@ -126,9 +171,21 @@ func (p *publisher) createStreams() error {
 		Replicas:  1,
 	}
 
-	// Try to create the stream, ignore if it already exists
 	_, err := p.js.AddStream(streamConfig)
-	if err != nil && !errors.Is(err, nats.ErrStreamNameAlreadyInUse) {
+	if errors.Is(err, nats.ErrStreamNameAlreadyInUse) {
+		info, infoErr := p.js.StreamInfo(streamConfig.Name)
+		if infoErr != nil {
+			return fmt.Errorf("failed to get stream info for %q: %w", streamConfig.Name, infoErr)
+		}
+		existingConfig := info.Config
+		merged, updated := mergeSubjects(existingConfig.Subjects, streamConfig.Subjects)
+		if updated {
+			existingConfig.Subjects = merged
+			if _, err = p.js.UpdateStream(&existingConfig); err != nil {
+				return fmt.Errorf("failed to update stream subjects for %q: %w", streamConfig.Name, err)
+			}
+		}
+	} else if err != nil {
 		return fmt.Errorf("failed to create stream: %w", err)
 	}
 
