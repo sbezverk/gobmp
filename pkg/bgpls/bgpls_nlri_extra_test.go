@@ -688,7 +688,16 @@ func TestGetOpaquePrefixAttribute(t *testing.T) {
 	}
 }
 
+// equalStringSlices reports whether a and b have the same elements AND the
+// same nil-vs-empty status. Distinguishing nil from a non-nil empty slice
+// matters for the Opaque*Attribute getters: nil makes omitempty fire on the
+// receiving message struct, an empty slice would render as []. Callers rely
+// on this contract — drift would silently break JSON output for "absent"
+// and "wrong-type TLV" cases.
 func equalStringSlices(a, b []string) bool {
+	if (a == nil) != (b == nil) {
+		return false
+	}
 	if len(a) != len(b) {
 		return false
 	}

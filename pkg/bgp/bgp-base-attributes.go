@@ -255,7 +255,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			// required by RFC 7606 §3 / RFC 9552 §5.3 from a consumer's
 			// perspective. The raw bytes remain in PathAttributes for
 			// forensics; we do not mutate the slice here.
-			if _, err := bgpls.UnmarshalBGPLSTLV(b); err != nil {
+			if err := bgpls.ValidateBGPLSTLV(b); err != nil {
 				glog.Errorf("malformed BGP-LS Attribute (path attribute type 29); content will be skipped in emitted messages per RFC 7606 §3 / RFC 9552 §5.3: %v", err)
 			}
 		case 30:
