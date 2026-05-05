@@ -194,6 +194,27 @@ func TestBaseAttributes_Equal(t *testing.T) {
 		}
 	})
 
+	t.Run("different TunnelEncapAttr", func(t *testing.T) {
+		a := *base
+		a.TunnelEncapAttr = []byte{0x00, 0x0d, 0x00, 0x06, 0x00, 0x0c, 0x00, 0x04, 0x00, 0x00, 0x00, 0x64}
+		b := *base
+		b.TunnelEncapAttr = []byte{0x00, 0x0d, 0x00, 0x06, 0x00, 0x0c, 0x00, 0x04, 0x00, 0x00, 0x00, 0xc8}
+		equal, diffs := a.Equal(&b)
+		if equal {
+			t.Error("Equal() = true for different TunnelEncapAttr, want false")
+		}
+		found := false
+		for _, d := range diffs {
+			if d == "tunnel_encap_attr mismatch" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected 'tunnel_encap_attr mismatch' in diffs, got %v", diffs)
+		}
+	})
+
 	t.Run("different TunnelEncapMalformed", func(t *testing.T) {
 		a := *base
 		b := *base
