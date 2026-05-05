@@ -43,6 +43,11 @@ type BaseAttributes struct {
 	// Raw bytes are retained in TunnelEncapAttr for the SR Policy consumer in
 	// pkg/message/srpolicy.go which decodes its own RFC 9256 view of the same TLVs.
 	TunnelEncap *tunnel.TunnelEncapsulation `json:"tunnel_encap,omitempty"`
+	// TunnelEncapMalformed is set when path attribute 23 was present on the wire
+	// but UnmarshalTunnelEncapsulation rejected it. Lets downstream consumers
+	// distinguish "attribute absent" (field omitted) from "attribute present but
+	// undecodable" (field true) without exposing raw bytes in JSON.
+	TunnelEncapMalformed bool `json:"tunnel_encap_malformed,omitempty"`
 	// TraficEng
 	IPv6ExtCommunityList []string `json:"ipv6_ext_community_list,omitempty"` // RFC 5701
 	AIGP                 *AIGP    `json:"aigp,omitempty"`                    // RFC 7311 AIGP Attribute (Type 26)
@@ -133,6 +138,14 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if asEqual, asDiffs := ba.AttrSet.Equal(oba.AttrSet); !asEqual {
 		equal = false
 		diffs = append(diffs, asDiffs...)
+	}
+	if !reflect.DeepEqual(ba.TunnelEncap, oba.TunnelEncap) {
+		equal = false
+		diffs = append(diffs, "tunnel_encap mismatch")
+	}
+	if ba.TunnelEncapMalformed != oba.TunnelEncapMalformed {
+		equal = false
+		diffs = append(diffs, "tunnel_encap_malformed mismatch: "+strconv.FormatBool(ba.TunnelEncapMalformed)+" and "+strconv.FormatBool(oba.TunnelEncapMalformed))
 	}
 
 	return equal, diffs
@@ -238,6 +251,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			te, err := tunnel.UnmarshalTunnelEncapsulation(b)
 			if err != nil {
 				glog.Errorf("failed to parse Tunnel Encapsulation attribute (path attribute type 23) per RFC 9012: %v", err)
+				baseAttr.TunnelEncapMalformed = true
 			} else {
 				baseAttr.TunnelEncap = te
 			}

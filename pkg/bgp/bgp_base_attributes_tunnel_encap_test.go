@@ -57,6 +57,9 @@ func TestBaseAttrs_TunnelEncap_WellFormed(t *testing.T) {
 	if !bytes.Equal(ba.TunnelEncapAttr, tlv) {
 		t.Errorf("TunnelEncapAttr = %x, want %x (raw bytes must remain for SR Policy consumer)", ba.TunnelEncapAttr, tlv)
 	}
+	if ba.TunnelEncapMalformed {
+		t.Error("TunnelEncapMalformed = true on well-formed attribute; want false")
+	}
 
 	out, err := json.Marshal(ba)
 	if err != nil {
@@ -64,6 +67,9 @@ func TestBaseAttrs_TunnelEncap_WellFormed(t *testing.T) {
 	}
 	if !strings.Contains(string(out), `"tunnel_encap":`) {
 		t.Errorf("json output missing tunnel_encap field: %s", out)
+	}
+	if strings.Contains(string(out), `"tunnel_encap_malformed":`) {
+		t.Errorf("json output should omit tunnel_encap_malformed when false: %s", out)
 	}
 }
 
@@ -86,6 +92,9 @@ func TestBaseAttrs_TunnelEncap_Malformed(t *testing.T) {
 	if !bytes.Equal(ba.TunnelEncapAttr, tlv) {
 		t.Errorf("TunnelEncapAttr = %x, want raw %x preserved on parse failure", ba.TunnelEncapAttr, tlv)
 	}
+	if !ba.TunnelEncapMalformed {
+		t.Error("TunnelEncapMalformed = false; want true so consumers can distinguish present-but-broken from absent")
+	}
 
 	out, err := json.Marshal(ba)
 	if err != nil {
@@ -93,6 +102,9 @@ func TestBaseAttrs_TunnelEncap_Malformed(t *testing.T) {
 	}
 	if strings.Contains(string(out), `"tunnel_encap":`) {
 		t.Errorf("json output should omit tunnel_encap when nil: %s", out)
+	}
+	if !strings.Contains(string(out), `"tunnel_encap_malformed":true`) {
+		t.Errorf("json output missing tunnel_encap_malformed=true on broken attr 23: %s", out)
 	}
 }
 
@@ -112,6 +124,9 @@ func TestBaseAttrs_TunnelEncap_Absent(t *testing.T) {
 	if len(ba.TunnelEncapAttr) != 0 {
 		t.Errorf("TunnelEncapAttr len = %d, want 0", len(ba.TunnelEncapAttr))
 	}
+	if ba.TunnelEncapMalformed {
+		t.Error("TunnelEncapMalformed = true when attribute absent; want false")
+	}
 
 	out, err := json.Marshal(ba)
 	if err != nil {
@@ -119,5 +134,8 @@ func TestBaseAttrs_TunnelEncap_Absent(t *testing.T) {
 	}
 	if strings.Contains(string(out), `"tunnel_encap":`) {
 		t.Errorf("json output should omit tunnel_encap when attribute absent: %s", out)
+	}
+	if strings.Contains(string(out), `"tunnel_encap_malformed":`) {
+		t.Errorf("json output should omit tunnel_encap_malformed when attribute absent: %s", out)
 	}
 }
