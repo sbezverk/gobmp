@@ -249,6 +249,7 @@ type LSNode struct {
 	SRv6CapabilitiesTLV *srv6.CapabilityTLV             `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             []*base.MSDTV                   `json:"node_msd,omitempty"`
 	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition     `json:"flex_algo_definition,omitempty"`
+	OpaqueNodeAttribute []string                        `json:"opaque_node_attribute,omitempty"` // RFC 9552 §5.3.1.5 TLV 1025, hex-encoded raw values
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -323,6 +324,7 @@ type LSLink struct {
 	UnidirResidualBW      uint32                        `json:"unidir_residual_bw,omitempty"`
 	UnidirAvailableBW     uint32                        `json:"unidir_available_bw,omitempty"`
 	UnidirBWUtilization   uint32                        `json:"unidir_bw_utilization,omitempty"`
+	OpaqueLinkAttribute   []string                      `json:"opaque_link_attribute,omitempty"` // RFC 9552 §5.3.2.6 TLV 1097, hex-encoded raw values
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -478,40 +480,41 @@ type L3VPNPrefix struct {
 
 // LSPrefix defines a structure of LS Prefix message
 type LSPrefix struct {
-	Key                  string                        `json:"_key,omitempty"`
-	ID                   string                        `json:"_id,omitempty"`
-	Rev                  string                        `json:"_rev,omitempty"`
-	Action               string                        `json:"action,omitempty"`
-	Sequence             int                           `json:"sequence,omitempty"`
-	Hash                 string                        `json:"hash,omitempty"`
-	RouterHash           string                        `json:"router_hash,omitempty"`
-	RouterIP             string                        `json:"router_ip,omitempty"`
-	DomainID             int64                         `json:"domain_id"`
-	PeerHash             string                        `json:"peer_hash,omitempty"`
-	PeerIP               string                        `json:"peer_ip,omitempty"`
-	PeerType             uint8                         `json:"peer_type"`
-	PeerASN              uint32                        `json:"peer_asn,omitempty"`
-	Timestamp            string                        `json:"timestamp,omitempty"`
-	IGPRouterID          string                        `json:"igp_router_id,omitempty"`
-	RouterID             string                        `json:"router_id,omitempty"`
-	LSID                 uint32                        `json:"ls_id,omitempty"`
-	ProtocolID           base.ProtoID                  `json:"protocol_id,omitempty"`
-	Protocol             string                        `json:"protocol,omitempty"`
-	AreaID               string                        `json:"area_id"`
-	Nexthop              string                        `json:"nexthop,omitempty"`
-	LocalNodeHash        string                        `json:"local_node_hash,omitempty"`
-	MTID                 *base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
-	OSPFRouteType        uint8                         `json:"ospf_route_type,omitempty"`
-	IGPFlags             *bgpls.IGPFlags               `json:"igp_flags,omitempty"`
-	IGPRouteTag          []uint32                      `json:"route_tag,omitempty"`
-	IGPExtRouteTag       []uint64                      `json:"ext_route_tag,omitempty"`
-	OSPFFwdAddr          string                        `json:"ospf_fwd_addr,omitempty"`
-	Prefix               string                        `json:"prefix,omitempty"`
-	PrefixLen            int32                         `json:"prefix_len,omitempty"`
-	PrefixMetric         uint32                        `json:"prefix_metric,omitempty"`
-	PrefixAttrTLVs       *bgpls.PrefixAttrTLVs         `json:"prefix_attr_tlvs,omitempty"`
-	FlexAlgoPrefixMetric []*bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
-	SRv6Locator          *srv6.LocatorTLV              `json:"srv6_locator,omitempty"`
+	Key                   string                        `json:"_key,omitempty"`
+	ID                    string                        `json:"_id,omitempty"`
+	Rev                   string                        `json:"_rev,omitempty"`
+	Action                string                        `json:"action,omitempty"`
+	Sequence              int                           `json:"sequence,omitempty"`
+	Hash                  string                        `json:"hash,omitempty"`
+	RouterHash            string                        `json:"router_hash,omitempty"`
+	RouterIP              string                        `json:"router_ip,omitempty"`
+	DomainID              int64                         `json:"domain_id"`
+	PeerHash              string                        `json:"peer_hash,omitempty"`
+	PeerIP                string                        `json:"peer_ip,omitempty"`
+	PeerType              uint8                         `json:"peer_type"`
+	PeerASN               uint32                        `json:"peer_asn,omitempty"`
+	Timestamp             string                        `json:"timestamp,omitempty"`
+	IGPRouterID           string                        `json:"igp_router_id,omitempty"`
+	RouterID              string                        `json:"router_id,omitempty"`
+	LSID                  uint32                        `json:"ls_id,omitempty"`
+	ProtocolID            base.ProtoID                  `json:"protocol_id,omitempty"`
+	Protocol              string                        `json:"protocol,omitempty"`
+	AreaID                string                        `json:"area_id"`
+	Nexthop               string                        `json:"nexthop,omitempty"`
+	LocalNodeHash         string                        `json:"local_node_hash,omitempty"`
+	MTID                  *base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
+	OSPFRouteType         uint8                         `json:"ospf_route_type,omitempty"`
+	IGPFlags              *bgpls.IGPFlags               `json:"igp_flags,omitempty"`
+	IGPRouteTag           []uint32                      `json:"route_tag,omitempty"`
+	IGPExtRouteTag        []uint64                      `json:"ext_route_tag,omitempty"`
+	OSPFFwdAddr           string                        `json:"ospf_fwd_addr,omitempty"`
+	Prefix                string                        `json:"prefix,omitempty"`
+	PrefixLen             int32                         `json:"prefix_len,omitempty"`
+	PrefixMetric          uint32                        `json:"prefix_metric,omitempty"`
+	PrefixAttrTLVs        *bgpls.PrefixAttrTLVs         `json:"prefix_attr_tlvs,omitempty"`
+	FlexAlgoPrefixMetric  []*bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
+	SRv6Locator           *srv6.LocatorTLV              `json:"srv6_locator,omitempty"`
+	OpaquePrefixAttribute []string                      `json:"opaque_prefix_attribute,omitempty"` // RFC 9552 §5.3.3.6 TLV 1157, hex-encoded raw values
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`

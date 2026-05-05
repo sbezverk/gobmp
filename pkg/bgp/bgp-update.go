@@ -47,15 +47,18 @@ func (up *Update) GetBaseAttrHash() string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// GetNLRI29 check for presence of NLRI 29 in the update and if exists, instantiate NLRI29 object
-func (up *Update) GetNLRI29() (*bgpls.NLRI, error) {
+// GetBGPLSAttribute returns the parsed BGP-LS Attribute (BGP path attribute
+// type 29 per RFC 9552 §5.3), or NewAttributeNotFoundError when the update
+// carries no such attribute. The attribute payload is a stream of BGP-LS TLVs;
+// see RFC 9552 §9 Table 18 for the codepoint registry.
+func (up *Update) GetBGPLSAttribute() (*bgpls.NLRI, error) {
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType == 29 {
-			nlri29, err := bgpls.UnmarshalBGPLSNLRI(attr.Attribute)
+			ls, err := bgpls.UnmarshalBGPLSNLRI(attr.Attribute)
 			if err != nil {
 				return nil, err
 			}
-			return nlri29, nil
+			return ls, nil
 		}
 	}
 	return nil, NewAttributeNotFoundError(29, "BGP-LS")

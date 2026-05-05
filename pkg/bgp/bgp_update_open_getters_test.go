@@ -80,22 +80,58 @@ func TestUpdate_GetBaseAttrHash(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Update.GetNLRI29 – not-found path
+// Update.GetBGPLSAttribute
 // ---------------------------------------------------------------------------
 
-func TestUpdate_GetNLRI29_NotFound(t *testing.T) {
+func TestUpdate_GetBGPLSAttribute_NotFound(t *testing.T) {
 	up := &Update{
 		PathAttributes: []PathAttribute{
 			{AttributeType: 1, Attribute: []byte{}},
 		},
 	}
-	_, err := up.GetNLRI29()
+	_, err := up.GetBGPLSAttribute()
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
 	notFound := &AttributeNotFoundError{}
 	if !errors.As(err, &notFound) {
 		t.Errorf("expected AttributeNotFoundError, got %T: %v", err, err)
+	}
+}
+
+func TestUpdate_GetBGPLSAttribute_Success(t *testing.T) {
+	// One BGP-LS TLV: Type=1024 (Node Flag Bits), Length=1, Value=0x80.
+	bgplsAttr := []byte{0x04, 0x00, 0x00, 0x01, 0x80}
+	up := &Update{
+		PathAttributes: []PathAttribute{
+			{AttributeType: 29, Attribute: bgplsAttr},
+		},
+	}
+	ls, err := up.GetBGPLSAttribute()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ls == nil {
+		t.Fatal("expected non-nil NLRI")
+	}
+	if len(ls.LS) != 1 {
+		t.Fatalf("expected 1 TLV, got %d", len(ls.LS))
+	}
+	if ls.LS[0].Type != 1024 {
+		t.Errorf("TLV type = %d, want 1024", ls.LS[0].Type)
+	}
+}
+
+func TestUpdate_GetBGPLSAttribute_MalformedReturnsError(t *testing.T) {
+	// Truncated TLV header (1 byte; needs ≥ 4) → underlying parser must error.
+	up := &Update{
+		PathAttributes: []PathAttribute{
+			{AttributeType: 29, Attribute: []byte{0xff}},
+		},
+	}
+	_, err := up.GetBGPLSAttribute()
+	if err == nil {
+		t.Fatal("expected error from malformed BGP-LS attribute, got nil")
 	}
 }
 

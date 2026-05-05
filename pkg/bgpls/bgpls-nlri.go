@@ -2,6 +2,7 @@ package bgpls
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"net"
@@ -874,6 +875,45 @@ func (ls *NLRI) GetSRSegmentList() ([]*SRSegmentList, error) {
 		lists = append(lists, sl)
 	}
 	return lists, nil
+}
+
+// GetOpaqueNodeAttribute returns all Opaque Node Attribute TLVs (type 1025)
+// per RFC 9552 §5.3.1.5. Each entry is the raw TLV value, hex-encoded.
+// The TLV is an envelope carrying IGP-protocol-specific attributes that
+// BGP-LS does not interpret; multiple TLVs may be present.
+func (ls *NLRI) GetOpaqueNodeAttribute() []string {
+	return ls.collectOpaqueTLVValues(1025)
+}
+
+// GetOpaqueLinkAttribute returns all Opaque Link Attribute TLVs (type 1097)
+// per RFC 9552 §5.3.2.6. See GetOpaqueNodeAttribute for semantics.
+func (ls *NLRI) GetOpaqueLinkAttribute() []string {
+	return ls.collectOpaqueTLVValues(1097)
+}
+
+// GetOpaquePrefixAttribute returns all Opaque Prefix Attribute TLVs (type 1157)
+// per RFC 9552 §5.3.3.6. See GetOpaqueNodeAttribute for semantics.
+func (ls *NLRI) GetOpaquePrefixAttribute() []string {
+	return ls.collectOpaqueTLVValues(1157)
+}
+
+// collectOpaqueTLVValues returns hex-encoded raw values of every TLV with the
+// given type. Zero-length values are skipped: per RFC 9552 §5.3.1.5/§5.3.2.6/
+// §5.3.3.6 these envelopes carry "information specific to the protocol" — an
+// empty envelope carries no information and would also defeat omitempty on
+// the receiving message struct. Returns nil when no qualifying TLV is present.
+func (ls *NLRI) collectOpaqueTLVValues(tlvType uint16) []string {
+	var out []string
+	for _, tlv := range ls.LS {
+		if tlv.Type != tlvType {
+			continue
+		}
+		if len(tlv.Value) == 0 {
+			continue
+		}
+		out = append(out, hex.EncodeToString(tlv.Value))
+	}
+	return out
 }
 
 // UnmarshalBGPLSNLRI builds Prefix NLRI object

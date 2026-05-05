@@ -68,6 +68,44 @@ func TestUnmarshalBGPLSTLV(t *testing.T) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ValidateBGPLSTLV
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestValidateBGPLSTLV(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []byte
+		wantErr bool
+	}{
+		{name: "empty buffer is valid", input: []byte{}, wantErr: false},
+		{name: "single zero-length TLV", input: []byte{0x04, 0x00, 0x00, 0x00}, wantErr: false},
+		{
+			name: "two TLVs back to back",
+			input: []byte{
+				0x04, 0x00, 0x00, 0x02, 0xAB, 0xCD,
+				0x04, 0x03, 0x00, 0x01, 0xFF,
+			},
+			wantErr: false,
+		},
+		{name: "truncated header (1 byte)", input: []byte{0x04}, wantErr: true},
+		{name: "truncated header (3 bytes)", input: []byte{0x04, 0x00, 0x00}, wantErr: true},
+		{
+			name:    "declared length exceeds available bytes",
+			input:   []byte{0x04, 0x00, 0x00, 0x10, 0x01, 0x02},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateBGPLSTLV(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ValidateBGPLSTLV() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // UnmarshalIGPFlags
 // ─────────────────────────────────────────────────────────────────────────────
 

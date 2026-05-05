@@ -16,6 +16,26 @@ type TLV struct {
 	Value  []byte
 }
 
+// ValidateBGPLSTLV walks a BGP-LS Attribute (path attribute 29) TLV stream and
+// reports whether every TLV's Type/Length header fits within the buffer. Unlike
+// UnmarshalBGPLSTLV it does not allocate per-TLV value slices, so it is safe to
+// call from the BGP path-attribute parser hot path. Detailed per-TLV decoding
+// happens later via UnmarshalBGPLSTLV when a Link-State NLRI is emitted.
+func ValidateBGPLSTLV(b []byte) error {
+	for p := 0; p < len(b); {
+		if p+4 > len(b) {
+			return fmt.Errorf("not enough bytes to unmarshal BGP-LS TLV header: need 4 bytes, have %d", len(b)-p)
+		}
+		l := binary.BigEndian.Uint16(b[p+2 : p+4])
+		p += 4
+		if p+int(l) > len(b) {
+			return fmt.Errorf("not enough bytes to unmarshal BGP-LS TLV Value: need %d bytes, have %d", l, len(b)-p)
+		}
+		p += int(l)
+	}
+	return nil
+}
+
 // UnmarshalBGPLSTLV builds Collection of BGP-LS TLVs
 func UnmarshalBGPLSTLV(b []byte) ([]TLV, error) {
 	if glog.V(6) {
