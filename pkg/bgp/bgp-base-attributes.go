@@ -113,6 +113,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "as4_aggregator mismatch")
 	}
+	if !bytes.Equal(ba.TunnelEncapAttr, oba.TunnelEncapAttr) {
+		equal = false
+		diffs = append(diffs, "tunnel_encap_attr mismatch")
+	}
 	if !reflect.DeepEqual(sort.SortMergeComparableSlice(ba.LgCommunityList), sort.SortMergeComparableSlice(oba.LgCommunityList)) {
 		equal = false
 		diffs = append(diffs, "large_community_list mismatch")
