@@ -6,7 +6,7 @@ require (
 	github.com/IBM/sarama v1.48.0
 	github.com/go-test/deep v1.1.1
 	github.com/golang/glog v1.2.5
-	github.com/nats-io/nats.go v1.51.0
+	github.com/nats-io/nats.go v1.52.0
 	github.com/sbezverk/tools v0.0.0-20230714051746-80037ac202cf
 	gopkg.in/yaml.v3 v3.0.1
 )
