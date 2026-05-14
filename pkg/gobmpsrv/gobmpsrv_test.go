@@ -1330,6 +1330,23 @@ func TestConnectSpeaker_StableSession_ResetsRetryDelay(t *testing.T) {
 	if err != nil {
 		t.Fatalf("accepting connection: %v", err)
 	}
+	// Wait for connectSpeaker to mark the speaker connected before timing the
+	// stable-session window. Sleeping before connectedAt is recorded races with
+	// the goroutine inside connectSpeaker and the elapsed session can register
+	// below stableSessionThreshold on slow CI runners, making the test flaky.
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		speaker.mu.Lock()
+		connected := speaker.isConnected
+		speaker.mu.Unlock()
+		if connected {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timed out waiting for speaker.isConnected to become true")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 	time.Sleep(100 * time.Millisecond) // exceed the 50 ms threshold
 	_ = conn.Close()
 
