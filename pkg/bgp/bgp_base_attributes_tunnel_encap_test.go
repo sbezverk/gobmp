@@ -2,7 +2,9 @@ package bgp
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -137,5 +139,36 @@ func TestBaseAttrs_TunnelEncap_Absent(t *testing.T) {
 	}
 	if strings.Contains(string(out), `"tunnel_encap_malformed":`) {
 		t.Errorf("json output should omit tunnel_encap_malformed when attribute absent: %s", out)
+	}
+	if strings.Contains(string(out), `"tunnel_encap_attr":`) {
+		t.Errorf("json output should omit tunnel_encap_attr when attribute absent: %s", out)
+	}
+}
+
+// TestBaseAttrs_TunnelEncapAttr_JSON locks the JSON encoding of
+// BaseAttributes.TunnelEncapAttr: the field is emitted as standard
+// base64-encoded bytes under the key "tunnel_encap_attr". Pins the wire
+// contract so downstream consumers can recover the raw RFC 9012 payload
+// even when the structured TunnelEncap view is nil (parse failure).
+func TestBaseAttrs_TunnelEncapAttr_JSON(t *testing.T) {
+	raw := []byte{0x00, 0x0d, 0x00, 0x06, 0x0c, 0x04, 0x00, 0x00, 0x00, 0x64}
+	ba := &BaseAttributes{TunnelEncapAttr: raw}
+
+	out, err := json.Marshal(ba)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	want := fmt.Sprintf(`"tunnel_encap_attr":%q`, base64.StdEncoding.EncodeToString(raw))
+	if !strings.Contains(string(out), want) {
+		t.Errorf("json output missing %s: %s", want, out)
+	}
+
+	// Empty/nil slice must be omitted under omitempty.
+	empty, err := json.Marshal(&BaseAttributes{})
+	if err != nil {
+		t.Fatalf("json.Marshal empty: %v", err)
+	}
+	if strings.Contains(string(empty), `"tunnel_encap_attr":`) {
+		t.Errorf("tunnel_encap_attr should be omitted when nil: %s", empty)
 	}
 }

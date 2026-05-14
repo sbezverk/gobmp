@@ -38,15 +38,17 @@ type BaseAttributes struct {
 	AS4PathCount     int32            `json:"as4_path_count,omitempty"`
 	AS4Aggregator    []byte           `json:"as4_aggregator,omitempty"`
 	PMSITunnel       *pmsi.PMSITunnel `json:"pmsi_tunnel,omitempty"` // RFC 6514 PMSI Tunnel Attribute (Type 22)
-	TunnelEncapAttr  []byte           `json:"-"`
+	// TunnelEncapAttr retains the raw RFC 9012 Tunnel Encapsulation Attribute
+	// (path attribute type 23) bytes. Exposed in JSON so downstream consumers
+	// can recover the original payload when UnmarshalTunnelEncapsulation
+	// rejects the encoding and TunnelEncap is left nil. Also consumed in-process
+	// by the SR Policy decoder in pkg/message/srpolicy.go (RFC 9256 view).
+	TunnelEncapAttr []byte `json:"tunnel_encap_attr,omitempty"`
 	// TunnelEncap is the decoded RFC 9012 Tunnel Encapsulation Attribute (Type 23).
-	// Raw bytes are retained in TunnelEncapAttr for the SR Policy consumer in
-	// pkg/message/srpolicy.go which decodes its own RFC 9256 view of the same TLVs.
 	TunnelEncap *tunnel.TunnelEncapsulation `json:"tunnel_encap,omitempty"`
 	// TunnelEncapMalformed is set when path attribute 23 was present on the wire
 	// but UnmarshalTunnelEncapsulation rejected it. Lets downstream consumers
-	// distinguish "attribute absent" (field omitted) from "attribute present but
-	// undecodable" (field true) without exposing raw bytes in JSON.
+	// distinguish "attribute absent" from "attribute present but undecodable".
 	TunnelEncapMalformed bool `json:"tunnel_encap_malformed,omitempty"`
 	// TraficEng
 	IPv6ExtCommunityList []string `json:"ipv6_ext_community_list,omitempty"` // RFC 5701
@@ -138,6 +140,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if asEqual, asDiffs := ba.AttrSet.Equal(oba.AttrSet); !asEqual {
 		equal = false
 		diffs = append(diffs, asDiffs...)
+	}
+	if !bytes.Equal(ba.TunnelEncapAttr, oba.TunnelEncapAttr) {
+		equal = false
+		diffs = append(diffs, "tunnel_encap_attr mismatch")
 	}
 	if !reflect.DeepEqual(ba.TunnelEncap, oba.TunnelEncap) {
 		equal = false
