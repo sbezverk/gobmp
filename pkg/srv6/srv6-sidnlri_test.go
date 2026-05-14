@@ -39,8 +39,8 @@ func TestSIDNLRINilGuards(t *testing.T) {
 		t.Errorf("GetSRv6SID with empty SID bytes: want \"\", got %q", got)
 	}
 
-	// A 4-byte value must be rejected by the length guard: SRv6 SIDs are
-	// 16 bytes per RFC 8986, so any other length is malformed.
+	// 4-byte SIDs are rejected by the length check: SRv6 SIDs must be 16
+	// bytes per RFC 8986 §2, so any other length is malformed.
 	shortSID := &SIDNLRI{SRv6SID: &SIDDescriptor{SID: []byte{0x0a, 0x00, 0x00, 0x01}}}
 	if got := shortSID.GetSRv6SID(); got != "" {
 		t.Errorf("GetSRv6SID with 4-byte SID: want \"\", got %q", got)
@@ -117,10 +117,6 @@ func TestUnmarshalSIDNLRI(t *testing.T) {
 			if err != nil {
 				t.Fatalf("test failed with error: %+v", err)
 			}
-			// fmt.Printf("got: \n%+v\n expect:\n%+v\n", *got, *tt.expect)
-			// fmt.Printf("got local: \n%+v\n expect local:\n%+v\n", *got.LocalNode, *tt.expect.LocalNode)
-			// fmt.Printf("got sid: \n%+v\n expect sid:\n%+v\n", *got.SRv6SID, *tt.expect.SRv6SID)
-			// fmt.Printf("got mtid: \n%+v\n expect mtid:\n%+v\n", got.SRv6SID.MultiTopologyID, tt.expect.SRv6SID.MultiTopologyID)
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Fatalf("test failed as expected nlri %+v does not match actual nlri %+v", tt.expect, got)
 			}

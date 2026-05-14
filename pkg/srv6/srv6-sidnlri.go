@@ -68,9 +68,9 @@ func (sr *SIDNLRI) GetSRv6SIDMTID() *base.MultiTopologyIdentifier {
 	return sr.SRv6SID.GetMTID()[0]
 }
 
-// GetSRv6SID returns the SRv6 SID as an IP string, or an empty string if the
-// SID is missing or not a 16-byte value. SRv6 SIDs are 128-bit per RFC 8986,
-// so any other length is treated as invalid.
+// GetSRv6SID returns the SRv6 SID as an IP string, or an empty string if it
+// is missing or invalid. SRv6 SIDs are 128-bit per RFC 8986 §2, so only
+// 16-byte SID values are accepted; any other length is treated as invalid.
 func (sr *SIDNLRI) GetSRv6SID() string {
 	if sr.SRv6SID == nil || len(sr.SRv6SID.SID) != net.IPv6len {
 		return ""
