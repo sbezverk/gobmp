@@ -48,6 +48,12 @@ type BaseAttributes struct {
 	OTC             uint32        `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
 	// SecPath
 	AttrSet *AttrSet `json:"attr_set,omitempty"` // RFC 6368 ATTR_SET Attribute (Type 128)
+
+	// bgplsParsed memoizes the parsed BGP-LS Attribute (path attribute 29) so
+	// repeated GetBGPLSAttribute calls reuse a single allocation. Eager
+	// validation on receipt uses a non-allocating walk; this cache is populated
+	// on the first detailed decode requested by a producer.
+	bgplsParsed *bgpls.NLRI `json:"-"`
 }
 
 func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {

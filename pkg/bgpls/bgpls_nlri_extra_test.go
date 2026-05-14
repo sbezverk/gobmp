@@ -652,6 +652,12 @@ func TestGetOpaqueNodeAttribute(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			got := tc.nlri.GetOpaqueNodeAttribute()
+			if tc.want == nil {
+				if got != nil {
+					t.Errorf("GetOpaqueNodeAttribute() = %v, want nil", got)
+				}
+				return
+			}
 			if !equalStringSlices(got, tc.want) {
 				t.Errorf("GetOpaqueNodeAttribute() = %v, want %v", got, tc.want)
 			}

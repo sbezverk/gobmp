@@ -54,15 +54,24 @@ func (up *Update) GetBaseAttrHash() string {
 func (up *Update) GetBGPLSAttribute() (*bgpls.NLRI, error) {
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType == 29 {
+			if up.BaseAttributes != nil && up.BaseAttributes.bgplsParsed != nil {
+				return up.BaseAttributes.bgplsParsed, nil
+			}
 			ls, err := bgpls.UnmarshalBGPLSNLRI(attr.Attribute)
 			if err != nil {
 				return nil, err
+			}
+			if up.BaseAttributes != nil {
+				up.BaseAttributes.bgplsParsed = ls
 			}
 			return ls, nil
 		}
 	}
 	return nil, NewAttributeNotFoundError(29, "BGP-LS")
 }
+
+// Deprecated: use GetBGPLSAttribute. Kept for API compatibility.
+func (up *Update) GetNLRI29() (*bgpls.NLRI, error) { return up.GetBGPLSAttribute() }
 
 // GetAttrPrefixSID check for presence of BGP Attribute Prefix SID (40) and instantiates it
 func (up *Update) GetAttrPrefixSID() (*prefixsid.PSid, error) {
