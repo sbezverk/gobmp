@@ -22,6 +22,9 @@ type TLV struct {
 // call from the BGP path-attribute parser hot path. Detailed per-TLV decoding
 // happens later via UnmarshalBGPLSTLV when a Link-State NLRI is emitted.
 func ValidateBGPLSTLV(b []byte) error {
+	if len(b) == 0 {
+		return fmt.Errorf("BGP-LS Attribute is empty")
+	}
 	for p := 0; p < len(b); {
 		if p+4 > len(b) {
 			return fmt.Errorf("not enough bytes to unmarshal BGP-LS TLV header: need 4 bytes, have %d", len(b)-p)

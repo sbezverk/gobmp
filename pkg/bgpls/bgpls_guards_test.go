@@ -77,7 +77,7 @@ func TestValidateBGPLSTLV(t *testing.T) {
 		input   []byte
 		wantErr bool
 	}{
-		{name: "empty buffer is valid", input: []byte{}, wantErr: false},
+		{name: "empty buffer rejected", input: []byte{}, wantErr: true},
 		{name: "single zero-length TLV", input: []byte{0x04, 0x00, 0x00, 0x00}, wantErr: false},
 		{
 			name: "two TLVs back to back",
