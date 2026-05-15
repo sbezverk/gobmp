@@ -3,6 +3,8 @@ package bgp
 import (
 	"strings"
 	"testing"
+
+	"github.com/sbezverk/gobmp/pkg/tunnel"
 )
 
 // TestUnmarshalBGPBaseAttributes_AllAttrTypes exercises the zero-coverage private
@@ -162,6 +164,41 @@ func TestBaseAttributes_Equal(t *testing.T) {
 		equal, _ := base.Equal(&other)
 		if equal {
 			t.Error("Equal() = true for different CommunityList, want false")
+		}
+	})
+
+	t.Run("different TunnelEncap", func(t *testing.T) {
+		// Two updates that differ only in attribute 23 must not compare equal,
+		// otherwise validators silently miss real Tunnel Encapsulation changes.
+		a := *base
+		b := *base
+		a.TunnelEncap = &tunnel.TunnelEncapsulation{
+			Tunnels: []tunnel.Tunnel{{Type: uint16(tunnel.TypeSRPolicy)}},
+		}
+		b.TunnelEncap = nil
+		equal, diffs := a.Equal(&b)
+		if equal {
+			t.Error("Equal() = true for different TunnelEncap, want false")
+		}
+		found := false
+		for _, d := range diffs {
+			if d == "tunnel_encap mismatch" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected tunnel_encap mismatch in diffs, got %v", diffs)
+		}
+	})
+
+	t.Run("different TunnelEncapMalformed", func(t *testing.T) {
+		a := *base
+		b := *base
+		a.TunnelEncapMalformed = true
+		equal, _ := a.Equal(&b)
+		if equal {
+			t.Error("Equal() = true for different TunnelEncapMalformed, want false")
 		}
 	})
 }
