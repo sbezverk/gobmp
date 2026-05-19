@@ -3,7 +3,7 @@ module github.com/sbezverk/gobmp
 go 1.25.0
 
 require (
-	github.com/IBM/sarama v1.48.1
+	github.com/IBM/sarama v1.48.2
 	github.com/go-test/deep v1.1.1
 	github.com/golang/glog v1.2.5
 	github.com/nats-io/nats.go v1.52.0
