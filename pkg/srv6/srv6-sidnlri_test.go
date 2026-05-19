@@ -7,6 +7,65 @@ import (
 	"github.com/sbezverk/gobmp/pkg/base"
 )
 
+// sidNLRIFixture is a valid SRv6 SID NLRI used across getter and unmarshal tests.
+var sidNLRIFixture = []byte{
+	0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x01, 0x00, 0x00, 0x1a,
+	0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0x13, 0xce,
+	0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+	0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x93,
+	0x01, 0x07, 0x00, 0x02, 0x00, 0x02,
+	0x02, 0x06, 0x00, 0x10,
+	0x01, 0x92, 0x01, 0x68, 0x00, 0x93, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+}
+
+func TestSIDNLRINilGuards(t *testing.T) {
+	nilNode := &SIDNLRI{}
+	if got := nilNode.GetSRv6SIDLSID(); got != 0 {
+		t.Errorf("GetSRv6SIDLSID with nil LocalNode: want 0, got %d", got)
+	}
+	if got := nilNode.GetSRv6SIDASN(); got != 0 {
+		t.Errorf("GetSRv6SIDASN with nil LocalNode: want 0, got %d", got)
+	}
+	if got := nilNode.GetSRv6SIDIGPRouterID(); got != "" {
+		t.Errorf("GetSRv6SIDIGPRouterID with nil LocalNode: want \"\", got %q", got)
+	}
+	if got := nilNode.GetSRv6SID(); got != "" {
+		t.Errorf("GetSRv6SID with nil SRv6SID: want \"\", got %q", got)
+	}
+
+	emptySID := &SIDNLRI{SRv6SID: &SIDDescriptor{SID: []byte{}}}
+	if got := emptySID.GetSRv6SID(); got != "" {
+		t.Errorf("GetSRv6SID with empty SID bytes: want \"\", got %q", got)
+	}
+
+	// 4-byte SIDs are rejected by the length check: SRv6 SIDs must be 16
+	// bytes per RFC 8986 §2, so any other length is malformed.
+	shortSID := &SIDNLRI{SRv6SID: &SIDDescriptor{SID: []byte{0x0a, 0x00, 0x00, 0x01}}}
+	if got := shortSID.GetSRv6SID(); got != "" {
+		t.Errorf("GetSRv6SID with 4-byte SID: want \"\", got %q", got)
+	}
+}
+
+func TestSIDNLRIGetters(t *testing.T) {
+	sr, err := UnmarshalSRv6SIDNLRI(sidNLRIFixture)
+	if err != nil {
+		t.Fatalf("UnmarshalSRv6SIDNLRI: %v", err)
+	}
+	if got := sr.GetSRv6SIDASN(); got != 5070 {
+		t.Errorf("GetSRv6SIDASN: want 5070, got %d", got)
+	}
+	if got := sr.GetSRv6SIDLSID(); got != 0 {
+		t.Errorf("GetSRv6SIDLSID: want 0, got %d", got)
+	}
+	if got := sr.GetSRv6SIDIGPRouterID(); got != "0000.0000.0093" {
+		t.Errorf("GetSRv6SIDIGPRouterID: want \"0000.0000.0093\", got %q", got)
+	}
+	if got := sr.GetSRv6SID(); got != "192:168:93:0:11::" {
+		t.Errorf("GetSRv6SID: want \"192:168:93:0:11::\", got %q", got)
+	}
+}
+
 func TestUnmarshalSIDNLRI(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -15,7 +74,7 @@ func TestUnmarshalSIDNLRI(t *testing.T) {
 	}{
 		{
 			name:  "prefix nlri 1",
-			input: []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x1a, 0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0x13, 0xce, 0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x93, 0x01, 0x07, 0x00, 0x02, 0x00, 0x02, 0x02, 0x06, 0x00, 0x10, 0x01, 0x92, 0x01, 0x68, 0x00, 0x93, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			input: sidNLRIFixture,
 			expect: &SIDNLRI{
 				ProtocolID: 2,
 				Identifier: []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
@@ -58,10 +117,6 @@ func TestUnmarshalSIDNLRI(t *testing.T) {
 			if err != nil {
 				t.Fatalf("test failed with error: %+v", err)
 			}
-			// fmt.Printf("got: \n%+v\n expect:\n%+v\n", *got, *tt.expect)
-			// fmt.Printf("got local: \n%+v\n expect local:\n%+v\n", *got.LocalNode, *tt.expect.LocalNode)
-			// fmt.Printf("got sid: \n%+v\n expect sid:\n%+v\n", *got.SRv6SID, *tt.expect.SRv6SID)
-			// fmt.Printf("got mtid: \n%+v\n expect mtid:\n%+v\n", got.SRv6SID.MultiTopologyID, tt.expect.SRv6SID.MultiTopologyID)
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Fatalf("test failed as expected nlri %+v does not match actual nlri %+v", tt.expect, got)
 			}

@@ -34,16 +34,25 @@ func (sr *SIDNLRI) GetSRv6SIDProtocolID() string {
 
 // GetSRv6SIDLSID returns a value of Local Node Descriptor TLV BGP-LS Identifier
 func (sr *SIDNLRI) GetSRv6SIDLSID() uint32 {
+	if sr.LocalNode == nil {
+		return 0
+	}
 	return sr.LocalNode.GetLSID()
 }
 
 // GetSRv6SIDIGPRouterID returns a value of a local node Descriptor TLV IGP Router ID
 func (sr *SIDNLRI) GetSRv6SIDIGPRouterID() string {
+	if sr.LocalNode == nil {
+		return ""
+	}
 	return sr.LocalNode.GetIGPRouterID()
 }
 
-// GetSRv6SIDASN returns Autonomous System Number used to uniqely identify BGP-LS domain
+// GetSRv6SIDASN returns Autonomous System Number used to uniquely identify BGP-LS domain
 func (sr *SIDNLRI) GetSRv6SIDASN() uint32 {
+	if sr.LocalNode == nil {
+		return 0
+	}
 	return sr.LocalNode.GetASN()
 }
 
@@ -59,9 +68,14 @@ func (sr *SIDNLRI) GetSRv6SIDMTID() *base.MultiTopologyIdentifier {
 	return sr.SRv6SID.GetMTID()[0]
 }
 
-// GetSRv6SID returns a slice of SIDs
+// GetSRv6SID returns the SRv6 SID as an IP string, or an empty string if it
+// is missing or invalid. SRv6 SIDs are 128-bit per RFC 8986 §2, so only
+// 16-byte SID values are accepted; any other length is treated as invalid.
 func (sr *SIDNLRI) GetSRv6SID() string {
-	return net.IP(sr.SRv6SID.SID).To16().String()
+	if sr.SRv6SID == nil || len(sr.SRv6SID.SID) != net.IPv6len {
+		return ""
+	}
+	return net.IP(sr.SRv6SID.SID).String()
 }
 
 // UnmarshalSRv6SIDNLRI builds SRv6SIDNLRI NLRI object
