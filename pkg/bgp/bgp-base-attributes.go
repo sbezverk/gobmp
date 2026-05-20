@@ -59,6 +59,23 @@ type BaseAttributes struct {
 	OTC             uint32        `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
 	// SecPath
 	AttrSet *AttrSet `json:"attr_set,omitempty"` // RFC 6368 ATTR_SET Attribute (Type 128)
+	// UnknownAttributes preserves any path attribute whose Type code is not
+	// recognised by this parser. RFC 4271 §5 requires speakers to forward
+	// transitive unrecognised attributes with the Partial bit set; a passive
+	// BMP collector does not forward, but exposing the raw bytes lets
+	// downstream consumers see attributes the collector does not yet decode
+	// instead of silently dropping them.
+	UnknownAttributes []UnknownPathAttribute `json:"unknown_attributes,omitempty"`
+}
+
+// UnknownPathAttribute is the raw form of a BGP path attribute whose Type
+// code is not recognised by unmarshalBaseAttrsFromSlice. Flags is the full
+// flags byte (RFC 4271 §4.3 — Optional/Transitive/Partial/Extended Length in
+// bits 0-3, bits 4-7 reserved zero).
+type UnknownPathAttribute struct {
+	Type  uint8  `json:"type"`
+	Flags uint8  `json:"flags"`
+	Value []byte `json:"value,omitempty"`
 }
 
 func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
@@ -152,6 +169,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if ba.TunnelEncapMalformed != oba.TunnelEncapMalformed {
 		equal = false
 		diffs = append(diffs, "tunnel_encap_malformed mismatch: "+strconv.FormatBool(ba.TunnelEncapMalformed)+" and "+strconv.FormatBool(oba.TunnelEncapMalformed))
+	}
+	if !reflect.DeepEqual(ba.UnknownAttributes, oba.UnknownAttributes) {
+		equal = false
+		diffs = append(diffs, "unknown_attributes mismatch")
 	}
 
 	return equal, diffs
@@ -321,6 +342,21 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			} else {
 				baseAttr.AttrSet = attrSet
 			}
+		default:
+			// Per RFC 4271 §5, unrecognised optional transitive attributes
+			// must be preserved. gobmp is a passive observer (no forwarding,
+			// no Partial-bit semantics), so capture the raw value + flags so
+			// downstream consumers see attributes the collector cannot decode
+			// instead of having them silently disappear from the JSON output.
+			ua := UnknownPathAttribute{
+				Type:  attr.AttributeType,
+				Flags: attr.AttributeTypeFlags,
+			}
+			if len(b) > 0 {
+				ua.Value = make([]byte, len(b))
+				copy(ua.Value, b)
+			}
+			baseAttr.UnknownAttributes = append(baseAttr.UnknownAttributes, ua)
 		}
 	}
 	// Hash the raw attribute bytes directly instead of marshaling to JSON
