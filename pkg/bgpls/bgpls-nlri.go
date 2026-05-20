@@ -898,17 +898,14 @@ func (ls *NLRI) GetOpaquePrefixAttribute() []string {
 }
 
 // collectOpaqueTLVValues returns hex-encoded raw values of every TLV with the
-// given type. Zero-length values are skipped: per RFC 9552 §5.3.1.5/§5.3.2.6/
-// §5.3.3.6 these envelopes carry "information specific to the protocol" — an
-// empty envelope carries no information and would also defeat omitempty on
-// the receiving message struct. Returns nil when no qualifying TLV is present.
+// given type per RFC 9552 §5.3.1.5/§5.3.2.6/§5.3.3.6. Returns nil when no
+// qualifying TLV is present; a zero-length TLV is preserved as "" in the
+// returned slice so callers can distinguish a present-but-empty envelope from
+// an absent one (JSON then carries [""] vs being omitted by omitempty).
 func (ls *NLRI) collectOpaqueTLVValues(tlvType uint16) []string {
 	var out []string
 	for _, tlv := range ls.LS {
 		if tlv.Type != tlvType {
-			continue
-		}
-		if len(tlv.Value) == 0 {
 			continue
 		}
 		out = append(out, hex.EncodeToString(tlv.Value))
