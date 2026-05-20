@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/pmsi"
 	"github.com/sbezverk/gobmp/pkg/tunnel"
 	"github.com/sbezverk/tools/sort"
@@ -59,6 +60,12 @@ type BaseAttributes struct {
 	OTC             uint32        `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
 	// SecPath
 	AttrSet *AttrSet `json:"attr_set,omitempty"` // RFC 6368 ATTR_SET Attribute (Type 128)
+
+	// bgplsParsed memoizes the parsed BGP-LS Attribute (path attribute 29) so
+	// repeated GetBGPLSAttribute calls reuse a single allocation. Eager
+	// validation on receipt uses a non-allocating walk; this cache is populated
+	// on the first detailed decode requested by a producer.
+	bgplsParsed *bgpls.NLRI `json:"-"`
 }
 
 func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
@@ -279,7 +286,20 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 		case 28:
 			// BGP Entropy Label Capability Attribute (deprecated) - RFC 6790, RFC 7447
 		case 29:
-			// BGP-LS Attribute - RFC 9552
+			// BGP-LS Attribute - RFC 9552 §5.3.
+			// Eagerly validate the TLV stream structure on receipt so a
+			// malformed attribute is detected and logged at a single, central
+			// site. Detailed per-TLV decoding is deferred to GetBGPLSAttribute,
+			// invoked by message producers when a Link-State NLRI is emitted;
+			// that call returns the same parse error and the producers skip
+			// the BGP-LS-derived fields, so a malformed attribute does not
+			// surface in published messages — the Attribute Discard outcome
+			// required by RFC 7606 §3 / RFC 9552 §5.3 from a consumer's
+			// perspective. The raw bytes remain in PathAttributes for
+			// forensics; we do not mutate the slice here.
+			if err := bgpls.ValidateBGPLSTLV(b); err != nil {
+				glog.Errorf("malformed BGP-LS Attribute (path attribute type 29); content will be skipped in emitted messages per RFC 7606 §3 / RFC 9552 §5.3: %v", err)
+			}
 		case 30:
 			// Deprecated - RFC 8093
 		case 31:

@@ -90,7 +90,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	default:
 		msg.AreaID = "0"
 	}
-	lsprefix, err := update.GetNLRI29()
+	lsprefix, err := update.GetBGPLSAttribute()
 	if err == nil {
 		if !ipv4 {
 			msg.RouterID = lsprefix.GetLocalIPv6RouterID()
@@ -112,6 +112,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 		if loc, err := lsprefix.GetLSSRv6Locator(); err == nil {
 			msg.SRv6Locator = loc
 		}
+		msg.OpaquePrefixAttribute = lsprefix.GetOpaquePrefixAttribute()
 	}
 
 	return &msg, nil
