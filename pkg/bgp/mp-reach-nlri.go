@@ -110,6 +110,21 @@ func (mp *MPReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
 }
 
+// GetNLRI72 checks for presence of NLRI 72 (BGP-LS-VPN, RFC 9552 §5.2)
+// in the NLRI 14 NLRI data and if AFI/SAFI matches 16388/72 instantiates an NLRI72 object.
+func (mp *MPReachNLRI) GetNLRI72() (*ls.NLRI72, error) {
+	if mp.AddressFamilyID == 16388 && mp.SubAddressFamilyID == 72 {
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		nlri72, err := ls.UnmarshalLSNLRI72(mp.NLRI, pathID)
+		if err != nil {
+			return nil, err
+		}
+		return nlri72, nil
+	}
+
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_REACH_NLRI")
+}
+
 // GetNLRI73 check for presence of NLRI 73 in the NLRI 14 NLRI data and if exists, instantiate NLRI73 object
 func (mp *MPReachNLRI) GetNLRI73() (*srpolicy.NLRI73, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 73 {

@@ -349,6 +349,7 @@ func (m *mockMPNLRI) GetNLRIUnicast() (*base.MPNLRI, error)         { return m.u
 func (m *mockMPNLRI) GetNLRIEVPN() (*evpn.Route, error)             { return nil, nil }
 func (m *mockMPNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)           { return m.l3vpnRoute, m.l3vpnErr }
 func (m *mockMPNLRI) GetNLRI71() (*ls.NLRI71, error)                { return nil, nil }
+func (m *mockMPNLRI) GetNLRI72() (*ls.NLRI72, error)                { return nil, nil }
 func (m *mockMPNLRI) GetNLRI73() (*srpolicy.NLRI73, error)          { return m.srpolicyRoute, nil }
 func (m *mockMPNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error)      { return nil, nil }
 func (m *mockMPNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) { return nil, nil }

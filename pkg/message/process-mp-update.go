@@ -234,6 +234,8 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		}
 	case 71:
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
+	case 72:
+		p.processNLRI72SubTypes(nlri, operation, ph, update)
 	default:
 		switch n := nlri.(type) {
 		case *bgp.MPReachNLRI:
@@ -322,5 +324,95 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 			glog.Warningf("Unknown NLRI 71 Sub type %d", e.Type)
 		}
 
+	}
+}
+
+// processNLRI72SubTypes dispatches the per-Element decode for BGP-LS-VPN
+// (AFI 16388 / SAFI 72, RFC 9552 §5.2). Sub-NLRI handling is identical to
+// SAFI 71; the only difference is each Element carries an 8-byte Route
+// Distinguisher that scopes the link/node/prefix to a VPN. The RD is stamped
+// onto the produced LSNode/LSLink/LSPrefix message so downstream consumers
+// can distinguish per-tenant topology.
+func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
+	ls, err := nlri.GetNLRI72()
+	if err != nil {
+		glog.Errorf("failed to NLRI 72 with error: %+v", err)
+		return
+	}
+	for _, e := range ls.NLRI {
+		rd := ""
+		if e.RD != nil {
+			rd = e.RD.String()
+		}
+		ipv4Flag := false
+		switch e.Type {
+		case 1:
+			n, ok := e.LS.(*base.NodeNLRI)
+			if !ok {
+				glog.Errorf("NLRI 72 type 1: expected *base.NodeNLRI, got %T", e.LS)
+				continue
+			}
+			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update, ph.IsRemotePeerIPv6())
+			if err != nil {
+				glog.Errorf("failed to produce ls_node message with error: %+v", err)
+				continue
+			}
+			msg.RD = rd
+			if err := p.marshalAndPublish(&msg, bmp.LSNodeMsg, []byte(msg.RouterHash)); err != nil {
+				glog.Errorf("failed to process LSNode message with error: %+v", err)
+				continue
+			}
+		case 2:
+			l, ok := e.LS.(*base.LinkNLRI)
+			if !ok {
+				glog.Errorf("NLRI 72 type 2: expected *base.LinkNLRI, got %T", e.LS)
+				continue
+			}
+			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, ph.IsRemotePeerIPv6())
+			if err != nil {
+				glog.Errorf("failed to produce ls_link message with error: %+v", err)
+				continue
+			}
+			msg.RD = rd
+			if err := p.marshalAndPublish(&msg, bmp.LSLinkMsg, []byte(msg.RouterHash)); err != nil {
+				glog.Errorf("failed to process LSLink message with error: %+v", err)
+				continue
+			}
+		case 3, 4:
+			ipv4Flag = e.Type == 3
+			prfx, ok := e.LS.(*base.PrefixNLRI)
+			if !ok {
+				glog.Errorf("NLRI 72 type %d: expected *base.PrefixNLRI, got %T", e.Type, e.LS)
+				continue
+			}
+			msg, err := p.lsPrefix(prfx, nlri.GetNextHop(), operation, ph, update, ipv4Flag)
+			if err != nil {
+				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
+				continue
+			}
+			msg.RD = rd
+			if err := p.marshalAndPublish(&msg, bmp.LSPrefixMsg, []byte(msg.RouterHash)); err != nil {
+				glog.Errorf("failed to process LSPrefix message with error: %+v", err)
+				continue
+			}
+		case 6:
+			s, ok := e.LS.(*srv6.SIDNLRI)
+			if !ok {
+				glog.Errorf("NLRI 72 type 6: expected *srv6.SIDNLRI, got %T", e.LS)
+				continue
+			}
+			msg, err := p.lsSRv6SID(s, nlri.GetNextHop(), operation, ph, update)
+			if err != nil {
+				glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
+				continue
+			}
+			msg.RD = rd
+			if err := p.marshalAndPublish(&msg, bmp.LSSRv6SIDMsg, []byte(msg.RouterHash)); err != nil {
+				glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
+				continue
+			}
+		default:
+			glog.Warningf("Unknown NLRI 72 Sub type %d", e.Type)
+		}
 	}
 }

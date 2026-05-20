@@ -30,6 +30,7 @@ func (m *evpnMockNLRI) GetNLRIEVPN() (*evpn.Route, error)             { return m
 func (m *evpnMockNLRI) GetNLRIVPLS() (*vpls.Route, error)             { return nil, nil }
 func (m *evpnMockNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)           { return nil, nil }
 func (m *evpnMockNLRI) GetNLRI71() (*ls.NLRI71, error)                { return nil, nil }
+func (m *evpnMockNLRI) GetNLRI72() (*ls.NLRI72, error)                { return nil, nil }
 func (m *evpnMockNLRI) GetNLRI73() (*srpolicy.NLRI73, error)          { return nil, nil }
 func (m *evpnMockNLRI) GetFlowspecNLRI() (*flowspec.NLRI, error)      { return nil, nil }
 func (m *evpnMockNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) { return nil, nil }
