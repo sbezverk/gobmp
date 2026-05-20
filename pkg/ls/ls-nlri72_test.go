@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
+	"github.com/sbezverk/gobmp/pkg/srv6"
+	"github.com/sbezverk/gobmp/pkg/te"
 )
 
 // rdType0 builds an 8-byte RD of type 0: 2-byte type + 2-byte AS + 4-byte assigned number.
@@ -138,6 +140,79 @@ func TestUnmarshalLSNLRI72(t *testing.T) {
 		}
 		if _, ok := got.NLRI[0].LS.(*base.PrefixNLRI); !ok {
 			t.Errorf("LS type = %T, want *base.PrefixNLRI", got.NLRI[0].LS)
+		}
+	})
+
+	t.Run("prefix v6 element decoded", func(t *testing.T) {
+		// IPv6 Prefix Descriptor: IP Reachability TLV with /128 IPv6 prefix.
+		prefixV6Body := []byte{
+			0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x01, 0x00, 0x00, 0x1A,
+			0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0xFD, 0xE8,
+			0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+			0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05,
+			// IP Reachability TLV (type 265, length 17): /128 then 16 bytes of 2001:db8::1
+			0x01, 0x09, 0x00, 0x11, 0x80,
+			0x20, 0x01, 0x0D, 0xB8, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+		}
+		input := makeEntry(rdType0(100, 1), 4, prefixV6Body)
+		got, err := UnmarshalLSNLRI72(input, false)
+		if err != nil {
+			t.Fatalf("UnmarshalLSNLRI72 error: %v", err)
+		}
+		if len(got.NLRI) != 1 || got.NLRI[0].Type != 4 {
+			t.Fatalf("got %d elements / type %d, want 1 / 4", len(got.NLRI), got.NLRI[0].Type)
+		}
+		if _, ok := got.NLRI[0].LS.(*base.PrefixNLRI); !ok {
+			t.Errorf("LS type = %T, want *base.PrefixNLRI", got.NLRI[0].LS)
+		}
+	})
+
+	t.Run("TE policy element decoded", func(t *testing.T) {
+		// TE Policy NLRI: ProtocolID(1) + Identifier(8) + Node Descriptor TLV with type 256.
+		teBody := []byte{
+			0x09,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x01, 0x00, 0x00, 0x10,
+			0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0xFD, 0xE8,
+			0x02, 0x04, 0x00, 0x04, 0xC0, 0xA8, 0x01, 0x01,
+		}
+		input := makeEntry(rdType0(100, 1), 5, teBody)
+		got, err := UnmarshalLSNLRI72(input, false)
+		if err != nil {
+			t.Fatalf("UnmarshalLSNLRI72 error: %v", err)
+		}
+		if len(got.NLRI) != 1 || got.NLRI[0].Type != 5 {
+			t.Fatalf("got %d elements / type %d, want 1 / 5", len(got.NLRI), got.NLRI[0].Type)
+		}
+		if _, ok := got.NLRI[0].LS.(*te.NLRI); !ok {
+			t.Errorf("LS type = %T, want *te.NLRI", got.NLRI[0].LS)
+		}
+	})
+
+	t.Run("SRv6 SID element decoded", func(t *testing.T) {
+		sidBody := []byte{
+			0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x01, 0x00, 0x00, 0x1A,
+			0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0x13, 0xCE,
+			0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+			0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x93,
+			0x01, 0x07, 0x00, 0x02, 0x00, 0x02,
+			0x02, 0x06, 0x00, 0x10,
+			0x01, 0x92, 0x01, 0x68, 0x00, 0x93, 0x00, 0x00,
+			0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		}
+		input := makeEntry(rdType0(100, 1), 6, sidBody)
+		got, err := UnmarshalLSNLRI72(input, false)
+		if err != nil {
+			t.Fatalf("UnmarshalLSNLRI72 error: %v", err)
+		}
+		if len(got.NLRI) != 1 || got.NLRI[0].Type != 6 {
+			t.Fatalf("got %d elements / type %d, want 1 / 6", len(got.NLRI), got.NLRI[0].Type)
+		}
+		if _, ok := got.NLRI[0].LS.(*srv6.SIDNLRI); !ok {
+			t.Errorf("LS type = %T, want *srv6.SIDNLRI", got.NLRI[0].LS)
 		}
 	})
 
