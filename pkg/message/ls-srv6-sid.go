@@ -57,7 +57,7 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 	msg.LocalNodeASN = nlri6.GetSRv6SIDASN()
 	msg.MTID = nlri6.GetSRv6SIDMTID()
 	msg.SRv6SID = nlri6.GetSRv6SID()
-	ls, err := update.GetNLRI29()
+	ls, err := update.GetBGPLSAttribute()
 	if err == nil {
 		msg.SRv6EndpointBehavior = ls.GetSRv6EndpointBehavior()
 		msg.SRv6BGPPeerNodeSID = ls.GetSRv6BGPPeerNodeSID()

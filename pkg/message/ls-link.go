@@ -105,7 +105,7 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	default:
 		msg.AreaID = "0"
 	}
-	if lslink, err := update.GetNLRI29(); err == nil {
+	if lslink, err := update.GetBGPLSAttribute(); err == nil {
 		if isIPv6 {
 			msg.RouterID = lslink.GetLocalIPv6RouterID()
 			msg.RemoteRouterID = lslink.GetRemoteIPv6RouterID()
@@ -166,6 +166,7 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 				msg.PeerSetSID = sid
 			}
 		}
+		msg.OpaqueLinkAttribute = lslink.GetOpaqueLinkAttribute()
 	}
 
 	return &msg, nil

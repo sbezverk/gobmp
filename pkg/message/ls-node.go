@@ -62,7 +62,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 	case base.ISISL1, base.ISISL2, base.Direct, base.Static, base.BGP, base.RSVPTE, base.SR:
 	}
 
-	lsnode, err := update.GetNLRI29()
+	lsnode, err := update.GetBGPLSAttribute()
 	if err == nil {
 		if f, err := lsnode.GetNodeFlags(); err == nil {
 			msg.NodeFlags = f
@@ -95,6 +95,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 		if fad, err := lsnode.GetFlexAlgoDefinition(); err == nil {
 			msg.FlexAlgoDefinition = fad
 		}
+		msg.OpaqueNodeAttribute = lsnode.GetOpaqueNodeAttribute()
 	}
 
 	return &msg, nil
