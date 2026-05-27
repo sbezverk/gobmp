@@ -2,6 +2,7 @@ package bgp
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -14,32 +15,78 @@ func buildAttr(flags, attrType uint8, value []byte) []byte {
 	return append(out, value...)
 }
 
-// TestUnknownPathAttribute_Preserved verifies that an unrecognised path
-// attribute (Type 99 here — IANA-unassigned) is captured in
-// BaseAttributes.UnknownAttributes with its full flag byte and raw value
-// instead of being silently dropped.
-func TestUnknownPathAttribute_Preserved(t *testing.T) {
-	value := []byte{0xDE, 0xAD, 0xBE, 0xEF}
-	// Optional + Transitive flags (0xC0) = "preserve and forward with Partial"
-	// per RFC 4271 §5; we only need to assert the flag byte round-trips.
-	raw := buildAttr(0xC0, 99, value)
+// buildAttrExtLen returns the wire form of a single path attribute with the
+// Extended Length flag (0x10) forced on and a 2-byte length field, per
+// RFC 4271 §4.3.
+func buildAttrExtLen(flags, attrType uint8, value []byte) []byte {
+	flags |= 0x10
+	out := []byte{flags, attrType, 0, 0}
+	binary.BigEndian.PutUint16(out[2:4], uint16(len(value)))
+	return append(out, value...)
+}
 
-	ba, err := UnmarshalBGPBaseAttributes(raw)
-	if err != nil {
-		t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+// TestUnknownPathAttribute_Preserved verifies that unrecognised path
+// attributes are captured in BaseAttributes.UnknownAttributes with their full
+// flag byte and raw value instead of being silently dropped, across the
+// flag/length-encoding combinations gobmp can encounter on the wire.
+func TestUnknownPathAttribute_Preserved(t *testing.T) {
+	extLenValue := bytes.Repeat([]byte{0xAB}, 300)
+	cases := []struct {
+		name      string
+		raw       []byte
+		wantType  uint8
+		wantFlags uint8
+		wantValue []byte
+	}{
+		{
+			name:      "optional transitive single byte length",
+			raw:       buildAttr(0xC0, 99, []byte{0xDE, 0xAD, 0xBE, 0xEF}),
+			wantType:  99,
+			wantFlags: 0xC0,
+			wantValue: []byte{0xDE, 0xAD, 0xBE, 0xEF},
+		},
+		{
+			name:      "optional non transitive single byte length",
+			raw:       buildAttr(0x80, 100, []byte{0xAA, 0xBB}),
+			wantType:  100,
+			wantFlags: 0x80,
+			wantValue: []byte{0xAA, 0xBB},
+		},
+		{
+			name:      "extended length over 255 bytes",
+			raw:       buildAttrExtLen(0xC0, 101, extLenValue),
+			wantType:  101,
+			wantFlags: 0xD0,
+			wantValue: extLenValue,
+		},
+		{
+			name:      "extended length zero value",
+			raw:       buildAttrExtLen(0xC0, 102, nil),
+			wantType:  102,
+			wantFlags: 0xD0,
+			wantValue: nil,
+		},
 	}
-	if len(ba.UnknownAttributes) != 1 {
-		t.Fatalf("len(UnknownAttributes) = %d, want 1", len(ba.UnknownAttributes))
-	}
-	ua := ba.UnknownAttributes[0]
-	if ua.Type != 99 {
-		t.Errorf("Type = %d, want 99", ua.Type)
-	}
-	if ua.Flags != 0xC0 {
-		t.Errorf("Flags = %#x, want 0xC0 (Optional|Transitive)", ua.Flags)
-	}
-	if !bytes.Equal(ua.Value, value) {
-		t.Errorf("Value = %#x, want %#x", ua.Value, value)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ba, err := UnmarshalBGPBaseAttributes(tc.raw)
+			if err != nil {
+				t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+			}
+			if len(ba.UnknownAttributes) != 1 {
+				t.Fatalf("len(UnknownAttributes) = %d, want 1", len(ba.UnknownAttributes))
+			}
+			ua := ba.UnknownAttributes[0]
+			if ua.Type != tc.wantType {
+				t.Errorf("Type = %d, want %d", ua.Type, tc.wantType)
+			}
+			if ua.Flags != tc.wantFlags {
+				t.Errorf("Flags = %#x, want %#x", ua.Flags, tc.wantFlags)
+			}
+			if !bytes.Equal(ua.Value, tc.wantValue) {
+				t.Errorf("Value (len %d) = %x, want (len %d) %x", len(ua.Value), ua.Value, len(tc.wantValue), tc.wantValue)
+			}
+		})
 	}
 }
 

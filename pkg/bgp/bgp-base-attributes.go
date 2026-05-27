@@ -363,18 +363,21 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 				baseAttr.AttrSet = attrSet
 			}
 		default:
-			// Per RFC 4271 §5, unrecognised optional transitive attributes
-			// must be preserved. gobmp is a passive observer (no forwarding,
-			// no Partial-bit semantics), so capture the raw value + flags so
-			// downstream consumers see attributes the collector cannot decode
-			// instead of having them silently disappear from the JSON output.
+			// Capture every unrecognised path attribute (any flag combination)
+			// so downstream consumers see attributes the collector cannot
+			// decode instead of having them silently disappear from the JSON
+			// output. gobmp is a passive observer, so the RFC 4271 §5
+			// Optional/Transitive forwarding distinction is not applied here;
+			// the full flags byte is preserved on UnknownPathAttribute so
+			// consumers can apply their own policy.
+			// b aliases the fresh per-attribute buffer allocated in
+			// unmarshalRawPathAttributes, so no extra copy is needed.
 			ua := UnknownPathAttribute{
 				Type:  attr.AttributeType,
 				Flags: attr.AttributeTypeFlags,
 			}
 			if len(b) > 0 {
-				ua.Value = make([]byte, len(b))
-				copy(ua.Value, b)
+				ua.Value = b
 			}
 			baseAttr.UnknownAttributes = append(baseAttr.UnknownAttributes, ua)
 		}
