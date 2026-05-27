@@ -19,13 +19,17 @@ import (
 )
 
 // safi72MockNLRI is a minimal bgp.MPNLRI implementation that returns a
-// canned *ls.NLRI72 via GetNLRI72 and nil/empty results elsewhere.
+// canned *ls.NLRI72 via GetNLRI72 and nil/empty results elsewhere. Set
+// nlri72Err to drive the error branch in processNLRI72SubTypes.
 type safi72MockNLRI struct {
-	nlri72 *ls.NLRI72
+	nlri72    *ls.NLRI72
+	nlri72Err error
 }
 
-func (m *safi72MockNLRI) GetAFISAFIType() int                      { return 72 }
-func (m *safi72MockNLRI) GetNLRI72() (*ls.NLRI72, error)           { return m.nlri72, nil }
+func (m *safi72MockNLRI) GetAFISAFIType() int { return 72 }
+func (m *safi72MockNLRI) GetNLRI72() (*ls.NLRI72, error) {
+	return m.nlri72, m.nlri72Err
+}
 func (m *safi72MockNLRI) GetNLRI71() (*ls.NLRI71, error)           { return nil, nil }
 func (m *safi72MockNLRI) GetNLRI73() (*srpolicy.NLRI73, error)     { return nil, nil }
 func (m *safi72MockNLRI) GetNLRILU() (*base.MPNLRI, error)         { return nil, nil }
@@ -171,11 +175,22 @@ func TestProcessNLRI72SubTypes_LinkAndPrefixRDStamped(t *testing.T) {
 	}
 }
 
-// TestProcessNLRI72SubTypes_GetNLRI72Error logs but does not crash.
+// TestProcessNLRI72SubTypes_GetNLRI72Error covers the early-return when
+// GetNLRI72 fails: the dispatch loop must not iterate, nothing is published.
 func TestProcessNLRI72SubTypes_GetNLRI72Error(t *testing.T) {
-	// safi72MockNLRI with nil nlri72 → GetNLRI72 returns (nil, nil). The dispatch
-	// loop iterates over ls.NLRI which is empty, so nothing is published — and
-	// importantly nothing panics.
+	mock := &safi72MockNLRI{nlri72Err: errPublishFailure}
+	rec := &recordingPublisher{}
+	p := &producer{publisher: rec}
+	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+	p.processNLRI72SubTypes(mock, 0, ph, &bgp.Update{})
+	if len(rec.msgs) != 0 {
+		t.Errorf("GetNLRI72 error should not publish; got %d messages", len(rec.msgs))
+	}
+}
+
+// TestProcessNLRI72SubTypes_EmptyNLRI covers the previously-conflated empty
+// NLRI path: GetNLRI72 succeeds with no elements, dispatch loop is a no-op.
+func TestProcessNLRI72SubTypes_EmptyNLRI(t *testing.T) {
 	mock := &safi72MockNLRI{nlri72: &ls.NLRI72{NLRI: nil}}
 	rec := &recordingPublisher{}
 	p := &producer{publisher: rec}
@@ -264,7 +279,10 @@ func TestProcessNLRI72SubTypes_PublishFailure(t *testing.T) {
 		0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
 		0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 	}
-	node, _ := base.UnmarshalNodeNLRI(nodeBytes)
+	node, err := base.UnmarshalNodeNLRI(nodeBytes)
+	if err != nil {
+		t.Fatalf("UnmarshalNodeNLRI: %v", err)
+	}
 	linkBytes := []byte{
 		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x01, 0x00, 0x00, 0x1A,
@@ -283,7 +301,10 @@ func TestProcessNLRI72SubTypes_PublishFailure(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
 		0x01, 0x07, 0x00, 0x02, 0x00, 0x02,
 	}
-	link, _ := base.UnmarshalLinkNLRI(linkBytes)
+	link, err := base.UnmarshalLinkNLRI(linkBytes)
+	if err != nil {
+		t.Fatalf("UnmarshalLinkNLRI: %v", err)
+	}
 	prefixBytes := []byte{
 		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x01, 0x00, 0x00, 0x1A,
@@ -292,7 +313,10 @@ func TestProcessNLRI72SubTypes_PublishFailure(t *testing.T) {
 		0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05,
 		0x01, 0x09, 0x00, 0x05, 0x20, 0x0A, 0x00, 0x00, 0x01,
 	}
-	prfx, _ := base.UnmarshalPrefixNLRI(prefixBytes, true)
+	prfx, err := base.UnmarshalPrefixNLRI(prefixBytes, true)
+	if err != nil {
+		t.Fatalf("UnmarshalPrefixNLRI: %v", err)
+	}
 	sidBytes := []byte{
 		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x01, 0x00, 0x00, 0x1a,
@@ -303,7 +327,10 @@ func TestProcessNLRI72SubTypes_PublishFailure(t *testing.T) {
 		0x02, 0x06, 0x00, 0x10,
 		0x01, 0x92, 0x01, 0x68, 0x00, 0x93, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
-	sid, _ := srv6.UnmarshalSRv6SIDNLRI(sidBytes)
+	sid, err := srv6.UnmarshalSRv6SIDNLRI(sidBytes)
+	if err != nil {
+		t.Fatalf("UnmarshalSRv6SIDNLRI: %v", err)
+	}
 	mock := &safi72MockNLRI{
 		nlri72: &ls.NLRI72{
 			NLRI: []ls.VPNElement{
@@ -327,7 +354,10 @@ func TestProcessNLRI72SubTypes_PublishFailure(t *testing.T) {
 // TestProcessNLRI72SubTypes_WrongLSType exercises the defensive type-assertion
 // branches by feeding deliberately mistyped Element.LS interfaces.
 func TestProcessNLRI72SubTypes_WrongLSType(t *testing.T) {
-	rd, _ := base.MakeRD([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x05})
+	rd, err := base.MakeRD([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x05})
+	if err != nil {
+		t.Fatalf("MakeRD: %v", err)
+	}
 	mock := &safi72MockNLRI{
 		nlri72: &ls.NLRI72{
 			NLRI: []ls.VPNElement{
@@ -349,7 +379,10 @@ func TestProcessNLRI72SubTypes_WrongLSType(t *testing.T) {
 
 // TestProcessNLRI72SubTypes_DeleteOperation exercises operation=1 (del) path.
 func TestProcessNLRI72SubTypes_DeleteOperation(t *testing.T) {
-	rd, _ := base.MakeRD([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x06})
+	rd, err := base.MakeRD([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x06})
+	if err != nil {
+		t.Fatalf("MakeRD: %v", err)
+	}
 	nodeBytes := []byte{
 		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x01, 0x00, 0x00, 0x1A,
@@ -357,7 +390,10 @@ func TestProcessNLRI72SubTypes_DeleteOperation(t *testing.T) {
 		0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
 		0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 	}
-	node, _ := base.UnmarshalNodeNLRI(nodeBytes)
+	node, err := base.UnmarshalNodeNLRI(nodeBytes)
+	if err != nil {
+		t.Fatalf("UnmarshalNodeNLRI: %v", err)
+	}
 	mock := &safi72MockNLRI{
 		nlri72: &ls.NLRI72{
 			NLRI: []ls.VPNElement{{RD: rd, Type: 1, LS: node}},
@@ -374,7 +410,10 @@ func TestProcessNLRI72SubTypes_DeleteOperation(t *testing.T) {
 
 // TestProcessNLRI72SubTypes_UnknownSubType logs but does not crash.
 func TestProcessNLRI72SubTypes_UnknownSubType(t *testing.T) {
-	rd, _ := base.MakeRD([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01})
+	rd, err := base.MakeRD([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01})
+	if err != nil {
+		t.Fatalf("MakeRD: %v", err)
+	}
 	mock := &safi72MockNLRI{
 		nlri72: &ls.NLRI72{
 			NLRI: []ls.VPNElement{{RD: rd, Type: 99, LS: []byte{0xab}}},

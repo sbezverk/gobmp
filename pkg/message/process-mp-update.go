@@ -336,7 +336,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
 	ls, err := nlri.GetNLRI72()
 	if err != nil {
-		glog.Errorf("failed to NLRI 72 with error: %+v", err)
+		glog.Errorf("failed to decode NLRI 72 with error: %+v", err)
 		return
 	}
 	for _, e := range ls.NLRI {

@@ -727,14 +727,18 @@ func TestMPReachNLRI_GetNLRI72_WithAddPath(t *testing.T) {
 
 func TestMPReachNLRI_GetNLRI72_WrongAFI(t *testing.T) {
 	mp := &MPReachNLRI{AddressFamilyID: 1, SubAddressFamilyID: 72}
-	if _, err := mp.GetNLRI72(); err == nil {
-		t.Fatal("GetNLRI72() with AFI=1 SAFI=72 should fail")
+	_, err := mp.GetNLRI72()
+	notFound := &NLRINotFoundError{}
+	if !errors.As(err, &notFound) {
+		t.Fatalf("GetNLRI72() with AFI=1 SAFI=72: expected NLRINotFoundError, got %T: %v", err, err)
 	}
 }
 
 func TestMPReachNLRI_GetNLRI72_WrongSAFI(t *testing.T) {
 	mp := &MPReachNLRI{AddressFamilyID: 16388, SubAddressFamilyID: 71}
-	if _, err := mp.GetNLRI72(); err == nil {
-		t.Fatal("GetNLRI72() with SAFI=71 should fail")
+	_, err := mp.GetNLRI72()
+	notFound := &NLRINotFoundError{}
+	if !errors.As(err, &notFound) {
+		t.Fatalf("GetNLRI72() with SAFI=71: expected NLRINotFoundError, got %T: %v", err, err)
 	}
 }
