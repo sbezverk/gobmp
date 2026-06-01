@@ -121,10 +121,17 @@ func TestNewKafkaPublisher_SkipTopicCreation(t *testing.T) {
 	pub.Stop()
 }
 
-// stubAdmin is a minimal sarama.ClusterAdmin that only implements Close.
-type stubAdmin struct{ sarama.ClusterAdmin }
+// stubAdmin is a minimal sarama.ClusterAdmin that only implements Close and
+// records whether Close was called.
+type stubAdmin struct {
+	sarama.ClusterAdmin
+	closed bool
+}
 
-func (s *stubAdmin) Close() error { return nil }
+func (s *stubAdmin) Close() error {
+	s.closed = true
+	return nil
+}
 
 // TestStop_NilClusterAdmin verifies Stop() does not panic when clusterAdmin is nil.
 func TestStop_NilClusterAdmin(t *testing.T) {
@@ -141,11 +148,15 @@ func TestStop_NilClusterAdmin(t *testing.T) {
 // TestStop_NonNilClusterAdmin verifies Stop() calls Close on a non-nil clusterAdmin.
 func TestStop_NonNilClusterAdmin(t *testing.T) {
 	stopCh := make(chan struct{})
-	p := &publisher{clusterAdmin: &stubAdmin{}, stopCh: stopCh}
+	sa := &stubAdmin{}
+	p := &publisher{clusterAdmin: sa, stopCh: stopCh}
 	p.Stop()
 	select {
 	case <-stopCh:
 	default:
 		t.Error("Stop() did not close stopCh")
+	}
+	if !sa.closed {
+		t.Error("Stop() did not call Close on clusterAdmin")
 	}
 }

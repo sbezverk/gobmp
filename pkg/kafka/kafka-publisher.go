@@ -198,6 +198,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 		cb, err := waitForControllerBrokerConnection(ca, config, brockerConnectTimeout)
 		if err != nil {
 			glog.Errorf("failed to open connection to the controller broker with error: %+v\n", err)
+			_ = ca.Close()
 			return nil, err
 		}
 		glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
@@ -206,6 +207,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 			topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
 			if err := ensureTopic(ca, topicCreateTimeout, topicName); err != nil {
 				glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
+				_ = ca.Close()
 				return nil, err
 			}
 		}
