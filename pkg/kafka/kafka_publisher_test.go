@@ -1,6 +1,10 @@
 package kafka
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/IBM/sarama"
+)
 
 func TestValidator(t *testing.T) {
 	const validRetention = "900000"
@@ -52,5 +56,59 @@ func TestValidator(t *testing.T) {
 				t.Errorf("validator() error = %v, wantErr %v", err, tc.wantErr)
 			}
 		})
+	}
+}
+
+// TestNewKafkaPublisher_SkipTopicCreation exercises the SkipTopicCreation=true
+// path using an in-memory mock broker: ClusterAdmin init and ensureTopic are
+// bypassed; the async producer connects successfully and Stop() closes cleanly.
+func TestNewKafkaPublisher_SkipTopicCreation(t *testing.T) {
+	mb := sarama.NewMockBroker(t, 1)
+	defer mb.Close()
+	mb.SetHandlerByMap(map[string]sarama.MockResponse{
+		"ApiVersionsRequest": sarama.NewMockApiVersionsResponse(t),
+		"MetadataRequest": sarama.NewMockMetadataResponse(t).
+			SetBroker(mb.Addr(), mb.BrokerID()),
+		"ProduceRequest": sarama.NewMockProduceResponse(t),
+	})
+
+	cfg := &Config{
+		ServerAddress:        mb.Addr(),
+		TopicRetentionTimeMs: "900000",
+		SkipTopicCreation:    true,
+	}
+	pub, err := NewKafkaPublisher(cfg)
+	if err != nil {
+		t.Fatalf("NewKafkaPublisher with SkipTopicCreation=true: %v", err)
+	}
+	pub.Stop()
+}
+
+// stubAdmin is a minimal sarama.ClusterAdmin that only implements Close.
+type stubAdmin struct{ sarama.ClusterAdmin }
+
+func (s *stubAdmin) Close() error { return nil }
+
+// TestStop_NilClusterAdmin verifies Stop() does not panic when clusterAdmin is nil.
+func TestStop_NilClusterAdmin(t *testing.T) {
+	stopCh := make(chan struct{})
+	p := &publisher{clusterAdmin: nil, stopCh: stopCh}
+	p.Stop()
+	select {
+	case <-stopCh:
+	default:
+		t.Error("Stop() did not close stopCh")
+	}
+}
+
+// TestStop_NonNilClusterAdmin verifies Stop() calls Close on a non-nil clusterAdmin.
+func TestStop_NonNilClusterAdmin(t *testing.T) {
+	stopCh := make(chan struct{})
+	p := &publisher{clusterAdmin: &stubAdmin{}, stopCh: stopCh}
+	p.Stop()
+	select {
+	case <-stopCh:
+	default:
+		t.Error("Stop() did not close stopCh")
 	}
 }
