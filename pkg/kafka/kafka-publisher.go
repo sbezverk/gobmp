@@ -151,7 +151,9 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 
 func (p *publisher) Stop() {
 	close(p.stopCh)
-	_ = p.clusterAdmin.Close()
+	if p.clusterAdmin != nil {
+		_ = p.clusterAdmin.Close()
+	}
 }
 
 // NewKafkaPublisher instantiates a new instance of a Kafka publisher
@@ -175,27 +177,35 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	config.Version = sarama.V3_0_0_0
 
 	kafkaSrvs := strings.Split(kConfig.ServerAddress, ",")
-	ca, err := sarama.NewClusterAdmin(kafkaSrvs, config)
-	if err != nil {
-		glog.Errorf("failed to create cluster admin: %+v", err)
-		return nil, err
-	}
-
-	cb, err := waitForControllerBrokerConnection(ca, config, brockerConnectTimeout)
-	if err != nil {
-		glog.Errorf("failed to open connection to the controller broker with error: %+v\n", err)
-		return nil, err
-	}
-	glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
-
-	for _, t := range topicNames {
-		topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
-		if err := ensureTopic(ca, topicCreateTimeout, topicName); err != nil {
-			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
+	var (
+		ca  sarama.ClusterAdmin
+		err error
+	)
+	if !kConfig.SkipTopicCreation {
+		ca, err = sarama.NewClusterAdmin(kafkaSrvs, config)
+		if err != nil {
+			glog.Errorf("failed to create cluster admin: %+v", err)
 			return nil, err
 		}
+		cb, err := waitForControllerBrokerConnection(ca, config, brockerConnectTimeout)
+		if err != nil {
+			glog.Errorf("failed to open connection to the controller broker with error: %+v\n", err)
+			return nil, err
+		}
+		glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
+		_ = cb.Close()
+		for _, t := range topicNames {
+			topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
+			if err := ensureTopic(ca, topicCreateTimeout, topicName); err != nil {
+				glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
+				return nil, err
+			}
+		}
+	} else {
+		glog.Infof("Kafka topic creation skipped; topics must be pre-created before publishing")
 	}
-	producer, err := sarama.NewAsyncProducer(kafkaSrvs, config)
+	var producer sarama.AsyncProducer
+	producer, err = sarama.NewAsyncProducer(kafkaSrvs, config)
 	if err != nil {
 		glog.Errorf("New Kafka publisher failed to start new async producer with error: %+v", err)
 		return nil, err
