@@ -10,15 +10,22 @@ import (
 
 // buildAttr returns the wire form of a single path attribute: flags + type +
 // length + value. Uses single-byte length (Extended Length flag clear).
+// Panics if len(value) > 255; use buildAttrExtLen for larger values.
 func buildAttr(flags, attrType uint8, value []byte) []byte {
+	if len(value) > 255 {
+		panic("buildAttr: value exceeds single-byte length; use buildAttrExtLen")
+	}
 	out := []byte{flags, attrType, byte(len(value))}
 	return append(out, value...)
 }
 
 // buildAttrExtLen returns the wire form of a single path attribute with the
 // Extended Length flag (0x10) forced on and a 2-byte length field, per
-// RFC 4271 §4.3.
+// RFC 4271 §4.3. Panics if len(value) > 65535.
 func buildAttrExtLen(flags, attrType uint8, value []byte) []byte {
+	if len(value) > 65535 {
+		panic("buildAttrExtLen: value exceeds 2-byte length field")
+	}
 	flags |= 0x10
 	out := []byte{flags, attrType, 0, 0}
 	binary.BigEndian.PutUint16(out[2:4], uint16(len(value)))

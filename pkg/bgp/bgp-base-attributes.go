@@ -77,8 +77,8 @@ type BaseAttributes struct {
 
 // UnknownPathAttribute is the raw form of a BGP path attribute whose Type
 // code is not recognised by unmarshalBaseAttrsFromSlice. Flags is the full
-// flags byte (RFC 4271 §4.3 — Optional/Transitive/Partial/Extended Length in
-// bits 0-3, bits 4-7 reserved zero).
+// flags byte (RFC 4271 §4.3 — Optional (0x80)/Transitive (0x40)/Partial (0x20)/Extended Length (0x10)
+// occupy the high nibble; low nibble bits 3-0 are reserved and MUST be zero).
 type UnknownPathAttribute struct {
 	Type  uint8  `json:"type"`
 	Flags uint8  `json:"flags"`
