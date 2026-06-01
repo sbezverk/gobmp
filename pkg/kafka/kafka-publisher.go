@@ -48,6 +48,13 @@ var (
 	topicCreateTimeout    = 1 * time.Second
 	// goBMP topic's retention timer is 15 minutes.
 	topicRetention = "900000"
+	// adminRetryMax controls sarama ClusterAdmin retry attempts. Exposed as a
+	// var so tests can set it to 0 for fast failure without network retries.
+	adminRetryMax = 120
+	// netReadTimeout sets the TCP read deadline for sarama connections.
+	// Defaults to sarama's built-in 30s. Tests set a short value so that
+	// an unresponsive mock broker causes a fast read-timeout rather than hanging.
+	netReadTimeout = 30 * time.Second
 )
 
 var (
@@ -170,10 +177,11 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	config.ClientID = "gobmp-producer" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
-	config.Admin.Retry.Max = 120
+	config.Admin.Retry.Max = adminRetryMax
 	config.Admin.Retry.Backoff = time.Second
 	config.Metadata.Retry.Max = 300
 	config.Metadata.Retry.Backoff = time.Second * 10
+	config.Net.ReadTimeout = netReadTimeout
 	config.Version = sarama.V3_0_0_0
 
 	kafkaSrvs := strings.Split(kConfig.ServerAddress, ",")

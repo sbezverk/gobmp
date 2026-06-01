@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"testing"
+	"time"
 
 	"github.com/IBM/sarama"
 )
@@ -56,6 +57,42 @@ func TestValidator(t *testing.T) {
 				t.Errorf("validator() error = %v, wantErr %v", err, tc.wantErr)
 			}
 		})
+	}
+}
+
+// TestNewKafkaPublisher_WithTopicCreation exercises the default (SkipTopicCreation=false)
+// path: ClusterAdmin and waitForControllerBrokerConnection succeed via mock, then
+// ensureTopic fails fast (mock has no CreateTopicsRequest handler; netReadTimeout
+// causes a quick read timeout; adminRetryMax=0 skips retries). All non-skip path
+// lines in NewKafkaPublisher are exercised.
+func TestNewKafkaPublisher_WithTopicCreation(t *testing.T) {
+	origRetry := adminRetryMax
+	origTimeout := netReadTimeout
+	adminRetryMax = 0
+	netReadTimeout = 200 * time.Millisecond
+	defer func() {
+		adminRetryMax = origRetry
+		netReadTimeout = origTimeout
+	}()
+
+	mb := sarama.NewMockBroker(t, 1)
+	defer mb.Close()
+	mb.SetHandlerByMap(map[string]sarama.MockResponse{
+		"ApiVersionsRequest": sarama.NewMockApiVersionsResponse(t),
+		"MetadataRequest": sarama.NewMockMetadataResponse(t).
+			SetBroker(mb.Addr(), mb.BrokerID()).
+			SetController(mb.BrokerID()),
+		// No CreateTopicsRequest handler: mock ignores it, read timeout fires.
+	})
+
+	cfg := &Config{
+		ServerAddress:        mb.Addr(),
+		TopicRetentionTimeMs: "900000",
+		SkipTopicCreation:    false,
+	}
+	_, err := NewKafkaPublisher(cfg)
+	if err == nil {
+		t.Fatal("expected error from topic creation timeout, got nil")
 	}
 }
 
