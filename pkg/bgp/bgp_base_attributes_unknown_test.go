@@ -247,4 +247,20 @@ func TestBaseAttributes_Equal_UnknownAttributes(t *testing.T) {
 	if eq, _ := (&BaseAttributes{}).Equal(&BaseAttributes{}); !eq {
 		t.Error("Equal returned false for two empty BaseAttributes")
 	}
+
+	// nil slice vs empty (non-nil) slice → equal. A JSON-decoded
+	// "unknown_attributes":[] must not be treated as different from a
+	// parser-produced nil, which reflect.DeepEqual would have done.
+	nilSide := &BaseAttributes{}
+	emptySide := &BaseAttributes{UnknownAttributes: []UnknownPathAttribute{}}
+	if eq, _ := nilSide.Equal(emptySide); !eq {
+		t.Error("Equal returned false for nil vs empty UnknownAttributes")
+	}
+
+	// nil Value vs empty []byte{} Value → equal (both are zero-length).
+	nilVal := &BaseAttributes{UnknownAttributes: []UnknownPathAttribute{{Type: 99, Flags: 0xC0, Value: nil}}}
+	emptyVal := &BaseAttributes{UnknownAttributes: []UnknownPathAttribute{{Type: 99, Flags: 0xC0, Value: []byte{}}}}
+	if eq, _ := nilVal.Equal(emptyVal); !eq {
+		t.Error("Equal returned false for nil vs empty Value")
+	}
 }

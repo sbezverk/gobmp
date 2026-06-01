@@ -177,13 +177,34 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "tunnel_encap_malformed mismatch: "+strconv.FormatBool(ba.TunnelEncapMalformed)+" and "+strconv.FormatBool(oba.TunnelEncapMalformed))
 	}
-	if !reflect.DeepEqual(ba.UnknownAttributes, oba.UnknownAttributes) {
+	if !equalUnknownAttributes(ba.UnknownAttributes, oba.UnknownAttributes) {
 		equal = false
 		diffs = append(diffs, "unknown_attributes mismatch")
 	}
 
 	return equal, diffs
 
+}
+
+// equalUnknownAttributes compares two unknown-attribute slices semantically.
+// reflect.DeepEqual is unsuitable here because it treats a nil slice as distinct
+// from an empty slice (e.g. a JSON-decoded "unknown_attributes":[] versus a
+// parser-produced nil), and likewise treats a nil Value as distinct from an
+// empty []byte{}. Both pairs represent the same thing, so length, Type, Flags
+// and bytes.Equal on Value are compared element-wise instead.
+func equalUnknownAttributes(a, b []UnknownPathAttribute) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Type != b[i].Type || a[i].Flags != b[i].Flags {
+			return false
+		}
+		if !bytes.Equal(a[i].Value, b[i].Value) {
+			return false
+		}
+	}
+	return true
 }
 
 // UnmarshalBGPBaseAttributes discovers all present Base Attributes in a BGP
