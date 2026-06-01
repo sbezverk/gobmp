@@ -331,7 +331,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 // (AFI 16388 / SAFI 72, RFC 9552 §5.2). Sub-NLRI handling is identical to
 // SAFI 71; the only difference is each Element carries an 8-byte Route
 // Distinguisher that scopes the link/node/prefix to a VPN. The RD is stamped
-// onto the produced LSNode/LSLink/LSPrefix message so downstream consumers
+// onto the produced LSNode/LSLink/LSPrefix/LSSRv6SID message so downstream consumers
 // can distinguish per-tenant topology.
 func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
 	ls, err := nlri.GetNLRI72()

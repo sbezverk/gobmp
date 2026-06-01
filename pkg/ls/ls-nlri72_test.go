@@ -19,7 +19,8 @@ func rdType0(as uint16, assigned uint32) []byte {
 }
 
 func TestUnmarshalLSNLRI72(t *testing.T) {
-	// One Node NLRI (type 1, length 0x1A == 26 bytes) reused from ls-nlri71_test.go.
+	// One Node NLRI (type 1) body reused from ls-nlri71_test.go.
+	// 0x1A is the Local Node Descriptor TLV length, not the element body length.
 	nodeBody := []byte{
 		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 		0x00, 0x00, 0x1A,
