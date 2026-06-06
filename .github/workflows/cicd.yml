@@ -51,6 +51,10 @@ jobs:
         run: |
             go test -v ./... 2>&1 | tee test-output.txt
             go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+      - name: Import Codecov GPG key
+        run: |
+          curl -fsSL https://uploader.codecov.io/verification.gpg | gpg --batch --import
+          gpg --batch --fingerprint ED779869 | tr -d ' ' | grep -q '27034E7FDB850E0BBC2C62FF806BB28AED779869'
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
         with:
@@ -58,7 +62,6 @@ jobs:
           flags: unittests
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
-
       # --- Coverage Gate ---
       - name: Check coverage threshold
         run: |
