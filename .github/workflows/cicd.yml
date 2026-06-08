@@ -56,7 +56,7 @@ jobs:
           curl -fsSL https://uploader.codecov.io/verification.gpg | gpg --batch --import
           gpg --batch --fingerprint ED779869 | tr -d ' ' | grep -q '27034E7FDB850E0BBC2C62FF806BB28AED779869'
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: coverage.txt
           flags: unittests
