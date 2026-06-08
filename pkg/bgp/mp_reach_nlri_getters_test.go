@@ -673,3 +673,72 @@ func TestMPReachNLRI_GetNLRI71_WithAddPath(t *testing.T) {
 		t.Errorf("expected PathID=7, got %d", nlri.NLRI[0].PathID)
 	}
 }
+
+// rdType0_8bytes builds an 8-byte RD of type 0 (2-byte AS + 4-byte assigned number).
+func rdType0_8bytes(as uint16, assigned uint32) []byte {
+	return []byte{
+		0x00, 0x00,
+		byte(as >> 8), byte(as),
+		byte(assigned >> 24), byte(assigned >> 16), byte(assigned >> 8), byte(assigned),
+	}
+}
+
+func TestMPReachNLRI_GetNLRI72_NoAddPath(t *testing.T) {
+	// SAFI 72 wire format: 8-byte RD + standard SAFI 71 NLRI Element.
+	payload := append(rdType0_8bytes(100, 1), nodeNLRI71Payload...)
+	mp := &MPReachNLRI{
+		AddressFamilyID:    16388,
+		SubAddressFamilyID: 72,
+		NLRI:               payload,
+		addPath:            map[int]bool{72: false},
+	}
+	nlri, err := mp.GetNLRI72()
+	if err != nil {
+		t.Fatalf("GetNLRI72() unexpected error: %v", err)
+	}
+	if nlri == nil || len(nlri.NLRI) == 0 {
+		t.Fatal("GetNLRI72() returned nil or empty NLRI")
+	}
+	if got := nlri.NLRI[0].RD.String(); got != "100:1" {
+		t.Errorf("RD = %q, want \"100:1\"", got)
+	}
+	if nlri.NLRI[0].PathID != 0 {
+		t.Errorf("PathID = %d, want 0", nlri.NLRI[0].PathID)
+	}
+}
+
+func TestMPReachNLRI_GetNLRI72_WithAddPath(t *testing.T) {
+	payload := append([]byte{0x00, 0x00, 0x00, 0x09}, rdType0_8bytes(100, 1)...)
+	payload = append(payload, nodeNLRI71Payload...)
+	mp := &MPReachNLRI{
+		AddressFamilyID:    16388,
+		SubAddressFamilyID: 72,
+		NLRI:               payload,
+		addPath:            map[int]bool{72: true},
+	}
+	nlri, err := mp.GetNLRI72()
+	if err != nil {
+		t.Fatalf("GetNLRI72() with Add Path unexpected error: %v", err)
+	}
+	if len(nlri.NLRI) == 0 || nlri.NLRI[0].PathID != 9 {
+		t.Fatalf("expected PathID=9, got %+v", nlri.NLRI)
+	}
+}
+
+func TestMPReachNLRI_GetNLRI72_WrongAFI(t *testing.T) {
+	mp := &MPReachNLRI{AddressFamilyID: 1, SubAddressFamilyID: 72}
+	_, err := mp.GetNLRI72()
+	notFound := &NLRINotFoundError{}
+	if !errors.As(err, &notFound) {
+		t.Fatalf("GetNLRI72() with AFI=1 SAFI=72: expected NLRINotFoundError, got %T: %v", err, err)
+	}
+}
+
+func TestMPReachNLRI_GetNLRI72_WrongSAFI(t *testing.T) {
+	mp := &MPReachNLRI{AddressFamilyID: 16388, SubAddressFamilyID: 71}
+	_, err := mp.GetNLRI72()
+	notFound := &NLRINotFoundError{}
+	if !errors.As(err, &notFound) {
+		t.Fatalf("GetNLRI72() with SAFI=71: expected NLRINotFoundError, got %T: %v", err, err)
+	}
+}

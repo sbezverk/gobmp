@@ -21,6 +21,7 @@ type MPNLRI interface {
 	GetNLRIVPLS() (*vpls.Route, error)
 	GetNLRIL3VPN() (*base.MPNLRI, error)
 	GetNLRI71() (*ls.NLRI71, error)
+	GetNLRI72() (*ls.NLRI72, error)
 	GetNLRI73() (*srpolicy.NLRI73, error)
 	GetFlowspecNLRI() (*flowspec.NLRI, error)
 	GetAllFlowspecNLRI() ([]*flowspec.NLRI, error)
@@ -39,6 +40,9 @@ func NLRIMessageType(afi uint16, safi uint8) int {
 	// 16388 BGP-LS	[RFC7752] : 71	BGP-LS	[RFC7752]
 	case afi == 16388 && safi == 71:
 		return 71
+	// 16388 BGP-LS : 72 BGP-LS-VPN [RFC 9552]
+	case afi == 16388 && safi == 72:
+		return 72
 	// 1 IP (IP version 4) : 1 unicast forwarding
 	case afi == 1 && safi == 1:
 		return 1

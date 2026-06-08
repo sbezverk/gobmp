@@ -257,6 +257,9 @@ type LSNode struct {
 	IsLocRIB         bool   `json:"is_loc_rib"`
 	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
 	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+	// RD is the BGP-LS-VPN Route Distinguisher (RFC 9552 §5.2); set only
+	// for NLRI carried under AFI 16388 / SAFI 72, otherwise omitted.
+	RD string `json:"route_distinguisher,omitempty"`
 }
 
 // LSLink defines a structure of LS link message
@@ -332,6 +335,9 @@ type LSLink struct {
 	IsLocRIB         bool   `json:"is_loc_rib"`
 	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
 	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+	// RD is the BGP-LS-VPN Route Distinguisher (RFC 9552 §5.2); set only
+	// for NLRI carried under AFI 16388 / SAFI 72, otherwise omitted.
+	RD string `json:"route_distinguisher,omitempty"`
 }
 
 // MulticastPrefix defines a message format sent as a result of BMP Route Monitor message
@@ -522,6 +528,9 @@ type LSPrefix struct {
 	IsLocRIB         bool   `json:"is_loc_rib"`
 	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
 	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+	// RD is the BGP-LS-VPN Route Distinguisher (RFC 9552 §5.2); set only
+	// for NLRI carried under AFI 16388 / SAFI 72, otherwise omitted.
+	RD string `json:"route_distinguisher,omitempty"`
 }
 
 // LSSRv6SID defines a structure of LS SRv6 SID message
@@ -568,6 +577,9 @@ type LSSRv6SID struct {
 	IsLocRIB         bool   `json:"is_loc_rib"`
 	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
 	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+	// RD is the BGP-LS-VPN Route Distinguisher (RFC 9552 §5.2); set only
+	// for NLRI carried under AFI 16388 / SAFI 72, otherwise omitted.
+	RD string `json:"route_distinguisher,omitempty"`
 }
 
 // EVPNPrefix defines the structure of EVPN message

@@ -184,6 +184,7 @@ func (m *flowspecMockNLRI) GetNLRIEVPN() (*evpn.Route, error)             { retu
 func (m *flowspecMockNLRI) GetNLRIVPLS() (*vpls.Route, error)             { return nil, nil }
 func (m *flowspecMockNLRI) GetNLRIL3VPN() (*base.MPNLRI, error)           { return nil, nil }
 func (m *flowspecMockNLRI) GetNLRI71() (*ls.NLRI71, error)                { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRI72() (*ls.NLRI72, error)                { return nil, nil }
 func (m *flowspecMockNLRI) GetNLRI73() (*srpolicy.NLRI73, error)          { return nil, nil }
 func (m *flowspecMockNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error)     { return nil, nil }
 func (m *flowspecMockNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)         { return nil, nil }

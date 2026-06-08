@@ -306,6 +306,50 @@ func TestMPUnReachNLRI_NLRINotFound(t *testing.T) {
 			t.Errorf("expected NLRINotFoundError for wrong AFI, got %T: %v", err, err)
 		}
 	})
+	t.Run("GetNLRI72 wrong AFI correct SAFI", func(t *testing.T) {
+		mp72 := &MPUnReachNLRI{
+			AddressFamilyID:    1, // should be 16388
+			SubAddressFamilyID: 72,
+			WithdrawnRoutes:    []byte{},
+			addPath:            map[int]bool{},
+		}
+		_, err := mp72.GetNLRI72()
+		if !errors.As(err, &notFound) {
+			t.Errorf("expected NLRINotFoundError for wrong AFI, got %T: %v", err, err)
+		}
+	})
+	t.Run("GetNLRI72 wrong SAFI", func(t *testing.T) {
+		mp72 := &MPUnReachNLRI{
+			AddressFamilyID:    16388,
+			SubAddressFamilyID: 71, // should be 72
+			WithdrawnRoutes:    []byte{},
+			addPath:            map[int]bool{},
+		}
+		_, err := mp72.GetNLRI72()
+		if !errors.As(err, &notFound) {
+			t.Errorf("expected NLRINotFoundError for wrong SAFI, got %T: %v", err, err)
+		}
+	})
+	t.Run("GetNLRI72 happy path", func(t *testing.T) {
+		// 8-byte RD type 0 (100:1) + Node NLRI element from RFC 9552 test data.
+		rd := []byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01}
+		mp72 := &MPUnReachNLRI{
+			AddressFamilyID:    16388,
+			SubAddressFamilyID: 72,
+			WithdrawnRoutes:    append(rd, nodeNLRI71Payload...),
+			addPath:            map[int]bool{72: false},
+		}
+		nlri, err := mp72.GetNLRI72()
+		if err != nil {
+			t.Fatalf("GetNLRI72() unexpected error: %v", err)
+		}
+		if nlri == nil || len(nlri.NLRI) == 0 {
+			t.Fatal("GetNLRI72() returned nil or empty NLRI")
+		}
+		if got := nlri.NLRI[0].RD.String(); got != "100:1" {
+			t.Errorf("RD = %q, want \"100:1\"", got)
+		}
+	})
 }
 
 // TestMPUnReachNLRI_GetNLRIRTC covers the AFI guard on GetNLRIRTC.
