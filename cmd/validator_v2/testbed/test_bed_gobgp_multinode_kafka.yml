@@ -215,7 +215,9 @@ services:
       mgmt: null
       gobmp-xrd-1:
         ipv4_address: 10.1.1.3
-      xr-1-gi1-bgpinjector-gi0: null
+      xr-1-gi1-bgpinjector-gi0:
+        ipv4_address: 10.2.1.3
+        ipv6_address: 2001:db8:2:1::3
     pids_limit: -1
     security_opt:
     - apparmor=unconfined
