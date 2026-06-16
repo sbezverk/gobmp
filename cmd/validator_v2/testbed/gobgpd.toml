@@ -1,0 +1,13 @@
+[global.config]
+  as = 50123
+  router-id = "4.4.4.4"
+
+[[neighbors]]
+  [neighbors.config]
+    neighbor-address = "10.2.1.3"
+    peer-as = 5070
+  [neighbors.transport.config]
+    local-address = "10.2.1.5"
+  [[neighbors.afi-safis]]
+    [neighbors.afi-safis.config]
+      afi-safi-name = "ipv4-unicast"
