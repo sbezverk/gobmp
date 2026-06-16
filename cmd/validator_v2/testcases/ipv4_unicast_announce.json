@@ -48,7 +48,7 @@
       "base_attrs": {
         "origin": "igp",
         "as_path": [50123, 64512, 64513],
-        "community_list": ["64512:100", "no-export"],
+        "community_list": ["64512:100", "65535:65281"],
         "large_community_list": ["64512:10:100"]
       }
     },
