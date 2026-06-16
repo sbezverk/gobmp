@@ -8,6 +8,7 @@
     peer-as = 5070
   [neighbors.transport.config]
     local-address = "10.2.1.5"
+    passive-mode = true
   [[neighbors.afi-safis]]
     [neighbors.afi-safis.config]
       afi-safi-name = "ipv4-unicast"
