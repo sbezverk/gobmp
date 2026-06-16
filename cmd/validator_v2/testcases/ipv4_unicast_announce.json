@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "name": "ipv4-unicast-announce",
+  "description": "Inject an IPv4 unicast announcement and validate gobmp unicast IPv4 output.",
+  "tags": ["ipv4", "unicast", "announce", "manual-inject"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/unicast",
+      "action": "announce",
+      "source": "manual-fixture",
+      "collector": "validator-v2",
+      "sequence_id": "ipv4-unicast-announce-001",
+      "nlri": {
+        "prefix": "198.51.100.0/24"
+      },
+      "next_hops": ["10.2.1.5"],
+      "as_path_segments": [
+        { "type": "as_sequence", "asns": [64512, 64513] }
+      ],
+      "origin": "igp",
+      "med": 100,
+      "communities": ["64512:100", "no-export"],
+      "large_communities": [
+        { "global_admin": 64512, "local_data_1": 10, "local_data_2": 100 }
+      ]
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.unicast_prefix_v4",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "prefix": "198.51.100.0",
+      "prefix_len": 24
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "prefix": "198.51.100.0",
+      "prefix_len": 24,
+      "is_ipv4": true,
+      "nexthop": "10.2.1.5"
+    },
+    "contains": {
+      "base_attrs": {
+        "origin": "igp",
+        "as_path": [50123, 64512, 64513],
+        "community_list": ["64512:100", "no-export"],
+        "large_community_list": ["64512:10:100"]
+      }
+    },
+    "present": ["timestamp", "peer_ip", "router_hash", "base_attrs"],
+    "absent": ["error"]
+  },
+  "cleanup": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/unicast",
+      "action": "withdraw",
+      "nlri": {
+        "prefix": "198.51.100.0/24"
+      }
+    }
+  }
+}

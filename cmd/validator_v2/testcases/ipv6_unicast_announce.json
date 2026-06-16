@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "name": "ipv6-unicast-announce",
+  "description": "Inject an IPv6 unicast announcement and validate gobmp unicast IPv6 output.",
+  "tags": ["ipv6", "unicast", "announce", "manual-inject"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv6/unicast",
+      "action": "announce",
+      "source": "manual-fixture",
+      "collector": "validator-v2",
+      "sequence_id": "ipv6-unicast-announce-001",
+      "nlri": {
+        "prefix": "2001:db8:100::/48"
+      },
+      "next_hops": ["2001:db8:2:1::5"],
+      "as_path_segments": [
+        { "type": "as_sequence", "asns": [64512, 64514] }
+      ],
+      "origin": "igp",
+      "med": 200,
+      "communities": ["64512:200"],
+      "large_communities": [
+        { "global_admin": 64512, "local_data_1": 20, "local_data_2": 200 }
+      ]
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.unicast_prefix_v6",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "prefix": "2001:db8:100::",
+      "prefix_len": 48
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "prefix": "2001:db8:100::",
+      "prefix_len": 48,
+      "is_ipv4": false,
+      "nexthop": "2001:db8:2:1::5"
+    },
+    "contains": {
+      "base_attrs": {
+        "origin": "igp",
+        "as_path": [50123, 64512, 64514],
+        "community_list": ["64512:200"],
+        "large_community_list": ["64512:20:200"]
+      }
+    },
+    "present": ["timestamp", "peer_ip", "router_hash", "base_attrs"],
+    "absent": ["error"]
+  },
+  "cleanup": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv6/unicast",
+      "action": "withdraw",
+      "nlri": {
+        "prefix": "2001:db8:100::/48"
+      }
+    }
+  }
+}

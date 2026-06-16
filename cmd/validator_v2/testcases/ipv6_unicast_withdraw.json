@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "ipv6-unicast-withdraw",
+  "description": "Withdraw the IPv6 unicast route created by ipv6-unicast-announce.",
+  "tags": ["ipv6", "unicast", "withdraw", "manual-inject", "requires-existing-route"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv6/unicast",
+      "action": "withdraw",
+      "nlri": {
+        "prefix": "2001:db8:100::/48"
+      }
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.unicast_prefix_v6",
+    "timeout": "120",
+    "match": {
+      "action": "del",
+      "prefix": "2001:db8:100::",
+      "prefix_len": 48
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "del",
+      "prefix": "2001:db8:100::",
+      "prefix_len": 48,
+      "is_ipv4": false
+    },
+    "present": ["timestamp", "peer_ip", "router_hash"],
+    "absent": ["error"]
+  }
+}

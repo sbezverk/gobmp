@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "ipv4-unicast-withdraw",
+  "description": "Withdraw the IPv4 unicast route created by ipv4-unicast-announce.",
+  "tags": ["ipv4", "unicast", "withdraw", "manual-inject", "requires-existing-route"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/unicast",
+      "action": "withdraw",
+      "nlri": {
+        "prefix": "198.51.100.0/24"
+      }
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.unicast_prefix_v4",
+    "timeout": "120",
+    "match": {
+      "action": "del",
+      "prefix": "198.51.100.0",
+      "prefix_len": 24
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "del",
+      "prefix": "198.51.100.0",
+      "prefix_len": 24,
+      "is_ipv4": true
+    },
+    "present": ["timestamp", "peer_ip", "router_hash"],
+    "absent": ["error"]
+  }
+}

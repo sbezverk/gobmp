@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "name": "ipv4-labeled-unicast-withdraw",
+  "description": "Withdraw the IPv4 labeled-unicast route created by ipv4-labeled-unicast-announce.",
+  "tags": ["ipv4", "labeled-unicast", "withdraw", "manual-inject", "requires-existing-route"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/labeled-unicast",
+      "action": "withdraw",
+      "nlri": {
+        "labels": [
+          { "value": 1000, "exp": 0, "is_bos": true }
+        ],
+        "prefix": "10.255.4.0/24"
+      }
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.unicast_prefix_v4",
+    "timeout": "120",
+    "match": {
+      "action": "del",
+      "prefix": "10.255.4.0",
+      "prefix_len": 24,
+      "labels": [1000]
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "del",
+      "prefix": "10.255.4.0",
+      "prefix_len": 24,
+      "is_ipv4": true
+    },
+    "contains": {
+      "labels": [1000]
+    },
+    "present": ["timestamp", "peer_ip", "router_hash"],
+    "absent": ["error"]
+  }
+}
