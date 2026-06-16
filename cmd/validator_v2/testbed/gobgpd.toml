@@ -6,8 +6,6 @@
   [neighbors.config]
     neighbor-address = "10.2.1.3"
     peer-as = 5070
-  [neighbors.transport.config]
-    local-address = "10.2.1.5"
   [[neighbors.afi-safis]]
     [neighbors.afi-safis.config]
       afi-safi-name = "ipv4-unicast"
