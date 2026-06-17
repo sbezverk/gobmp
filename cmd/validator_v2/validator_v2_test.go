@@ -425,6 +425,151 @@ func TestValidateExpectedNonEmptyRejectsEmptyValue(t *testing.T) {
 	}
 }
 
+func TestValidateExpectedFailureBranches(t *testing.T) {
+	msg := map[string]any{
+		"action": "add",
+		"hash":   "abc123",
+		"base_attrs": map[string]any{
+			"origin": "igp",
+		},
+	}
+	tests := []struct {
+		name    string
+		expect  ExpectSpec
+		wantErr string
+	}{
+		{
+			name:    "equals missing",
+			expect:  ExpectSpec{Equals: map[string]any{"missing": "value"}},
+			wantErr: "expected equals",
+		},
+		{
+			name:    "contains mismatch",
+			expect:  ExpectSpec{Contains: map[string]any{"base_attrs": map[string]any{"origin": "egp"}}},
+			wantErr: "expected contains",
+		},
+		{
+			name:    "present missing",
+			expect:  ExpectSpec{Present: []string{"base_attrs.base_attr_hash"}},
+			wantErr: "expected present",
+		},
+		{
+			name:    "non empty missing",
+			expect:  ExpectSpec{NonEmpty: []string{"base_attrs.base_attr_hash"}},
+			wantErr: "expected non-empty",
+		},
+		{
+			name:    "absent found",
+			expect:  ExpectSpec{Absent: []string{"hash"}},
+			wantErr: "expected absent",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateExpected(msg, tt.expect)
+			if err == nil {
+				t.Fatal("validateExpected succeeded, want error")
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("error = %q, want substring %q", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValueEqualNestedStructures(t *testing.T) {
+	actual := map[string]any{
+		"base_attrs": map[string]any{
+			"as_path": []any{json.Number("50123"), json.Number("64512")},
+			"med":     json.Number("100"),
+		},
+	}
+	expected := map[string]any{
+		"base_attrs": map[string]any{
+			"as_path": []any{json.Number("50123"), json.Number("64512")},
+			"med":     100,
+		},
+	}
+	if !valueEqual(actual, expected) {
+		t.Fatal("valueEqual returned false for equivalent nested structures")
+	}
+
+	if valueEqual(actual, map[string]any{"base_attrs": map[string]any{"as_path": []any{json.Number("50123")}}}) {
+		t.Fatal("valueEqual returned true for different nested array length")
+	}
+	if valueEqual(actual, map[string]any{"base_attrs": []any{json.Number("50123")}}) {
+		t.Fatal("valueEqual returned true for different nested type")
+	}
+	if valueEqual([]any{json.Number("1")}, []any{json.Number("2")}) {
+		t.Fatal("valueEqual returned true for different arrays")
+	}
+	if valueEqual([]any{json.Number("1")}, "1") {
+		t.Fatal("valueEqual returned true for array vs scalar")
+	}
+}
+
+func TestMatchSubsetFailureBranches(t *testing.T) {
+	if matchSubset("not-a-map", map[string]any{"origin": "igp"}) {
+		t.Fatal("matchSubset returned true for non-map actual")
+	}
+	if matchSubset(map[string]any{"origin": "igp"}, map[string]any{"missing": "igp"}) {
+		t.Fatal("matchSubset returned true for missing map key")
+	}
+	if matchSubset("not-array", []any{"igp"}) {
+		t.Fatal("matchSubset returned true for non-array actual")
+	}
+	if matchSubset([]any{"igp"}, []any{"egp"}) {
+		t.Fatal("matchSubset returned true for missing array item")
+	}
+}
+
+func TestNumberAndEmptyHelpers(t *testing.T) {
+	tests := []struct {
+		name string
+		in   any
+		want string
+		ok   bool
+	}{
+		{name: "json number", in: json.Number("100"), want: "100", ok: true},
+		{name: "float64", in: float64(100), want: "100", ok: true},
+		{name: "int", in: int(100), want: "100", ok: true},
+		{name: "int64", in: int64(100), want: "100", ok: true},
+		{name: "string", in: "100", ok: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := numberAsString(tt.in)
+			if ok != tt.ok || got != tt.want {
+				t.Fatalf("numberAsString(%v) = %q/%v, want %q/%v", tt.in, got, ok, tt.want, tt.ok)
+			}
+		})
+	}
+
+	for _, v := range []any{nil, "", "   ", []any{}, map[string]any{}} {
+		if !isEmptyValue(v) {
+			t.Fatalf("isEmptyValue(%#v) = false, want true", v)
+		}
+	}
+	for _, v := range []any{"hash", []any{"x"}, map[string]any{"x": "y"}, 42} {
+		if isEmptyValue(v) {
+			t.Fatalf("isEmptyValue(%#v) = true, want false", v)
+		}
+	}
+}
+
+func TestValueAtPathFailures(t *testing.T) {
+	msg := map[string]any{
+		"base_attrs": map[string]any{"origin": "igp"},
+		"hash":       "abc",
+	}
+	for _, path := range []string{"", "base_attrs.missing", "hash.value"} {
+		if _, ok := valueAtPath(msg, path); ok {
+			t.Fatalf("valueAtPath(%q) ok = true, want false", path)
+		}
+	}
+}
+
 func TestProcessDecodesKafkaBatch(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
