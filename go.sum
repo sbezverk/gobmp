@@ -49,8 +49,6 @@ github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 h1:bsUq1dX0N8A
 github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
-github.com/sbezverk/tools v0.0.0-20260617033704-df1d823f0463 h1:hPHkFJixMKHkHLJxH4LOIxSY1eocxu8Gp3zsCXpAdr8=
-github.com/sbezverk/tools v0.0.0-20260617033704-df1d823f0463/go.mod h1:GMofMoxZWdFP+rUiId+MN//0iiUDLFYvT9k2y9LqWbY=
 github.com/sbezverk/tools v0.0.0-20260617035518-331d0102e1c8 h1:tnstwKkm+YaI5/cJnLDd3t9azKiqy+DTFu9Hf1p7+IA=
 github.com/sbezverk/tools v0.0.0-20260617035518-331d0102e1c8/go.mod h1:GMofMoxZWdFP+rUiId+MN//0iiUDLFYvT9k2y9LqWbY=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
