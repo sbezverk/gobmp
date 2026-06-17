@@ -520,14 +520,14 @@ func validateExpected(msg map[string]any, expect ExpectSpec) error {
 	}
 	if len(expect.Present) > 0 {
 		for _, k := range expect.Present {
-			if _, ok := msg[k]; !ok {
+			if _, ok := valueAtPath(msg, k); !ok {
 				return fmt.Errorf("expected present: key=%s not found", k)
 			}
 		}
 	}
 	if len(expect.Absent) > 0 {
 		for _, k := range expect.Absent {
-			if _, ok := msg[k]; ok {
+			if _, ok := valueAtPath(msg, k); ok {
 				return fmt.Errorf("expected absent: key=%s found", k)
 			}
 		}
@@ -537,4 +537,22 @@ func validateExpected(msg map[string]any, expect ExpectSpec) error {
 
 func contains(msgVal, expected any) bool {
 	return matchSubset(msgVal, expected)
+}
+
+func valueAtPath(msg map[string]any, path string) (any, bool) {
+	if path == "" {
+		return nil, false
+	}
+	var cur any = msg
+	for _, part := range strings.Split(path, ".") {
+		m, ok := cur.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		cur, ok = m[part]
+		if !ok {
+			return nil, false
+		}
+	}
+	return cur, true
 }

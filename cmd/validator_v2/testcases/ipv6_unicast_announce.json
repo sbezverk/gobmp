@@ -39,21 +39,35 @@
   "expect": {
     "equals": {
       "action": "add",
+      "router_ip": "10.2.1.3",
+      "peer_ip": "10.2.1.5",
+      "peer_type": 0,
+      "peer_asn": 50123,
       "prefix": "2001:db8:100::",
       "prefix_len": 48,
       "is_ipv4": false,
-      "nexthop": "2001:db8:2:1::5"
+      "origin_as": 64514,
+      "nexthop": "2001:db8:2:1::5",
+      "is_nexthop_ipv4": false,
+      "is_adj_rib_in_post_policy": false,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false,
+      "is_loc_rib_filtered": false
     },
     "contains": {
       "base_attrs": {
         "origin": "igp",
         "as_path": [50123, 64512, 64514],
+        "as_path_count": 3,
+        "med": 200,
+        "is_atomic_agg": false,
         "community_list": ["64512:200"],
         "large_community_list": ["64512:20:200"]
       }
     },
-    "present": ["timestamp", "peer_ip", "router_hash", "base_attrs"],
-    "absent": ["error"]
+    "present": ["timestamp", "router_hash", "peer_hash", "base_attrs", "base_attrs.base_attr_hash"],
+    "absent": ["error", "is_eor"]
   },
   "cleanup": {
     "path": "/v1/routes",

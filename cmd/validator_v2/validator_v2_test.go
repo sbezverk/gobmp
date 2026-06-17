@@ -59,3 +59,19 @@ func TestValidateExpectedEqualsRequiresFullArrayEquality(t *testing.T) {
 		t.Fatal("validateExpected succeeded for partial array equality")
 	}
 }
+
+func TestValidateExpectedPresentAbsentSupportNestedPaths(t *testing.T) {
+	msg := map[string]any{
+		"base_attrs": map[string]any{
+			"base_attr_hash": "abc123",
+		},
+	}
+	expect := ExpectSpec{
+		Present: []string{"base_attrs.base_attr_hash"},
+		Absent:  []string{"base_attrs.missing", "missing"},
+	}
+
+	if err := validateExpected(msg, expect); err != nil {
+		t.Fatalf("validateExpected returned error: %v", err)
+	}
+}
