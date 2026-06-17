@@ -536,17 +536,5 @@ func validateExpected(msg map[string]any, expect ExpectSpec) error {
 }
 
 func contains(msgVal, expected any) bool {
-	switch v := msgVal.(type) {
-	case []any:
-		for _, item := range v {
-			if matchSubset(item, expected) {
-				return true
-			}
-		}
-	case map[string]any:
-		return matchSubset(v, expected)
-	default:
-		return matchSubset(msgVal, expected)
-	}
-	return false
+	return matchSubset(msgVal, expected)
 }
