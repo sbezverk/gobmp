@@ -95,6 +95,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 }
 
 func (p *producer) marshalAndPublish(msg interface{}, msgType int, hash []byte) error {
+	ensureMessageHash(msg)
 	j, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal a message of type %d with error: %w", msgType, err)
