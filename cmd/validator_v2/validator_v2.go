@@ -125,7 +125,11 @@ func injectBody(apiSrv, path string, body json.RawMessage) error {
 	if err != nil {
 		return fmt.Errorf("failed to execute request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
+	}()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -186,7 +190,11 @@ func checkSession(apiSrv, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to execute request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
+	}()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -230,7 +238,11 @@ func main() {
 		glog.Errorf("failed to open test file: %v", err)
 		os.Exit(1)
 	}
-	defer f.Close()
+	defer func() {
+		if f != nil {
+			_ = f.Close()
+		}
+	}()
 	b, err := io.ReadAll(f)
 	if err != nil {
 		glog.Errorf("failed to read test file: %v", err)
@@ -345,9 +357,9 @@ func process(ctx context.Context, batchCh <-chan []kafka_consumer.Message, msgCh
 				}
 				bmpMsg, err := decodeKafkaJSON(msg.Msg.Value)
 				if err != nil {
-					msg.AckCh <- fmt.Errorf("Failed to unmarshal Event message (len=%d): %v", len(msg.Msg.Value), err) // Acknowledge message even if we fail to process it to avoid blocking the consumer
+					msg.AckCh <- fmt.Errorf("failed to unmarshal kafka message (len=%d): %v", len(msg.Msg.Value), err) // Acknowledge message even if we fail to process it to avoid blocking the consumer
 					select {
-					case errCh <- fmt.Errorf("Failed to unmarshal Event message (len=%d): %v", len(msg.Msg.Value), err):
+					case errCh <- fmt.Errorf("failed to unmarshal kafka message (len=%d): %v", len(msg.Msg.Value), err):
 					case <-ctx.Done():
 						return
 					}
