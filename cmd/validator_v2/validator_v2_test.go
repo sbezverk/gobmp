@@ -75,3 +75,32 @@ func TestValidateExpectedPresentAbsentSupportNestedPaths(t *testing.T) {
 		t.Fatalf("validateExpected returned error: %v", err)
 	}
 }
+
+func TestValidateExpectedNonEmptySupportNestedPaths(t *testing.T) {
+	msg := map[string]any{
+		"hash": "prefix-hash",
+		"base_attrs": map[string]any{
+			"base_attr_hash": "attr-hash",
+		},
+	}
+	expect := ExpectSpec{
+		NonEmpty: []string{"hash", "base_attrs.base_attr_hash"},
+	}
+
+	if err := validateExpected(msg, expect); err != nil {
+		t.Fatalf("validateExpected returned error: %v", err)
+	}
+}
+
+func TestValidateExpectedNonEmptyRejectsEmptyValue(t *testing.T) {
+	msg := map[string]any{
+		"hash": "   ",
+	}
+	expect := ExpectSpec{
+		NonEmpty: []string{"hash"},
+	}
+
+	if err := validateExpected(msg, expect); err == nil {
+		t.Fatal("validateExpected succeeded for whitespace-only non_empty field")
+	}
+}

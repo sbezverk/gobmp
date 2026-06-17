@@ -67,7 +67,8 @@
         "large_community_list": ["64512:10:100"]
       }
     },
-    "present": ["timestamp", "router_hash", "peer_hash", "base_attrs", "base_attrs.base_attr_hash"],
+    "present": ["timestamp", "base_attrs"],
+    "non_empty": ["hash", "router_hash", "peer_hash", "base_attrs.base_attr_hash"],
     "absent": ["error", "is_eor"]
   },
   "cleanup": {

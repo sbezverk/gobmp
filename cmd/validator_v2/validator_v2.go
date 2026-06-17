@@ -76,6 +76,7 @@ func validateAndNormalize(f *Fixture) error {
 	case len(f.Expect.Contains) > 0:
 	case len(f.Expect.Present) > 0:
 	case len(f.Expect.Absent) > 0:
+	case len(f.Expect.NonEmpty) > 0:
 	default:
 		return fmt.Errorf("expect is required for a successful test")
 	}
@@ -525,6 +526,17 @@ func validateExpected(msg map[string]any, expect ExpectSpec) error {
 			}
 		}
 	}
+	if len(expect.NonEmpty) > 0 {
+		for _, k := range expect.NonEmpty {
+			val, ok := valueAtPath(msg, k)
+			if !ok {
+				return fmt.Errorf("expected non-empty: key=%s not found", k)
+			}
+			if isEmptyValue(val) {
+				return fmt.Errorf("expected non-empty: key=%s is empty", k)
+			}
+		}
+	}
 	if len(expect.Absent) > 0 {
 		for _, k := range expect.Absent {
 			if _, ok := valueAtPath(msg, k); ok {
@@ -537,6 +549,22 @@ func validateExpected(msg map[string]any, expect ExpectSpec) error {
 
 func contains(msgVal, expected any) bool {
 	return matchSubset(msgVal, expected)
+}
+
+func isEmptyValue(v any) bool {
+	if v == nil {
+		return true
+	}
+	switch val := v.(type) {
+	case string:
+		return strings.TrimSpace(val) == ""
+	case []any:
+		return len(val) == 0
+	case map[string]any:
+		return len(val) == 0
+	default:
+		return false
+	}
 }
 
 func valueAtPath(msg map[string]any, path string) (any, bool) {

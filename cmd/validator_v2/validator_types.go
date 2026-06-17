@@ -36,6 +36,7 @@ type ExpectSpec struct {
 	Contains map[string]any `json:"contains,omitempty"`
 	Present  []string       `json:"present,omitempty"`
 	Absent   []string       `json:"absent,omitempty"`
+	NonEmpty []string       `json:"non_empty,omitempty"`
 }
 
 type SessionResponse struct {

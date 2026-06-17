@@ -45,7 +45,8 @@
         "is_atomic_agg": false
       }
     },
-    "present": ["timestamp", "router_hash", "peer_hash", "base_attrs", "base_attrs.base_attr_hash"],
+    "present": ["timestamp", "base_attrs"],
+    "non_empty": ["hash", "router_hash", "peer_hash", "base_attrs.base_attr_hash"],
     "absent": ["error", "is_eor"]
   }
 }

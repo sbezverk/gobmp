@@ -4,6 +4,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/l3vpn"
@@ -176,6 +177,49 @@ func TestL3VPN_EoR_IPv6(t *testing.T) {
 	}
 	if msgs[0].IsIPv4 {
 		t.Error("IsIPv4 = true, want false for IPv6")
+	}
+}
+
+func TestL3VPN_WithdrawIPv6WithoutNextHop(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	p.speakerIP = "10.0.0.1"
+	p.speakerHash = "abc123"
+
+	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+	rd, err := base.MakeRD([]byte{0x00, 0x00, 0xc3, 0xcb, 0x00, 0x00, 0x00, 0xc8})
+	if err != nil {
+		t.Fatalf("MakeRD failed: %v", err)
+	}
+	nlri := &mockMPNLRI{
+		isIPv6: true,
+		l3vpnRoute: &base.MPNLRI{
+			NLRI: []base.Route{{
+				Length: 64,
+				Label:  []*base.Label{{Value: 1000, BoS: true}},
+				RD:     rd,
+				Prefix: []byte{0x20, 0x01, 0x0d, 0xb8, 0x50, 0x12, 0x02, 0x00},
+			}},
+		},
+	}
+
+	msgs, err := p.l3vpn(nlri, 1, ph, &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}})
+	if err != nil {
+		t.Fatalf("l3vpn() error: %v", err)
+	}
+	if len(msgs) != 1 {
+		t.Fatalf("l3vpn() returned %d messages, want 1", len(msgs))
+	}
+	if msgs[0].Action != "del" {
+		t.Errorf("Action = %q, want \"del\"", msgs[0].Action)
+	}
+	if msgs[0].Nexthop != "" {
+		t.Errorf("Nexthop = %q, want empty for MP_UNREACH", msgs[0].Nexthop)
+	}
+	if msgs[0].IsIPv4 {
+		t.Error("IsIPv4 = true, want false for VPNv6 withdrawal")
+	}
+	if msgs[0].IsNexthopIPv4 {
+		t.Error("IsNexthopIPv4 = true, want false for VPNv6 withdrawal without next hop")
 	}
 }
 
