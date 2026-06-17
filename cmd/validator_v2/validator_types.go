@@ -1,6 +1,9 @@
 package main
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 const injectPath = "/v1/routes"
 
@@ -69,4 +72,13 @@ type InjectUpdate struct {
 
 type APIErrorResponse struct {
 	Error string `json:"error"`
+}
+
+type observedKafkaMessage struct {
+	Timestamp time.Time
+	Topic     string
+	Partition int32
+	Offset    int64
+	Body      map[string]any
+	Raw       []byte
 }

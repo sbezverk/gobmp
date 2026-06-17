@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/tools/kafka_consumer"
 )
 
 var (
@@ -61,7 +62,9 @@ func validateAndNormalize(f *Fixture) error {
 		f.Observe.timeoutSec = int(t)
 	}
 	var body any
-	if err := json.Unmarshal(f.Inject.Body, &body); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(f.Inject.Body))
+	dec.UseNumber()
+	if err := dec.Decode(&body); err != nil {
 		return fmt.Errorf("invalid inject.body: %v", err)
 	}
 	if len(f.Observe.Match) == 0 {
@@ -81,7 +84,9 @@ func validateAndNormalize(f *Fixture) error {
 			f.Cleanup.Path = injectPath
 		}
 		var body any
-		if err := json.Unmarshal(f.Cleanup.Body, &body); err != nil {
+		dec := json.NewDecoder(bytes.NewReader(f.Cleanup.Body))
+		dec.UseNumber()
+		if err := dec.Decode(&body); err != nil {
 			return fmt.Errorf("invalid cleanup.body: %v", err)
 		}
 	}
@@ -230,10 +235,14 @@ func main() {
 		os.Exit(1)
 	}
 	var fixture Fixture
-	if err := json.Unmarshal(b, &fixture); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+
+	if err := dec.Decode(&fixture); err != nil {
 		glog.Errorf("failed to unmarshal test file: %v", err)
 		os.Exit(1)
 	}
+
 	if err := validateAndNormalize(&fixture); err != nil {
 		glog.Errorf("validation failed: %v", err)
 		os.Exit(1)
@@ -244,9 +253,44 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(fixture.Observe.timeoutSec)*time.Second)
+	defer cancel()
+	kafkaCfg := kafka_consumer.KafkaConsumerConfig{
+		Brokers:        []string{kafkaSrv},
+		ConsumerGroups: []string{"gobmp_validator"},
+		Topics:         []string{fixture.Observe.Topic},
+	}
+	consumer, err := kafka_consumer.NewKafkaConsumer(ctx, "gobmp_validator", "gobmp_validator_group_"+strconv.FormatInt(time.Now().UnixNano(), 10), &kafkaCfg)
+	if err != nil {
+		glog.Errorf("failed to create Kafka consumer: %v", err)
+		os.Exit(1)
+	}
+	consumer.Start()
+	defer consumer.Stop()
+
+	msgCh := make(chan observedKafkaMessage, 100)
+	errCh := make(chan error, 1)
+	topicsDescr := consumer.GetTopics()
+	// There is a single topic, so use index 0 to get the batch channel
+	batchCh := topicsDescr[0].BatchChannel
+
+	go process(ctx, batchCh, msgCh, errCh)
+
+	notBefore := time.Now().UTC()
+
 	if err := injectBody(apiSrv, fixture.Inject.Path, fixture.Inject.Body); err != nil {
 		glog.Errorf("inject failed: %v", err)
 		os.Exit(1)
+	}
+
+	msg, err := waitForMessage(ctx, msgCh, errCh, notBefore, fixture.Observe.Match)
+	if err != nil {
+		glog.Errorf("failed to receive message: %v", err)
+		os.Exit(1)
+	}
+
+	if glog.V(3) {
+		glog.Infof("Received message: topic=%s partition=%d offset=%d timestamp=%s body=%s", msg.Topic, msg.Partition, msg.Offset, msg.Timestamp.Format(time.RFC3339), string(msg.Raw))
 	}
 
 	if fixture.Cleanup != nil {
@@ -259,4 +303,97 @@ func main() {
 		}
 	}
 	glog.Infof("Test '%s' executed successfully", fixture.Name)
+}
+
+func process(ctx context.Context, batchCh <-chan []kafka_consumer.Message, msgCh chan<- observedKafkaMessage, errCh chan<- error) {
+	for {
+		select {
+		case <-ctx.Done():
+			glog.Info("shutdown signal received")
+			return
+
+		case batch, ok := <-batchCh:
+			if !ok {
+				glog.Info("batch channel closed")
+				select {
+				case errCh <- fmt.Errorf("batch channel closed"):
+				case <-ctx.Done():
+				}
+				return
+			}
+
+			// Process each message individually (not bulk) since we need Read-Modify-Write
+			for _, msg := range batch {
+				if len(msg.Msg.Value) == 0 {
+					msg.AckCh <- fmt.Errorf("empty message value") // Acknowledge message even if we fail to process it to avoid blocking the consumer
+					select {
+					case errCh <- fmt.Errorf("empty message value"):
+					case <-ctx.Done():
+						return
+					}
+					continue
+				}
+				bmpMsg, err := decodeKafkaJSON(msg.Msg.Value)
+				if err != nil {
+					msg.AckCh <- fmt.Errorf("Failed to unmarshal Event message (len=%d): %v", len(msg.Msg.Value), err) // Acknowledge message even if we fail to process it to avoid blocking the consumer
+					select {
+					case errCh <- fmt.Errorf("Failed to unmarshal Event message (len=%d): %v", len(msg.Msg.Value), err):
+					case <-ctx.Done():
+						return
+					}
+					continue
+				}
+				ts := msg.Msg.Timestamp
+				if ts.IsZero() {
+					ts = time.Now()
+				}
+				msg.AckCh <- nil
+				select {
+				case msgCh <- observedKafkaMessage{
+					Topic:     msg.Msg.Topic,
+					Partition: msg.Msg.Partition,
+					Offset:    msg.Msg.Offset,
+					Body:      bmpMsg,
+					Timestamp: ts.UTC(),
+					Raw:       msg.Msg.Value,
+				}:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}
+}
+
+func decodeKafkaJSON(b []byte) (map[string]any, error) {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+
+	var msg map[string]any
+	if err := dec.Decode(&msg); err != nil {
+		return nil, err
+	}
+	return msg, nil
+}
+
+func waitForMessage(ctx context.Context, msgCh <-chan observedKafkaMessage, errCh <-chan error, notBefore time.Time, match map[string]any) (observedKafkaMessage, error) {
+messages:
+	for {
+		select {
+		case <-ctx.Done():
+			return observedKafkaMessage{}, fmt.Errorf("timeout waiting for message")
+		case err := <-errCh:
+			return observedKafkaMessage{}, fmt.Errorf("error from consumer: %v", err)
+		case msg := <-msgCh:
+			if msg.Timestamp.Before(notBefore) {
+				continue // Ignore messages that were received before the injection
+			}
+			for k, v := range match {
+				if msgVal, ok := msg.Body[k]; !ok || msgVal != v {
+					continue messages // This message does not match the criteria, keep waiting
+				}
+			}
+			return msg, nil
+		}
+	}
 }

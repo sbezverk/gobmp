@@ -1,13 +1,13 @@
 module github.com/sbezverk/gobmp
 
-go 1.25.0
+go 1.25.5
 
 require (
-	github.com/IBM/sarama v1.50.1
+	github.com/IBM/sarama v1.50.3
 	github.com/go-test/deep v1.1.1
 	github.com/golang/glog v1.2.5
 	github.com/nats-io/nats.go v1.52.0
-	github.com/sbezverk/tools v0.0.0-20230714051746-80037ac202cf
+	github.com/sbezverk/tools v0.0.0-20260617035518-331d0102e1c8
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -24,11 +24,11 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/nats-io/nkeys v0.4.15 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/pierrec/lz4/v4 v4.1.26 // indirect
+	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
-	golang.org/x/crypto v0.52.0 // indirect
+	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
 )
