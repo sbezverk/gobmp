@@ -222,7 +222,7 @@ services:
       type: bind
     - xr-1:/xr-storage/
   bgpinjector:
-    image: localhost/bgpinjector:v0.0.0
+    image: ${BGPINJECTOR_IMAGE:-localhost/bgpinjector:v0.0.0}
     container_name: bgpinjector
     hostname: bgpinjector
     restart: on-failure
