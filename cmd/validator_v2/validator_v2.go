@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -293,6 +294,8 @@ func main() {
 		glog.Infof("Received message: topic=%s partition=%d offset=%d timestamp=%s body=%s", msg.Topic, msg.Partition, msg.Offset, msg.Timestamp.Format(time.RFC3339), string(msg.Raw))
 	}
 
+	testErr := validateExpected(msg.Body, fixture.Expect)
+
 	if fixture.Cleanup != nil {
 		// For now just sleep for 60 seconds before clean up to check the router
 		time.Sleep(time.Second * 60)
@@ -302,7 +305,13 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	glog.Infof("Test '%s' executed successfully", fixture.Name)
+	if testErr != nil {
+		glog.Errorf("validation failed: %v", testErr)
+		os.Exit(1)
+	} else {
+		glog.Infof("Test '%s' executed successfully", fixture.Name)
+		os.Exit(0)
+	}
 }
 
 func process(ctx context.Context, batchCh <-chan []kafka_consumer.Message, msgCh chan<- observedKafkaMessage, errCh chan<- error) {
@@ -389,11 +398,155 @@ messages:
 				continue // Ignore messages that were received before the injection
 			}
 			for k, v := range match {
-				if msgVal, ok := msg.Body[k]; !ok || msgVal != v {
+				if msgVal, ok := msg.Body[k]; !ok || !valueEqual(msgVal, v) {
 					continue messages // This message does not match the criteria, keep waiting
 				}
 			}
 			return msg, nil
 		}
 	}
+}
+
+func matchSubset(actual, expected any) bool {
+	switch exp := expected.(type) {
+	case map[string]any:
+		act, ok := actual.(map[string]any)
+		if !ok {
+			return false
+		}
+		for k, expVal := range exp {
+			actVal, ok := act[k]
+			if !ok || !matchSubset(actVal, expVal) {
+				return false
+			}
+		}
+		return true
+
+	case []any:
+		act, ok := actual.([]any)
+		if !ok {
+			return false
+		}
+		for _, expItem := range exp {
+			found := false
+			for _, actItem := range act {
+				if matchSubset(actItem, expItem) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		return true
+
+	default:
+		return scalarEqual(actual, expected)
+	}
+}
+
+func scalarEqual(actual, expected any) bool {
+	if reflect.DeepEqual(actual, expected) {
+		return true
+	}
+
+	av, aok := numberAsString(actual)
+	ev, eok := numberAsString(expected)
+	return aok && eok && av == ev
+}
+
+func numberAsString(v any) (string, bool) {
+	switch x := v.(type) {
+	case json.Number:
+		return x.String(), true
+	case float64:
+		return strconv.FormatFloat(x, 'f', -1, 64), true
+	case int:
+		return strconv.Itoa(x), true
+	case int64:
+		return strconv.FormatInt(x, 10), true
+	default:
+		return "", false
+	}
+}
+
+func valueEqual(actual, expected any) bool {
+	switch exp := expected.(type) {
+	case map[string]any:
+		act, ok := actual.(map[string]any)
+		if !ok || len(act) != len(exp) {
+			return false
+		}
+		for k, expVal := range exp {
+			actVal, ok := act[k]
+			if !ok || !valueEqual(actVal, expVal) {
+				return false
+			}
+		}
+		return true
+
+	case []any:
+		act, ok := actual.([]any)
+		if !ok || len(act) != len(exp) {
+			return false
+		}
+		for i := range exp {
+			if !valueEqual(act[i], exp[i]) {
+				return false
+			}
+		}
+		return true
+
+	default:
+		return scalarEqual(actual, expected)
+	}
+}
+
+func validateExpected(msg map[string]any, expect ExpectSpec) error {
+	if len(expect.Equals) > 0 {
+		for k, v := range expect.Equals {
+			if msgVal, ok := msg[k]; !ok || !valueEqual(msgVal, v) {
+				return fmt.Errorf("expected equals: key=%s expected=%v got=%v", k, v, msgVal)
+			}
+		}
+	}
+	if len(expect.Contains) > 0 {
+		for k, v := range expect.Contains {
+			if msgVal, ok := msg[k]; !ok || !contains(msgVal, v) {
+				return fmt.Errorf("expected contains: key=%s expected=%v got=%v", k, v, msgVal)
+			}
+		}
+	}
+	if len(expect.Present) > 0 {
+		for _, k := range expect.Present {
+			if _, ok := msg[k]; !ok {
+				return fmt.Errorf("expected present: key=%s not found", k)
+			}
+		}
+	}
+	if len(expect.Absent) > 0 {
+		for _, k := range expect.Absent {
+			if _, ok := msg[k]; ok {
+				return fmt.Errorf("expected absent: key=%s found", k)
+			}
+		}
+	}
+	return nil
+}
+
+func contains(msgVal, expected any) bool {
+	switch v := msgVal.(type) {
+	case []any:
+		for _, item := range v {
+			if matchSubset(item, expected) {
+				return true
+			}
+		}
+	case map[string]any:
+		return matchSubset(v, expected)
+	default:
+		return matchSubset(msgVal, expected)
+	}
+	return false
 }
