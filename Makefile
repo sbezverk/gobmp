@@ -17,6 +17,9 @@ IMAGE_VERSION?=test-235
 	validator-mac-amd64 \
 	validator-mac-arm64 \
 	validator \
+	validator-v2-mac-amd64 \
+	validator-v2-mac-arm64 \
+	validator-v2 \
 	player-container \
 	validator-container \
 	player-push \
@@ -66,6 +69,18 @@ validator-mac-amd64:
 validator-mac-arm64:
 	mkdir -p bin
 	$(MAKE) -C ./cmd/validator compile-validator-mac-arm64
+
+validator-v2:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/validator_v2 compile-validator_v2
+
+validator-v2-mac-amd64:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/validator_v2 compile-validator_v2-mac-amd64
+
+validator-v2-mac-arm64:
+	mkdir -p bin
+	$(MAKE) -C ./cmd/validator_v2 compile-validator_v2-mac-arm64
 
 container: gobmp
 	docker buildx build --platform linux/amd64 --load -t $(REGISTRY_NAME)/gobmp:$(IMAGE_VERSION) -f ./build/Dockerfile.gobmp .

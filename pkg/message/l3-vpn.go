@@ -104,7 +104,11 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			}
 			prfx.PrefixLen = 32
 		}
-		prfx.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
+		if prfx.Nexthop == "" {
+			prfx.IsNexthopIPv4 = prfx.IsIPv4
+		} else {
+			prfx.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
+		}
 		prfx.PeerIP = ph.GetPeerAddrString()
 		if f, err := ph.IsAdjRIBInPost(); err == nil {
 			prfx.IsAdjRIBInPost = f

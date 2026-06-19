@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "name": "ipv4-unicast-withdraw",
+  "description": "Withdraw the IPv4 unicast route created by ipv4-unicast-announce.",
+  "tags": ["ipv4", "unicast", "withdraw", "manual-inject", "requires-existing-route"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/unicast",
+      "action": "withdraw",
+      "nlri": {
+        "prefix": "198.51.100.0/24"
+      }
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.unicast_prefix_v4",
+    "timeout": "120",
+    "match": {
+      "action": "del",
+      "prefix": "198.51.100.0",
+      "prefix_len": 24
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "del",
+      "router_ip": "10.2.1.3",
+      "peer_ip": "10.2.1.5",
+      "peer_type": 0,
+      "peer_asn": 50123,
+      "prefix": "198.51.100.0",
+      "prefix_len": 24,
+      "is_ipv4": true,
+      "is_nexthop_ipv4": true,
+      "is_adj_rib_in_post_policy": false,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false,
+      "is_loc_rib_filtered": false
+    },
+    "contains": {
+      "base_attrs": {
+        "is_atomic_agg": false
+      }
+    },
+    "present": ["timestamp", "base_attrs"],
+    "non_empty": ["hash", "router_hash", "peer_hash", "base_attrs.base_attr_hash"],
+    "absent": ["error", "is_eor"]
+  }
+}

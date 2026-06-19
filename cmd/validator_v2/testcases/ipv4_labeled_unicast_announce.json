@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "name": "ipv4-labeled-unicast-announce",
+  "description": "Inject an IPv4 labeled-unicast announcement and validate gobmp unicast IPv4 output with labels.",
+  "tags": ["ipv4", "labeled-unicast", "mpls-label", "announce", "manual-inject"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/labeled-unicast",
+      "action": "announce",
+      "source": "manual-fixture",
+      "collector": "validator-v2",
+      "sequence_id": "ipv4-labeled-unicast-announce-001",
+      "nlri": {
+        "labels": [
+          { "value": 1000, "exp": 0, "is_bos": true }
+        ],
+        "prefix": "10.255.4.0/24"
+      },
+      "next_hops": ["10.2.1.5"],
+      "as_path_segments": [
+        { "type": "as_sequence", "asns": [64512, 64513] }
+      ],
+      "origin": "igp",
+      "med": 400,
+      "communities": ["64512:400"],
+      "large_communities": [
+        { "global_admin": 64512, "local_data_1": 40, "local_data_2": 400 }
+      ]
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.unicast_prefix_v4",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "prefix": "10.255.4.0",
+      "prefix_len": 24,
+      "labels": [1000]
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "router_ip": "10.2.1.3",
+      "peer_ip": "10.2.1.5",
+      "peer_type": 0,
+      "peer_asn": 50123,
+      "prefix": "10.255.4.0",
+      "prefix_len": 24,
+      "is_ipv4": true,
+      "origin_as": 64513,
+      "nexthop": "10.2.1.5",
+      "is_nexthop_ipv4": true,
+      "labels": [1000],
+      "is_adj_rib_in_post_policy": false,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false,
+      "is_loc_rib_filtered": false
+    },
+    "contains": {
+      "labels": [1000],
+      "base_attrs": {
+        "origin": "igp",
+        "as_path": [50123, 64512, 64513],
+        "as_path_count": 3,
+        "med": 400,
+        "is_atomic_agg": false,
+        "community_list": ["64512:400"],
+        "large_community_list": ["64512:40:400"]
+      }
+    },
+    "present": ["timestamp", "base_attrs"],
+    "non_empty": ["hash", "router_hash", "peer_hash", "base_attrs.base_attr_hash"],
+    "absent": ["error", "is_eor"]
+  },
+  "cleanup": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/labeled-unicast",
+      "action": "withdraw",
+      "nlri": {
+        "labels": [
+          { "value": 1000, "exp": 0, "is_bos": true }
+        ],
+        "prefix": "10.255.4.0/24"
+      }
+    }
+  }
+}

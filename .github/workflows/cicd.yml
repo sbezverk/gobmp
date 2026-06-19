@@ -116,8 +116,6 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v6
-      - name: setup host kernel parameters
-        run: ./build/set_kernel_params.sh
       - name: Setup Environment
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
@@ -131,82 +129,11 @@ jobs:
         run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
       - name: Build validator binary
         run: make validator
-      - name: pulling XRd container
-        run: docker pull sbezverk/xrd-control-plane:25.2.1
-        continue-on-error: true
       - name: check for gobmp container
         run: docker images
-      - name: starts unicast v4 integration test on a single node kafka
-        run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka.yml up --detach
-      - name: check connection to kafka and bmp session with a router
-        id: session_1
-        run: ./build/monitor_container.sh gobmp
-        continue-on-error: true
-      - name: Add kafka host to /etc/hosts
+      - name: Add kafka host aliases to /etc/hosts
         run: |
-            sudo echo "127.0.0.1 kafka" | sudo tee -a /etc/hosts
-      - name: run validator for ipv4 unicast
-        id: validation_1
-        run: ./bin/validator --validate=true --kafka=127.0.0.1:9092 --msg-file=./testdata/validator/ipv4_unicast.msg
-        continue-on-error: true
-      - name: Check on failures
-        if: steps.session_1.outcome != 'success' || steps.validation_1.outcome != 'success'
-        run: |
-          docker ps -a
-          docker logs gobmp
-          docker logs xr-1
-          exit 1
-      - name: Collect container logs (single kafka)
-        if: always()
-        run: |
-          mkdir -p /tmp/logs/single-kafka
-          docker logs gobmp > /tmp/logs/single-kafka/gobmp.log 2>&1 || true
-          docker logs xr-1 > /tmp/logs/single-kafka/xr-1.log 2>&1 || true
-          docker logs kafka > /tmp/logs/single-kafka/kafka.log 2>&1 || true
-      - name: Upload single-kafka logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-single-kafka
-          path: /tmp/logs/single-kafka/
-      - name: cleanup unicast v4 integration test on a single node kafka
-        if: always()
-        run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka.yml down
-      - name: Add kafka host to /etc/hosts
-        run: |
-            sudo echo "127.0.0.1 kafka-1 kafka-2 kafka-3 kafka-4" | sudo tee -a /etc/hosts
-      - name: starts unicast v4 integration test on a multinode kafka
-        run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka.yml up --detach
-      - name: check connection to kafka and bmp session with a router
-        id: session_2
-        run: ./build/monitor_container.sh gobmp-multinode
-        continue-on-error: true
-      - name: run validator for ipv4 unicast
-        id: validation_2
-        run: ./bin/validator --validate=true --kafka=127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093,127.0.0.1:9094 --msg-file=./testdata/validator/ipv4_unicast.msg
-        continue-on-error: true
-      - name: Check on failures
-        if: steps.session_2.outcome != 'success' || steps.validation_2.outcome != 'success'
-        run: |
-          docker ps -a
-          docker logs gobmp-multinode
-          docker logs xr-1
-          exit 1
-      - name: Collect container logs (multinode kafka)
-        if: always()
-        run: |
-          mkdir -p /tmp/logs/multinode-kafka
-          docker logs gobmp-multinode > /tmp/logs/multinode-kafka/gobmp.log 2>&1 || true
-          docker logs xr-1 > /tmp/logs/multinode-kafka/xr-1.log 2>&1 || true
-      - name: Upload multinode-kafka logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-multinode-kafka
-          path: /tmp/logs/multinode-kafka/
-      - name: cleanup unicast v4 integration test on a multinode kafka
-        if: always()
-        run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka.yml down
+            echo "127.0.0.1 kafka kafka-1 kafka-2 kafka-3 kafka-4" | sudo tee -a /etc/hosts
       - name: pulling cEOS container
         run: docker pull sbezverk/ceos-lab-4.35.2f:cicd
         continue-on-error: true
@@ -408,6 +335,80 @@ jobs:
       - name: cleanup unicast v4 integration test on a single node kafka
         if: always()
         run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_frr.yaml down
+
+  # ==============================================================================
+  # Validator v2 Integration Tests (bgpinjector-driven)
+  # ==============================================================================
+  integration_tests_validator_v2:
+    needs: [tests]
+    strategy:
+        matrix:
+          os: [ubuntu-latest]
+          go-version: [1.25.x]
+    runs-on: ${{ matrix.os }}
+    env:
+      VALIDATOR_TESTBED_COMPOSE: ./cmd/validator_v2/testbed/test_bed_injector_multinode_kafka.yml
+      BGPINJECTOR_IMAGE: sbezverk/bgpinjector:v0.0.1-linux-amd64
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+      - name: setup host kernel parameters
+        run: ./build/set_kernel_params.sh
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: "**/go.sum"
+      - name: Build gobmp container
+        run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
+      - name: Build validator v2 binary
+        run: make validator-v2
+      - name: Pull XRd container
+        run: docker pull sbezverk/xrd-control-plane:26.2.1
+        continue-on-error: true
+      - name: Pull bgpinjector container
+        run: docker pull "$BGPINJECTOR_IMAGE"
+        continue-on-error: true
+      - name: Check local images
+        run: docker images
+      - name: Add Kafka broker names to /etc/hosts
+        run: |
+          echo "127.0.0.1 kafka-1 kafka-2 kafka-3 kafka-4" | sudo tee -a /etc/hosts
+      - name: Start validator v2 integration testbed
+        run: docker compose -f "$VALIDATOR_TESTBED_COMPOSE" up --detach
+      - name: Check gobmp Kafka and BMP sessions
+        run: ./build/monitor_container.sh gobmp-multinode xr-1
+      - name: Wait for bgpinjector BGP session
+        run: ./cmd/validator_v2/testcases/wait_for_bgp_established.sh
+      - name: Run validator v2 test cases
+        run: |
+          VALIDATOR_BIN="$PWD/bin/validator_v2" \
+          API_SRV=http://127.0.0.1:8080 \
+          KAFKA_SRV=127.0.0.1:9092 \
+          ./cmd/validator_v2/testcases/testcases_runner.sh
+      - name: Collect validator v2 integration logs
+        if: always()
+        run: |
+          mkdir -p /tmp/logs/validator-v2
+          docker ps -a > /tmp/logs/validator-v2/docker-ps.txt 2>&1 || true
+          docker compose -f "$VALIDATOR_TESTBED_COMPOSE" ps > /tmp/logs/validator-v2/compose-ps.txt 2>&1 || true
+          curl -s http://127.0.0.1:8080/v1/session > /tmp/logs/validator-v2/bgpinjector-session.json 2>&1 || true
+          for container in gobmp-multinode xr-1 bgpinjector zookeeper kafka-1 kafka-2 kafka-3 kafka-4; do
+            docker logs "$container" > "/tmp/logs/validator-v2/${container}.log" 2>&1 || true
+          done
+      - name: Upload validator v2 integration logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-validator-v2
+          path: /tmp/logs/validator-v2/
+      - name: Cleanup validator v2 integration testbed
+        if: always()
+        run: docker compose -f "$VALIDATOR_TESTBED_COMPOSE" down
 
   # ==============================================================================
   # RFC Compliance Validation (BGP-LS RFC 7752 & RFC 9085)
