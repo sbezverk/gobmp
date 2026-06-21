@@ -49,6 +49,11 @@ func TestValidator(t *testing.T) {
 			cfg:     &Config{ServerAddress: "127.0.0.1:9092", TopicRetentionTimeMs: "-1"},
 			wantErr: false,
 		},
+		{
+			name:    "nil config",
+			cfg:     nil,
+			wantErr: true,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -133,6 +138,14 @@ func (s *stubAdmin) Close() error {
 	return nil
 }
 
+type nilControllerAdmin struct {
+	sarama.ClusterAdmin
+}
+
+func (n *nilControllerAdmin) Controller() (*sarama.Broker, error) {
+	return nil, nil
+}
+
 // TestStop_NilClusterAdmin verifies Stop() does not panic when clusterAdmin is nil.
 func TestStop_NilClusterAdmin(t *testing.T) {
 	stopCh := make(chan struct{})
@@ -158,5 +171,19 @@ func TestStop_NonNilClusterAdmin(t *testing.T) {
 	}
 	if !sa.closed {
 		t.Error("Stop() did not call Close on clusterAdmin")
+	}
+}
+
+func TestEnsureTopic_NilClusterAdmin(t *testing.T) {
+	err := ensureTopic(nil, time.Millisecond, PeerTopic)
+	if err == nil {
+		t.Fatal("ensureTopic(nil) error = nil, want error")
+	}
+}
+
+func TestWaitForControllerBrokerConnection_NilController(t *testing.T) {
+	_, err := waitForControllerBrokerConnection(&nilControllerAdmin{}, nil, time.Millisecond)
+	if err == nil {
+		t.Fatal("waitForControllerBrokerConnection() error = nil, want error")
 	}
 }
