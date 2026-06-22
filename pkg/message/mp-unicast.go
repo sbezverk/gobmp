@@ -43,6 +43,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			RouterHash: p.speakerHash,
 			RouterIP:   p.speakerIP,
 			PeerHash:   ph.GetPeerHash(),
+			PeerIP:     ph.GetPeerAddrString(),
 			PeerASN:    ph.PeerAS,
 			Timestamp:  ph.GetPeerTimestamp(),
 			PeerType:   uint8(ph.PeerType),

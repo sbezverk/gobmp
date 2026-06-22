@@ -370,6 +370,9 @@ func TestBaseNLRI_EoR(t *testing.T) {
 	if !msgs[0].IsEOR {
 		t.Error("IsEOR = false, want true")
 	}
+	if msgs[0].PeerIP != ph.GetPeerAddrString() {
+		t.Errorf("PeerIP = %q, want %q", msgs[0].PeerIP, ph.GetPeerAddrString())
+	}
 }
 
 // TestMVPN_LocRIB_TableName verifies MVPN handler sets TableName for LocRIB peers.
@@ -474,6 +477,9 @@ func TestUnicast_EoR_RIBFlags(t *testing.T) {
 	}
 	if !r.IsIPv4 {
 		t.Error("IsIPv4 = false, want true for IPv4")
+	}
+	if r.PeerIP != ph.GetPeerAddrString() {
+		t.Errorf("PeerIP = %q, want %q", r.PeerIP, ph.GetPeerAddrString())
 	}
 	if !r.IsAdjRIBOut {
 		t.Error("IsAdjRIBOut = false, want true")
