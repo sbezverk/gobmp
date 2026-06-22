@@ -18,7 +18,7 @@ jobs:
     steps:
       # --- Setup ---
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0   # full history required by Codecov to resolve merge-base
       - name: Setup Environment
@@ -115,7 +115,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup Environment
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
@@ -351,7 +351,7 @@ jobs:
       BGPINJECTOR_IMAGE: sbezverk/bgpinjector:v0.0.1-linux-amd64
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: setup host kernel parameters
         run: ./build/set_kernel_params.sh
       - name: Setup Environment
@@ -422,7 +422,7 @@ jobs:
     if: github.event_name == 'pull_request' # Only run on PRs for now
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -474,7 +474,7 @@ jobs:
     if: github.event_name == 'pull_request' # Only run on PRs for now
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -523,7 +523,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -562,7 +562,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -612,7 +612,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -688,7 +688,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -727,7 +727,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -767,7 +767,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -806,7 +806,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -846,7 +846,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -885,7 +885,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -924,7 +924,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -973,7 +973,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
@@ -1012,7 +1012,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Go
         uses: actions/setup-go@v6
