@@ -19,7 +19,7 @@ func UnmarshalUnicastNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 		glog.Infof("MP Unicast NLRI Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
+		return &base.MPNLRI{NLRI: make([]base.Route, 0)}, nil
 	}
 	mpnlri := base.MPNLRI{}
 	r, err := base.UnmarshalRoutes(b, pathID)

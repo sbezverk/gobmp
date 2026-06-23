@@ -659,6 +659,79 @@ func TestProcessMPUpdate_UnicastBranches(t *testing.T) {
 	}
 }
 
+func TestProcessMPUpdate_MPUnreachEORTopics(t *testing.T) {
+	tests := []struct {
+		name          string
+		unreach       []byte
+		wantTopicType int
+		wantIsIPv4    bool
+		wantL3VPN     bool
+	}{
+		{"IPv4 Unicast", []byte{0x00, 0x01, 0x01}, bmp.UnicastPrefixV4Msg, true, false},
+		{"IPv4 Labeled Unicast", []byte{0x00, 0x01, 0x04}, bmp.UnicastPrefixV4Msg, true, false},
+		{"IPv6 Unicast", []byte{0x00, 0x02, 0x01}, bmp.UnicastPrefixV6Msg, false, false},
+		{"VPNv4", []byte{0x00, 0x01, 0x80}, bmp.L3VPNV4Msg, true, true},
+		{"VPNv6", []byte{0x00, 0x02, 0x80}, bmp.L3VPNV6Msg, false, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := &recordingPublisher{}
+			p := NewProducer(rec, true).(*producer)
+			p.speakerIP = "10.0.0.1"
+			p.speakerHash = "abc123"
+
+			ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+			update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+			nlri, err := bgp.UnmarshalMPUnReachNLRI(tt.unreach, map[int]bool{})
+			if err != nil {
+				t.Fatalf("UnmarshalMPUnReachNLRI: %v", err)
+			}
+
+			p.processMPUpdate(nlri, 1, ph, update)
+
+			if len(rec.msgs) != 1 {
+				t.Fatalf("published %d messages, want 1", len(rec.msgs))
+			}
+			if rec.msgs[0].msgType != tt.wantTopicType {
+				t.Errorf("topic type = %d, want %d", rec.msgs[0].msgType, tt.wantTopicType)
+			}
+
+			if tt.wantL3VPN {
+				var got L3VPNPrefix
+				if err := json.Unmarshal(rec.msgs[0].payload, &got); err != nil {
+					t.Fatalf("Unmarshal published L3VPN message: %v", err)
+				}
+				if !got.IsEOR {
+					t.Error("IsEOR = false, want true")
+				}
+				if got.IsIPv4 != tt.wantIsIPv4 {
+					t.Errorf("IsIPv4 = %v, want %v", got.IsIPv4, tt.wantIsIPv4)
+				}
+				if got.PeerIP != ph.GetPeerAddrString() {
+					t.Errorf("PeerIP = %q, want %q", got.PeerIP, ph.GetPeerAddrString())
+				}
+				return
+			}
+
+			var got UnicastPrefix
+			if err := json.Unmarshal(rec.msgs[0].payload, &got); err != nil {
+				t.Fatalf("Unmarshal published unicast message: %v", err)
+			}
+			if !got.IsEOR {
+				t.Error("IsEOR = false, want true")
+			}
+			if got.IsIPv4 != tt.wantIsIPv4 {
+				t.Errorf("IsIPv4 = %v, want %v", got.IsIPv4, tt.wantIsIPv4)
+			}
+			if got.PeerIP != ph.GetPeerAddrString() {
+				t.Errorf("PeerIP = %q, want %q", got.PeerIP, ph.GetPeerAddrString())
+			}
+		})
+	}
+}
+
 // TestProcessMPUpdate_UnknownAFISAFI verifies default case logs warning for unknown types.
 func TestProcessMPUpdate_UnknownAFISAFI(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
