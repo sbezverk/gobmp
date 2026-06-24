@@ -17,6 +17,14 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 		pathID bool
 	}{
 		{
+			name:  "empty input returns empty NLRI",
+			input: []byte{},
+			expect: &base.MPNLRI{
+				NLRI: []base.Route{},
+			},
+			pathID: false,
+		},
+		{
 			name:  "mp unicast nlri 1",
 			input: []byte{0x18, 0x0a, 0x00, 0x82},
 			expect: &base.MPNLRI{

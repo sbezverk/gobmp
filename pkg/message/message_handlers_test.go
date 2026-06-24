@@ -370,6 +370,9 @@ func TestBaseNLRI_EoR(t *testing.T) {
 	if !msgs[0].IsEOR {
 		t.Error("IsEOR = false, want true")
 	}
+	if msgs[0].PeerIP != ph.GetPeerAddrString() {
+		t.Errorf("PeerIP = %q, want %q", msgs[0].PeerIP, ph.GetPeerAddrString())
+	}
 }
 
 // TestMVPN_LocRIB_TableName verifies MVPN handler sets TableName for LocRIB peers.
@@ -474,6 +477,9 @@ func TestUnicast_EoR_RIBFlags(t *testing.T) {
 	}
 	if !r.IsIPv4 {
 		t.Error("IsIPv4 = false, want true for IPv4")
+	}
+	if r.PeerIP != ph.GetPeerAddrString() {
+		t.Errorf("PeerIP = %q, want %q", r.PeerIP, ph.GetPeerAddrString())
 	}
 	if !r.IsAdjRIBOut {
 		t.Error("IsAdjRIBOut = false, want true")
@@ -648,6 +654,79 @@ func TestProcessMPUpdate_UnicastBranches(t *testing.T) {
 			hasLabels := len(got.Labels) > 0
 			if hasLabels != tt.wantLabeled {
 				t.Errorf("labels present = %v (labels=%v), want %v", hasLabels, got.Labels, tt.wantLabeled)
+			}
+		})
+	}
+}
+
+func TestProcessMPUpdate_MPUnreachEORTopics(t *testing.T) {
+	tests := []struct {
+		name          string
+		unreach       []byte
+		wantTopicType int
+		wantIsIPv4    bool
+		wantL3VPN     bool
+	}{
+		{"IPv4 Unicast", []byte{0x00, 0x01, 0x01}, bmp.UnicastPrefixV4Msg, true, false},
+		{"IPv4 Labeled Unicast", []byte{0x00, 0x01, 0x04}, bmp.UnicastPrefixV4Msg, true, false},
+		{"IPv6 Unicast", []byte{0x00, 0x02, 0x01}, bmp.UnicastPrefixV6Msg, false, false},
+		{"VPNv4", []byte{0x00, 0x01, 0x80}, bmp.L3VPNV4Msg, true, true},
+		{"VPNv6", []byte{0x00, 0x02, 0x80}, bmp.L3VPNV6Msg, false, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := &recordingPublisher{}
+			p := NewProducer(rec, true).(*producer)
+			p.speakerIP = "10.0.0.1"
+			p.speakerHash = "abc123"
+
+			ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+			update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+			nlri, err := bgp.UnmarshalMPUnReachNLRI(tt.unreach, map[int]bool{})
+			if err != nil {
+				t.Fatalf("UnmarshalMPUnReachNLRI: %v", err)
+			}
+
+			p.processMPUpdate(nlri, 1, ph, update)
+
+			if len(rec.msgs) != 1 {
+				t.Fatalf("published %d messages, want 1", len(rec.msgs))
+			}
+			if rec.msgs[0].msgType != tt.wantTopicType {
+				t.Errorf("topic type = %d, want %d", rec.msgs[0].msgType, tt.wantTopicType)
+			}
+
+			if tt.wantL3VPN {
+				var got L3VPNPrefix
+				if err := json.Unmarshal(rec.msgs[0].payload, &got); err != nil {
+					t.Fatalf("Unmarshal published L3VPN message: %v", err)
+				}
+				if !got.IsEOR {
+					t.Error("IsEOR = false, want true")
+				}
+				if got.IsIPv4 != tt.wantIsIPv4 {
+					t.Errorf("IsIPv4 = %v, want %v", got.IsIPv4, tt.wantIsIPv4)
+				}
+				if got.PeerIP != ph.GetPeerAddrString() {
+					t.Errorf("PeerIP = %q, want %q", got.PeerIP, ph.GetPeerAddrString())
+				}
+				return
+			}
+
+			var got UnicastPrefix
+			if err := json.Unmarshal(rec.msgs[0].payload, &got); err != nil {
+				t.Fatalf("Unmarshal published unicast message: %v", err)
+			}
+			if !got.IsEOR {
+				t.Error("IsEOR = false, want true")
+			}
+			if got.IsIPv4 != tt.wantIsIPv4 {
+				t.Errorf("IsIPv4 = %v, want %v", got.IsIPv4, tt.wantIsIPv4)
+			}
+			if got.PeerIP != ph.GetPeerAddrString() {
+				t.Errorf("PeerIP = %q, want %q", got.PeerIP, ph.GetPeerAddrString())
 			}
 		})
 	}
