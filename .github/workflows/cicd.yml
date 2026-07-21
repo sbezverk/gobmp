@@ -26,7 +26,7 @@ jobs:
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.sum"
@@ -121,7 +121,7 @@ jobs:
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.sum"
@@ -359,7 +359,7 @@ jobs:
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.sum"
@@ -425,7 +425,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -477,7 +477,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -526,7 +526,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -565,7 +565,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -615,7 +615,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -691,7 +691,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -730,7 +730,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -770,7 +770,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -809,7 +809,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -849,7 +849,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -888,7 +888,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -927,7 +927,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -976,7 +976,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
@@ -1015,7 +1015,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
 
