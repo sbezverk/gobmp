@@ -453,6 +453,140 @@ func TestUnmarshalBGPBaseAttributesASPathSegments(t *testing.T) {
 	}
 }
 
+func TestBaseAttributesEqual_ASPathSegmentSemantics(t *testing.T) {
+	t.Run("AS_SET and AS_CONFED_SET are unordered", func(t *testing.T) {
+		a := &BaseAttributes{
+			ASPathSegments: []ASPathSegment{
+				{Type: 1, ASNs: []uint32{65001, 65002, 65003}},
+				{Type: 4, ASNs: []uint32{65101, 65102}},
+			},
+		}
+		b := &BaseAttributes{
+			ASPathSegments: []ASPathSegment{
+				{Type: 1, ASNs: []uint32{65003, 65001, 65002}},
+				{Type: 4, ASNs: []uint32{65102, 65101}},
+			},
+		}
+		equal, diffs := a.Equal(b)
+		if !equal {
+			t.Fatalf("expected equal for reordered set segments, diffs=%v", diffs)
+		}
+	})
+
+	t.Run("AS_SEQUENCE and AS_CONFED_SEQUENCE remain ordered", func(t *testing.T) {
+		a := &BaseAttributes{
+			ASPathSegments: []ASPathSegment{
+				{Type: 2, ASNs: []uint32{64512, 64513}},
+				{Type: 3, ASNs: []uint32{64520, 64521}},
+			},
+		}
+		b := &BaseAttributes{
+			ASPathSegments: []ASPathSegment{
+				{Type: 2, ASNs: []uint32{64513, 64512}},
+				{Type: 3, ASNs: []uint32{64521, 64520}},
+			},
+		}
+		equal, _ := a.Equal(b)
+		if equal {
+			t.Fatal("expected non-equal for reordered sequence segments")
+		}
+	})
+
+	t.Run("AS_SET different members with same length are not equal", func(t *testing.T) {
+		a := &BaseAttributes{ASPathSegments: []ASPathSegment{{Type: 1, ASNs: []uint32{65001, 65002}}}}
+		b := &BaseAttributes{ASPathSegments: []ASPathSegment{{Type: 1, ASNs: []uint32{65001, 65099}}}}
+		equal, _ := a.Equal(b)
+		if equal {
+			t.Fatal("expected non-equal for different AS_SET members")
+		}
+	})
+}
+
+func TestUnmarshalASPathSegments_MalformedInputs(t *testing.T) {
+	t.Run("invalid segment type with explicit AS4 hint", func(t *testing.T) {
+		hint := true
+		_, err := unmarshalASPathSegments([]byte{0x05, 0x00}, &hint)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "invalid segment type") {
+			t.Fatalf("expected invalid segment type error, got %v", err)
+		}
+	})
+
+	t.Run("truncated missing segment length with explicit AS2 hint", func(t *testing.T) {
+		hint := false
+		_, err := unmarshalASPathSegments([]byte{0x02}, &hint)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "cannot read segment length") {
+			t.Fatalf("expected segment length truncation error, got %v", err)
+		}
+	})
+
+	t.Run("truncated segment body with explicit AS4 hint", func(t *testing.T) {
+		hint := true
+		_, err := unmarshalASPathSegments([]byte{0x02, 0x02, 0x00, 0x00, 0x00, 0x01}, &hint)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "claims 2 ASes (8 bytes) but only 4 bytes remain") {
+			t.Fatalf("expected segment body truncation error, got %v", err)
+		}
+	})
+
+	t.Run("zero-length AS_SET segment parses without panic", func(t *testing.T) {
+		hint := false
+		segments, err := unmarshalASPathSegments([]byte{0x01, 0x00}, &hint)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := []ASPathSegment{{Type: 1, ASNs: []uint32{}}}
+		if !reflect.DeepEqual(segments, want) {
+			t.Fatalf("segments=%+v, want=%+v", segments, want)
+		}
+	})
+}
+
+func TestUnmarshalASPathSegments_MultiSegmentMalformed(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []byte
+		hint    bool
+		wantErr string
+	}{
+		{
+			name: "invalid segment type after one valid AS2 segment",
+			// Segment #1: AS_SEQUENCE, one AS2 value (0x0001)
+			// Segment #2: invalid type 0x05
+			input:   []byte{0x02, 0x01, 0x00, 0x01, 0x05, 0x00},
+			hint:    false,
+			wantErr: "invalid segment type 0x05 at offset 4",
+		},
+		{
+			name: "second segment truncated after one valid AS2 segment",
+			// Segment #1: AS_SEQUENCE, one AS2 value (0x0001)
+			// Segment #2: AS_SET claims two AS2 values, but only one follows
+			input:   []byte{0x02, 0x01, 0x00, 0x01, 0x01, 0x02, 0x00, 0x02},
+			hint:    false,
+			wantErr: "claims 2 ASes (4 bytes) but only 2 bytes remain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := unmarshalASPathSegments(tt.input, &tt.hint)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
 // TestBaseAttributes_TunnelEncapAttr_JSON locks the JSON output contract for
 // the Tunnel Encapsulation Attribute (path attribute 23). The field is []byte
 // so encoding/json renders it as a base64 string; assert both that the field
