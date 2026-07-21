@@ -17,10 +17,14 @@ func TestUnmarshaBaseAttributes(t *testing.T) {
 			name:  "panic 1",
 			input: []byte{0x40, 0x01, 0x01, 0x00, 0x40, 0x02, 0x20, 0x02, 0x06, 0x00, 0x00, 0x88, 0x38, 0x00, 0x00, 0x9a, 0x6d, 0x00, 0x00, 0x19, 0x35, 0x00, 0x00, 0x0a, 0x7f, 0x00, 0x00, 0x65, 0x20, 0x00, 0x00, 0x53, 0x4e, 0x01, 0x01, 0x00, 0x00, 0x12, 0xc9, 0x40, 0x03, 0x04, 0xc2, 0x1c, 0x62, 0x25, 0x80, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x07, 0x08, 0x00, 0x00, 0x65, 0x20, 0xc0, 0x78, 0x51, 0x88, 0xc0, 0x08, 0x18, 0x00, 0x00, 0x9a, 0x6d, 0x19, 0x35, 0x00, 0x56, 0x19, 0x35, 0x0b, 0xb8, 0x19, 0x35, 0x0c, 0x1c, 0x19, 0x35, 0x0c, 0x1e, 0x9a, 0x6d, 0xc2, 0x02, 0xc0, 0x20, 0x30, 0x00, 0x00, 0x88, 0x38, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0xd3, 0x00, 0x00, 0x88, 0x38, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x88, 0x38, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x31, 0x00, 0x00, 0x88, 0x38, 0x00, 0x00, 0x00, 0x7a, 0x00, 0x00, 0x00, 0x01},
 			expect: &BaseAttributes{
-				BaseAttrHash:    "fd52d710c305d5c5bd62a4d86e97c5de",
-				Origin:          "igp",
-				ASPath:          []uint32{34872, 39533, 6453, 2687, 25888, 21326, 4809},
-				ASPathCount:     7,
+				BaseAttrHash: "fd52d710c305d5c5bd62a4d86e97c5de",
+				Origin:       "igp",
+				ASPath:       []uint32{34872, 39533, 6453, 2687, 25888, 21326, 4809},
+				ASPathCount:  7,
+				ASPathSegments: []ASPathSegment{
+					{Type: 2, ASNs: []uint32{34872, 39533, 6453, 2687, 25888, 21326}},
+					{Type: 1, ASNs: []uint32{4809}},
+				},
 				Nexthop:         "194.28.98.37",
 				Aggregator:      []byte{0, 0, 101, 32, 192, 120, 81, 136},
 				CommunityList:   []string{"0:39533", "6453:86", "6453:3000", "6453:3100", "6453:3102", "39533:49666"},
@@ -157,10 +161,11 @@ func TestUnmarshalASPath(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		r, err := unmarshalAttrASPath(tt.input, nil)
+		segments, err := unmarshalASPathSegments(tt.input, nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+		r := buildASPathFromSegments(segments)
 		if !reflect.DeepEqual(tt.asPath, r) {
 			t.Fatalf("expected %+v and result %+v as path do not match", tt.asPath, r)
 		}
@@ -215,11 +220,12 @@ func TestUnmarshalAttrASPathAs4Hint(t *testing.T) {
 
 	t.Run("as4=true hint parses 4-byte ASNs correctly", func(t *testing.T) {
 		hint := true
-		got, err := unmarshalAttrASPath(as4bytes, &hint)
+		segments, err := unmarshalASPathSegments(as4bytes, &hint)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		want := []uint32{1, 2}
+		got := buildASPathFromSegments(segments)
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
 		}
@@ -227,22 +233,24 @@ func TestUnmarshalAttrASPathAs4Hint(t *testing.T) {
 
 	t.Run("as4=false hint parses 2-byte ASNs correctly", func(t *testing.T) {
 		hint := false
-		got, err := unmarshalAttrASPath(as2bytes, &hint)
+		segments, err := unmarshalASPathSegments(as2bytes, &hint)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		want := []uint32{1, 2}
+		got := buildASPathFromSegments(segments)
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
 		}
 	})
 
 	t.Run("nil hint falls back to heuristic for 4-byte input", func(t *testing.T) {
-		got, err := unmarshalAttrASPath(as4bytes, nil)
+		segments, err := unmarshalASPathSegments(as4bytes, nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		want := []uint32{1, 2}
+		got := buildASPathFromSegments(segments)
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
 		}
@@ -257,11 +265,12 @@ func TestUnmarshalAttrASPathAs4Hint(t *testing.T) {
 
 	t.Run("as4=true on ambiguous data yields single 4-byte ASN", func(t *testing.T) {
 		hint := true
-		got, err := unmarshalAttrASPath(ambiguous, &hint)
+		segments, err := unmarshalASPathSegments(ambiguous, &hint)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		want := []uint32{0xAABB0200}
+		got := buildASPathFromSegments(segments)
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
 		}
@@ -269,11 +278,12 @@ func TestUnmarshalAttrASPathAs4Hint(t *testing.T) {
 
 	t.Run("as4=false on ambiguous data yields single 2-byte ASN", func(t *testing.T) {
 		hint := false
-		got, err := unmarshalAttrASPath(ambiguous, &hint)
+		segments, err := unmarshalASPathSegments(ambiguous, &hint)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		want := []uint32{0xAABB}
+		got := buildASPathFromSegments(segments)
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
 		}

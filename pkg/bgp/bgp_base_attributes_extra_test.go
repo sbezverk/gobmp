@@ -3,6 +3,7 @@ package bgp
 import (
 	"encoding/base64"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -382,7 +383,7 @@ func TestUnmarshalAttrASPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := unmarshalAttrASPath(tt.input, nil)
+			segments, err := unmarshalASPathSegments(tt.input, nil)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
@@ -395,6 +396,7 @@ func TestUnmarshalAttrASPath(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+			got := buildASPathFromSegments(segments)
 			if len(got) != len(tt.wantAS) {
 				t.Fatalf("got %v (len %d), want %v (len %d)", got, len(got), tt.wantAS, len(tt.wantAS))
 			}
@@ -404,6 +406,50 @@ func TestUnmarshalAttrASPath(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestUnmarshalBGPBaseAttributesASPathSegments(t *testing.T) {
+	raw := []byte{
+		// ORIGIN: IGP.
+		0x40, 0x01, 0x01, 0x00,
+		// AS_PATH with four 4-byte ASN segments.
+		0x40, 0x02, 0x24,
+		0x02, 0x02, 0x00, 0x00, 0xFD, 0xE9, 0x00, 0x00, 0xFD, 0xEA, // AS_SEQUENCE [65001, 65002]
+		0x01, 0x02, 0x00, 0x00, 0xFD, 0xEB, 0x00, 0x00, 0xFD, 0xEC, // AS_SET [65003, 65004]
+		0x03, 0x01, 0x00, 0x00, 0xFD, 0xED, // AS_CONFED_SEQUENCE [65005]
+		0x04, 0x02, 0x00, 0x00, 0xFD, 0xEE, 0x00, 0x00, 0xFD, 0xEF, // AS_CONFED_SET [65006, 65007]
+	}
+
+	got, err := UnmarshalBGPBaseAttributesWithAS4Hint(raw, true)
+	if err != nil {
+		t.Fatalf("UnmarshalBGPBaseAttributesWithAS4Hint() unexpected error: %v", err)
+	}
+
+	wantSegments := []ASPathSegment{
+		{Type: 2, ASNs: []uint32{65001, 65002}},
+		{Type: 1, ASNs: []uint32{65003, 65004}},
+		{Type: 3, ASNs: []uint32{65005}},
+		{Type: 4, ASNs: []uint32{65006, 65007}},
+	}
+	if !reflect.DeepEqual(got.ASPathSegments, wantSegments) {
+		t.Fatalf("ASPathSegments = %+v, want %+v", got.ASPathSegments, wantSegments)
+	}
+
+	wantPath := []uint32{65001, 65002, 65003, 65004, 65005, 65006, 65007}
+	if !reflect.DeepEqual(got.ASPath, wantPath) {
+		t.Fatalf("ASPath = %v, want %v", got.ASPath, wantPath)
+	}
+	if got.ASPathCount != int32(len(wantPath)) {
+		t.Fatalf("ASPathCount = %d, want %d", got.ASPathCount, len(wantPath))
+	}
+
+	out, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("json.Marshal() unexpected error: %v", err)
+	}
+	if !strings.Contains(string(out), `"as_path_segments"`) {
+		t.Fatalf("JSON output %s does not include as_path_segments", out)
 	}
 }
 

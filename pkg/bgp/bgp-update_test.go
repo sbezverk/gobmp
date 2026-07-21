@@ -72,7 +72,13 @@ func TestUnmarshalBGPUpdate(t *testing.T) {
 					BaseAttrHash: "8681ce86ce93dc0060f7582ae21cc6a1",
 					ASPath:       []uint32{65001, 65003},
 					ASPathCount:  2,
-					Origin:       "incomplete",
+					ASPathSegments: []ASPathSegment{
+						{
+							Type: 2,
+							ASNs: []uint32{65001, 65003},
+						},
+					},
+					Origin: "incomplete",
 				},
 				PathAttributes: []PathAttribute{
 					{
