@@ -97,40 +97,42 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "as_path_count mismatch: "+strconv.Itoa(int(ba.ASPathCount))+" and "+strconv.Itoa(int(oba.ASPathCount)))
 	}
-	for i, seg := range ba.ASPathSegments {
-		if i >= len(oba.ASPathSegments) {
+	if len(ba.ASPathSegments) != 0 {
+		if len(ba.ASPathSegments) < len(oba.ASPathSegments) {
 			equal = false
-			diffs = append(diffs, "as_path_segments mismatch: additional segment in first BaseAttributes")
-			break
+			diffs = append(diffs, "as_path_segments mismatch: additional segment in second BaseAttributes")
 		}
-		oseg := oba.ASPathSegments[i]
-		if seg.Type != oseg.Type {
-			equal = false
-			diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] type mismatch: %d and %d", i, seg.Type, oseg.Type))
-		}
-		if len(seg.ASNs) != len(oseg.ASNs) {
-			equal = false
-			diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] length mismatch: %d and %d", i, len(seg.ASNs), len(oseg.ASNs)))
-		}
-		switch seg.Type {
-		case 1, 4: // AS_SET or AS_CONFED_SET
-			for _, asn := range seg.ASNs {
-				if !slices.Contains(oseg.ASNs, asn) {
+		for i, seg := range ba.ASPathSegments {
+			if i >= len(oba.ASPathSegments) {
+				equal = false
+				diffs = append(diffs, "as_path_segments mismatch: additional segment in first BaseAttributes")
+				break
+			}
+			oseg := oba.ASPathSegments[i]
+			if seg.Type != oseg.Type {
+				equal = false
+				diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] type mismatch: %d and %d", i, seg.Type, oseg.Type))
+			}
+			if len(seg.ASNs) != len(oseg.ASNs) {
+				equal = false
+				diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] length mismatch: %d and %d", i, len(seg.ASNs), len(oseg.ASNs)))
+			}
+			switch seg.Type {
+			case 1, 4: // AS_SET or AS_CONFED_SET
+				for _, asn := range seg.ASNs {
+					if !slices.Contains(oseg.ASNs, asn) {
+						equal = false
+						diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] ASNs mismatch: %v and %v", i, seg.ASNs, oseg.ASNs))
+						break
+					}
+				}
+			case 2, 3: // AS_SEQUENCE or AS_CONFED_SEQUENCE
+				if !reflect.DeepEqual(seg.ASNs, oseg.ASNs) {
 					equal = false
 					diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] ASNs mismatch: %v and %v", i, seg.ASNs, oseg.ASNs))
-					break
 				}
 			}
-		case 2, 3: // AS_SEQUENCE or AS_CONFED_SEQUENCE
-			if !reflect.DeepEqual(seg.ASNs, oseg.ASNs) {
-				equal = false
-				diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] ASNs mismatch: %v and %v", i, seg.ASNs, oseg.ASNs))
-			}
 		}
-	}
-	if len(ba.ASPathSegments) < len(oba.ASPathSegments) {
-		equal = false
-		diffs = append(diffs, "as_path_segments mismatch: additional segment in second BaseAttributes")
 	}
 	if ba.Nexthop != oba.Nexthop {
 		equal = false
