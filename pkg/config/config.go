@@ -67,8 +67,11 @@ type Config struct {
 	SplitAF         *bool        `yaml:"split_af"`
 	BmpListenPort   int          `yaml:"bmp_listen_port"`
 	PerformancePort int          `yaml:"performance_port"` // > 0 enables pprof collection
-	ActiveMode      bool         `yaml:"active_mode"`
-	SpeakersList    []string     `yaml:"speakers_list"`
+	// MaxPassiveConnections caps concurrent passive-mode BMP TCP sessions (0 = unlimited).
+	// YAML key is max_passive_connections (not max_connections). Ignored in active_mode.
+	MaxPassiveConnections int      `yaml:"max_passive_connections"`
+	ActiveMode            bool     `yaml:"active_mode"`
+	SpeakersList          []string `yaml:"speakers_list"`
 }
 
 func LoadConfig(path string) (*Config, error) {
