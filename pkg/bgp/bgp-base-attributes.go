@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -107,9 +108,24 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 			equal = false
 			diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] type mismatch: %d and %d", i, seg.Type, oseg.Type))
 		}
-		if !reflect.DeepEqual(seg.ASNs, oseg.ASNs) {
+		if len(seg.ASNs) != len(oseg.ASNs) {
 			equal = false
-			diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] ASNs mismatch: %v and %v", i, seg.ASNs, oseg.ASNs))
+			diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] length mismatch: %d and %d", i, len(seg.ASNs), len(oseg.ASNs)))
+		}
+		switch seg.Type {
+		case 1, 4: // AS_SET or AS_CONFED_SET
+			for _, asn := range seg.ASNs {
+				if !slices.Contains(oseg.ASNs, asn) {
+					equal = false
+					diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] ASNs mismatch: %v and %v", i, seg.ASNs, oseg.ASNs))
+					break
+				}
+			}
+		case 2, 3: // AS_SEQUENCE or AS_CONFED_SEQUENCE
+			if !reflect.DeepEqual(seg.ASNs, oseg.ASNs) {
+				equal = false
+				diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] ASNs mismatch: %v and %v", i, seg.ASNs, oseg.ASNs))
+			}
 		}
 	}
 	if len(ba.ASPathSegments) < len(oba.ASPathSegments) {
