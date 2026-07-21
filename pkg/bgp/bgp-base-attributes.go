@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -18,20 +19,29 @@ import (
 	"github.com/sbezverk/tools/sort"
 )
 
+// ASPathSegment represents a single segment of an AS_PATH attribute, which can be one of four types.
+// Preserving the segment structure allows for more detailed analysis of the AS_PATH, including the ability to distinguish between AS_SET and AS_SEQUENCE segments, as well as handling of confederation segments.
+// Used in ASPA validation logic.
+type ASPathSegment struct {
+	Type uint8    `json:"type"` // 1 AS_SET, 2 AS_SEQUENCE, 3 AS_CONFED_SEQUENCE, 4 AS_CONFED_SET
+	ASNs []uint32 `json:"asns"`
+}
+
 // BaseAttributes defines a structure holding BGP's basic, non nlri based attributes,
 // codes for each can be found:
 // https://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml#bgp-parameters-2
 type BaseAttributes struct {
-	BaseAttrHash  string   `json:"base_attr_hash,omitempty"`
-	Origin        string   `json:"origin,omitempty"`
-	ASPath        []uint32 `json:"as_path,omitempty"`
-	ASPathCount   int32    `json:"as_path_count,omitempty"`
-	Nexthop       string   `json:"nexthop,omitempty"`
-	MED           uint32   `json:"med,omitempty"`
-	LocalPref     uint32   `json:"local_pref,omitempty"`
-	IsAtomicAgg   bool     `json:"is_atomic_agg"`
-	Aggregator    []byte   `json:"aggregator,omitempty"`
-	CommunityList []string `json:"community_list,omitempty"`
+	BaseAttrHash   string          `json:"base_attr_hash,omitempty"`
+	Origin         string          `json:"origin,omitempty"`
+	ASPath         []uint32        `json:"as_path,omitempty"`
+	ASPathCount    int32           `json:"as_path_count,omitempty"`
+	ASPathSegments []ASPathSegment `json:"as_path_segments,omitempty"`
+	Nexthop        string          `json:"nexthop,omitempty"`
+	MED            uint32          `json:"med,omitempty"`
+	LocalPref      uint32          `json:"local_pref,omitempty"`
+	IsAtomicAgg    bool            `json:"is_atomic_agg"`
+	Aggregator     []byte          `json:"aggregator,omitempty"`
+	CommunityList  []string        `json:"community_list,omitempty"`
 	// WellKnownCommunityList holds IANA symbolic names for any well-known
 	// communities present in CommunityList (RFC 1997 and related).
 	WellKnownCommunityList []string         `json:"well_known_community_list,omitempty"`
@@ -86,6 +96,43 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if ba.ASPathCount != oba.ASPathCount {
 		equal = false
 		diffs = append(diffs, "as_path_count mismatch: "+strconv.Itoa(int(ba.ASPathCount))+" and "+strconv.Itoa(int(oba.ASPathCount)))
+	}
+	if len(ba.ASPathSegments) != 0 {
+		if len(ba.ASPathSegments) < len(oba.ASPathSegments) {
+			equal = false
+			diffs = append(diffs, "as_path_segments mismatch: additional segment in second BaseAttributes")
+		}
+		for i, seg := range ba.ASPathSegments {
+			if i >= len(oba.ASPathSegments) {
+				equal = false
+				diffs = append(diffs, "as_path_segments mismatch: additional segment in first BaseAttributes")
+				break
+			}
+			oseg := oba.ASPathSegments[i]
+			if seg.Type != oseg.Type {
+				equal = false
+				diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] type mismatch: %d and %d", i, seg.Type, oseg.Type))
+			}
+			if len(seg.ASNs) != len(oseg.ASNs) {
+				equal = false
+				diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] length mismatch: %d and %d", i, len(seg.ASNs), len(oseg.ASNs)))
+			}
+			switch seg.Type {
+			case 1, 4: // AS_SET or AS_CONFED_SET
+				for _, asn := range seg.ASNs {
+					if !slices.Contains(oseg.ASNs, asn) {
+						equal = false
+						diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] ASNs mismatch: %v and %v", i, seg.ASNs, oseg.ASNs))
+						break
+					}
+				}
+			case 2, 3: // AS_SEQUENCE or AS_CONFED_SEQUENCE
+				if !reflect.DeepEqual(seg.ASNs, oseg.ASNs) {
+					equal = false
+					diffs = append(diffs, fmt.Sprintf("as_path_segments[%d] ASNs mismatch: %v and %v", i, seg.ASNs, oseg.ASNs))
+				}
+			}
+		}
 	}
 	if ba.Nexthop != oba.Nexthop {
 		equal = false
@@ -199,10 +246,13 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			baseAttr.Origin = unmarshalAttrOrigin(b)
 		case 2:
 			var err error
-			baseAttr.ASPath, err = unmarshalAttrASPath(b, as4hint)
+			var segments []ASPathSegment
+			segments, err = unmarshalASPathSegments(b, as4hint)
 			if err != nil {
 				return nil, err
 			}
+			baseAttr.ASPathSegments = segments
+			baseAttr.ASPath = buildASPathFromSegments(segments)
 			baseAttr.ASPathCount = int32(len(baseAttr.ASPath))
 		case 3:
 			baseAttr.Nexthop = unmarshalAttrNextHop(b)
@@ -375,21 +425,24 @@ func unmarshalAttrOrigin(b []byte) string {
 	}
 }
 
-// unmarshalAttrASPath returns a slice with a list of ASes.
-// as4hint, when non-nil, overrides the heuristic: true means 4-byte ASNs, false means 2-byte.
-// Per RFC 7854 §4.2 the BMP Per-Peer A flag is authoritative for the encoding used.
-func unmarshalAttrASPath(b []byte, as4hint *bool) ([]uint32, error) {
-	if len(b) == 0 {
-		return []uint32{}, nil
+func buildASPathFromSegments(segments []ASPathSegment) []uint32 {
+	path := make([]uint32, 0)
+	for _, seg := range segments {
+		path = append(path, seg.ASNs...)
 	}
-	path := make([]uint32, 0, len(b)/2)
+	return path
+}
+
+// unmarshalASPAthSegments returns a slice of ASPathSegment structs, preserving the segment structure of the AS_PATH attribute.
+func unmarshalASPathSegments(b []byte, as4hint *bool) ([]ASPathSegment, error) {
+	if len(b) == 0 {
+		return []ASPathSegment{}, nil
+	}
+	segments := make([]ASPathSegment, 0)
 	var as4 bool
 	if as4hint != nil {
 		as4 = *as4hint
 	} else {
-		// Detect whether 2-byte or 4-byte ASNs are used. isASPath4 walks the whole
-		// buffer; the loop below re-checks segment type and per-segment bounds so
-		// the hinted path is validated identically.
 		var err error
 		as4, err = isASPath4(b)
 		if err != nil {
@@ -401,36 +454,37 @@ func unmarshalAttrASPath(b []byte, as4hint *bool) ([]uint32, error) {
 		asSize = 4
 	}
 	for p := 0; p < len(b); {
-		// Segment type byte — must be one of 0x01..0x04 per RFC 4271 §4.3 / RFC 5065.
-		// Loop condition guarantees p < len(b), so the byte is always readable.
 		segType := b[p]
 		if segType < 0x01 || segType > 0x04 {
 			return nil, fmt.Errorf("AS_PATH attribute invalid segment type 0x%02x at offset %d", segType, p)
 		}
-		p++ // skip segment type
-		// Segment length (number of ASNs in this segment)
+		p++
 		if p+1 > len(b) {
 			return nil, fmt.Errorf("AS_PATH attribute truncated: cannot read segment length at offset %d", p)
 		}
 		l := int(b[p])
 		p++
-		// Validate that all ASN values for this segment are present before reading any
 		if p+l*asSize > len(b) {
 			return nil, fmt.Errorf("AS_PATH attribute truncated: segment at offset %d claims %d ASes (%d bytes) but only %d bytes remain",
 				p, l, l*asSize, len(b)-p)
 		}
+		asns := make([]uint32, 0, l)
 		for n := 0; n < l; n++ {
 			if as4 {
-				path = append(path, binary.BigEndian.Uint32(b[p:p+4]))
+				asns = append(asns, binary.BigEndian.Uint32(b[p:p+4]))
 				p += 4
 			} else {
-				path = append(path, uint32(binary.BigEndian.Uint16(b[p:p+2])))
+				asns = append(asns, uint32(binary.BigEndian.Uint16(b[p:p+2])))
 				p += 2
 			}
 		}
+		segments = append(segments, ASPathSegment{
+			Type: segType,
+			ASNs: asns,
+		})
 	}
 
-	return path, nil
+	return segments, nil
 }
 
 func isASPath4(b []byte) (bool, error) {
