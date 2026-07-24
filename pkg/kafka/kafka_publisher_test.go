@@ -101,6 +101,41 @@ func TestNewKafkaPublisher_WithTopicCreation(t *testing.T) {
 	}
 }
 
+// TestNewKafkaPublisher_WithTopicCreation_Success exercises the default
+// (SkipTopicCreation=false) happy path: ClusterAdmin creates all topics
+// successfully via mock broker, then an async producer is returned.
+func TestNewKafkaPublisher_WithTopicCreation_Success(t *testing.T) {
+	mb := sarama.NewMockBroker(t, 1)
+	defer mb.Close()
+	// Cap CreateTopics (API key 19) at V4 so MockCreateTopicsResponse works;
+	// V5+ requires TopicResults which the mock doesn't populate.
+	apiVersions := sarama.NewMockApiVersionsResponse(t).SetApiKeys([]sarama.ApiVersionsResponseKey{
+		{ApiKey: 0, MinVersion: 5, MaxVersion: 8},  // Produce
+		{ApiKey: 1, MinVersion: 7, MaxVersion: 11}, // Fetch
+		{ApiKey: 3, MinVersion: 0, MaxVersion: 9},  // Metadata
+		{ApiKey: 19, MinVersion: 0, MaxVersion: 4}, // CreateTopics
+	})
+	mb.SetHandlerByMap(map[string]sarama.MockResponse{
+		"ApiVersionsRequest": apiVersions,
+		"MetadataRequest": sarama.NewMockMetadataResponse(t).
+			SetBroker(mb.Addr(), mb.BrokerID()).
+			SetController(mb.BrokerID()),
+		"CreateTopicsRequest": sarama.NewMockCreateTopicsResponse(t),
+		"ProduceRequest":      sarama.NewMockProduceResponse(t),
+	})
+
+	cfg := &Config{
+		ServerAddress:        mb.Addr(),
+		TopicRetentionTimeMs: "900000",
+		SkipTopicCreation:    false,
+	}
+	pub, err := NewKafkaPublisher(cfg)
+	if err != nil {
+		t.Fatalf("NewKafkaPublisher with SkipTopicCreation=false: %v", err)
+	}
+	pub.Stop()
+}
+
 // TestNewKafkaPublisher_SkipTopicCreation exercises the SkipTopicCreation=true
 // path using an in-memory mock broker: ClusterAdmin init and ensureTopic are
 // bypassed; the async producer connects successfully and Stop() closes cleanly.
