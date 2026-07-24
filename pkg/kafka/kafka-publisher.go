@@ -48,6 +48,13 @@ var (
 	topicCreateTimeout    = 1 * time.Second
 	// goBMP topic's retention timer is 15 minutes.
 	topicRetention = "900000"
+	// adminRetryMax controls sarama ClusterAdmin retry attempts. Exposed as a
+	// var so tests can set it to 0 for fast failure without network retries.
+	adminRetryMax = 120
+	// netReadTimeout sets the TCP read deadline for sarama connections.
+	// Defaults to sarama's built-in 30s. Tests set a short value so that
+	// an unresponsive mock broker causes a fast read-timeout rather than hanging.
+	netReadTimeout = 30 * time.Second
 )
 
 var (
@@ -151,10 +158,14 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 
 func (p *publisher) Stop() {
 	close(p.stopCh)
-	_ = p.clusterAdmin.Close()
+	if p.clusterAdmin != nil {
+		_ = p.clusterAdmin.Close()
+	}
 }
 
-// NewKafkaPublisher instantiates a new instance of a Kafka publisher
+// NewKafkaPublisher instantiates a new Kafka publisher. When SkipTopicCreation
+// is true, topics must already exist because startup skips Admin API topic
+// creation and validation.
 func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	glog.Infof("Initializing Kafka producer client")
 	if err := validator(kConfig); err != nil {
@@ -168,32 +179,46 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	config.ClientID = "gobmp-producer" + "_" + strconv.Itoa(rand.Intn(1000))
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
-	config.Admin.Retry.Max = 120
+	config.Admin.Retry.Max = adminRetryMax
 	config.Admin.Retry.Backoff = time.Second
 	config.Metadata.Retry.Max = 300
 	config.Metadata.Retry.Backoff = time.Second * 10
+	config.Net.ReadTimeout = netReadTimeout
 	config.Version = sarama.V3_0_0_0
 
 	kafkaSrvs := strings.Split(kConfig.ServerAddress, ",")
-	ca, err := sarama.NewClusterAdmin(kafkaSrvs, config)
-	if err != nil {
-		glog.Errorf("failed to create cluster admin: %+v", err)
-		return nil, err
-	}
-
-	cb, err := waitForControllerBrokerConnection(ca, config, brockerConnectTimeout)
-	if err != nil {
-		glog.Errorf("failed to open connection to the controller broker with error: %+v\n", err)
-		return nil, err
-	}
-	glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
-
-	for _, t := range topicNames {
-		topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
-		if err := ensureTopic(ca, topicCreateTimeout, topicName); err != nil {
-			glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
+	var (
+		ca                    sarama.ClusterAdmin
+		err                   error
+		adminOwnedByPublisher bool
+	)
+	defer func() {
+		if ca != nil && !adminOwnedByPublisher {
+			_ = ca.Close()
+		}
+	}()
+	if !kConfig.SkipTopicCreation {
+		ca, err = sarama.NewClusterAdmin(kafkaSrvs, config)
+		if err != nil {
+			glog.Errorf("failed to create cluster admin: %+v", err)
 			return nil, err
 		}
+		cb, err := waitForControllerBrokerConnection(ca, config, brockerConnectTimeout)
+		if err != nil {
+			glog.Errorf("failed to open connection to the controller broker with error: %+v\n", err)
+			return nil, err
+		}
+		glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
+		_ = cb.Close()
+		for _, t := range topicNames {
+			topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
+			if err := ensureTopic(ca, topicCreateTimeout, topicName); err != nil {
+				glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
+				return nil, err
+			}
+		}
+	} else {
+		glog.Infof("Kafka topic creation skipped; topics must be pre-created before publishing")
 	}
 	producer, err := sarama.NewAsyncProducer(kafkaSrvs, config)
 	if err != nil {
@@ -215,6 +240,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 		}
 	}(producer, stopCh)
 
+	adminOwnedByPublisher = true
 	return &publisher{
 		stopCh:       stopCh,
 		clusterAdmin: ca,
@@ -225,6 +251,9 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 }
 
 func validator(kConfig *Config) error {
+	if kConfig == nil {
+		return errors.New("kafka config cannot be nil")
+	}
 	addrs := strings.Split(kConfig.ServerAddress, ",")
 	for _, addr := range addrs {
 		host, port, _ := net.SplitHostPort(addr)
@@ -258,6 +287,9 @@ func validator(kConfig *Config) error {
 }
 
 func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string) error {
+	if ca == nil {
+		return errors.New("nil ClusterAdmin provided")
+	}
 	topicDetail := &sarama.TopicDetail{
 		NumPartitions:     1,
 		ReplicationFactor: 1,
@@ -267,7 +299,9 @@ func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string
 	}
 
 	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
 	tout := time.NewTimer(timeout)
+	defer tout.Stop()
 	for {
 		err := ca.CreateTopic(topicName, topicDetail, false)
 		if errors.Is(err, sarama.ErrIncompleteResponse) {
@@ -301,6 +335,9 @@ func waitForControllerBrokerConnection(ca sarama.ClusterAdmin, config *sarama.Co
 	cb, err := ca.Controller()
 	if err != nil {
 		return nil, err
+	}
+	if cb == nil {
+		return nil, errors.New("nil controller broker returned")
 	}
 	for {
 		if err := cb.Open(config); err == nil {

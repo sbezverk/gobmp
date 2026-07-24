@@ -257,6 +257,7 @@ func newTestFlagSet() *flag.FlagSet {
 	fs.StringVar(&kafkaSrv, "kafka-server", "", "")
 	fs.StringVar(&kafkaTpRetnTimeMs, "kafka-topic-retention-time-ms", defaultKafkaTpRetnTimeMs, "")
 	fs.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "")
+	fs.StringVar(&kafkaSkipTopicCreation, "kafka-skip-topic-creation", "false", "")
 	fs.StringVar(&natsSrv, "nats-server", "", "")
 	fs.StringVar(&splitAF, "split-af", "", "")
 	fs.StringVar(&dump, "dump", "", "")
@@ -656,5 +657,36 @@ func TestApplyConfigOverrides_AdminID_WithoutKafka_NoError(t *testing.T) {
 	}
 	if cfg.KafkaConfig == nil || cfg.KafkaConfig.AdminID != "my-collector" {
 		t.Error("AdminID should be stored in KafkaConfig regardless of publisher selection")
+	}
+}
+
+func TestApplyConfigOverrides_KafkaSkipTopicCreation(t *testing.T) {
+	fs := newTestFlagSet()
+	if err := fs.Set("kafka-skip-topic-creation", "true"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+
+	cfg := &config.Config{}
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if cfg.KafkaConfig == nil {
+		t.Fatal("KafkaConfig is nil, want non-nil")
+	}
+	if !cfg.KafkaConfig.SkipTopicCreation {
+		t.Error("SkipTopicCreation = false, want true")
+	}
+}
+
+func TestApplyConfigOverrides_KafkaSkipTopicCreation_Invalid(t *testing.T) {
+	fs := newTestFlagSet()
+	if err := fs.Set("kafka-skip-topic-creation", "notabool"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+
+	cfg := &config.Config{}
+	if err := applyConfigOverrides(cfg, fs); err == nil {
+		t.Error("expected error for invalid --kafka-skip-topic-creation value, got nil")
 	}
 }

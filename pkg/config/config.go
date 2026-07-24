@@ -54,6 +54,11 @@ type KafkaConfig struct {
 	KafkaTopicPrefix  string `yaml:"kafka_topic_prefix"`
 	BmpRaw            bool   `yaml:"bmp_raw"`
 	AdminID           string `yaml:"admin_id"`
+	// SkipTopicCreation disables the Kafka Admin API topic-creation calls on
+	// startup. Use with Kafka 4.0+ environments that reject CreateTopics, or
+	// clusters where the client lacks CreateTopics permission. Pre-create the
+	// required topics before starting gobmp when this is set.
+	SkipTopicCreation bool `yaml:"skip_topic_creation"`
 }
 
 type Config struct {

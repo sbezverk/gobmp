@@ -22,18 +22,19 @@ import (
 )
 
 var (
-	srcPort           int
-	perfPort          int
-	kafkaSrv          string
-	kafkaTpRetnTimeMs string // Kafka topic retention time in ms
-	kafkaTopicPrefix  string
-	natsSrv           string
-	splitAF           string
-	dump              string
-	file              string
-	bmpRaw            string
-	adminID           string
-	configFile        string
+	srcPort                int
+	perfPort               int
+	kafkaSrv               string
+	kafkaTpRetnTimeMs      string // Kafka topic retention time in ms
+	kafkaTopicPrefix       string
+	kafkaSkipTopicCreation string
+	natsSrv                string
+	splitAF                string
+	dump                   string
+	file                   string
+	bmpRaw                 string
+	adminID                string
+	configFile             string
 )
 
 const (
@@ -49,6 +50,7 @@ func init() {
 	flag.StringVar(&kafkaSrv, "kafka-server", "", "URL to access Kafka server")
 	flag.StringVar(&kafkaTpRetnTimeMs, "kafka-topic-retention-time-ms", defaultKafkaTpRetnTimeMs, "Kafka topic retention time in ms, default is 900000 ms i.e 15 minutes")
 	flag.StringVar(&kafkaTopicPrefix, "kafka-topic-prefix", "", "Optional prefix prepended to all Kafka topic names (e.g. 'prod' -> 'prod.gobmp.parsed.peer')")
+	flag.StringVar(&kafkaSkipTopicCreation, "kafka-skip-topic-creation", "false", "When \"true\", skip Kafka Admin API topic creation on startup. Use with Kafka 4.0+ environments that reject CreateTopics, or clusters where the client lacks CreateTopics permission; pre-create topics before starting gobmp.")
 	flag.StringVar(&natsSrv, "nats-server", "", "URL to access NATS server")
 	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 0, "port used for performance debugging")
@@ -133,6 +135,7 @@ func main() {
 			ServerAddress:        cfg.KafkaConfig.KafkaSrv,
 			TopicRetentionTimeMs: strconv.Itoa(cfg.KafkaConfig.KafkaTpRetnTimeMs),
 			TopicPrefix:          cfg.KafkaConfig.KafkaTopicPrefix,
+			SkipTopicCreation:    cfg.KafkaConfig.SkipTopicCreation,
 		}
 		cfg.Publisher, err = kafka.NewKafkaPublisher(kConfig)
 		if err != nil {
@@ -271,6 +274,15 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 				cfg.KafkaConfig = defaultKafkaConfig()
 			}
 			cfg.KafkaConfig.KafkaTopicPrefix = kafkaTopicPrefix
+		case "kafka-skip-topic-creation":
+			if cfg.KafkaConfig == nil {
+				cfg.KafkaConfig = defaultKafkaConfig()
+			}
+			if v, err := strconv.ParseBool(kafkaSkipTopicCreation); err != nil {
+				visitErr = fmt.Errorf("invalid value for --kafka-skip-topic-creation: %q: %w", kafkaSkipTopicCreation, err)
+			} else {
+				cfg.KafkaConfig.SkipTopicCreation = v
+			}
 		case "bmp-raw":
 			if cfg.KafkaConfig == nil {
 				cfg.KafkaConfig = defaultKafkaConfig()

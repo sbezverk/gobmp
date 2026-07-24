@@ -340,6 +340,23 @@ Examples:
 Kafka topic retention time in milliseconds. Topics are created with this retention policy to manage storage for high-volume BGP data. Adjust based on your storage capacity and retention requirements.
 
 ```
+--kafka-skip-topic-creation={true|false}
+```
+**Default:** false
+
+When `true`, gobmp skips the Kafka Admin API `CreateTopics` call on startup and connects directly as an async producer. Use this with Kafka 4.0+ environments that reject `CreateTopics`, or with clusters where the client lacks `CreateTopics` permission (e.g. Confluent Cloud, MSK with restricted IAM policies).
+
+> **Important:** Topics must be pre-created before starting gobmp. If the required topics do not exist, publishing will fail with unclear broker errors.
+
+YAML equivalent:
+```yaml
+kafka_config:
+  kafka_srv: "kafka.example.com:9092"
+  kafka_tp_retn_time_ms: 900000
+  skip_topic_creation: true
+```
+
+```
 --nats-server={url}
 ```
 **Default:** none (NATS disabled)
