@@ -63,6 +63,9 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		// that wait on speakerReady.
 		p.speakerReadyOnce.Do(func() {
 			p.speakerIP = msg.SpeakerIP
+			if p.speakerIP == "" {
+				p.speakerIP = m.LocalIP
+			}
 			md5Sum := md5.Sum([]byte(p.speakerIP))
 			p.speakerHash = hex.EncodeToString(md5Sum[:])
 			close(p.speakerReady)
