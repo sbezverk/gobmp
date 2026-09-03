@@ -425,6 +425,55 @@ func TestProducingWorkerRefreshesIdentityAfterReady(t *testing.T) {
 	}
 }
 
+func TestProducingWorkerUsesSessionIdentityFallback(t *testing.T) {
+	rec := &recordingPublisher{}
+	p := NewProducer(rec, false).(*producer)
+	peerUpHeader := makePeerHeader(t, bmp.PeerType0, 0)
+
+	p.producingWorker(bmp.Message{
+		PeerHeader: peerUpHeader,
+		Payload:    buildPeerUpMessage(t, "192.168.100.11"),
+		SpeakerIP:  "10.1.1.3",
+	})
+	rec.msgs = nil
+
+	statHeader := makePeerHeader(t, bmp.PeerType0, 0)
+	statHeader.PeerAddress = make([]byte, 16)
+	statHeader.PeerAS = 0
+	statHeader.PeerBGPID = make([]byte, 4)
+	statValue := make([]byte, 4)
+	binary.BigEndian.PutUint32(statValue, 42)
+
+	p.producingWorker(bmp.Message{
+		PeerHeader: statHeader,
+		Payload: &bmp.StatsReport{StatsTLV: []bmp.InformationalTLV{
+			{
+				InformationType:   0,
+				InformationLength: 4,
+				Information:       statValue,
+			},
+		}},
+		SpeakerIP: "10.1.1.3",
+	})
+
+	if len(rec.msgs) != 1 {
+		t.Fatalf("published messages = %d, want 1", len(rec.msgs))
+	}
+	var got Stats
+	if err := json.Unmarshal(rec.msgs[0].payload, &got); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if got.RouterIP != "192.168.100.11" {
+		t.Errorf("RouterIP = %q, want session identity", got.RouterIP)
+	}
+	if got.RouterHash == "" {
+		t.Fatal("RouterHash is empty, want session identity hash")
+	}
+	if got.RemoteIP != "0.0.0.0" {
+		t.Errorf("RemoteIP = %q, want original peer header address", got.RemoteIP)
+	}
+}
+
 func TestProducePeerMessageIdentityCornerCases(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
 

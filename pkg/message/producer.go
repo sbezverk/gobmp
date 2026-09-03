@@ -63,6 +63,7 @@ type producer struct {
 	adminHash    string
 	identityLock sync.RWMutex
 	identities   map[string]bmp.PeerIdentity
+	speakerID    bmp.PeerIdentity
 }
 
 // Producer dispatches kafka workers upon request received from the channel
@@ -103,11 +104,29 @@ func (p *producer) attachIdentitySnapshot(msg *bmp.Message) {
 		p.identityLock.RUnlock()
 	}
 	if !peerExists {
-		peer = bmp.IdentityFromPeerHeader(*msg)
+		peer = p.identityFromHeaderFallback(*msg)
 	}
 	ph := *msg.PeerHeader
 	ph.Identity = peer
 	msg.PeerHeader = &ph
+}
+
+func (p *producer) identityFromHeaderFallback(msg bmp.Message) bmp.PeerIdentity {
+	peer := bmp.IdentityFromPeerHeader(msg)
+
+	p.identityLock.RLock()
+	speakerID := p.speakerID
+	p.identityLock.RUnlock()
+
+	if speakerID.RouterIP == "" && speakerID.RouterHash == "" {
+		return peer
+	}
+
+	peer.SpeakerIP = speakerID.SpeakerIP
+	peer.SpeakerHash = speakerID.SpeakerHash
+	peer.RouterIP = speakerID.RouterIP
+	peer.RouterHash = speakerID.RouterHash
+	return peer
 }
 
 func (p *producer) producingWorker(msg bmp.Message) {
@@ -133,6 +152,9 @@ func (p *producer) producingWorker(msg bmp.Message) {
 					p.identities[peerID] = peer
 				} else {
 					glog.V(5).Infof("Duplicate PeerUP message for peer %s: %s", peerID, peer)
+				}
+				if p.speakerID.RouterIP == "" || !isSpecificAddress(p.speakerID.RouterIP) {
+					p.speakerID = peer
 				}
 				p.identityLock.Unlock()
 			}
@@ -161,7 +183,7 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		}
 
 		if !peerExists {
-			peer = bmp.IdentityFromPeerHeader(msg)
+			peer = p.identityFromHeaderFallback(msg)
 		}
 		if m, err = p.producePeerMessage(peerDown, msg, peer); err != nil {
 			glog.Errorf("failed to produce peer message: %+v", err)
