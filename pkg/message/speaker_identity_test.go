@@ -33,7 +33,7 @@ func publishPeerUp(t *testing.T, p *producer, peerType bmp.PeerType, localIP, co
 	t.Helper()
 	rec := p.publisher.(*recordingPublisher)
 
-	p.producePeerMessage(peerUP, bmp.Message{
+	p.producingWorker(bmp.Message{
 		PeerHeader: makePeerHeader(t, peerType, 0x00),
 		Payload:    buildPeerUpMessage(t, localIP),
 		SpeakerIP:  connIP,

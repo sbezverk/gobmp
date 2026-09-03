@@ -32,8 +32,8 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	if len(mvpnRoute.Route) == 0 {
 		prfx := &MVPNPrefix{
 			Action:        operation,
-			RouterHash:    p.speakerHash,
-			RouterIP:      p.speakerIP,
+			RouterHash:    ph.Identity.RouterHash,
+			RouterIP:      ph.Identity.RouterIP,
 			PeerHash:      ph.GetPeerHash(),
 			PeerASN:       ph.PeerAS,
 			Timestamp:     ph.GetPeerTimestamp(),
@@ -66,8 +66,8 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	for _, route := range mvpnRoute.Route {
 		prfx := &MVPNPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     ph.Identity.RouterHash,
+			RouterIP:       ph.Identity.RouterIP,
 			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,

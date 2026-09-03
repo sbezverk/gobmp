@@ -48,8 +48,8 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *bmp.PerPeerHeader, update *bgp.Update, fsnlri *flowspec.NLRI) *Flowspec {
 	fs := &Flowspec{
 		Action:         operation,
-		RouterHash:     p.speakerHash,
-		RouterIP:       p.speakerIP,
+		RouterHash:     ph.Identity.RouterHash,
+		RouterIP:       ph.Identity.RouterIP,
 		PeerType:       uint8(ph.PeerType),
 		PeerASN:        ph.PeerAS,
 		Timestamp:      ph.GetPeerTimestamp(),

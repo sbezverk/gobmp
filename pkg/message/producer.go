@@ -38,14 +38,11 @@ type Producer interface {
 }
 
 type producer struct {
-	publisher   pub.Publisher
-	speakerIP   string
-	speakerHash string
-	// speakerReady is closed exactly once (by speakerReadyOnce) when the first
-	// PeerUp message has been processed and speakerIP/speakerHash are populated.
-	// RouteMonitor and StatsReport goroutines block here before reading speakerIP,
-	// eliminating the race against FRR's initial Loc-RIB burst in active mode.
-	// After the channel is closed, all subsequent receives are immediately non-blocking.
+	publisher pub.Publisher
+
+	// speakerReady is closed once the first valid PeerUp has established the
+	// initial identity cache. RouteMonitor and StatsReport workers wait on it so
+	// active-mode initial routes do not race ahead of their PeerUp identity.
 	speakerReady     chan struct{}
 	speakerReadyOnce sync.Once
 	// stopCh is set to the stop channel passed to Producer() before the dispatch
@@ -63,7 +60,9 @@ type producer struct {
 	// collectorAdminID is the collector identifier string for OpenBMP binary header
 	collectorAdminID string
 	// adminHash is the MD5 hash of the admin ID for RAW messages
-	adminHash string
+	adminHash    string
+	identityLock sync.RWMutex
+	identities   map[string]bmp.PeerIdentity
 }
 
 // Producer dispatches kafka workers upon request received from the channel
@@ -74,7 +73,15 @@ func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
 	for {
 		select {
 		case msg := <-queue:
-			go p.producingWorker(msg)
+			switch msg.Payload.(type) {
+			case *bmp.PeerUpMessage, *bmp.PeerDownMessage:
+				// State changes update identity cache and publish in input order.
+				p.producingWorker(msg)
+			default:
+				// Other message types carry an identity snapshot and can fan out.
+				p.attachIdentitySnapshot(&msg)
+				go p.producingWorker(msg)
+			}
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
@@ -82,25 +89,102 @@ func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
 	}
 }
 
+func (p *producer) attachIdentitySnapshot(msg *bmp.Message) {
+	if msg == nil || msg.PeerHeader == nil {
+		return
+	}
+
+	var peer bmp.PeerIdentity
+	var peerExists bool
+	peerKey := msg.PeerHeader.PeerIdentity()
+	if peerKey != "" {
+		p.identityLock.RLock()
+		peer, peerExists = p.identities[peerKey]
+		p.identityLock.RUnlock()
+	}
+	if !peerExists {
+		peer = bmp.IdentityFromPeerHeader(*msg)
+	}
+	ph := *msg.PeerHeader
+	ph.Identity = peer
+	msg.PeerHeader = &ph
+}
+
 func (p *producer) producingWorker(msg bmp.Message) {
 	switch obj := msg.Payload.(type) {
 	case *bmp.PeerUpMessage:
-		p.producePeerMessage(peerUP, msg)
+		var peer bmp.PeerIdentity
+		var peerExists bool
+		if msg.PeerHeader != nil {
+			peerID := msg.PeerHeader.PeerIdentity()
+			peer = bmp.IdentityFromPeerUp(msg)
+			if peerID != "" {
+				p.identityLock.Lock()
+				if p.identities == nil {
+					p.identities = make(map[string]bmp.PeerIdentity)
+				}
+				cachedPeer, ok := p.identities[peerID]
+				peerExists = ok
+				if !peerExists {
+					p.identities[peerID] = peer
+					glog.V(5).Infof("New peer identity stored for peer %s: %s", peerID, peer)
+				} else if !cachedPeer.IsEqual(peer) {
+					glog.Warningf("Peer identity changed for peer %s: old=%s, new=%s", peerID, cachedPeer, peer)
+					p.identities[peerID] = peer
+				} else {
+					glog.V(5).Infof("Duplicate PeerUP message for peer %s: %s", peerID, peer)
+				}
+				p.identityLock.Unlock()
+			}
+		}
+		if m, err := p.producePeerMessage(peerUP, msg, peer); err != nil {
+			glog.Errorf("failed to produce peer message: %+v", err)
+		} else {
+			if err := p.marshalAndPublish(m, bmp.PeerStateChangeMsg, []byte(m.RouterHash)); err != nil {
+				glog.Errorf("failed to process peer message with error: %+v", err)
+			}
+		}
 	case *bmp.PeerDownMessage:
-		p.producePeerMessage(peerDown, msg)
+		var m *PeerStateChange
+		var err error
+		if msg.PeerHeader == nil {
+			glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
+			return
+		}
+		var peer bmp.PeerIdentity
+		var peerExists bool
+		peerID := msg.PeerHeader.PeerIdentity()
+		if peerID != "" {
+			p.identityLock.RLock()
+			peer, peerExists = p.identities[peerID]
+			p.identityLock.RUnlock()
+		}
+
+		if !peerExists {
+			peer = bmp.IdentityFromPeerHeader(msg)
+		}
+		if m, err = p.producePeerMessage(peerDown, msg, peer); err != nil {
+			glog.Errorf("failed to produce peer message: %+v", err)
+			return
+		}
+		// Remove the peer identity from the cache if it exists, since the peer is now down
+		if peerExists {
+			p.identityLock.Lock()
+			delete(p.identities, peerID)
+			p.identityLock.Unlock()
+		}
+		// Publish using the identity snapshot captured before cache removal.
+		if err := p.marshalAndPublish(m, bmp.PeerStateChangeMsg, []byte(m.RouterHash)); err != nil {
+			glog.Errorf("failed to process peer message with error: %+v", err)
+		}
 	case *bmp.RouteMonitor:
-		// Wait until PeerUp has populated speakerIP/speakerHash before producing
-		// any route message.  In active mode (gobmp dials the router) FRR floods
-		// its full Loc-RIB in a burst that races the PeerUp goroutine.  Blocking
-		// here costs nothing after the channel is closed: a closed-channel receive
-		// is a single no-op instruction with no lock or syscall involved.
-		// The stopCh arm handles the case where the connection is terminated before
-		// any PeerUp arrives, preventing these goroutines from leaking forever.
+		// Wait for the first identity before processing initial route messages.
 		select {
 		case <-p.speakerReady:
 		case <-p.stopCh:
 			return
 		}
+		p.attachIdentitySnapshot(&msg)
 		p.produceRouteMonitorMessage(msg)
 	case *bmp.StatsReport:
 		// Same cancellable wait as RouteMonitor above.
@@ -109,6 +193,7 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		case <-p.stopCh:
 			return
 		}
+		p.attachIdentitySnapshot(&msg)
 		p.produceStatsMessage(msg)
 	case *bmp.RawMessage:
 		p.produceRawMessage(msg)
@@ -181,5 +266,6 @@ func NewProducer(publisher pub.Publisher, splitAF bool) Producer {
 		splitAF:         splitAF,
 		tableProperties: make(map[string]PerTableProperties),
 		speakerReady:    make(chan struct{}),
+		identities:      make(map[string]bmp.PeerIdentity),
 	}
 }

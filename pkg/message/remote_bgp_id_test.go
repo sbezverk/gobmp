@@ -16,8 +16,6 @@ const wantPeerBGPID = "10.0.0.1"
 // advertising peer's BGP Identifier from the Per-Peer Header.
 func TestUnicast_RemoteBGPID_EOR(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	reachBytes := []byte{0x00, 0x01, 0x01} // AFI=1 SAFI=1, no prefixes
@@ -43,8 +41,6 @@ func TestUnicast_RemoteBGPID_EOR(t *testing.T) {
 // the advertising peer's BGP Identifier from the Per-Peer Header.
 func TestUnicast_RemoteBGPID_PerRoute(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	// Unicast (AFI=1, SAFI=1) with one /24 prefix
@@ -78,8 +74,6 @@ func TestUnicast_RemoteBGPID_PerRoute(t *testing.T) {
 // advertising peer's BGP Identifier from the Per-Peer Header.
 func TestL3VPN_RemoteBGPID_EOR(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	nlri := &mockMPNLRI{
@@ -103,8 +97,6 @@ func TestL3VPN_RemoteBGPID_EOR(t *testing.T) {
 // advertising peer's BGP Identifier from the Per-Peer Header.
 func TestL3VPN_RemoteBGPID_PerRoute(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	// L3VPN (AFI=1, SAFI=128) with one route
@@ -141,8 +133,6 @@ func TestL3VPN_RemoteBGPID_PerRoute(t *testing.T) {
 // carries the advertising peer's BGP Identifier from the Per-Peer Header.
 func TestBaseNLRI_RemoteBGPID_EOR(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	update := &bgp.Update{
@@ -167,8 +157,6 @@ func TestBaseNLRI_RemoteBGPID_EOR(t *testing.T) {
 // Header.
 func TestBaseNLRI_RemoteBGPID_PerRoute(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	update := &bgp.Update{
