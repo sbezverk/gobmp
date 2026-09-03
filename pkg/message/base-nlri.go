@@ -45,8 +45,8 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 		}
 		prfx := &UnicastPrefix{
 			Action:        operation,
-			RouterHash:    p.speakerHash,
-			RouterIP:      p.speakerIP,
+			RouterHash:    ph.Identity.RouterHash,
+			RouterIP:      ph.Identity.RouterIP,
 			PeerHash:      ph.GetPeerHash(),
 			RemoteBGPID:   ph.GetPeerBGPIDString(),
 			PeerIP:        ph.GetPeerAddrString(),
@@ -80,8 +80,8 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 	for _, pr := range routes {
 		prfx := &UnicastPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     ph.Identity.RouterHash,
+			RouterIP:       ph.Identity.RouterIP,
 			PeerHash:       ph.GetPeerHash(),
 			RemoteBGPID:    ph.GetPeerBGPIDString(),
 			PeerASN:        ph.PeerAS,

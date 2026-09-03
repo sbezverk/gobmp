@@ -26,8 +26,8 @@ func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	}
 	prfx := SRPolicy{
 		Action:         operation,
-		RouterHash:     p.speakerHash,
-		RouterIP:       p.speakerIP,
+		RouterHash:     ph.Identity.RouterHash,
+		RouterIP:       ph.Identity.RouterIP,
 		PeerType:       uint8(ph.PeerType),
 		PeerHash:       ph.GetPeerHash(),
 		PeerASN:        ph.PeerAS,

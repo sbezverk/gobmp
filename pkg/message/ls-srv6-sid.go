@@ -20,8 +20,8 @@ func (p *producer) lsSRv6SID(nlri6 *srv6.SIDNLRI, nextHop string, op int, ph *bm
 	}
 	msg := LSSRv6SID{
 		Action:     operation,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
+		RouterHash: ph.Identity.RouterHash,
+		RouterIP:   ph.Identity.RouterIP,
 		PeerType:   uint8(ph.PeerType),
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,

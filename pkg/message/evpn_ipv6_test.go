@@ -81,9 +81,7 @@ func buildEVPNType5IPv6Wire() []byte {
 
 func TestEvpnIPv6Address(t *testing.T) {
 	prod := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		publisher: &mockPublisher{},
 	}
 
 	route, err := evpn.UnmarshalEVPNNLRI(buildEVPNType5IPv6Wire())
@@ -97,14 +95,14 @@ func TestEvpnIPv6Address(t *testing.T) {
 		isIPv6:  true,
 	}
 
-	ph := &bmp.PerPeerHeader{
+	ph := attachTestIdentity(&bmp.PerPeerHeader{
 		PeerAS:            65001,
 		PeerType:          0,
 		PeerBGPID:         make([]byte, 4),
 		PeerAddress:       make([]byte, 16),
 		PeerDistinguisher: make([]byte, 8),
 		PeerTimestamp:     make([]byte, 8),
-	}
+	}, defaultTestRouterIP, "test-hash")
 
 	update := &bgp.Update{
 		BaseAttributes: &bgp.BaseAttributes{},
@@ -160,9 +158,7 @@ func buildEVPNType5IPv4Wire() []byte {
 
 func TestEvpnIPv4Address(t *testing.T) {
 	prod := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		publisher: &mockPublisher{},
 	}
 
 	route, err := evpn.UnmarshalEVPNNLRI(buildEVPNType5IPv4Wire())
@@ -176,14 +172,14 @@ func TestEvpnIPv4Address(t *testing.T) {
 		isIPv6:  false,
 	}
 
-	ph := &bmp.PerPeerHeader{
+	ph := attachTestIdentity(&bmp.PerPeerHeader{
 		PeerAS:            65001,
 		PeerType:          0,
 		PeerBGPID:         make([]byte, 4),
 		PeerAddress:       make([]byte, 16),
 		PeerDistinguisher: make([]byte, 8),
 		PeerTimestamp:     make([]byte, 8),
-	}
+	}, defaultTestRouterIP, "test-hash")
 
 	update := &bgp.Update{
 		BaseAttributes: &bgp.BaseAttributes{},
@@ -226,9 +222,7 @@ func buildEVPNType2Wire(esi [10]byte, mac [6]byte) []byte {
 
 func TestEvpnType2ESIAndMAC(t *testing.T) {
 	prod := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		publisher: &mockPublisher{},
 	}
 
 	esi := [10]byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99}
@@ -245,13 +239,13 @@ func TestEvpnType2ESIAndMAC(t *testing.T) {
 		isIPv6:  false,
 	}
 
-	ph := &bmp.PerPeerHeader{
+	ph := attachTestIdentity(&bmp.PerPeerHeader{
 		PeerType:          0,
 		PeerBGPID:         make([]byte, 4),
 		PeerAddress:       make([]byte, 16),
 		PeerDistinguisher: make([]byte, 8),
 		PeerTimestamp:     make([]byte, 8),
-	}
+	}, defaultTestRouterIP, "test-hash")
 
 	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
 

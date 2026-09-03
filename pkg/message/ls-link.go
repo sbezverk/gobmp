@@ -22,8 +22,8 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	}
 	msg := LSLink{
 		Action:     operation,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
+		RouterHash: ph.Identity.RouterHash,
+		RouterIP:   ph.Identity.RouterIP,
 		PeerType:   uint8(ph.PeerType),
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,

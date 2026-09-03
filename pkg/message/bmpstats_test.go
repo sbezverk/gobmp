@@ -19,14 +19,13 @@ func (m *mockPublisher) Stop() {
 	// No-op for testing
 }
 
+const (
+	statsTestRouterIP   = "192.0.2.1"
+	statsTestRouterHash = "test-router"
+)
+
 // TestStatsType0_PrefixesRejectedInbound tests RFC 7854 Section 4.8 Type 0
 func TestStatsType0_PrefixesRejectedInbound(t *testing.T) {
-	p := &producer{
-		speakerHash: "test-router",
-		speakerIP:   "192.0.2.1",
-		publisher:   &mockPublisher{},
-	}
-
 	// Create test BMP message with Stats Type 0
 	statsMsg := &bmp.StatsReport{
 		StatsTLV: []bmp.InformationalTLV{
@@ -51,8 +50,8 @@ func TestStatsType0_PrefixesRejectedInbound(t *testing.T) {
 	// Create Stats struct
 	m := Stats{
 		RemoteASN:  msg.PeerHeader.PeerAS,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
+		RouterHash: statsTestRouterHash,
+		RouterIP:   statsTestRouterIP,
 	}
 
 	// Process TLV
@@ -70,12 +69,6 @@ func TestStatsType0_PrefixesRejectedInbound(t *testing.T) {
 
 // TestStatsType14_PrePolicyAdjRIBOut tests RFC 7854 Section 4.8 Type 14
 func TestStatsType14_PrePolicyAdjRIBOut(t *testing.T) {
-	p := &producer{
-		speakerHash: "test-router",
-		speakerIP:   "192.0.2.1",
-		publisher:   &mockPublisher{},
-	}
-
 	statsMsg := &bmp.StatsReport{
 		StatsTLV: []bmp.InformationalTLV{
 			{
@@ -98,8 +91,8 @@ func TestStatsType14_PrePolicyAdjRIBOut(t *testing.T) {
 
 	m := Stats{
 		RemoteASN:  msg.PeerHeader.PeerAS,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
+		RouterHash: statsTestRouterHash,
+		RouterIP:   statsTestRouterIP,
 	}
 
 	for _, tlv := range statsMsg.StatsTLV {
@@ -115,12 +108,6 @@ func TestStatsType14_PrePolicyAdjRIBOut(t *testing.T) {
 
 // TestStatsType15_PostPolicyAdjRIBOut tests RFC 7854 Section 4.8 Type 15
 func TestStatsType15_PostPolicyAdjRIBOut(t *testing.T) {
-	p := &producer{
-		speakerHash: "test-router",
-		speakerIP:   "192.0.2.1",
-		publisher:   &mockPublisher{},
-	}
-
 	statsMsg := &bmp.StatsReport{
 		StatsTLV: []bmp.InformationalTLV{
 			{
@@ -142,8 +129,8 @@ func TestStatsType15_PostPolicyAdjRIBOut(t *testing.T) {
 
 	m := Stats{
 		RemoteASN:  msg.PeerHeader.PeerAS,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
+		RouterHash: statsTestRouterHash,
+		RouterIP:   statsTestRouterIP,
 	}
 
 	for _, tlv := range statsMsg.StatsTLV {
@@ -165,12 +152,6 @@ func TestStatsType15_PostPolicyAdjRIBOut(t *testing.T) {
 
 // TestStatsMultipleTLVs tests handling multiple stat types in single message
 func TestStatsMultipleTLVs(t *testing.T) {
-	p := &producer{
-		speakerHash: "test-router",
-		speakerIP:   "192.0.2.1",
-		publisher:   &mockPublisher{},
-	}
-
 	// Create message with multiple TLVs (excluding types 16/17 which require AFI/SAFI structure)
 	statsMsg := &bmp.StatsReport{
 		StatsTLV: []bmp.InformationalTLV{
@@ -199,8 +180,8 @@ func TestStatsMultipleTLVs(t *testing.T) {
 
 	m := Stats{
 		RemoteASN:  msg.PeerHeader.PeerAS,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
+		RouterHash: statsTestRouterHash,
+		RouterIP:   statsTestRouterIP,
 	}
 
 	// Process all TLVs

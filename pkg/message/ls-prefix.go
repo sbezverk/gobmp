@@ -21,8 +21,8 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	}
 	msg := LSPrefix{
 		Action:     operation,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
+		RouterHash: ph.Identity.RouterHash,
+		RouterIP:   ph.Identity.RouterIP,
 		PeerType:   uint8(ph.PeerType),
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,

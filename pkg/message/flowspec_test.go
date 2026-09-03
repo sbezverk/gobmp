@@ -192,14 +192,14 @@ func (m *flowspecMockNLRI) GetNLRIRTC() (*rtc.Route, error)               { retu
 
 // minimalPeerHeader returns a PerPeerHeader usable in producer tests.
 func minimalPeerHeader() *bmp.PerPeerHeader {
-	return &bmp.PerPeerHeader{
+	return attachTestIdentity(&bmp.PerPeerHeader{
 		PeerType:          0,
 		PeerAS:            65000,
 		PeerAddress:       []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 1},
 		PeerBGPID:         []byte{10, 0, 0, 1},
 		PeerDistinguisher: make([]byte, 8),
 		PeerTimestamp:     []byte{0, 0, 0, 0, 0, 0, 0, 0},
-	}
+	}, "10.1.1.1", "")
 }
 
 // minimalUpdate returns a bgp.Update usable in producer tests.
@@ -225,7 +225,7 @@ func parseOneNLRI(t *testing.T) *flowspec.NLRI {
 func TestFlowspecProducer_AddSingleNLRI(t *testing.T) {
 	nlri := parseOneNLRI(t)
 	mock := &flowspecMockNLRI{allNLRI: []*flowspec.NLRI{nlri}}
-	p := &producer{speakerIP: "10.1.1.1"}
+	p := &producer{}
 
 	msgs, err := p.flowspec(mock, 0, minimalPeerHeader(), minimalUpdate())
 	if err != nil {
@@ -268,7 +268,7 @@ func TestFlowspecProducer_AddMultiNLRI(t *testing.T) {
 		t.Fatalf("failed to parse second NLRI: %v", err)
 	}
 	mock := &flowspecMockNLRI{allNLRI: []*flowspec.NLRI{nlri1, nlri2}}
-	p := &producer{speakerIP: "10.1.1.1"}
+	p := &producer{}
 
 	msgs, err := p.flowspec(mock, 0, minimalPeerHeader(), minimalUpdate())
 	if err != nil {
@@ -291,7 +291,7 @@ func TestFlowspecProducer_WithdrawAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &flowspecMockNLRI{allNLRI: nil, isIPv6: tt.isIPv6}
-			p := &producer{speakerIP: "10.1.1.1"}
+			p := &producer{}
 
 			msgs, err := p.flowspec(mock, 1, minimalPeerHeader(), minimalUpdate())
 			if err != nil {
@@ -312,7 +312,7 @@ func TestFlowspecProducer_WithdrawAll(t *testing.T) {
 
 func TestFlowspecProducer_UnknownOp(t *testing.T) {
 	mock := &flowspecMockNLRI{}
-	p := &producer{speakerIP: "10.1.1.1"}
+	p := &producer{}
 
 	_, err := p.flowspec(mock, 99, minimalPeerHeader(), minimalUpdate())
 	if err == nil {
@@ -322,7 +322,7 @@ func TestFlowspecProducer_UnknownOp(t *testing.T) {
 
 func TestFlowspecProducer_GetAllFlowspecNLRI_Error(t *testing.T) {
 	mock := &flowspecMockNLRI{err: errors.New("simulated parse failure")}
-	p := &producer{speakerIP: "10.1.1.1"}
+	p := &producer{}
 
 	_, err := p.flowspec(mock, 0, minimalPeerHeader(), minimalUpdate())
 	if err == nil {
