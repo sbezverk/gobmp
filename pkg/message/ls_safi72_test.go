@@ -12,6 +12,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/mcastvpn"
+	"github.com/sbezverk/gobmp/pkg/mup"
 	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/srv6"
@@ -45,6 +46,7 @@ func (m *safi72MockNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
 func (m *safi72MockNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) { return nil, nil }
 func (m *safi72MockNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)     { return nil, nil }
 func (m *safi72MockNLRI) GetNLRIRTC() (*rtc.Route, error)           { return nil, nil }
+func (m *safi72MockNLRI) GetNLRIMUP() (*mup.Route, error)           { return nil, nil }
 func (m *safi72MockNLRI) GetNextHop() string                        { return "" }
 func (m *safi72MockNLRI) IsIPv6NLRI() bool                          { return false }
 func (m *safi72MockNLRI) IsNextHopIPv6() bool                       { return false }

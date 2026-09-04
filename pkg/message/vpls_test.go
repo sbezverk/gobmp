@@ -13,6 +13,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/mcastvpn"
+	"github.com/sbezverk/gobmp/pkg/mup"
 	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/vpls"
@@ -350,4 +351,5 @@ func (m *mockMPNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) { return nil
 func (m *mockMPNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error)     { return nil, nil }
 func (m *mockMPNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)         { return m.mvpnRoute, nil }
 func (m *mockMPNLRI) GetNLRIRTC() (*rtc.Route, error)               { return nil, nil }
+func (m *mockMPNLRI) GetNLRIMUP() (*mup.Route, error)               { return nil, nil }
 func (m *mockMPNLRI) GetNLRIMulticast() (*base.MPNLRI, error)       { return nil, nil }
