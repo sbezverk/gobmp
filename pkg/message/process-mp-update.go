@@ -232,6 +232,26 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 				return
 			}
 		}
+	case 36, 37:
+		msgs, err := p.mup(nlri, operation, ph, update)
+		if err != nil {
+			glog.Errorf("failed to produce mup messages with error: %+v", err)
+			return
+		}
+		for _, m := range msgs {
+			topicType := bmp.MUPMsg
+			if p.splitAF {
+				if m.IsIPv4 {
+					topicType = bmp.MUPV4Msg
+				} else {
+					topicType = bmp.MUPV6Msg
+				}
+			}
+			if err := p.marshalAndPublish(&m, topicType, []byte(m.RouterHash)); err != nil {
+				glog.Errorf("failed to process MUP message with error: %+v", err)
+				return
+			}
+		}
 	case 71:
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
 	case 72:

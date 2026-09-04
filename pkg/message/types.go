@@ -8,6 +8,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/flowspec"
+	"github.com/sbezverk/gobmp/pkg/mup"
 	"github.com/sbezverk/gobmp/pkg/pmsi"
 	"github.com/sbezverk/gobmp/pkg/prefixsid"
 	"github.com/sbezverk/gobmp/pkg/sr"
@@ -437,6 +438,57 @@ type RTCPrefix struct {
 	RouteTarget    string              `json:"route_target,omitempty"`
 	IsIPv4         bool                `json:"is_ipv4"`
 	IsEOR          bool                `json:"is_eor,omitempty"`
+	// Values are assigned based on PerPeerHeader flags
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+}
+
+// MUPPrefix defines the structure of BGP-MUP message (AFI 1/2, SAFI 85)
+// as defined in draft-ietf-bess-mup-safi-01.
+// Which of the route type specific fields are set depends on RouteType.
+type MUPPrefix struct {
+	Key             string              `json:"_key,omitempty"`
+	ID              string              `json:"_id,omitempty"`
+	Rev             string              `json:"_rev,omitempty"`
+	Action          string              `json:"action,omitempty"` // Action can be "add" or "del"
+	Sequence        int                 `json:"sequence,omitempty"`
+	Hash            string              `json:"hash,omitempty"`
+	RouterHash      string              `json:"router_hash,omitempty"`
+	RouterIP        string              `json:"router_ip,omitempty"`
+	BaseAttributes  *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash        string              `json:"peer_hash,omitempty"`
+	RemoteBGPID     string              `json:"remote_bgp_id,omitempty"`
+	PeerIP          string              `json:"peer_ip,omitempty"`
+	PeerType        uint8               `json:"peer_type"`
+	PeerASN         uint32              `json:"peer_asn,omitempty"`
+	Timestamp       string              `json:"timestamp,omitempty"`
+	IsIPv4          bool                `json:"is_ipv4"`
+	OriginAS        uint32              `json:"origin_as,omitempty"`
+	Nexthop         string              `json:"nexthop,omitempty"`
+	IsNexthopIPv4   bool                `json:"is_nexthop_ipv4"`
+	VPNRD           string              `json:"vpn_rd,omitempty"`
+	VPNRDType       uint16              `json:"vpn_rd_type"`
+	PathID          int32               `json:"path_id,omitempty"`
+	ArchType        uint8               `json:"arch_type"`
+	RouteType       uint16              `json:"route_type"`
+	Prefix          string              `json:"prefix,omitempty"`
+	PrefixLen       uint8               `json:"prefix_len,omitempty"`
+	Address         string              `json:"address,omitempty"`
+	EndpointAddress string              `json:"endpoint_address,omitempty"`
+	EndpointLen     uint8               `json:"endpoint_len,omitempty"`
+	SourceAddress   string              `json:"source_address,omitempty"`
+	// TEID and QFI are pointers so that a route type without the field, and
+	// a Type 2 ST route whose Endpoint Length carries no TEID, publish no
+	// value at all instead of a 0. QFI 0 is a real value and must survive.
+	TEID      *uint32         `json:"teid,omitempty"`
+	QFI       *uint8          `json:"qfi,omitempty"`
+	TLVs      []*mup.TLV      `json:"tlvs,omitempty"`
+	PrefixSID *prefixsid.PSid `json:"prefix_sid,omitempty"`
+	IsEOR     bool            `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
