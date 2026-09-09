@@ -31,8 +31,8 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 		return []*MulticastPrefix{
 			{
 				Action:     operation,
-				RouterHash: p.speakerHash,
-				RouterIP:   p.speakerIP,
+				RouterHash: ph.Identity.RouterHash,
+				RouterIP:   ph.Identity.RouterIP,
 				PeerHash:   ph.GetPeerHash(),
 				PeerASN:    ph.PeerAS,
 				Timestamp:  ph.GetPeerTimestamp(),
@@ -44,8 +44,8 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 	for _, e := range u.NLRI {
 		prfx := &MulticastPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     ph.Identity.RouterHash,
+			RouterIP:       ph.Identity.RouterIP,
 			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,

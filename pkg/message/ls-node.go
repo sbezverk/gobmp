@@ -21,8 +21,8 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 	}
 	msg := LSNode{
 		Action:     operation,
-		RouterHash: p.speakerHash,
-		RouterIP:   p.speakerIP,
+		RouterHash: ph.Identity.RouterHash,
+		RouterIP:   ph.Identity.RouterIP,
 		PeerType:   uint8(ph.PeerType),
 		PeerHash:   ph.GetPeerHash(),
 		PeerASN:    ph.PeerAS,

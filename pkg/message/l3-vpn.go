@@ -29,8 +29,8 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		// Empty NLRI signals End-of-RIB per RFC 4724 §2 and is encoded as a withdrawal.
 		prfx := L3VPNPrefix{
 			Action:      "del",
-			RouterHash:  p.speakerHash,
-			RouterIP:    p.speakerIP,
+			RouterHash:  ph.Identity.RouterHash,
+			RouterIP:    ph.Identity.RouterIP,
 			PeerHash:    ph.GetPeerHash(),
 			RemoteBGPID: ph.GetPeerBGPIDString(),
 			PeerASN:     ph.PeerAS,
@@ -68,8 +68,8 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 	for _, e := range nlril3vpn.NLRI {
 		prfx := L3VPNPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     ph.Identity.RouterHash,
+			RouterIP:       ph.Identity.RouterIP,
 			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			RemoteBGPID:    ph.GetPeerBGPIDString(),

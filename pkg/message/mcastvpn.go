@@ -33,8 +33,8 @@ func (p *producer) mcastvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		return []*MCASTVPNPrefix{
 			{
 				Action:     operation,
-				RouterHash: p.speakerHash,
-				RouterIP:   p.speakerIP,
+				RouterHash: ph.Identity.RouterHash,
+				RouterIP:   ph.Identity.RouterIP,
 				PeerHash:   ph.GetPeerHash(),
 				PeerASN:    ph.PeerAS,
 				Timestamp:  ph.GetPeerTimestamp(),
@@ -47,8 +47,8 @@ func (p *producer) mcastvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	for _, route := range mcastvpnRoute.Route {
 		prfx := &MCASTVPNPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     ph.Identity.RouterHash,
+			RouterIP:       ph.Identity.RouterIP,
 			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,

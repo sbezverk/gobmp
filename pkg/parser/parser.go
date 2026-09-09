@@ -44,7 +44,8 @@ func (p *parser) Start() {
 	for {
 		select {
 		case msg := <-p.queue:
-			go p.parsingWorker(msg)
+			// Calling parsingWorker synchronously to avoid Peer State change messages being processed out of order.
+			p.parsingWorker(msg)
 		case <-p.stop:
 			glog.Infof("received interrupt, stopping.")
 			return

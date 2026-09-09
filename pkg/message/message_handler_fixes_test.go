@@ -61,10 +61,8 @@ func TestEqual_BaseAttributesNilMismatch(t *testing.T) {
 // TestFlowspec_RouterHash verifies flowspec messages include RouterHash (P3-20).
 func TestFlowspec_RouterHash(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abcdef123456"
 
-	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+	ph := attachTestIdentity(makePeerHeader(t, bmp.PeerType0, 0x00), "10.0.0.1", "abcdef123456")
 	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
 
 	// Build a flowspec message with nil NLRI (withdraw-all path)
@@ -80,8 +78,6 @@ func TestFlowspec_RouterHash(t *testing.T) {
 // TestL3VPN_EoR verifies L3VPN produces an EoR message for empty NLRI (N6).
 func TestL3VPN_EoR(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 
@@ -115,8 +111,6 @@ func TestL3VPN_EoR(t *testing.T) {
 // TestL3VPN_EoR_LocRIB verifies L3VPN EoR sets TableName for LocRIB peers.
 func TestL3VPN_EoR_LocRIB(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType3, 0x00)
 	tableKey := ph.GetPeerBGPIDString() + ph.GetPeerDistinguisherString()
@@ -155,8 +149,6 @@ func TestL3VPN_EoR_LocRIB(t *testing.T) {
 // TestL3VPN_EoR_IPv6 verifies L3VPN IPv6 EoR sets IsIPv4 = false.
 func TestL3VPN_EoR_IPv6(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "fd00::1"
-	p.speakerHash = "ipv6hash"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 
@@ -182,8 +174,6 @@ func TestL3VPN_EoR_IPv6(t *testing.T) {
 
 func TestL3VPN_WithdrawIPv6WithoutNextHop(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	rd, err := base.MakeRD([]byte{0x00, 0x00, 0xc3, 0xcb, 0x00, 0x00, 0x00, 0xc8})
@@ -227,8 +217,6 @@ func TestL3VPN_WithdrawIPv6WithoutNextHop(t *testing.T) {
 // from actual nexthop, not from AFI (N21).
 func TestSRPolicy_NexthopIPv4_IndependentOfAFI(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{
@@ -257,9 +245,9 @@ func TestSRPolicy_NexthopIPv4_IndependentOfAFI(t *testing.T) {
 	}
 }
 
-// TestSpeakerIP_SetOnce verifies speakerIP/speakerHash are set exactly once
-// via sync.Once and subsequent PeerUp messages don't overwrite them (N8).
-func TestSpeakerIP_SetOnce(t *testing.T) {
+// TestPeerIdentity_ChangedPeerUpUpdatesCache verifies a later PeerUp for the
+// same peer key updates the cached identity used by subsequent messages.
+func TestPeerIdentity_ChangedPeerUpUpdatesCache(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
 
 	// Build two PeerUp messages with different local IPs
@@ -268,22 +256,18 @@ func TestSpeakerIP_SetOnce(t *testing.T) {
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 
-	msg1 := bmp.Message{PeerHeader: ph, Payload: peerUpMsg1}
-	msg2 := bmp.Message{PeerHeader: ph, Payload: peerUpMsg2}
+	msg1 := bmp.Message{PeerHeader: ph, Payload: peerUpMsg1, SpeakerIP: "10.2.1.3"}
+	msg2 := bmp.Message{PeerHeader: ph, Payload: peerUpMsg2, SpeakerIP: "10.2.1.3"}
 
-	p.producePeerMessage(peerUP, msg1)
+	p.producingWorker(msg1)
+	p.producingWorker(msg2)
 
-	firstIP := p.speakerIP
-	firstHash := p.speakerHash
-
-	// Second PeerUp should NOT overwrite speakerIP
-	p.producePeerMessage(peerUP, msg2)
-
-	if p.speakerIP != firstIP {
-		t.Errorf("speakerIP changed from %q to %q after second PeerUp", firstIP, p.speakerIP)
+	peer, ok := p.identities[ph.PeerIdentity()]
+	if !ok {
+		t.Fatal("peer identity was not cached")
 	}
-	if p.speakerHash != firstHash {
-		t.Errorf("speakerHash changed after second PeerUp")
+	if peer.RouterIP != "192.168.2.2" {
+		t.Errorf("RouterIP = %q, want %q", peer.RouterIP, "192.168.2.2")
 	}
 }
 
@@ -333,8 +317,6 @@ func parseIPv4(t *testing.T, s string) []byte {
 // message with correct fields, exercising the non-error publish path (H2).
 func TestUnicast_ValidNLRI_Publishes(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
-	p.speakerIP = "10.0.0.1"
-	p.speakerHash = "abc123"
 
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}

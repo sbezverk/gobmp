@@ -43,14 +43,14 @@ func TestVPLSMessageProducer_RFC4761(t *testing.T) {
 	}
 
 	// Create mock PerPeerHeader
-	peerHeader := &bmp.PerPeerHeader{
+	peerHeader := attachTestIdentity(&bmp.PerPeerHeader{
 		PeerType:          0,
 		PeerAS:            65000,
 		PeerAddress:       []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 2},
 		PeerBGPID:         []byte{10, 0, 0, 2},
 		PeerDistinguisher: make([]byte, 8),
 		PeerTimestamp:     []byte{0, 0, 0, 0, 0, 0, 0, 0},
-	}
+	}, "10.1.1.1", "test-speaker-hash")
 
 	// Create mock Update with Extended Community
 	update := &bgp.Update{
@@ -72,10 +72,7 @@ func TestVPLSMessageProducer_RFC4761(t *testing.T) {
 	}
 
 	// Create producer
-	p := &producer{
-		speakerHash: "test-speaker-hash",
-		speakerIP:   "10.1.1.1",
-	}
+	p := &producer{}
 
 	// Call vpls producer
 	msgs, err := p.vpls(mockNLRI, 0, peerHeader, update)
@@ -159,14 +156,14 @@ func TestVPLSMessageProducer_RFC6074(t *testing.T) {
 		isIPv6:    false,
 	}
 
-	peerHeader := &bmp.PerPeerHeader{
+	peerHeader := attachTestIdentity(&bmp.PerPeerHeader{
 		PeerType:          0,
 		PeerAS:            65000,
 		PeerAddress:       []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 3},
 		PeerBGPID:         []byte{10, 0, 0, 3},
 		PeerDistinguisher: make([]byte, 8),
 		PeerTimestamp:     []byte{0, 0, 0, 0, 0, 0, 0, 0},
-	}
+	}, "10.1.1.1", "test-speaker-hash")
 
 	update := &bgp.Update{
 		BaseAttributes: &bgp.BaseAttributes{
@@ -186,10 +183,7 @@ func TestVPLSMessageProducer_RFC6074(t *testing.T) {
 		},
 	}
 
-	p := &producer{
-		speakerHash: "test-speaker-hash",
-		speakerIP:   "10.1.1.1",
-	}
+	p := &producer{}
 
 	msgs, err := p.vpls(mockNLRI, 0, peerHeader, update)
 	if err != nil {
@@ -243,13 +237,13 @@ func TestVPLSMessageProducer_Withdrawal(t *testing.T) {
 		isIPv6:    false,
 	}
 
-	peerHeader := &bmp.PerPeerHeader{
+	peerHeader := attachDefaultTestIdentity(&bmp.PerPeerHeader{
 		PeerAS:            65000,
 		PeerAddress:       make([]byte, 16),
 		PeerBGPID:         make([]byte, 4),
 		PeerDistinguisher: make([]byte, 8),
 		PeerTimestamp:     make([]byte, 8),
-	}
+	})
 
 	update := &bgp.Update{
 		BaseAttributes: &bgp.BaseAttributes{},

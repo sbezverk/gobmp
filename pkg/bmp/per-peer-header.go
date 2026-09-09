@@ -57,6 +57,9 @@ type PerPeerHeader struct {
 	PeerAS            uint32
 	PeerBGPID         []byte
 	PeerTimestamp     []byte
+	// Identity is attached by the message producer and is not part of the BMP
+	// Per-Peer Header wire format.
+	Identity PeerIdentity
 }
 
 // Len returns the length of PerPeerHeader structure
@@ -282,6 +285,141 @@ func (p *PerPeerHeader) GetPeerDistinguisherString() string {
 // the combination of Peer BGP ID and Peer Distinguisher fields
 func (p *PerPeerHeader) GetTableKey() string {
 	return p.GetPeerBGPIDString() + p.GetPeerDistinguisherString()
+}
+
+// PeerIdentity returns the cache key for a peer identity. Peer Types 0/1/2 use
+// the peer address, ASN, BGP ID, and distinguisher. Peer Type 3 represents a
+// Loc-RIB and intentionally omits peer address and ASN.
+func (p *PerPeerHeader) PeerIdentity() string {
+	switch p.PeerType {
+	case PeerType0, PeerType1, PeerType2:
+		return fmt.Sprintf("%d-%s-%s-%d-%s", p.PeerType, p.GetPeerDistinguisherString(), p.GetPeerAddrString(), p.PeerAS, p.GetPeerBGPIDString())
+	case PeerType3:
+		return fmt.Sprintf("%d-%s-%s", p.PeerType, p.GetPeerDistinguisherString(), p.GetPeerBGPIDString())
+	default:
+		return ""
+	}
+}
+
+// PeerIdentity holds information about the peer's identity extracted from the BMP PeerUP message.
+type PeerIdentity struct {
+	SpeakerIP   string
+	SpeakerHash string
+	RouterIP    string
+	RouterHash  string
+	PeerIP      string
+	PeerHash    string
+	IsLocRIB    bool
+}
+
+func (p PeerIdentity) String() string {
+	return "SpeakerIP: " + p.SpeakerIP + ", SpeakerHash: " + p.SpeakerHash +
+		", RouterIP: " + p.RouterIP + ", RouterHash: " + p.RouterHash +
+		", PeerIP: " + p.PeerIP + ", PeerHash: " + p.PeerHash +
+		", IsLocRIB: " + strconv.FormatBool(p.IsLocRIB)
+}
+
+func (p PeerIdentity) IsEqual(other PeerIdentity) bool {
+	return p.SpeakerIP == other.SpeakerIP &&
+		p.SpeakerHash == other.SpeakerHash &&
+		p.RouterIP == other.RouterIP &&
+		p.RouterHash == other.RouterHash &&
+		p.PeerIP == other.PeerIP &&
+		p.PeerHash == other.PeerHash &&
+		p.IsLocRIB == other.IsLocRIB
+}
+
+func isZeroOrEmptyIP(s string) bool {
+	if s == "" {
+		return true
+	}
+	ip := net.ParseIP(s)
+	if ip == nil {
+		return true
+	}
+	return ip.IsUnspecified()
+}
+
+func md5Hex(s string) string {
+	h := md5.New()
+	h.Write([]byte(s))
+	var digest [md5.Size]byte
+	return hex.EncodeToString(h.Sum(digest[:0]))
+}
+
+func identityHash(s string) string {
+	if isZeroOrEmptyIP(s) {
+		return ""
+	}
+	return md5Hex(s)
+}
+
+func localAddressFromPeerUp(peerUp *PeerUpMessage) string {
+	if peerUp == nil || len(peerUp.LocalAddress) < 16 {
+		return ""
+	}
+	return peerUp.GetLocalAddressString()
+}
+
+func identityAddress(localIP, speakerIP string) string {
+	if !isZeroOrEmptyIP(localIP) {
+		return localIP
+	}
+	if !isZeroOrEmptyIP(speakerIP) {
+		return speakerIP
+	}
+	return localIP
+}
+
+func IdentityFromPeerUp(msg Message) PeerIdentity {
+	id := IdentityFromPeerHeader(msg)
+	ph := msg.PeerHeader
+	peerUp, ok := msg.Payload.(*PeerUpMessage)
+	if ph == nil || !ok || peerUp == nil {
+		return id
+	}
+	localIP := localAddressFromPeerUp(peerUp)
+	routerIP := identityAddress(localIP, msg.SpeakerIP)
+
+	if ph.PeerType == PeerType3 {
+		id.SpeakerIP = msg.SpeakerIP
+		id.SpeakerHash = identityHash(msg.SpeakerIP)
+		id.RouterIP = routerIP
+		id.RouterHash = identityHash(routerIP)
+		id.PeerIP = ""
+		id.IsLocRIB = true
+		return id
+	}
+	id.SpeakerIP = msg.SpeakerIP
+	id.SpeakerHash = identityHash(msg.SpeakerIP)
+	id.RouterIP = routerIP
+	id.RouterHash = identityHash(routerIP)
+	id.PeerIP = ph.GetPeerAddrString()
+	id.IsLocRIB = false
+	return id
+}
+
+func IdentityFromPeerHeader(msg Message) PeerIdentity {
+	ph := msg.PeerHeader
+
+	peer := PeerIdentity{
+		SpeakerIP:   msg.SpeakerIP,
+		SpeakerHash: identityHash(msg.SpeakerIP),
+		RouterIP:    msg.SpeakerIP,
+		RouterHash:  identityHash(msg.SpeakerIP),
+	}
+
+	if ph == nil {
+		return peer
+	}
+
+	peer.PeerHash = ph.GetPeerHash()
+	peer.IsLocRIB = ph.PeerType == PeerType3
+	if ph.PeerType != PeerType3 {
+		peer.PeerIP = ph.GetPeerAddrString()
+	}
+
+	return peer
 }
 
 // UnmarshalPerPeerHeader processes Per-Peer header

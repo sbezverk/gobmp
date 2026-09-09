@@ -84,8 +84,6 @@ func TestCopyUpdateCopiesNHCState(t *testing.T) {
 func TestRouteMonitorPublishesMPReachAndUnreach(t *testing.T) {
 	publisher := &recordingPublisher{}
 	p := NewProducer(publisher, false).(*producer)
-	p.speakerIP = "192.0.2.10"
-	p.speakerHash = "speaker"
 	nhcValue := []byte{0, 1, 1, 4, 10, 0, 0, 1, 0, 4, 0, 0}
 	nhc, err := bgp.UnmarshalNHC(nhcValue)
 	if err != nil {

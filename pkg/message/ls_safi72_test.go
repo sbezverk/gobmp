@@ -77,9 +77,7 @@ func TestProcessNLRI72SubTypes_NodeRDStamped(t *testing.T) {
 	}
 	rec := &recordingPublisher{}
 	p := &producer{
-		speakerHash: "test-router",
-		speakerIP:   "192.0.2.1",
-		publisher:   rec,
+		publisher: rec,
 	}
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	p.processNLRI72SubTypes(mock, 0, ph, &bgp.Update{})
@@ -152,9 +150,7 @@ func TestProcessNLRI72SubTypes_LinkAndPrefixRDStamped(t *testing.T) {
 	}
 	rec := &recordingPublisher{}
 	p := &producer{
-		speakerHash: "test-router",
-		speakerIP:   "192.0.2.1",
-		publisher:   rec,
+		publisher: rec,
 	}
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	p.processNLRI72SubTypes(mock, 0, ph, &bgp.Update{})
@@ -229,9 +225,7 @@ func TestProcessNLRI72SubTypes_SRv6SIDRDStamped(t *testing.T) {
 	}
 	rec := &recordingPublisher{}
 	p := &producer{
-		speakerHash: "test-router",
-		speakerIP:   "192.0.2.1",
-		publisher:   rec,
+		publisher: rec,
 	}
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	p.processNLRI72SubTypes(mock, 0, ph, &bgp.Update{})

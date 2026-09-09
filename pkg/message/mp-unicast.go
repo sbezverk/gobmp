@@ -40,8 +40,8 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 	if len(u.NLRI) == 0 {
 		prfx := &UnicastPrefix{
 			Action:      operation,
-			RouterHash:  p.speakerHash,
-			RouterIP:    p.speakerIP,
+			RouterHash:  ph.Identity.RouterHash,
+			RouterIP:    ph.Identity.RouterIP,
 			PeerHash:    ph.GetPeerHash(),
 			RemoteBGPID: ph.GetPeerBGPIDString(),
 			PeerIP:      ph.GetPeerAddrString(),
@@ -75,8 +75,8 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 	for _, e := range u.NLRI {
 		prfx := &UnicastPrefix{
 			Action:         operation,
-			RouterHash:     p.speakerHash,
-			RouterIP:       p.speakerIP,
+			RouterHash:     ph.Identity.RouterHash,
+			RouterIP:       ph.Identity.RouterIP,
 			PeerType:       uint8(ph.PeerType),
 			PeerHash:       ph.GetPeerHash(),
 			RemoteBGPID:    ph.GetPeerBGPIDString(),

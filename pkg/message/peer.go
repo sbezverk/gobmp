@@ -1,30 +1,26 @@
 package message
 
 import (
-	"crypto/md5"
-	"encoding/hex"
+	"fmt"
 	"net"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) producePeerMessage(op int, msg bmp.Message) {
+func (p *producer) producePeerMessage(op int, msg bmp.Message, peerID bmp.PeerIdentity) (*PeerStateChange, error) {
 	if msg.PeerHeader == nil {
-		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
-		return
+		return nil, fmt.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 	}
 	action := "add"
 	if op == peerDown {
 		action = "del"
 	}
-
 	var m PeerStateChange
 	if op == peerUP {
 		peerUpMsg, ok := msg.Payload.(*bmp.PeerUpMessage)
 		if !ok {
-			glog.Errorf("got invalid Payload type in bmp.Message %+v", msg.Payload)
-			return
+			return nil, fmt.Errorf("got invalid Payload type in bmp.Message %+v", msg.Payload)
 		}
 		m = PeerStateChange{
 			Action:         action,
@@ -52,23 +48,19 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		if f, err := msg.PeerHeader.IsLocRIBFiltered(); err == nil {
 			m.IsLocRIBFiltered = f
 		}
-		m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
+
+		m.RouterIP = peerID.RouterIP
+		m.RouterHash = peerID.RouterHash
+		m.RemoteIP = peerID.PeerIP
+
 		m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()
 		m.LocalBGPID = net.IP(peerUpMsg.SentOpen.BGPID).To4().String()
 		m.IsIPv4 = !msg.PeerHeader.IsRemotePeerIPv6()
 		m.LocalIP = peerUpMsg.GetLocalAddressString()
-		// Saving local bgp speaker identities inside sync.Once so the writes
-		// happen exactly once and happen-before the channel close.  After the
-		// first PeerUp the fields are immutable — no data race with readers
-		// that wait on speakerReady.
+
 		p.speakerReadyOnce.Do(func() {
-			p.speakerIP = speakerAddress(m.LocalIP, msg.SpeakerIP)
-			md5Sum := md5.Sum([]byte(p.speakerIP))
-			p.speakerHash = hex.EncodeToString(md5Sum[:])
 			close(p.speakerReady)
 		})
-		m.RouterIP = p.speakerIP
-		m.RouterHash = p.speakerHash
 
 		m.LocalASN = uint32(peerUpMsg.SentOpen.MyAS)
 		if lasn, ok := peerUpMsg.SentOpen.Is4BytesASCapable(); ok {
@@ -108,27 +100,26 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		m.RcvCapabilities = peerUpMsg.ReceivedOpen.GetCapabilities()
 		if glog.V(6) {
 			glog.Infof("producer for speaker ip: %s table: %s add path: %+v",
-				p.speakerIP,
+				peerID.SpeakerIP,
 				msg.PeerHeader.GetTableKey(),
 				ptp.addPathCapable)
 		}
 	} else {
 		peerDownMsg, ok := msg.Payload.(*bmp.PeerDownMessage)
 		if !ok {
-			glog.Errorf("got invalid Payload type in bmp.Message")
-			return
+			return nil, fmt.Errorf("got invalid Payload type in bmp.Message")
 		}
 		m = PeerStateChange{
-			Action:     "down",
-			RouterIP:   p.speakerIP,
-			PeerType:   uint8(msg.PeerHeader.PeerType),
-			RouterHash: p.speakerHash,
-			BMPReason:  int(peerDownMsg.Reason),
-			RemoteASN:  msg.PeerHeader.PeerAS,
-			PeerRD:     msg.PeerHeader.GetPeerDistinguisherString(),
-			Timestamp:  msg.PeerHeader.GetPeerTimestamp(),
+			Action:    "down",
+			PeerType:  uint8(msg.PeerHeader.PeerType),
+			BMPReason: int(peerDownMsg.Reason),
+			RemoteASN: msg.PeerHeader.PeerAS,
+			PeerRD:    msg.PeerHeader.GetPeerDistinguisherString(),
+			Timestamp: msg.PeerHeader.GetPeerTimestamp(),
 		}
-		m.RemoteIP = msg.PeerHeader.GetPeerAddrString()
+		m.RouterIP = peerID.RouterIP
+		m.RouterHash = peerID.RouterHash
+		m.RemoteIP = peerID.PeerIP
 		m.RemoteBGPID = msg.PeerHeader.GetPeerBGPIDString()
 		m.IsIPv4 = !msg.PeerHeader.IsRemotePeerIPv6()
 		m.InfoData = make([]byte, len(peerDownMsg.Data))
@@ -140,10 +131,8 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message) {
 		delete(p.tableProperties, msg.PeerHeader.GetTableKey())
 		p.tableLock.Unlock()
 	}
-	if err := p.marshalAndPublish(&m, bmp.PeerStateChangeMsg, []byte(m.RouterHash)); err != nil {
-		glog.Errorf("failed to process peer message with error: %+v", err)
-		return
-	}
+
+	return &m, nil
 }
 
 // speakerAddress picks the address that identifies the BMP speaker for this

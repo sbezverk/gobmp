@@ -8,22 +8,20 @@ import (
 )
 
 func statsTestPeerHeader() *bmp.PerPeerHeader {
-	return &bmp.PerPeerHeader{
+	return attachTestIdentity(&bmp.PerPeerHeader{
 		PeerAS:            65001,
 		PeerType:          0,
 		PeerBGPID:         make([]byte, 4),
 		PeerAddress:       make([]byte, 16),
 		PeerDistinguisher: make([]byte, 8),
 		PeerTimestamp:     make([]byte, 8),
-	}
+	}, "10.0.0.1", "test-hash")
 }
 
 // TestProduceStatsMessage_AllTypes exercises produceStatsMessage with all stat types
 func TestProduceStatsMessage_AllTypes(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		publisher: &mockPublisher{},
 	}
 
 	statsMsg := &bmp.StatsReport{
@@ -61,9 +59,7 @@ func TestProduceStatsMessage_AllTypes(t *testing.T) {
 // TestProduceStatsMessage_TruncatedUint32 exercises the length guard for 4-byte stats
 func TestProduceStatsMessage_TruncatedUint32(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		publisher: &mockPublisher{},
 	}
 
 	for _, statType := range []uint16{0, 1, 2, 3, 4, 5, 6, 11, 12, 13} {
@@ -84,9 +80,7 @@ func TestProduceStatsMessage_TruncatedUint32(t *testing.T) {
 // TestProduceStatsMessage_TruncatedUint64 exercises the length guard for 8-byte stats
 func TestProduceStatsMessage_TruncatedUint64(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		publisher: &mockPublisher{},
 	}
 
 	for _, statType := range []uint16{7, 8, 14, 15} {
@@ -107,9 +101,7 @@ func TestProduceStatsMessage_TruncatedUint64(t *testing.T) {
 // TestProduceStatsMessage_NilPeerHeader exercises the nil PeerHeader guard
 func TestProduceStatsMessage_NilPeerHeader(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		publisher: &mockPublisher{},
 	}
 	msg := bmp.Message{
 		PeerHeader: nil,
@@ -121,9 +113,7 @@ func TestProduceStatsMessage_NilPeerHeader(t *testing.T) {
 // TestProduceStatsMessage_InvalidPayload exercises the type assertion guard
 func TestProduceStatsMessage_InvalidPayload(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		publisher: &mockPublisher{},
 	}
 	msg := bmp.Message{
 		PeerHeader: statsTestPeerHeader(),
@@ -135,9 +125,7 @@ func TestProduceStatsMessage_InvalidPayload(t *testing.T) {
 // TestProduceStatsMessage_EmptyTLV exercises the empty TLV guard
 func TestProduceStatsMessage_EmptyTLV(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		publisher: &mockPublisher{},
 	}
 	msg := bmp.Message{
 		PeerHeader: statsTestPeerHeader(),
@@ -149,9 +137,7 @@ func TestProduceStatsMessage_EmptyTLV(t *testing.T) {
 // TestProduceStatsMessage_UnknownType exercises the default case
 func TestProduceStatsMessage_UnknownType(t *testing.T) {
 	p := &producer{
-		speakerHash: "test-hash",
-		speakerIP:   "10.0.0.1",
-		publisher:   &mockPublisher{},
+		publisher: &mockPublisher{},
 	}
 	statsMsg := &bmp.StatsReport{
 		StatsTLV: []bmp.InformationalTLV{
