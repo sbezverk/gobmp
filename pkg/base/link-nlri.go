@@ -29,9 +29,9 @@ func (l *LinkNLRI) GetLinkProtocolID() string {
 	return ProtocolIDString(l.ProtocolID)
 }
 
-// GetIdentifier returns value of Identifier as int64
-func (l *LinkNLRI) GetIdentifier() int64 {
-	return int64(binary.BigEndian.Uint64(l.Identifier[:]))
+// GetIdentifier returns value of Identifier as uint64
+func (l *LinkNLRI) GetIdentifier() uint64 {
+	return binary.BigEndian.Uint64(l.Identifier[:])
 }
 
 // GetLinkLSID returns a value of Link Descriptor TLV BGP-LS Identifier

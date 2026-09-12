@@ -273,7 +273,7 @@ type LSLink struct {
 	Hash                  string                        `json:"hash,omitempty"`
 	RouterHash            string                        `json:"router_hash,omitempty"`
 	RouterIP              string                        `json:"router_ip,omitempty"`
-	DomainID              int64                         `json:"domain_id"`
+	DomainID              uint64                        `json:"domain_id"`
 	PeerHash              string                        `json:"peer_hash,omitempty"`
 	PeerIP                string                        `json:"peer_ip,omitempty"`
 	PeerType              uint8                         `json:"peer_type"`
@@ -291,6 +291,11 @@ type LSLink struct {
 	RemoteLinkID          uint32                        `json:"remote_link_id,omitempty"`
 	LocalLinkIP           string                        `json:"local_link_ip,omitempty"`
 	RemoteLinkIP          string                        `json:"remote_link_ip,omitempty"`
+	LocalLinkIPv4         string                        `json:"local_link_ipv4,omitempty"`
+	LocalLinkIPv6         string                        `json:"local_link_ipv6,omitempty"`
+	RemoteLinkIPv4        string                        `json:"remote_link_ipv4,omitempty"`
+	RemoteLinkIPv6        string                        `json:"remote_link_ipv6,omitempty"`
+	PathID                uint32                        `json:"path_id,omitempty"`
 	IGPMetric             uint32                        `json:"igp_metric,omitempty"`
 	AdminGroup            uint32                        `json:"admin_group,omitempty"`
 	MaxLinkBW             uint32                        `json:"max_link_bw,omitempty"`
@@ -310,6 +315,11 @@ type LSLink struct {
 	RemoteRouterID        string                        `json:"remote_router_id,omitempty"`
 	LocalNodeASN          uint32                        `json:"local_node_asn,omitempty"`
 	RemoteNodeASN         uint32                        `json:"remote_node_asn,omitempty"`
+	IsInterAS             bool                          `json:"is_inter_as,omitempty"`
+	LocalASBRIPv4         string                        `json:"local_asbr_ipv4,omitempty"`
+	LocalASBRIPv6         string                        `json:"local_asbr_ipv6,omitempty"`
+	RemoteASBRIPv4        string                        `json:"remote_asbr_ipv4,omitempty"`
+	RemoteASBRIPv6        string                        `json:"remote_asbr_ipv6,omitempty"`
 	BGPRouterID           string                        `json:"bgp_router_id,omitempty"`        // Local Node Descriptor's TLV 516
 	BGPRemoteRouterID     string                        `json:"bgp_remote_router_id,omitempty"` // Remote Node Descriptor's TLV 516
 	MemberAS              uint32                        `json:"member_as,omitempty"`            // Node Descriptor's TLV 517
