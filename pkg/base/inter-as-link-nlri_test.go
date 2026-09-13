@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// interASTLV encodes a BGP-LS TLV for test fixtures.
 func interASTLV(typ uint16, value []byte) []byte {
 	b := make([]byte, 4, 4+len(value))
 	binary.BigEndian.PutUint16(b[0:2], typ)
@@ -14,6 +15,7 @@ func interASTLV(typ uint16, value []byte) []byte {
 	return append(b, value...)
 }
 
+// validInterASLinkNLRI builds a complete dual-stack draft-38 NLRI fixture.
 func validInterASLinkNLRI() []byte {
 	local := append(interASTLV(512, []byte{0, 0, 0xfd, 0xe8}), interASTLV(514, []byte{0, 0, 0, 7})...)
 	local = append(local, interASTLV(515, []byte{10, 0, 0, 1})...)
@@ -31,6 +33,7 @@ func validInterASLinkNLRI() []byte {
 	return append(b, links...)
 }
 
+// TestUnmarshalInterASLinkNLRI verifies full decoding, accessor values, hashes, and unknown-TLV retention.
 func TestUnmarshalInterASLinkNLRI(t *testing.T) {
 	nlri, err := UnmarshalInterASLinkNLRI(validInterASLinkNLRI())
 	if err != nil {
@@ -65,6 +68,7 @@ func TestUnmarshalInterASLinkNLRI(t *testing.T) {
 	}
 }
 
+// TestInterASLinkNLRIMissingOptionalValues verifies accessors return safe zero values for absent descriptors.
 func TestInterASLinkNLRIMissingOptionalValues(t *testing.T) {
 	nlri := &InterASLinkNLRI{
 		LocalNode: &NodeDescriptor{SubTLV: map[uint16]TLV{}},
@@ -81,6 +85,7 @@ func TestInterASLinkNLRIMissingOptionalValues(t *testing.T) {
 	}
 }
 
+// TestInterASLinkNLRIIdentifierIsUnsigned verifies the full 64-bit instance identifier is preserved.
 func TestInterASLinkNLRIIdentifierIsUnsigned(t *testing.T) {
 	b := validInterASLinkNLRI()
 	for i := 1; i < 9; i++ {
@@ -95,6 +100,7 @@ func TestInterASLinkNLRIIdentifierIsUnsigned(t *testing.T) {
 	}
 }
 
+// TestUnmarshalInterASLinkNLRIMandatoryFields exercises malformed and missing mandatory descriptor handling.
 func TestUnmarshalInterASLinkNLRIMandatoryFields(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -162,6 +168,7 @@ func TestUnmarshalInterASLinkNLRIMandatoryFields(t *testing.T) {
 	}
 }
 
+// TestValidateInterASLocalNodeISIS verifies the six-octet IS-IS system ID encoding is accepted.
 func TestValidateInterASLocalNodeISIS(t *testing.T) {
 	node := &NodeDescriptor{SubTLV: map[uint16]TLV{
 		512:  {Type: 512, Length: 4, Value: []byte{0, 0, 0xfd, 0xe8}},
@@ -173,6 +180,7 @@ func TestValidateInterASLocalNodeISIS(t *testing.T) {
 	}
 }
 
+// TestUnmarshalInterASLinkNLRIFixedLengths verifies every fixed-width descriptor rejects invalid lengths.
 func TestUnmarshalInterASLinkNLRIFixedLengths(t *testing.T) {
 	tests := []struct {
 		typ    uint16

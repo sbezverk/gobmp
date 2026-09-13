@@ -409,6 +409,7 @@ func TestUnmarshalLSNLRI71_UnmarshalErrors(t *testing.T) {
 	}
 }
 
+// lsInterASTLV encodes a BGP-LS TLV for the SAFI 71 Inter-AS fixture.
 func lsInterASTLV(typ uint16, value []byte) []byte {
 	b := make([]byte, 4, 4+len(value))
 	binary.BigEndian.PutUint16(b[0:2], typ)
@@ -416,6 +417,7 @@ func lsInterASTLV(typ uint16, value []byte) []byte {
 	return append(b, value...)
 }
 
+// TestUnmarshalLSNLRI71InterASLink verifies NLRI type 7 dispatches to the Inter-AS decoder.
 func TestUnmarshalLSNLRI71InterASLink(t *testing.T) {
 	local := append(lsInterASTLV(512, []byte{0, 0, 0xfd, 0xe8}), lsInterASTLV(515, []byte{10, 0, 0, 1})...)
 	local = append(local, lsInterASTLV(1028, []byte{192, 0, 2, 1})...)

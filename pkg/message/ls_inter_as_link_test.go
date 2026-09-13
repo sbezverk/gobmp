@@ -11,6 +11,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/ls"
 )
 
+// messageInterASTLV encodes a BGP-LS TLV for message-layer fixtures.
 func messageInterASTLV(typ uint16, value []byte) []byte {
 	b := make([]byte, 4, 4+len(value))
 	binary.BigEndian.PutUint16(b[0:2], typ)
@@ -18,6 +19,7 @@ func messageInterASTLV(typ uint16, value []byte) []byte {
 	return append(b, value...)
 }
 
+// messageInterASLinkElement builds a complete NLRI type 7 element with dual-stack descriptors.
 func messageInterASLinkElement() []byte {
 	local := append(messageInterASTLV(512, []byte{0, 0, 0xfd, 0xe8}), messageInterASTLV(514, []byte{0, 0, 0, 9})...)
 	local = append(local, messageInterASTLV(515, []byte{10, 0, 0, 1})...)
@@ -37,6 +39,7 @@ func messageInterASLinkElement() []byte {
 	return append(element, body...)
 }
 
+// decodedMessageInterASLink returns the decoded type 7 fixture for producer tests.
 func decodedMessageInterASLink(t *testing.T) *base.InterASLinkNLRI {
 	t.Helper()
 	nlri, err := ls.UnmarshalLSNLRI71(messageInterASLinkElement(), false)
@@ -46,6 +49,7 @@ func decodedMessageInterASLink(t *testing.T) *base.InterASLinkNLRI {
 	return nlri.NLRI[0].LS.(*base.InterASLinkNLRI)
 }
 
+// TestProcessNLRI71InterASLink verifies an Add-Path advertisement is published with all structured fields.
 func TestProcessNLRI71InterASLink(t *testing.T) {
 	pathNLRI := []byte{0, 0, 0, 77}
 	pathNLRI = append(pathNLRI, messageInterASLinkElement()...)
@@ -94,6 +98,7 @@ func TestProcessNLRI71InterASLink(t *testing.T) {
 	}
 }
 
+// TestProcessNLRI71InterASLinkWithdrawalWithAddPath verifies withdrawals retain their path identity.
 func TestProcessNLRI71InterASLinkWithdrawalWithAddPath(t *testing.T) {
 	wire := []byte{0x40, 0x04, 71, 0, 0, 0, 88}
 	wire = append(wire, messageInterASLinkElement()...)
@@ -116,16 +121,19 @@ func TestProcessNLRI71InterASLinkWithdrawalWithAddPath(t *testing.T) {
 	}
 }
 
+// interASNLRI71Mock injects decoded SAFI 71 elements and decoder failures into dispatch tests.
 type interASNLRI71Mock struct {
 	*safi72MockNLRI
 	nlri *ls.NLRI71
 	err  error
 }
 
+// GetNLRI71 returns the configured result for the current dispatch test.
 func (m *interASNLRI71Mock) GetNLRI71() (*ls.NLRI71, error) {
 	return m.nlri, m.err
 }
 
+// TestProcessNLRI71InterASLinkFailures covers decode, type, operation, and publisher failure paths.
 func TestProcessNLRI71InterASLinkFailures(t *testing.T) {
 	ph := makePeerHeader(t, bmp.PeerType0, 0)
 	update := &bgp.Update{}
@@ -163,6 +171,7 @@ func TestProcessNLRI71InterASLinkFailures(t *testing.T) {
 	})
 }
 
+// TestLSInterASLinkIPv6LocRIB verifies IPv6-only direct links and Loc-RIB metadata use fallback fields.
 func TestLSInterASLinkIPv6LocRIB(t *testing.T) {
 	link := decodedMessageInterASLink(t)
 	link.ProtocolID = base.Direct

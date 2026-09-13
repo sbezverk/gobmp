@@ -8,7 +8,9 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
+// lsInterASLink maps a decoded Inter-AS half-link and its BGP-LS attributes into the shared LSLink schema.
 func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update, isIPv6 bool) (*LSLink, error) {
+	// Translate the internal operation code into the stable output action.
 	var operation string
 	switch op {
 	case 0:
@@ -18,6 +20,7 @@ func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op 
 	default:
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
+	// Populate fields shared by all LSLink records and Inter-AS endpoint identity.
 	msg := LSLink{
 		Action:        operation,
 		RouterHash:    ph.Identity.RouterHash,
@@ -39,6 +42,7 @@ func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op 
 		MTID:          link.Link.GetLinkMTID(),
 		IsInterAS:     true,
 	}
+	// Copy the monitored RIB and policy view encoded by the BMP per-peer header.
 	if f, err := ph.IsAdjRIBInPost(); err == nil {
 		msg.IsAdjRIBInPost = f
 	}
@@ -57,10 +61,12 @@ func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op 
 	if msg.IsLocRIB {
 		msg.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
 	}
+	// Retain optional numeric link identifiers when the source IGP provides them.
 	if ids, err := link.Link.GetLinkID(); err == nil {
 		msg.LocalLinkID = ids[0]
 		msg.RemoteLinkID = ids[1]
 	}
+	// Preserve both address families while maintaining the legacy preferred link-IP fields.
 	if address := link.Link.GetLinkIPv4InterfaceAddr(); address != nil {
 		msg.LocalLinkIPv4 = address.String()
 		msg.LocalLinkIP = msg.LocalLinkIPv4
@@ -81,6 +87,7 @@ func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op 
 			msg.RemoteLinkIP = msg.RemoteLinkIPv6
 		}
 	}
+	// Publish local and remote ASBR Router-IDs independently for dual-stack correlation.
 	if address := link.GetLocalASBRIPv4(); address != nil {
 		msg.LocalASBRIPv4 = address.String()
 	}
@@ -93,12 +100,14 @@ func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op 
 	if address := link.GetRemoteASBRIPv6(); address != nil {
 		msg.RemoteASBRIPv6 = address.String()
 	}
+	// OSPF links retain their area, while other source protocols use the existing neutral value.
 	switch link.ProtocolID {
 	case base.OSPFv2, base.OSPFv3:
 		msg.AreaID = link.LocalNode.GetOSPFAreaID()
 	default:
 		msg.AreaID = "0"
 	}
+	// Apply TE metrics and other path attributes through the common link enrichment path.
 	populateLSLinkAttributes(&msg, update, isIPv6)
 	return &msg, nil
 }
