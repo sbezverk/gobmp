@@ -65,6 +65,22 @@ func TestUnmarshalInterASLinkNLRI(t *testing.T) {
 	}
 }
 
+func TestInterASLinkNLRIMissingOptionalValues(t *testing.T) {
+	nlri := &InterASLinkNLRI{
+		LocalNode: &NodeDescriptor{SubTLV: map[uint16]TLV{}},
+		Link:      &LinkDescriptor{LinkTLV: map[uint16]TLV{}},
+	}
+	if nlri.GetLocalASBRIPv4() != nil || nlri.GetLocalASBRIPv6() != nil {
+		t.Error("missing local ASBR IDs must return nil")
+	}
+	if nlri.GetRemoteASN() != 0 {
+		t.Error("missing remote ASN must return zero")
+	}
+	if nlri.GetRemoteASBRIPv4() != nil || nlri.GetRemoteASBRIPv6() != nil {
+		t.Error("missing remote ASBR IDs must return nil")
+	}
+}
+
 func TestInterASLinkNLRIIdentifierIsUnsigned(t *testing.T) {
 	b := validInterASLinkNLRI()
 	for i := 1; i < 9; i++ {
@@ -97,17 +113,32 @@ func TestUnmarshalInterASLinkNLRIMandatoryFields(t *testing.T) {
 			binary.BigEndian.PutUint16(b[11:13], localLength-8)
 			return append(append([]byte(nil), b[:13]...), b[21:]...)
 		}(), wantErr: "missing Autonomous System"},
+		{name: "missing IGP router ID", input: func() []byte {
+			b := validInterASLinkNLRI()
+			localLength := binary.BigEndian.Uint16(b[11:13])
+			binary.BigEndian.PutUint16(b[11:13], localLength-8)
+			return append(append([]byte(nil), b[:29]...), b[37:]...)
+		}(), wantErr: "missing IGP Router-ID"},
 		{name: "missing local ASBR", input: func() []byte {
 			b := validInterASLinkNLRI()
 			localLength := binary.BigEndian.Uint16(b[11:13])
 			binary.BigEndian.PutUint16(b[11:13], localLength-28)
 			return append(append([]byte(nil), b[:37]...), b[65:]...)
 		}(), wantErr: "missing IPv4 or IPv6 ASBR"},
+		{name: "malformed local descriptor", input: func() []byte {
+			b := validInterASLinkNLRI()
+			binary.BigEndian.PutUint16(b[15:17], 0xffff)
+			return b
+		}(), wantErr: "invalid Inter-AS Link Local Node Descriptor"},
 		{name: "no link descriptors", input: func() []byte {
 			b := validInterASLinkNLRI()
 			localLength := int(binary.BigEndian.Uint16(b[11:13]))
 			return b[:13+localLength]
 		}(), wantErr: "no link descriptors"},
+		{name: "malformed link descriptors", input: func() []byte {
+			b := validInterASLinkNLRI()
+			return b[:len(b)-1]
+		}(), wantErr: "invalid Inter-AS Link Descriptors"},
 		{name: "missing remote AS", input: func() []byte {
 			b := validInterASLinkNLRI()
 			localLength := int(binary.BigEndian.Uint16(b[11:13]))
@@ -131,14 +162,29 @@ func TestUnmarshalInterASLinkNLRIMandatoryFields(t *testing.T) {
 	}
 }
 
+func TestValidateInterASLocalNodeISIS(t *testing.T) {
+	node := &NodeDescriptor{SubTLV: map[uint16]TLV{
+		512:  {Type: 512, Length: 4, Value: []byte{0, 0, 0xfd, 0xe8}},
+		515:  {Type: 515, Length: 6, Value: []byte{1, 2, 3, 4, 5, 6}},
+		1028: {Type: 1028, Length: 4, Value: []byte{192, 0, 2, 1}},
+	}}
+	if err := validateInterASLocalNode(node, ISISL2); err != nil {
+		t.Fatalf("validateInterASLocalNode: %v", err)
+	}
+}
+
 func TestUnmarshalInterASLinkNLRIFixedLengths(t *testing.T) {
 	tests := []struct {
 		typ    uint16
 		value  []byte
 		oldLen int
 	}{
+		{typ: 512, value: []byte{1, 2}, oldLen: 4},
 		{typ: 514, value: []byte{1, 2}, oldLen: 4},
 		{typ: 515, value: []byte{1, 2}, oldLen: 4},
+		{typ: 1028, value: []byte{1, 2}, oldLen: 4},
+		{typ: 1029, value: []byte{1, 2}, oldLen: 16},
+		{typ: 258, value: []byte{1, 2}, oldLen: 8},
 		{typ: 270, value: []byte{1, 2}, oldLen: 4},
 		{typ: 271, value: []byte{1, 2}, oldLen: 4},
 		{typ: 272, value: []byte{1, 2}, oldLen: 16},
@@ -151,7 +197,7 @@ func TestUnmarshalInterASLinkNLRIFixedLengths(t *testing.T) {
 				if i+len(needle) <= len(b) && binary.BigEndian.Uint16(b[i:i+2]) == tt.typ && int(binary.BigEndian.Uint16(b[i+2:i+4])) == tt.oldLen {
 					replacement := interASTLV(tt.typ, tt.value)
 					b = append(append(append([]byte(nil), b[:i]...), replacement...), b[i+len(needle):]...)
-					if tt.typ == 514 || tt.typ == 515 {
+					if tt.typ == 512 || tt.typ == 514 || tt.typ == 515 || tt.typ == 1028 || tt.typ == 1029 {
 						localLength := binary.BigEndian.Uint16(b[11:13])
 						binary.BigEndian.PutUint16(b[11:13], localLength-uint16(tt.oldLen-len(tt.value)))
 					}
