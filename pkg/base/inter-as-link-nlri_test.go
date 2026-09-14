@@ -71,25 +71,46 @@ func TestUnmarshalInterASLinkNLRI(t *testing.T) {
 	}
 }
 
-// TestInterASLinkNLRIMissingOptionalValues verifies accessors return safe zero values for absent descriptors.
+// TestInterASLinkNLRIMissingOptionalValues verifies accessors return safe zero values for nil and absent descriptors.
 func TestInterASLinkNLRIMissingOptionalValues(t *testing.T) {
-	nlri := &InterASLinkNLRI{
-		LocalNode: &NodeDescriptor{SubTLV: map[uint16]TLV{}},
-		Link:      &LinkDescriptor{LinkTLV: map[uint16]TLV{}},
+	var nilReceiver *InterASLinkNLRI
+	tests := map[string]*InterASLinkNLRI{
+		"nil receiver": nilReceiver,
+		"empty":        {},
+		"explicit nil": {LocalNode: nil, Link: nil},
+		"empty maps": {
+			LocalNode: &NodeDescriptor{SubTLV: map[uint16]TLV{}},
+			Link:      &LinkDescriptor{LinkTLV: map[uint16]TLV{}},
+		},
 	}
-	if nlri.GetLocalASBRIPv4() != nil || nlri.GetLocalASBRIPv6() != nil {
-		t.Error("missing local ASBR IDs must return nil")
-	}
-	if nlri.GetRemoteASN() != 0 {
-		t.Error("missing remote ASN must return zero")
-	}
-	if nlri.GetRemoteASBRIPv4() != nil || nlri.GetRemoteASBRIPv6() != nil {
-		t.Error("missing remote ASBR IDs must return nil")
+	for name, nlri := range tests {
+		t.Run(name, func(t *testing.T) {
+			if nlri.GetProtocolID() != "Unknown" || nlri.GetIdentifier() != 0 {
+				t.Errorf("unexpected identity values for %#v", nlri)
+			}
+			key := nlri.GetDomainKey()
+			if nlri == nil || nlri.LocalNode == nil {
+				if key != nil {
+					t.Errorf("domain key = %+v, want nil", key)
+				}
+			} else if key == nil || key.ASN != 0 || key.Identifier != 0 {
+				t.Errorf("domain key = %+v, want zero-value tuple", key)
+			}
+			if nlri.GetLocalASBRIPv4() != nil || nlri.GetLocalASBRIPv6() != nil {
+				t.Error("missing local ASBR IDs must return nil")
+			}
+			if nlri.GetRemoteASN() != 0 {
+				t.Error("missing remote ASN must return zero")
+			}
+			if nlri.GetRemoteASBRIPv4() != nil || nlri.GetRemoteASBRIPv6() != nil {
+				t.Error("missing remote ASBR IDs must return nil")
+			}
+		})
 	}
 }
 
-// TestInterASLinkNLRIIdentifierIsUnsigned verifies the full 64-bit instance identifier is preserved.
-func TestInterASLinkNLRIIdentifierIsUnsigned(t *testing.T) {
+// TestInterASLinkNLRIIdentifierUsesInt64 verifies identifiers match the representation used by other LS types.
+func TestInterASLinkNLRIIdentifierUsesInt64(t *testing.T) {
 	b := validInterASLinkNLRI()
 	for i := 1; i < 9; i++ {
 		b[i] = 0xff
@@ -98,8 +119,8 @@ func TestInterASLinkNLRIIdentifierIsUnsigned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UnmarshalInterASLinkNLRI: %v", err)
 	}
-	if got := nlri.GetIdentifier(); got != ^uint64(0) {
-		t.Errorf("identifier = %d, want %d", got, ^uint64(0))
+	if got := nlri.GetIdentifier(); got != -1 {
+		t.Errorf("identifier = %d, want -1", got)
 	}
 }
 
@@ -239,6 +260,16 @@ func TestValidateInterASLocalNodeISIS(t *testing.T) {
 	node.SubTLV[514] = TLV{Type: 514, Length: 4, Value: []byte{0, 0, 0, 1}}
 	if err := validateInterASLocalNode(node, ISISL2); err == nil || !strings.Contains(err.Error(), "non-OSPF") {
 		t.Fatalf("expected non-OSPF Area-ID error, got %v", err)
+	}
+}
+
+// TestValidateInterASDescriptorsNil verifies internal validators return errors instead of dereferencing nil pointers.
+func TestValidateInterASDescriptorsNil(t *testing.T) {
+	if err := validateInterASLocalNode(nil, OSPFv2); err == nil {
+		t.Error("validateInterASLocalNode(nil) returned nil")
+	}
+	if err := validateInterASLinkDescriptors(nil); err == nil {
+		t.Error("validateInterASLinkDescriptors(nil) returned nil")
 	}
 }
 

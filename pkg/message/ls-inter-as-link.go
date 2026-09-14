@@ -10,6 +10,21 @@ import (
 
 // lsInterASLink maps a decoded Inter-AS half-link and its BGP-LS attributes into the shared LSLink schema.
 func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update, isIPv6 bool) (*LSLink, error) {
+	if p == nil {
+		return nil, fmt.Errorf("message producer is nil")
+	}
+	if link == nil {
+		return nil, fmt.Errorf("Inter-AS Link NLRI is nil")
+	}
+	if link.LocalNode == nil {
+		return nil, fmt.Errorf("Inter-AS Link Local Node Descriptor is nil")
+	}
+	if link.Link == nil {
+		return nil, fmt.Errorf("Inter-AS Link Descriptors are nil")
+	}
+	if ph == nil {
+		return nil, fmt.Errorf("BMP per-peer header is nil")
+	}
 	// Translate the internal operation code into the stable output action.
 	var operation string
 	switch op {

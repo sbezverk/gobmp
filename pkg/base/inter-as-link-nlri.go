@@ -30,26 +30,38 @@ type InterASLinkNLRI struct {
 // InterASDomainKey identifies an IGP domain using the tuple mandated by draft-44.
 type InterASDomainKey struct {
 	ASN        uint32 `json:"asn"`
-	Identifier uint64 `json:"identifier"`
+	Identifier int64  `json:"identifier"`
 }
 
 // GetDomainKey returns the local ASN and BGP-LS Instance Identifier used to distinguish the IGP domain.
 func (l *InterASLinkNLRI) GetDomainKey() *InterASDomainKey {
+	if l == nil || l.LocalNode == nil {
+		return nil
+	}
 	return &InterASDomainKey{ASN: l.LocalNode.GetASN(), Identifier: l.GetIdentifier()}
 }
 
 // GetProtocolID returns the textual description of the source protocol.
 func (l *InterASLinkNLRI) GetProtocolID() string {
+	if l == nil {
+		return ProtocolIDString(0)
+	}
 	return ProtocolIDString(l.ProtocolID)
 }
 
-// GetIdentifier returns the unsigned 64-bit BGP-LS Instance Identifier.
-func (l *InterASLinkNLRI) GetIdentifier() uint64 {
-	return binary.BigEndian.Uint64(l.Identifier[:])
+// GetIdentifier returns the BGP-LS Instance Identifier using the int64 representation shared by other LS types.
+func (l *InterASLinkNLRI) GetIdentifier() int64 {
+	if l == nil {
+		return 0
+	}
+	return int64(binary.BigEndian.Uint64(l.Identifier[:]))
 }
 
 // GetLocalASBRIPv4 returns the local ASBR IPv4 Router-ID from TLV 1028.
 func (l *InterASLinkNLRI) GetLocalASBRIPv4() net.IP {
+	if l == nil || l.LocalNode == nil {
+		return nil
+	}
 	if tlv, ok := l.LocalNode.SubTLV[1028]; ok {
 		return net.IP(tlv.Value).To4()
 	}
@@ -58,6 +70,9 @@ func (l *InterASLinkNLRI) GetLocalASBRIPv4() net.IP {
 
 // GetLocalASBRIPv6 returns the local ASBR IPv6 Router-ID from TLV 1029.
 func (l *InterASLinkNLRI) GetLocalASBRIPv6() net.IP {
+	if l == nil || l.LocalNode == nil {
+		return nil
+	}
 	if tlv, ok := l.LocalNode.SubTLV[1029]; ok && len(tlv.Value) == net.IPv6len {
 		return net.IP(tlv.Value).To16()
 	}
@@ -66,6 +81,9 @@ func (l *InterASLinkNLRI) GetLocalASBRIPv6() net.IP {
 
 // GetRemoteASN returns the neighboring autonomous system from TLV 270.
 func (l *InterASLinkNLRI) GetRemoteASN() uint32 {
+	if l == nil || l.Link == nil {
+		return 0
+	}
 	if tlv, ok := l.Link.LinkTLV[RemoteASNumberType]; ok && len(tlv.Value) >= 4 {
 		return binary.BigEndian.Uint32(tlv.Value)
 	}
@@ -74,6 +92,9 @@ func (l *InterASLinkNLRI) GetRemoteASN() uint32 {
 
 // GetRemoteASBRIPv4 returns the neighboring ASBR IPv4 Router-ID from TLV 271.
 func (l *InterASLinkNLRI) GetRemoteASBRIPv4() net.IP {
+	if l == nil || l.Link == nil {
+		return nil
+	}
 	if tlv, ok := l.Link.LinkTLV[IPv4RemoteASBRIDType]; ok {
 		return net.IP(tlv.Value).To4()
 	}
@@ -82,6 +103,9 @@ func (l *InterASLinkNLRI) GetRemoteASBRIPv4() net.IP {
 
 // GetRemoteASBRIPv6 returns the neighboring ASBR IPv6 Router-ID from TLV 272.
 func (l *InterASLinkNLRI) GetRemoteASBRIPv6() net.IP {
+	if l == nil || l.Link == nil {
+		return nil
+	}
 	if tlv, ok := l.Link.LinkTLV[IPv6RemoteASBRIDType]; ok && len(tlv.Value) == net.IPv6len {
 		return net.IP(tlv.Value).To16()
 	}
@@ -136,6 +160,9 @@ func UnmarshalInterASLinkNLRI(b []byte) (*InterASLinkNLRI, error) {
 
 // validateInterASLocalNode enforces the mandatory local ASBR identity descriptors and their wire lengths.
 func validateInterASLocalNode(node *NodeDescriptor, protocol ProtoID) error {
+	if node == nil {
+		return fmt.Errorf("Inter-AS Link Local Node Descriptor is nil")
+	}
 	// The local ASN and protocol-specific IGP Router-ID identify the advertising ASBR.
 	if tlv, ok := node.SubTLV[512]; !ok {
 		return fmt.Errorf("Inter-AS Link Local Node Descriptor missing Autonomous System TLV 512")
@@ -178,6 +205,9 @@ func validateInterASLocalNode(node *NodeDescriptor, protocol ProtoID) error {
 
 // validateInterASLinkDescriptors enforces remote ASBR identity and fixed-length link descriptor encodings.
 func validateInterASLinkDescriptors(link *LinkDescriptor) error {
+	if link == nil {
+		return fmt.Errorf("Inter-AS Link Descriptors are nil")
+	}
 	// The remote ASN and at least one remote ASBR Router-ID identify the neighboring half-link.
 	remoteAS, ok := link.LinkTLV[RemoteASNumberType]
 	if !ok {
@@ -197,10 +227,20 @@ func validateInterASLinkDescriptors(link *LinkDescriptor) error {
 	if hasIPv6 && ipv6.Length != net.IPv6len {
 		return fmt.Errorf("Inter-AS Link Descriptor TLV 272 has length %d, expected 16", ipv6.Length)
 	}
-	// Validate optional link-correlation descriptors when the source IGP advertises them.
-	lengths := map[uint16]uint16{258: 8, 259: 4, 260: 4, 261: 16, 262: 16}
-	for typ, expected := range lengths {
-		if tlv, ok := link.LinkTLV[typ]; ok && tlv.Length != expected {
+	// Validate optional link-correlation descriptors without allocating on the parsing hot path.
+	for typ, tlv := range link.LinkTLV {
+		var expected uint16
+		switch typ {
+		case 258:
+			expected = 8
+		case 259, 260:
+			expected = 4
+		case 261, 262:
+			expected = 16
+		default:
+			continue
+		}
+		if tlv.Length != expected {
 			return fmt.Errorf("Inter-AS Link Descriptor TLV %d has length %d, expected %d", typ, tlv.Length, expected)
 		}
 	}

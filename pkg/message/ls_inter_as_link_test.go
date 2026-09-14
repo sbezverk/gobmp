@@ -174,6 +174,32 @@ func TestProcessNLRI71InterASLinkFailures(t *testing.T) {
 	})
 }
 
+// TestLSInterASLinkNilInputs verifies producer helpers reject or ignore nil pointers without panicking.
+func TestLSInterASLinkNilInputs(t *testing.T) {
+	link := decodedMessageInterASLink(t)
+	ph := makePeerHeader(t, bmp.PeerType0, 0)
+	p := &producer{publisher: &recordingPublisher{}}
+	if _, err := (*producer)(nil).lsInterASLink(link, "", 0, ph, nil, false); err == nil {
+		t.Error("nil producer returned nil error")
+	}
+	if _, err := p.lsInterASLink(nil, "", 0, ph, nil, false); err == nil {
+		t.Error("nil Inter-AS NLRI returned nil error")
+	}
+	if _, err := p.lsInterASLink(&base.InterASLinkNLRI{}, "", 0, ph, nil, false); err == nil {
+		t.Error("nil LocalNode returned nil error")
+	}
+	if _, err := p.lsInterASLink(&base.InterASLinkNLRI{LocalNode: &base.NodeDescriptor{}}, "", 0, ph, nil, false); err == nil {
+		t.Error("nil Link returned nil error")
+	}
+	if _, err := p.lsInterASLink(link, "", 0, nil, nil, false); err == nil {
+		t.Error("nil per-peer header returned nil error")
+	}
+	if _, err := p.lsInterASLink(link, "", 0, ph, nil, false); err != nil {
+		t.Fatalf("nil update should be ignored: %v", err)
+	}
+	populateLSLinkAttributes(nil, nil, false)
+}
+
 // TestLSInterASLinkIPv6LocRIB verifies IPv6-only direct links and Loc-RIB metadata use fallback fields.
 func TestLSInterASLinkIPv6LocRIB(t *testing.T) {
 	link := decodedMessageInterASLink(t)

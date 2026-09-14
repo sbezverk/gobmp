@@ -112,6 +112,9 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 
 // populateLSLinkAttributes applies BGP-LS path-attribute metrics and properties shared by intra-AS and Inter-AS links.
 func populateLSLinkAttributes(msg *LSLink, update *bgp.Update, isIPv6 bool) {
+	if msg == nil || update == nil {
+		return
+	}
 	if lslink, err := update.GetBGPLSAttribute(); err == nil {
 		if isIPv6 {
 			msg.RouterID = lslink.GetLocalIPv6RouterID()

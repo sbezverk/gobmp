@@ -273,7 +273,7 @@ type LSLink struct {
 	Hash                  string                        `json:"hash,omitempty"`
 	RouterHash            string                        `json:"router_hash,omitempty"`
 	RouterIP              string                        `json:"router_ip,omitempty"`
-	DomainID              uint64                        `json:"domain_id"`
+	DomainID              int64                         `json:"domain_id"`
 	PeerHash              string                        `json:"peer_hash,omitempty"`
 	PeerIP                string                        `json:"peer_ip,omitempty"`
 	PeerType              uint8                         `json:"peer_type"`
