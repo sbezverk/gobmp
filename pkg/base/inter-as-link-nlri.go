@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	// RemoteASNumberType identifies the Remote AS Number link descriptor defined by draft-38.
+	// RemoteASNumberType identifies the Remote AS Number link descriptor defined by draft-44.
 	RemoteASNumberType = 270
 	// IPv4RemoteASBRIDType identifies the IPv4 Remote ASBR ID link descriptor.
 	IPv4RemoteASBRIDType = 271
@@ -25,6 +25,17 @@ type InterASLinkNLRI struct {
 	Link          *LinkDescriptor
 	LocalNodeHash string
 	LinkHash      string
+}
+
+// InterASDomainKey identifies an IGP domain using the tuple mandated by draft-44.
+type InterASDomainKey struct {
+	ASN        uint32 `json:"asn"`
+	Identifier uint64 `json:"identifier"`
+}
+
+// GetDomainKey returns the local ASN and BGP-LS Instance Identifier used to distinguish the IGP domain.
+func (l *InterASLinkNLRI) GetDomainKey() *InterASDomainKey {
+	return &InterASDomainKey{ASN: l.LocalNode.GetASN(), Identifier: l.GetIdentifier()}
 }
 
 // GetProtocolID returns the textual description of the source protocol.
@@ -77,7 +88,7 @@ func (l *InterASLinkNLRI) GetRemoteASBRIPv6() net.IP {
 	return nil
 }
 
-// UnmarshalInterASLinkNLRI decodes and validates a draft-38 Inter-AS Link NLRI value.
+// UnmarshalInterASLinkNLRI decodes and validates a draft-44 Inter-AS Link NLRI value.
 func UnmarshalInterASLinkNLRI(b []byte) (*InterASLinkNLRI, error) {
 	// Validate and decode the fixed Protocol-ID, Identifier, and descriptor header.
 	if len(b) < 13 {
@@ -142,8 +153,13 @@ func validateInterASLocalNode(node *NodeDescriptor, protocol ProtoID) error {
 	if igpRouterID.Length != expectedIGPRouterIDLength {
 		return fmt.Errorf("Inter-AS Link Local Node Descriptor TLV 515 has length %d, expected %d", igpRouterID.Length, expectedIGPRouterIDLength)
 	}
-	if area, ok := node.SubTLV[514]; ok && area.Length != 4 {
-		return fmt.Errorf("Inter-AS Link Local Node Descriptor TLV 514 has length %d, expected 4", area.Length)
+	if area, ok := node.SubTLV[514]; ok {
+		if protocol != OSPFv2 && protocol != OSPFv3 {
+			return fmt.Errorf("Inter-AS Link Local Node Descriptor contains OSPF Area-ID TLV 514 for non-OSPF Protocol-ID %d", protocol)
+		}
+		if area.Length != 4 {
+			return fmt.Errorf("Inter-AS Link Local Node Descriptor TLV 514 has length %d, expected 4", area.Length)
+		}
 	}
 	// At least one TE Router-ID is required, while dual-stack ASBRs may advertise both.
 	ipv4, hasIPv4 := node.SubTLV[1028]

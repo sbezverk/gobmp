@@ -15,7 +15,7 @@ func interASTLV(typ uint16, value []byte) []byte {
 	return append(b, value...)
 }
 
-// validInterASLinkNLRI builds a complete dual-stack draft-38 NLRI fixture.
+// validInterASLinkNLRI builds a complete dual-stack draft-44 NLRI fixture.
 func validInterASLinkNLRI() []byte {
 	local := append(interASTLV(512, []byte{0, 0, 0xfd, 0xe8}), interASTLV(514, []byte{0, 0, 0, 7})...)
 	local = append(local, interASTLV(515, []byte{10, 0, 0, 1})...)
@@ -47,6 +47,9 @@ func TestUnmarshalInterASLinkNLRI(t *testing.T) {
 	}
 	if got := nlri.GetRemoteASN(); got != 65001 {
 		t.Errorf("remote ASN = %d, want 65001", got)
+	}
+	if key := nlri.GetDomainKey(); key.ASN != 65000 || key.Identifier != 42 {
+		t.Errorf("domain key = %+v, want ASN 65000 and identifier 42", key)
 	}
 	if got := nlri.GetLocalASBRIPv4().String(); got != "192.0.2.1" {
 		t.Errorf("local IPv4 ASBR = %q", got)
@@ -97,6 +100,61 @@ func TestInterASLinkNLRIIdentifierIsUnsigned(t *testing.T) {
 	}
 	if got := nlri.GetIdentifier(); got != ^uint64(0) {
 		t.Errorf("identifier = %d, want %d", got, ^uint64(0))
+	}
+}
+
+// TestInterASDomainKeyIncludesASN verifies equal Instance Identifiers in different ASes remain distinct.
+func TestInterASDomainKeyIncludesASN(t *testing.T) {
+	first, err := UnmarshalInterASLinkNLRI(validInterASLinkNLRI())
+	if err != nil {
+		t.Fatalf("first UnmarshalInterASLinkNLRI: %v", err)
+	}
+	wire := validInterASLinkNLRI()
+	binary.BigEndian.PutUint32(wire[17:21], 65002)
+	second, err := UnmarshalInterASLinkNLRI(wire)
+	if err != nil {
+		t.Fatalf("second UnmarshalInterASLinkNLRI: %v", err)
+	}
+	if *first.GetDomainKey() == *second.GetDomainKey() {
+		t.Fatalf("domain keys must differ: first=%+v second=%+v", first.GetDomainKey(), second.GetDomainKey())
+	}
+	if first.GetIdentifier() != second.GetIdentifier() {
+		t.Fatalf("identifiers differ: first=%d second=%d", first.GetIdentifier(), second.GetIdentifier())
+	}
+}
+
+// TestUnmarshalInterASLinkNLRIProtocolIDs verifies Direct and Static sources are accepted from the wire.
+func TestUnmarshalInterASLinkNLRIProtocolIDs(t *testing.T) {
+	for _, protocol := range []ProtoID{Direct, Static} {
+		t.Run(ProtocolIDString(protocol), func(t *testing.T) {
+			wire := validInterASLinkNLRI()
+			wire[0] = byte(protocol)
+			localLength := binary.BigEndian.Uint16(wire[11:13])
+			binary.BigEndian.PutUint16(wire[11:13], localLength-8)
+			wire = append(append([]byte(nil), wire[:21]...), wire[29:]...)
+			nlri, err := UnmarshalInterASLinkNLRI(wire)
+			if err != nil {
+				t.Fatalf("UnmarshalInterASLinkNLRI: %v", err)
+			}
+			if nlri.ProtocolID != protocol {
+				t.Errorf("Protocol-ID = %d, want %d", nlri.ProtocolID, protocol)
+			}
+		})
+	}
+}
+
+// TestInterASRemoteASNUsesFourOctets verifies draft-44 accepts the full 32-bit ASN value.
+func TestInterASRemoteASNUsesFourOctets(t *testing.T) {
+	wire := validInterASLinkNLRI()
+	localLength := int(binary.BigEndian.Uint16(wire[11:13]))
+	remoteASValue := 13 + localLength + 4
+	binary.BigEndian.PutUint32(wire[remoteASValue:remoteASValue+4], 4200000000)
+	nlri, err := UnmarshalInterASLinkNLRI(wire)
+	if err != nil {
+		t.Fatalf("UnmarshalInterASLinkNLRI: %v", err)
+	}
+	if got := nlri.GetRemoteASN(); got != 4200000000 {
+		t.Errorf("remote ASN = %d, want 4200000000", got)
 	}
 }
 
@@ -168,7 +226,7 @@ func TestUnmarshalInterASLinkNLRIMandatoryFields(t *testing.T) {
 	}
 }
 
-// TestValidateInterASLocalNodeISIS verifies the six-octet IS-IS system ID encoding is accepted.
+// TestValidateInterASLocalNodeISIS verifies IS-IS IDs and rejects the OSPF-only Area-ID descriptor.
 func TestValidateInterASLocalNodeISIS(t *testing.T) {
 	node := &NodeDescriptor{SubTLV: map[uint16]TLV{
 		512:  {Type: 512, Length: 4, Value: []byte{0, 0, 0xfd, 0xe8}},
@@ -177,6 +235,10 @@ func TestValidateInterASLocalNodeISIS(t *testing.T) {
 	}}
 	if err := validateInterASLocalNode(node, ISISL2); err != nil {
 		t.Fatalf("validateInterASLocalNode: %v", err)
+	}
+	node.SubTLV[514] = TLV{Type: 514, Length: 4, Value: []byte{0, 0, 0, 1}}
+	if err := validateInterASLocalNode(node, ISISL2); err == nil || !strings.Contains(err.Error(), "non-OSPF") {
+		t.Fatalf("expected non-OSPF Area-ID error, got %v", err)
 	}
 }
 

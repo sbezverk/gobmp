@@ -78,6 +78,9 @@ func TestProcessNLRI71InterASLink(t *testing.T) {
 	if got.DomainID != 42 || got.LocalNodeASN != 65000 || got.RemoteNodeASN != 65001 {
 		t.Errorf("unexpected domain/AS values: domain=%d local=%d remote=%d", got.DomainID, got.LocalNodeASN, got.RemoteNodeASN)
 	}
+	if got.InterASDomainKey == nil || got.InterASDomainKey.ASN != 65000 || got.InterASDomainKey.Identifier != 42 {
+		t.Errorf("unexpected Inter-AS domain key: %+v", got.InterASDomainKey)
+	}
 	if got.LocalASBRIPv4 != "192.0.2.1" || got.RemoteASBRIPv4 != "192.0.2.2" {
 		t.Errorf("unexpected ASBR IDs: local=%q remote=%q", got.LocalASBRIPv4, got.RemoteASBRIPv4)
 	}
