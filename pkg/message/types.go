@@ -315,6 +315,7 @@ type LSLink struct {
 	RemoteRouterID        string                        `json:"remote_router_id,omitempty"`
 	LocalNodeASN          uint32                        `json:"local_node_asn,omitempty"`
 	RemoteNodeASN         uint32                        `json:"remote_node_asn,omitempty"`
+	RemoteASN             uint32                        `json:"remote_asn,omitempty"`           // Neighboring AS from Inter-AS Link Descriptor TLV 270
 	IsInterAS             bool                          `json:"is_inter_as,omitempty"`          // Marks a draft-44 Inter-AS half-link
 	InterASDomainKey      *base.InterASDomainKey        `json:"inter_as_domain_key,omitempty"`  // Uses the draft-44 (ASN, BGP-LS Instance-ID) tuple
 	LocalASBRIPv4         string                        `json:"local_asbr_ipv4,omitempty"`      // Local ASBR IPv4 Router-ID

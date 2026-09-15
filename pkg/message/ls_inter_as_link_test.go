@@ -3,6 +3,7 @@ package message
 import (
 	"encoding/binary"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -75,8 +76,15 @@ func TestProcessNLRI71InterASLink(t *testing.T) {
 	if !got.IsInterAS {
 		t.Error("is_inter_as is false")
 	}
-	if got.DomainID != 42 || got.LocalNodeASN != 65000 || got.RemoteNodeASN != 65001 {
-		t.Errorf("unexpected domain/AS values: domain=%d local=%d remote=%d", got.DomainID, got.LocalNodeASN, got.RemoteNodeASN)
+	if got.DomainID != 42 || got.LocalNodeASN != 65000 || got.RemoteASN != 65001 {
+		t.Errorf("unexpected domain/AS values: domain=%d local=%d remote=%d", got.DomainID, got.LocalNodeASN, got.RemoteASN)
+	}
+	if got.RemoteNodeASN != 0 {
+		t.Errorf("remote node ASN = %d, want 0 for Inter-AS link", got.RemoteNodeASN)
+	}
+	payload := string(recorder.msgs[0].payload)
+	if !strings.Contains(payload, `"remote_asn":65001`) || strings.Contains(payload, `"remote_node_asn"`) {
+		t.Errorf("unexpected Inter-AS ASN JSON fields: %s", payload)
 	}
 	if got.InterASDomainKey == nil || got.InterASDomainKey.ASN != 65000 || got.InterASDomainKey.Identifier != 42 {
 		t.Errorf("unexpected Inter-AS domain key: %+v", got.InterASDomainKey)

@@ -52,7 +52,7 @@ func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op 
 		LSID:             link.LocalNode.GetLSID(),
 		LocalNodeHash:    link.LocalNodeHash,
 		LocalNodeASN:     link.LocalNode.GetASN(),
-		RemoteNodeASN:    link.GetRemoteASN(),
+		RemoteASN:        link.GetRemoteASN(),
 		IGPRouterID:      link.LocalNode.GetIGPRouterID(),
 		MTID:             link.Link.GetLinkMTID(),
 		IsInterAS:        true,
