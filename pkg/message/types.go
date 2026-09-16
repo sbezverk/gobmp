@@ -315,16 +315,17 @@ type LSLink struct {
 	RemoteRouterID        string                        `json:"remote_router_id,omitempty"`
 	LocalNodeASN          uint32                        `json:"local_node_asn,omitempty"`
 	RemoteNodeASN         uint32                        `json:"remote_node_asn,omitempty"`
-	RemoteASN             uint32                        `json:"remote_asn,omitempty"`           // Neighboring AS from Inter-AS Link Descriptor TLV 270
-	IsInterAS             bool                          `json:"is_inter_as,omitempty"`          // Marks a draft-44 Inter-AS half-link
-	InterASDomainKey      *base.InterASDomainKey        `json:"inter_as_domain_key,omitempty"`  // Uses the draft-44 (ASN, BGP-LS Instance-ID) tuple
-	LocalASBRIPv4         string                        `json:"local_asbr_ipv4,omitempty"`      // Local ASBR IPv4 Router-ID
-	LocalASBRIPv6         string                        `json:"local_asbr_ipv6,omitempty"`      // Local ASBR IPv6 Router-ID
-	RemoteASBRIPv4        string                        `json:"remote_asbr_ipv4,omitempty"`     // Neighboring ASBR IPv4 Router-ID
-	RemoteASBRIPv6        string                        `json:"remote_asbr_ipv6,omitempty"`     // Neighboring ASBR IPv6 Router-ID
-	BGPRouterID           string                        `json:"bgp_router_id,omitempty"`        // Local Node Descriptor's TLV 516
-	BGPRemoteRouterID     string                        `json:"bgp_remote_router_id,omitempty"` // Remote Node Descriptor's TLV 516
-	MemberAS              uint32                        `json:"member_as,omitempty"`            // Node Descriptor's TLV 517
+	RemoteASN             uint32                        `json:"remote_asn,omitempty"`                // Neighboring AS from Inter-AS Link Descriptor TLV 270
+	IsInterAS             bool                          `json:"is_inter_as,omitempty"`               // Marks a draft-44 Inter-AS half-link
+	InterASDomainKey      *base.InterASDomainKey        `json:"inter_as_domain_key,omitempty"`       // Uses the draft-44 (ASN, BGP-LS Instance-ID) tuple
+	InterASDescriptors    []base.TLV                    `json:"inter_as_link_descriptors,omitempty"` // Preserves duplicate descriptors in canonical order
+	LocalASBRIPv4         string                        `json:"local_asbr_ipv4,omitempty"`           // Local ASBR IPv4 Router-ID
+	LocalASBRIPv6         string                        `json:"local_asbr_ipv6,omitempty"`           // Local ASBR IPv6 Router-ID
+	RemoteASBRIPv4        string                        `json:"remote_asbr_ipv4,omitempty"`          // Neighboring ASBR IPv4 Router-ID
+	RemoteASBRIPv6        string                        `json:"remote_asbr_ipv6,omitempty"`          // Neighboring ASBR IPv6 Router-ID
+	BGPRouterID           string                        `json:"bgp_router_id,omitempty"`             // Local Node Descriptor's TLV 516
+	BGPRemoteRouterID     string                        `json:"bgp_remote_router_id,omitempty"`      // Remote Node Descriptor's TLV 516
+	MemberAS              uint32                        `json:"member_as,omitempty"`                 // Node Descriptor's TLV 517
 	PeerNodeSID           *sr.PeerSID                   `json:"peer_node_sid,omitempty"`
 	PeerAdjSID            *sr.PeerSID                   `json:"peer_adj_sid,omitempty"`
 	PeerSetSID            *sr.PeerSID                   `json:"peer_set_sid,omitempty"`

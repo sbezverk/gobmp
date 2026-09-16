@@ -1,6 +1,7 @@
 package message
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"strings"
@@ -25,12 +26,14 @@ func messageInterASLinkElement() []byte {
 	local := append(messageInterASTLV(512, []byte{0, 0, 0xfd, 0xe8}), messageInterASTLV(514, []byte{0, 0, 0, 9})...)
 	local = append(local, messageInterASTLV(515, []byte{10, 0, 0, 1})...)
 	local = append(local, messageInterASTLV(1028, []byte{192, 0, 2, 1})...)
-	links := append(messageInterASTLV(270, []byte{0, 0, 0xfd, 0xe9}), messageInterASTLV(271, []byte{192, 0, 2, 2})...)
-	links = append(links, messageInterASTLV(258, []byte{0, 0, 0, 10, 0, 0, 0, 20})...)
-	links = append(links, messageInterASTLV(259, []byte{198, 51, 100, 1})...)
+	links := append(messageInterASTLV(258, []byte{0, 0, 0, 10, 0, 0, 0, 20}), messageInterASTLV(259, []byte{198, 51, 100, 1})...)
 	links = append(links, messageInterASTLV(260, []byte{198, 51, 100, 2})...)
 	links = append(links, messageInterASTLV(261, []byte{0x20, 1, 0x0d, 0xb8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})...)
 	links = append(links, messageInterASTLV(262, []byte{0x20, 1, 0x0d, 0xb8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})...)
+	links = append(links, messageInterASTLV(270, []byte{0, 0, 0xfd, 0xe9})...)
+	links = append(links, messageInterASTLV(271, []byte{192, 0, 2, 2})...)
+	links = append(links, messageInterASTLV(999, []byte{0x01})...)
+	links = append(links, messageInterASTLV(999, []byte{0x02})...)
 	body := []byte{3, 0, 0, 0, 0, 0, 0, 0, 42}
 	body = append(body, messageInterASTLV(256, local)...)
 	body = append(body, links...)
@@ -88,6 +91,9 @@ func TestProcessNLRI71InterASLink(t *testing.T) {
 	}
 	if got.InterASDomainKey == nil || got.InterASDomainKey.ASN != 65000 || got.InterASDomainKey.Identifier != 42 {
 		t.Errorf("unexpected Inter-AS domain key: %+v", got.InterASDomainKey)
+	}
+	if count := len(got.InterASDescriptors); count < 2 || got.InterASDescriptors[count-2].Type != 999 || got.InterASDescriptors[count-1].Type != 999 || !bytes.Equal(got.InterASDescriptors[count-2].Value, []byte{0x01}) || !bytes.Equal(got.InterASDescriptors[count-1].Value, []byte{0x02}) {
+		t.Errorf("duplicate Inter-AS descriptors were not published in order: %+v", got.InterASDescriptors)
 	}
 	if got.LocalASBRIPv4 != "192.0.2.1" || got.RemoteASBRIPv4 != "192.0.2.2" {
 		t.Errorf("unexpected ASBR IDs: local=%q remote=%q", got.LocalASBRIPv4, got.RemoteASBRIPv4)
@@ -214,10 +220,24 @@ func TestLSInterASLinkIPv6LocRIB(t *testing.T) {
 	link.ProtocolID = base.Direct
 	delete(link.LocalNode.SubTLV, 1028)
 	link.LocalNode.SubTLV[1029] = base.TLV{Type: 1029, Length: 16, Value: []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}}
-	delete(link.Link.LinkTLV, 271)
-	link.Link.LinkTLV[272] = base.TLV{Type: 272, Length: 16, Value: []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}}
-	delete(link.Link.LinkTLV, 259)
-	delete(link.Link.LinkTLV, 260)
+	tlvs := make([]base.TLV, 0, len(link.Link.TLVs))
+	for _, tlv := range link.Link.TLVs {
+		if tlv.Type != 259 && tlv.Type != 260 && tlv.Type != 271 {
+			tlvs = append(tlvs, tlv)
+		}
+	}
+	remoteIPv6 := base.TLV{Type: 272, Length: 16, Value: []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}}
+	insertAt := len(tlvs)
+	for i, tlv := range tlvs {
+		if tlv.Type > remoteIPv6.Type {
+			insertAt = i
+			break
+		}
+	}
+	tlvs = append(tlvs, base.TLV{})
+	copy(tlvs[insertAt+1:], tlvs[insertAt:])
+	tlvs[insertAt] = remoteIPv6
+	link.Link.TLVs = tlvs
 	p := &producer{publisher: &recordingPublisher{}}
 	msg, err := p.lsInterASLink(link, "2001:db8::ffff", 0, makePeerHeader(t, bmp.PeerType3, 0), &bgp.Update{}, true)
 	if err != nil {

@@ -1,6 +1,7 @@
 package base
 
 import (
+	"bytes"
 	"encoding/binary"
 	"strconv"
 	"strings"
@@ -22,15 +23,29 @@ func validInterASLinkNLRI() []byte {
 	local = append(local, interASTLV(1028, []byte{192, 0, 2, 1})...)
 	local = append(local, interASTLV(1029, []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})...)
 	localDescriptor := interASTLV(256, local)
-	links := append(interASTLV(270, []byte{0, 0, 0xfd, 0xe9}), interASTLV(271, []byte{192, 0, 2, 2})...)
-	links = append(links, interASTLV(272, []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})...)
-	links = append(links, interASTLV(258, []byte{0, 0, 0, 10, 0, 0, 0, 20})...)
-	links = append(links, interASTLV(259, []byte{198, 51, 100, 1})...)
+	links := append(interASTLV(258, []byte{0, 0, 0, 10, 0, 0, 0, 20}), interASTLV(259, []byte{198, 51, 100, 1})...)
 	links = append(links, interASTLV(260, []byte{198, 51, 100, 2})...)
+	links = append(links, interASTLV(270, []byte{0, 0, 0xfd, 0xe9})...)
+	links = append(links, interASTLV(271, []byte{192, 0, 2, 2})...)
+	links = append(links, interASTLV(272, []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})...)
+	links = append(links, interASTLV(999, []byte{0x01})...)
 	links = append(links, interASTLV(999, []byte{0xaa, 0xbb})...)
 	b := []byte{byte(OSPFv2), 0, 0, 0, 0, 0, 0, 0, 42}
 	b = append(b, localDescriptor...)
 	return append(b, links...)
+}
+
+// removeInterASLinkTLV removes the first matching link descriptor from a test NLRI.
+func removeInterASLinkTLV(b []byte, typ uint16) []byte {
+	localLength := int(binary.BigEndian.Uint16(b[11:13]))
+	for p := 13 + localLength; p+4 <= len(b); {
+		length := int(binary.BigEndian.Uint16(b[p+2 : p+4]))
+		if binary.BigEndian.Uint16(b[p:p+2]) == typ {
+			return append(append([]byte(nil), b[:p]...), b[p+4+length:]...)
+		}
+		p += 4 + length
+	}
+	return b
 }
 
 // TestUnmarshalInterASLinkNLRI verifies full decoding, accessor values, hashes, and unknown-TLV retention.
@@ -63,8 +78,9 @@ func TestUnmarshalInterASLinkNLRI(t *testing.T) {
 	if got := nlri.GetRemoteASBRIPv6().String(); got != "2001:db8::2" {
 		t.Errorf("remote IPv6 ASBR = %q", got)
 	}
-	if _, ok := nlri.Link.LinkTLV[999]; !ok {
-		t.Error("unknown link descriptor was not preserved")
+	unknown := nlri.Link.GetAll(999)
+	if len(unknown) != 2 || !bytes.Equal(unknown[0].Value, []byte{0x01}) || !bytes.Equal(unknown[1].Value, []byte{0xaa, 0xbb}) {
+		t.Errorf("duplicate unknown descriptors were not preserved in order: %+v", unknown)
 	}
 	if nlri.LocalNodeHash == "" || nlri.LinkHash == "" {
 		t.Error("descriptor hashes were not populated")
@@ -78,9 +94,9 @@ func TestInterASLinkNLRIMissingOptionalValues(t *testing.T) {
 		"nil receiver": nilReceiver,
 		"empty":        {},
 		"explicit nil": {LocalNode: nil, Link: nil},
-		"empty maps": {
+		"empty descriptors": {
 			LocalNode: &NodeDescriptor{SubTLV: map[uint16]TLV{}},
-			Link:      &LinkDescriptor{LinkTLV: map[uint16]TLV{}},
+			Link:      &InterASLinkDescriptors{},
 		},
 	}
 	for name, nlri := range tests {
@@ -168,7 +184,7 @@ func TestUnmarshalInterASLinkNLRIProtocolIDs(t *testing.T) {
 func TestInterASRemoteASNUsesFourOctets(t *testing.T) {
 	wire := validInterASLinkNLRI()
 	localLength := int(binary.BigEndian.Uint16(wire[11:13]))
-	remoteASValue := 13 + localLength + 4
+	remoteASValue := 13 + localLength + 12 + 8 + 8 + 4
 	binary.BigEndian.PutUint32(wire[remoteASValue:remoteASValue+4], 4200000000)
 	nlri, err := UnmarshalInterASLinkNLRI(wire)
 	if err != nil {
@@ -215,27 +231,30 @@ func TestUnmarshalInterASLinkNLRIMandatoryFields(t *testing.T) {
 			binary.BigEndian.PutUint16(b[15:17], 0xffff)
 			return b
 		}(), wantErr: "invalid Inter-AS Link Local Node Descriptor"},
+		{name: "non-canonical local descriptor", input: func() []byte {
+			b := validInterASLinkNLRI()
+			wire := append(append([]byte(nil), b[:13]...), b[21:29]...)
+			wire = append(wire, b[13:21]...)
+			return append(wire, b[29:]...)
+		}(), wantErr: "ordering"},
 		{name: "no link descriptors", input: func() []byte {
 			b := validInterASLinkNLRI()
 			localLength := int(binary.BigEndian.Uint16(b[11:13]))
 			return b[:13+localLength]
 		}(), wantErr: "no link descriptors"},
+		{name: "descriptor before local node", input: func() []byte {
+			b := validInterASLinkNLRI()
+			localLength := int(binary.BigEndian.Uint16(b[11:13]))
+			p := 13 + localLength
+			wire := append(append([]byte(nil), b[:p]...), interASTLV(100, []byte{1})...)
+			return append(wire, b[p:]...)
+		}(), wantErr: "after Local Node Descriptor"},
 		{name: "malformed link descriptors", input: func() []byte {
 			b := validInterASLinkNLRI()
 			return b[:len(b)-1]
 		}(), wantErr: "invalid Inter-AS Link Descriptors"},
-		{name: "missing remote AS", input: func() []byte {
-			b := validInterASLinkNLRI()
-			localLength := int(binary.BigEndian.Uint16(b[11:13]))
-			p := 13 + localLength
-			return append(append([]byte(nil), b[:p]...), b[p+8:]...)
-		}(), wantErr: "missing Remote AS Number"},
-		{name: "missing remote ASBR", input: func() []byte {
-			b := validInterASLinkNLRI()
-			localLength := int(binary.BigEndian.Uint16(b[11:13]))
-			p := 13 + localLength
-			return append(append([]byte(nil), b[:p+8]...), b[p+36:]...)
-		}(), wantErr: "missing IPv4 or IPv6 Remote ASBR"},
+		{name: "missing remote AS", input: removeInterASLinkTLV(validInterASLinkNLRI(), 270), wantErr: "missing Remote AS Number"},
+		{name: "missing remote ASBR", input: removeInterASLinkTLV(removeInterASLinkTLV(validInterASLinkNLRI(), 271), 272), wantErr: "missing IPv4 or IPv6 Remote ASBR"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -244,6 +263,58 @@ func TestUnmarshalInterASLinkNLRIMandatoryFields(t *testing.T) {
 				t.Fatalf("error = %v, want substring %q", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+// TestUnmarshalInterASLinkDescriptorOrdering verifies RFC 9552 canonical ordering is enforced.
+func TestUnmarshalInterASLinkDescriptorOrdering(t *testing.T) {
+	tests := []struct {
+		name string
+		wire []byte
+	}{
+		{
+			name: "type",
+			wire: append(interASTLV(270, []byte{0, 0, 0, 1}), interASTLV(258, make([]byte, 8))...),
+		},
+		{
+			name: "duplicate length",
+			wire: append(interASTLV(999, []byte{1, 2}), interASTLV(999, []byte{1})...),
+		},
+		{
+			name: "duplicate value",
+			wire: append(interASTLV(999, []byte{2}), interASTLV(999, []byte{1})...),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalInterASLinkDescriptors(tt.wire); err == nil || !strings.Contains(err.Error(), "canonical") {
+				t.Fatalf("expected canonical ordering error, got %v", err)
+			}
+		})
+	}
+}
+
+// TestUnmarshalInterASLinkDescriptorsMalformed verifies dedicated parsing rejects truncated headers and values.
+func TestUnmarshalInterASLinkDescriptorsMalformed(t *testing.T) {
+	for _, wire := range [][]byte{{0}, {0, 1, 0}, {0, 1, 0, 2, 1}} {
+		if _, err := UnmarshalInterASLinkDescriptors(wire); err == nil {
+			t.Fatalf("expected malformed descriptor error for %v", wire)
+		}
+	}
+}
+
+// TestInterASLinkDescriptorAccessorsNil verifies descriptor accessors are safe on nil and malformed values.
+func TestInterASLinkDescriptorAccessorsNil(t *testing.T) {
+	var descriptors *InterASLinkDescriptors
+	if descriptors.GetAll(999) != nil || descriptors.GetLinkIPv4InterfaceAddr() != nil || descriptors.GetLinkIPv4NeighborAddr() != nil || descriptors.GetLinkIPv6InterfaceAddr() != nil || descriptors.GetLinkIPv6NeighborAddr() != nil || descriptors.GetLinkMTID() != nil {
+		t.Error("nil descriptor accessors returned values")
+	}
+	if _, err := descriptors.GetLinkID(); err == nil {
+		t.Error("nil descriptors returned a link ID")
+	}
+	malformed := &InterASLinkDescriptors{TLVs: []TLV{{Type: 258, Length: 2, Value: []byte{1, 2}}}}
+	if _, err := malformed.GetLinkID(); err == nil {
+		t.Error("malformed TLV 258 returned a link ID")
 	}
 }
 
