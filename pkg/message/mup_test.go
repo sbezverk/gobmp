@@ -161,6 +161,60 @@ func TestProcessMPUpdateMUPType1TLV(t *testing.T) {
 	}
 }
 
+func TestProcessMPUpdateMUPZeroPrefixLengthSerialization(t *testing.T) {
+	tests := []struct {
+		name   string
+		nlri   *bgp.MPReachNLRI
+		update *bgp.Update
+	}{
+		{
+			name: "ISD",
+			nlri: mupReachNLRI([]byte{
+				0x01, 0x00, 0x01, 0x09,
+				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
+				0x00, // /0; no prefix octets follow
+			}, false),
+			update: mupUpdateWithPrefixSID(),
+		},
+		{
+			name: "ST1",
+			nlri: mupReachNLRI([]byte{
+				0x01, 0x00, 0x03, 0x14,
+				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
+				0x00,                   // /0; no prefix octets follow
+				0x00, 0x00, 0x00, 0x64, // TEID 100
+				0x09,                         // QFI 9
+				0x20, 0x0a, 0x0a, 0x0a, 0x01, // endpoint address
+				0x00, // source address length 0
+			}, false),
+			update: minimalUpdate(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pub := &recordingPublisher{}
+			p := &producer{publisher: pub}
+			p.processMPUpdate(tt.nlri, AddPrefix, minimalPeerHeader(), tt.update)
+			if len(pub.msgs) != 1 {
+				t.Fatalf("processMPUpdate() published %d messages, want 1", len(pub.msgs))
+			}
+
+			var got map[string]any
+			if err := json.Unmarshal(pub.msgs[0].payload, &got); err != nil {
+				t.Fatalf("json.Unmarshal() unexpected error: %+v", err)
+			}
+			prefixLen, ok := got["prefix_len"]
+			if !ok {
+				t.Fatalf("published message is missing prefix_len: %s", pub.msgs[0].payload)
+			}
+			if prefixLen != float64(0) {
+				t.Fatalf("published prefix_len = %v, want 0", prefixLen)
+			}
+		})
+	}
+}
+
 // A Type 2 ST route reports the QFI only through the 3gpp-5g Session
 // Parameters TLV.
 func TestProducerMUPType2SessionTransformedTLV(t *testing.T) {

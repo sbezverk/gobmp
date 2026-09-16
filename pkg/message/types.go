@@ -477,7 +477,7 @@ type MUPPrefix struct {
 	ArchType        uint8               `json:"arch_type"`
 	RouteType       uint16              `json:"route_type"`
 	Prefix          string              `json:"prefix,omitempty"`
-	PrefixLen       uint8               `json:"prefix_len,omitempty"`
+	PrefixLen       uint8               `json:"prefix_len"`
 	Address         string              `json:"address,omitempty"`
 	EndpointAddress string              `json:"endpoint_address,omitempty"`
 	EndpointLen     uint8               `json:"endpoint_len,omitempty"`
