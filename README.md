@@ -84,6 +84,8 @@ goBMP is a production-ready implementation of the BGP Monitoring Protocol ([RFC 
 | SR Policy v6 | 2/73 | Segment Routing Policy for IPv6 |
 | FlowSpec v4 | 1/133 | Flow Specification for IPv4 |
 | FlowSpec v6 | 2/133 | Flow Specification for IPv6 |
+| BGP-MUP v4 | 1/85 | Mobile User Plane for IPv4 |
+| BGP-MUP v6 | 2/85 | Mobile User Plane for IPv6 |
 
 ### Advanced Features
 
@@ -545,6 +547,8 @@ When publishing to Kafka, goBMP creates the following topics (with `--split-af=t
 | `gobmp.parsed.sr_policy_v6` | SR Policy v6 NLRIs |
 | `gobmp.parsed.flowspec_v4` | FlowSpec v4 rules |
 | `gobmp.parsed.flowspec_v6` | FlowSpec v6 rules |
+| `gobmp.parsed.mup_v4` | MUP v4 routes |
+| `gobmp.parsed.mup_v6` | MUP v6 routes |
 | `gobmp.bmp_raw` | RAW OpenBMP binary messages (when `--bmp-raw=true`) |
 
 ---

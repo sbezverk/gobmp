@@ -57,6 +57,10 @@ func TestNLRIMessageType(t *testing.T) {
 		{"RTC v4 AFI=1 SAFI=132", 1, 132, 30},
 		{"RTC v6 AFI=2 SAFI=132", 2, 132, 31},
 
+		// BGP-MUP
+		{"BGP-MUP v4 AFI=1 SAFI=85", 1, 85, 36},
+		{"BGP-MUP v6 AFI=2 SAFI=85", 2, 85, 37},
+
 		// Unknown / unregistered
 		{"unknown AFI=0 SAFI=0", 0, 0, 0},
 		{"unknown AFI=99 SAFI=99", 99, 99, 0},

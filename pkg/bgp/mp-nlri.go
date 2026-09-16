@@ -6,6 +6,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/mcastvpn"
+	"github.com/sbezverk/gobmp/pkg/mup"
 	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/vpls"
@@ -28,6 +29,7 @@ type MPNLRI interface {
 	GetNLRIMCASTVPN() (*mcastvpn.Route, error)
 	GetNLRIMVPN() (*mcastvpn.Route, error)
 	GetNLRIRTC() (*rtc.Route, error)
+	GetNLRIMUP() (*mup.Route, error)
 	GetNextHop() string
 	IsIPv6NLRI() bool
 	IsNextHopIPv6() bool
@@ -109,6 +111,12 @@ func NLRIMessageType(afi uint16, safi uint8) int {
 		// AFI 2 and SAFI 132 Route Target Constraint v6
 	case afi == 2 && safi == 132:
 		return 31
+		// AFI 1 and SAFI 85 BGP-MUP v4
+	case afi == 1 && safi == mup.SAFI:
+		return 36
+		// AFI 2 and SAFI 85 BGP-MUP v6
+	case afi == 2 && safi == mup.SAFI:
+		return 37
 	}
 
 	return 0

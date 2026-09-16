@@ -4,6 +4,8 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"strconv"
+
+	"github.com/sbezverk/gobmp/pkg/mup"
 )
 
 func ensureMessageHash(msg any) {
@@ -25,6 +27,12 @@ func ensureMessageHash(msg any) {
 	case **L3VPNPrefix:
 		if m != nil {
 			setL3VPNPrefixHash(*m)
+		}
+	case *MUPPrefix:
+		setMUPPrefixHash(m)
+	case **MUPPrefix:
+		if m != nil {
+			setMUPPrefixHash(*m)
 		}
 	}
 }
@@ -76,6 +84,45 @@ func setL3VPNPrefixHash(m *L3VPNPrefix) {
 		strconv.FormatInt(int64(m.PathID), 10),
 		labelsHashPart(m.Labels),
 	)
+}
+
+// setMUPPrefixHash hashes the route key of draft-ietf-bess-mup-safi-01, which
+// differs per route type: RD, Prefix Length and Prefix for Interwork Segment
+// Discovery (Section 3.1.1) and Type 1 ST (Section 3.1.3), RD and Address for
+// Direct Segment Discovery (Section 3.1.2), RD, Endpoint Address and the
+// Architecture specific Endpoint Identifier for Type 2 ST (Section 3.1.4).
+// The TEID is a variable length identifier, so its length, carried by the
+// Endpoint Length, is part of its identity. Forwarding attributes such as the
+// ST1 TEID, QFI, source address and TLVs are not part of the key, a withdraw
+// carries the key alone and must hash the same as the announcement.
+func setMUPPrefixHash(m *MUPPrefix) {
+	if m == nil || m.Hash != "" || m.IsEOR {
+		return
+	}
+	parts := []string{
+		"mup",
+		m.RouterHash,
+		m.PeerHash,
+		m.VPNRD,
+		strconv.FormatUint(uint64(m.VPNRDType), 10),
+		strconv.FormatUint(uint64(m.ArchType), 10),
+		strconv.FormatUint(uint64(m.RouteType), 10),
+		strconv.FormatBool(m.IsIPv4),
+		strconv.FormatInt(int64(m.PathID), 10),
+	}
+	switch m.RouteType {
+	case mup.RouteTypeISD, mup.RouteTypeST1:
+		parts = append(parts, m.Prefix, strconv.FormatUint(uint64(m.PrefixLen), 10))
+	case mup.RouteTypeDSD:
+		parts = append(parts, m.Address)
+	case mup.RouteTypeST2:
+		teid := ""
+		if m.TEID != nil {
+			teid = strconv.FormatUint(uint64(*m.TEID), 10)
+		}
+		parts = append(parts, m.EndpointAddress, strconv.FormatUint(uint64(m.EndpointLen), 10), teid)
+	}
+	m.Hash = hashParts(parts...)
 }
 
 func labelsHashPart(labels []uint32) string {

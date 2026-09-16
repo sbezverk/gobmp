@@ -59,6 +59,11 @@ func makeExtCommunity(b []byte) (*ExtCommunity, error) {
 		ext.SubType = &st
 		l = 6
 		p++
+	case 0xc:
+		st := uint8(b[p])
+		ext.SubType = &st
+		l = 6
+		p++
 	}
 	ext.Value = make([]byte, l)
 	copy(ext.Value, b[p:])
@@ -236,6 +241,23 @@ var evpnSubTypes = map[uint8]string{
 	0x10: ECPEVPNLinkBandwidth,
 }
 
+// BGP MUP Extended Community Sub-Types
+// draft-ietf-bess-mup-safi-01 Section 3.2
+// 0x00	Direct Segment, 2-Octet AS Specific
+// 0x01	Direct Segment, IPv4 Address Specific
+// 0x02	Direct Segment, 4-Octet AS Specific
+// 0x03	Interwork Segment, 2-Octet AS Specific
+// 0x04	Interwork Segment, IPv4 Address Specific
+// 0x05	Interwork Segment, 4-Octet AS Specific
+var mupSubTypes = map[uint8]string{
+	0x0: ECPMUPDirectSegment,
+	0x1: ECPMUPDirectSegment,
+	0x2: ECPMUPDirectSegment,
+	0x3: ECPMUPInterworkSegment,
+	0x4: ECPMUPInterworkSegment,
+	0x5: ECPMUPInterworkSegment,
+}
+
 // Non-Transitive Two-Octet AS-Specific Extended Community Sub-Types
 // 0x04	Link Bandwidth Extended Community	[draft-ietf-idr-link-bandwidth]
 // 0x80	Virtual-Network Identifier Extended Community	[draft-drao-bgp-l3vpn-virtual-network-overlays]
@@ -310,6 +332,30 @@ func type3(subType uint8, value []byte) string {
 		s = fmt.Sprintf("%d", binary.BigEndian.Uint32(value[0:4]))
 	}
 	return getSubType(transOpaqueSubTypes, subType) + s
+}
+
+// BGP MUP Extended Community
+// The sub-type selects both the segment the community identifies and the
+// format of the Global and Local Administrator fields.
+func type12(subType uint8, value []byte) string {
+	if len(value) < 6 {
+		return fmt.Sprintf("invalid-type12-length=%d", len(value))
+	}
+	var s string
+	switch subType {
+	case 0x0, 0x3:
+		// 2-octet AS Global Administrator, 4-octet Local Administrator
+		s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:6]))
+	case 0x1, 0x4:
+		// IPv4 address Global Administrator, 2-octet Local Administrator
+		s = fmt.Sprintf("%s:%d", net.IP(value[0:4]).To4().String(), binary.BigEndian.Uint16(value[4:6]))
+	case 0x2, 0x5:
+		// 4-octet AS Global Administrator, 2-octet Local Administrator
+		s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(value[0:4]), binary.BigEndian.Uint16(value[4:6]))
+	default:
+		s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(value[0:4]), binary.BigEndian.Uint16(value[4:6]))
+	}
+	return getSubType(mupSubTypes, subType) + s
 }
 
 // EVPN Extended Community
@@ -508,6 +554,7 @@ var extComm = map[uint8]func(uint8, []byte) string{
 	0x5:  type5,
 	0x6:  type6,
 	0x8:  type8,
+	0xc:  type12,
 	0x40: type40,
 	0x43: type43,
 	0x80: type80,

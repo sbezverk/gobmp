@@ -74,6 +74,12 @@ const (
 	MVPNV4Msg = 208
 	// MVPNV6Msg defines BMP Route Monitoring message carrying MVPN IPv6 NLRI
 	MVPNV6Msg = 210
+	// MUPMsg defines BMP Route Monitoring message carrying BGP-MUP NLRI
+	MUPMsg = 22
+	// MUPV4Msg defines BMP Route Monitoring message carrying BGP-MUP IPv4 NLRI
+	MUPV4Msg = 224
+	// MUPV6Msg defines BMP Route Monitoring message carrying BGP-MUP IPv6 NLRI
+	MUPV6Msg = 226
 	// BMPRawMsg defines BMP RAW message type for unprocessed BMP messages
 	BMPRawMsg = 255
 )

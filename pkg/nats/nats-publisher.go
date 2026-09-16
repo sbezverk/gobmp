@@ -32,6 +32,9 @@ const (
 	flowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
 	flowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
 	vplsMessageTopic       = "gobmp.parsed.vpls"
+	mupMessageTopic        = "gobmp.parsed.mup"
+	mupMessageV4Topic      = "gobmp.parsed.mup_v4"
+	mupMessageV6Topic      = "gobmp.parsed.mup_v6"
 	statsMessageTopic      = "gobmp.parsed.statistics"
 	rawMessageTopic        = "gobmp.raw"
 	parsedWildcardSubject  = "gobmp.parsed.*"
@@ -99,6 +102,12 @@ func topicForMessage(t int) (string, bool) {
 		return flowspecMessageV6Topic, true
 	case bmp.VPLSMsg:
 		return vplsMessageTopic, true
+	case bmp.MUPMsg:
+		return mupMessageTopic, true
+	case bmp.MUPV4Msg:
+		return mupMessageV4Topic, true
+	case bmp.MUPV6Msg:
+		return mupMessageV6Topic, true
 	case bmp.StatsReportMsg:
 		return statsMessageTopic, true
 	case bmp.BMPRawMsg:
