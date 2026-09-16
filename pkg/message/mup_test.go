@@ -124,6 +124,43 @@ func TestProducerMUPType1SessionTransformed(t *testing.T) {
 	}
 }
 
+func TestProcessMPUpdateMUPType1TLV(t *testing.T) {
+	// Type 1 ST route with an unknown TLV after the mandatory fields.
+	nlri := mupReachNLRI([]byte{
+		0x01, 0x00, 0x03, 0x1d,
+		0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
+		0x18, 0xc0, 0x64, 0x00,
+		0x00, 0x00, 0x00, 0x64,
+		0x09,
+		0x20, 0x0a, 0x0a, 0x0a, 0x01,
+		0x00,
+		0xc8, 0x04, 0xde, 0xad, 0xbe, 0xef,
+	}, false)
+	pub := &recordingPublisher{}
+	p := &producer{publisher: pub}
+
+	p.processMPUpdate(nlri, AddPrefix, minimalPeerHeader(), minimalUpdate())
+	if len(pub.msgs) != 1 {
+		t.Fatalf("processMPUpdate() published %d messages, want 1", len(pub.msgs))
+	}
+
+	var got map[string]any
+	if err := json.Unmarshal(pub.msgs[0].payload, &got); err != nil {
+		t.Fatalf("json.Unmarshal() unexpected error: %+v", err)
+	}
+	tlvs, ok := got["tlvs"].([]any)
+	if !ok || len(tlvs) != 1 {
+		t.Fatalf("published message TLVs = %v, want one TLV", got["tlvs"])
+	}
+	tlv, ok := tlvs[0].(map[string]any)
+	if !ok {
+		t.Fatalf("published TLV = %T, want an object", tlvs[0])
+	}
+	if tlv["type"] != float64(200) || tlv["value"] != "0xdeadbeef" {
+		t.Fatalf("published TLV = %v, want type 200 and value 0xdeadbeef", tlv)
+	}
+}
+
 // A Type 2 ST route reports the QFI only through the 3gpp-5g Session
 // Parameters TLV.
 func TestProducerMUPType2SessionTransformedTLV(t *testing.T) {

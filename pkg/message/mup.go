@@ -119,6 +119,7 @@ func (p *producer) mup(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 			prfx.QFI = &qfi
 			prfx.EndpointAddress = net.IP(r.EndpointAddress).String()
 			prfx.EndpointLen = r.EndpointAddressLength
+			prfx.TLVs = r.TLVs
 			if r.SourceAddress != nil {
 				prfx.SourceAddress = net.IP(r.SourceAddress).String()
 			}
