@@ -612,6 +612,18 @@ This project follows the licensing terms of the original repository.
 
 ## Migration Guide
 
+### BGP Prefix-SID field migration
+
+`BaseAttributes.BGPPrefixSID` and the root-level `PrefixSID` fields on
+`UnicastPrefix`, `MUPPrefix`, and `L3VPNPrefix` are deprecated and scheduled
+for removal on September 16, 2027. The authoritative source for all
+Prefix-SID references is now `BaseAttributes.PrefixSID`.
+
+Applications should migrate any Prefix-SID reads and processing to
+`BaseAttributes.PrefixSID`. The legacy `BGPPrefixSID` and root-level
+`PrefixSID` fields remain available until the removal date for compatibility
+with existing consumers.
+
 ### Publisher Selection: `--dump=nats` and `--dump=kafka` removed
 
 In previous versions the `--dump` flag accepted `nats` and `kafka` as values to select the message broker. These values are **no longer valid**. `--dump` is now restricted to `console` and `file` only.
@@ -649,4 +661,3 @@ nats_config:
 ```
 
 > **Note:** Specifying both `--kafka-server` and `--nats-server` at the same time (or having both blocks populated in the config file without `--dump`) is now an explicit error.
-
