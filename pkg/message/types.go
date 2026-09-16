@@ -88,8 +88,9 @@ type UnicastPrefix struct {
 	Labels           []uint32            `json:"labels,omitempty"`
 	Color            *uint32             `json:"color,omitempty"`             // RFC 9723 BGP Colored Prefix Routing (CPR) for SRv6
 	OriginValidation *string             `json:"origin_validation,omitempty"` // RFC 8097 RPKI Origin Validation State
-	PrefixSID        *prefixsid.PSid     `json:"prefix_sid,omitempty"`
-	IsEOR            bool                `json:"is_eor,omitempty"`
+	// Will be removed from the root of the message on September 16, 2027 in favor of PrefixSID within BGP Base Attributes.
+	PrefixSID *prefixsid.PSid `json:"prefix_sid,omitempty"`
+	IsEOR     bool            `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -484,9 +485,10 @@ type MUPPrefix struct {
 	// TEID and QFI are pointers so that a route type without the field, and
 	// a Type 2 ST route whose Endpoint Length carries no TEID, publish no
 	// value at all instead of a 0. QFI 0 is a real value and must survive.
-	TEID      *uint32         `json:"teid,omitempty"`
-	QFI       *uint8          `json:"qfi,omitempty"`
-	TLVs      []*mup.TLV      `json:"tlvs,omitempty"`
+	TEID *uint32    `json:"teid,omitempty"`
+	QFI  *uint8     `json:"qfi,omitempty"`
+	TLVs []*mup.TLV `json:"tlvs,omitempty"`
+	// Will be removed from the root of the message on September 16, 2027 in favor of PrefixSID within BGP Base Attributes.
 	PrefixSID *prefixsid.PSid `json:"prefix_sid,omitempty"`
 	IsEOR     bool            `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
@@ -527,8 +529,9 @@ type L3VPNPrefix struct {
 	OriginValidation *string             `json:"origin_validation,omitempty"` // RFC 8097 RPKI Origin Validation State
 	VPNRD            string              `json:"vpn_rd,omitempty"`
 	VPNRDType        uint16              `json:"vpn_rd_type"`
-	PrefixSID        *prefixsid.PSid     `json:"prefix_sid,omitempty"`
-	IsEOR            bool                `json:"is_eor,omitempty"`
+	// Will be removed from the root of the message on September 16, 2027 in favor of PrefixSID within BGP Base Attributes.
+	PrefixSID *prefixsid.PSid `json:"prefix_sid,omitempty"`
+	IsEOR     bool            `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`

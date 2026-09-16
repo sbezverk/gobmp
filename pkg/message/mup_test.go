@@ -29,6 +29,27 @@ func mupReachNLRI(nlri []byte, ipv6 bool) *bgp.MPReachNLRI {
 	}
 }
 
+func mupPrefixSIDAttribute() []byte {
+	return []byte{
+		0x05, 0x00, 0x22, // SRv6 L3 Service TLV
+		0x00,                   // reserved
+		0x01, 0x00, 0x1e, 0x00, // SRv6 SID Information Sub-TLV
+		0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x03,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SID 2001:0:5:3::
+		0x00, 0x00, 0x11, 0x00, // flags, endpoint behavior 17, reserved
+		0x01, 0x00, 0x06, 0x28, 0x18, 0x10, 0x00, 0x10, 0x40, // SID Structure Sub-Sub-TLV
+	}
+}
+
+func mupUpdateWithPrefixSID() *bgp.Update {
+	update := minimalUpdate()
+	update.PathAttributes = []bgp.PathAttribute{{
+		AttributeType: 40,
+		Attribute:     mupPrefixSIDAttribute(),
+	}}
+	return update
+}
+
 func TestProducerMUPInterworkSegmentDiscovery(t *testing.T) {
 	nlri := mupReachNLRI([]byte{
 		0x01, 0x00, 0x01, 0x0c,
@@ -36,7 +57,7 @@ func TestProducerMUPInterworkSegmentDiscovery(t *testing.T) {
 		0x18, 0x0a, 0x0a, 0x0a,
 	}, false)
 
-	msgs, err := mupProducer().mup(nlri, 0, minimalPeerHeader(), minimalUpdate())
+	msgs, err := mupProducer().mup(nlri, 0, minimalPeerHeader(), mupUpdateWithPrefixSID())
 	if err != nil {
 		t.Fatalf("mup() unexpected error: %+v", err)
 	}
@@ -166,7 +187,7 @@ func TestProducerMUPAddPath(t *testing.T) {
 		t.Fatalf("UnmarshalMPReachNLRI() unexpected error: %+v", err)
 	}
 
-	msgs, err := mupProducer().mup(nlri, AddPrefix, minimalPeerHeader(), minimalUpdate())
+	msgs, err := mupProducer().mup(nlri, AddPrefix, minimalPeerHeader(), mupUpdateWithPrefixSID())
 	if err != nil {
 		t.Fatalf("mup() unexpected error: %+v", err)
 	}
@@ -325,17 +346,7 @@ func TestProducerMUPWithdrawIPv6NextHopFamily(t *testing.T) {
 // SRv6 L3 Service TLV (type 5) must reach the message decoded, not as raw
 // bytes. The attribute bytes are the type 5 vector of pkg/prefixsid.
 func TestProducerMUPPrefixSID(t *testing.T) {
-	prefixSID := []byte{
-		0x05, 0x00, 0x22, // SRv6 L3 Service TLV
-		0x00,                   // reserved
-		0x01, 0x00, 0x1e, 0x00, // SRv6 SID Information Sub-TLV
-		0x20, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x03,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SID 2001:0:5:3::
-		0x00, 0x00, 0x11, 0x00, // flags, endpoint behavior 17, reserved
-		0x01, 0x00, 0x06, 0x28, 0x18, 0x10, 0x00, 0x10, 0x40, // SID Structure Sub-Sub-TLV
-	}
-	update := minimalUpdate()
-	update.PathAttributes = []bgp.PathAttribute{{AttributeType: 40, Attribute: prefixSID}}
+	update := mupUpdateWithPrefixSID()
 
 	for _, tt := range []struct {
 		name string
@@ -380,6 +391,68 @@ func TestProducerMUPPrefixSID(t *testing.T) {
 			psid, _ := got["prefix_sid"].(map[string]any)
 			if _, ok := psid["srv6_l3_service"]; !ok {
 				t.Fatalf("marshalled message lacks prefix_sid.srv6_l3_service: %s", b)
+			}
+		})
+	}
+}
+
+func TestProducerMUPDiscoveryWithoutPrefixSIDIsSkipped(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		nlri []byte
+	}{
+		{
+			name: "ISD",
+			nlri: []byte{
+				0x01, 0x00, 0x01, 0x0c,
+				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
+				0x18, 0x0a, 0x0a, 0x0a,
+			},
+		},
+		{
+			name: "DSD",
+			nlri: []byte{
+				0x01, 0x00, 0x02, 0x0c,
+				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
+				0x0a, 0x0a, 0x0a, 0x01,
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			msgs, err := mupProducer().mup(mupReachNLRI(tt.nlri, false), AddPrefix, minimalPeerHeader(), minimalUpdate())
+			if err != nil {
+				t.Fatalf("mup() unexpected error: %+v", err)
+			}
+			if len(msgs) != 0 {
+				t.Fatalf("mup() returned %d messages, want 0 for an announcement without Prefix-SID", len(msgs))
+			}
+		})
+	}
+}
+
+func TestProducerMUPDiscoveryInvalidPrefixSIDIsSkipped(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		attr []byte
+	}{
+		{name: "empty", attr: []byte{}},
+		{name: "malformed", attr: []byte{0x05, 0x00, 0x00}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			update := minimalUpdate()
+			update.PathAttributes = []bgp.PathAttribute{{AttributeType: 40, Attribute: tt.attr}}
+			nlri := mupReachNLRI([]byte{
+				0x01, 0x00, 0x01, 0x0c,
+				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
+				0x18, 0x0a, 0x0a, 0x0a,
+			}, false)
+
+			msgs, err := mupProducer().mup(nlri, AddPrefix, minimalPeerHeader(), update)
+			if err != nil {
+				t.Fatalf("mup() unexpected error: %+v", err)
+			}
+			if len(msgs) != 0 {
+				t.Fatalf("mup() returned %d messages, want 0 for an announcement with %s Prefix-SID", len(msgs), tt.name)
 			}
 		})
 	}
@@ -445,7 +518,7 @@ func TestProcessMPUpdateMUP(t *testing.T) {
 				publisher: pub,
 				splitAF:   tt.splitAF,
 			}
-			p.processMPUpdate(mupReachNLRI(nlri, tt.ipv6), 0, minimalPeerHeader(), minimalUpdate())
+			p.processMPUpdate(mupReachNLRI(nlri, tt.ipv6), 0, minimalPeerHeader(), mupUpdateWithPrefixSID())
 			if len(pub.msgs) != 1 {
 				t.Fatalf("processMPUpdate() published %d messages, want 1", len(pub.msgs))
 			}

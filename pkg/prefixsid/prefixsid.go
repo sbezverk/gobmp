@@ -43,6 +43,10 @@ type PSid struct {
 	SRv6L2Service  *srv6.L2Service    `json:"srv6_l2_service,omitempty"`
 }
 
+func (p *PSid) IsEmpty() bool {
+	return p.LabelIndex == nil && p.OriginatorSRGB == nil && p.SRv6L3Service == nil && p.SRv6L2Service == nil
+}
+
 // UnmarshalBGPAttrPrefixSID instantiates a prefix sid object
 func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 	if glog.V(6) {

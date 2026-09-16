@@ -38,7 +38,7 @@ type SRGBRange struct {
 	Range uint32 `json:"range"` // 24-bit value (3 octets)
 }
 
-// UnmarshalBGPPrefixSID parses BGP Prefix-SID attribute
+// UnmarshalBGPPrefixSID parses BGP Prefix-SID attribute, will be removed in the future in favor of PrefixSID
 func UnmarshalBGPPrefixSID(b []byte) (*BGPPrefixSID, error) {
 	if len(b) < 3 {
 		return nil, fmt.Errorf("invalid BGP Prefix-SID length: %d", len(b))
