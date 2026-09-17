@@ -207,7 +207,7 @@ func TestUnmarshalMUPNLRI(t *testing.T) {
 		},
 		{
 			// No TLV applies to a Type 1 ST route, the framing is validated
-			// and the TLV is then ignored.
+			// and the TLV is stored for future reference.
 			name: "Type 1 ST with unknown TLV",
 			input: []byte{
 				0x01, 0x00, 0x03, 0x1d,
@@ -233,6 +233,9 @@ func TestUnmarshalMUPNLRI(t *testing.T) {
 					QFI:                   9,
 					EndpointAddressLength: 32,
 					EndpointAddress:       v4("10.10.10.1"),
+					TLVs: []*TLV{
+						{Type: 0xc8, Length: 4, Value: []byte{0xde, 0xad, 0xbe, 0xef}},
+					},
 				},
 			}}},
 		},

@@ -16,6 +16,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/pmsi"
+	"github.com/sbezverk/gobmp/pkg/prefixsid"
 	"github.com/sbezverk/gobmp/pkg/tunnel"
 	"github.com/sbezverk/tools/sort"
 )
@@ -69,9 +70,12 @@ type BaseAttributes struct {
 	IPv6ExtCommunityList []string `json:"ipv6_ext_community_list,omitempty"` // RFC 5701
 	AIGP                 *AIGP    `json:"aigp,omitempty"`                    // RFC 7311 AIGP Attribute (Type 26)
 	// PEDistinguisherLable
-	LgCommunityList []string      `json:"large_community_list,omitempty"`
-	BGPPrefixSID    *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
-	OTC             uint32        `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
+	LgCommunityList []string `json:"large_community_list,omitempty"`
+	// PrefixSID represents the Prefix Segment Identifier (SID) attribute as defined in RFC 8669.
+	PrefixSID *prefixsid.PSid `json:"prefix_sid,omitempty"`
+	// BGPPrefixSID will be deprecated in favor of PrefixSID on Septermber 16, 2027
+	BGPPrefixSID *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
+	OTC          uint32        `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
 	// NHCAttr retains the raw NHC attribute value for forensic use.
 	NHCAttr []byte `json:"nhc_attr,omitempty"`
 	// NHC contains the decoded NHC when its characteristics are usable.
@@ -447,10 +451,16 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 		case 40:
 			// RFC 8669: BGP Prefix-SID
 			var err error
+			// Will be removed in the future in favor of PrefixSID
 			baseAttr.BGPPrefixSID, err = UnmarshalBGPPrefixSID(b)
 			if err != nil {
 				baseAttr.BGPPrefixSID = nil
 				glog.Errorf("failed to unmarshal BGP Prefix-SID attribute with error: %+v", err)
+			}
+			baseAttr.PrefixSID, err = prefixsid.UnmarshalBGPAttrPrefixSID(b)
+			if err != nil {
+				baseAttr.PrefixSID = nil
+				glog.Errorf("failed to unmarshal Prefix-SID attribute with error: %+v", err)
 			}
 		case 41:
 			// BIER - RFC 9793

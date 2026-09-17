@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/mup"
@@ -53,6 +54,15 @@ func (p *producer) mup(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 	}
 
 	prfxs := make([]MUPPrefix, 0, len(route.Route))
+	// ISD and DSD routes carry their SRv6 SID and endpoint behavior in the
+	// Prefix-SID attribute, the same way L3VPN routes do.
+	psid, err := update.GetAttrPrefixSID()
+	if err != nil {
+		psid = nil
+		if !errors.Is(err, bgp.NewAttributeNotFoundError(40, "Prefix SID")) {
+			glog.Errorf("error getting Prefix SID attribute: %v", err)
+		}
+	}
 	for _, e := range route.Route {
 		prfx := MUPPrefix{
 			Action:         operation,
@@ -86,17 +96,21 @@ func (p *producer) mup(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 			prfx.VPNRD = rd.String()
 			prfx.VPNRDType = rd.Type
 		}
-		// ISD and DSD routes carry their SRv6 SID and endpoint behavior in the
-		// Prefix-SID attribute, the same way L3VPN routes do.
-		if psid, err := update.GetAttrPrefixSID(); err == nil {
-			prfx.PrefixSID = psid
-		}
+		prfx.PrefixSID = psid
 		switch r := e.GetRouteTypeSpec().(type) {
 		case *mup.ISDRoute:
 			prfx.Prefix = net.IP(r.Prefix).String()
 			prfx.PrefixLen = r.PrefixLength
+			if (prfx.PrefixSID == nil || prfx.PrefixSID.IsEmpty()) && prfx.Action != "del" {
+				glog.Errorf("missing PrefixSID for ISD route %s/%d", prfx.Prefix, prfx.PrefixLen)
+				continue
+			}
 		case *mup.DSDRoute:
 			prfx.Address = net.IP(r.Address).String()
+			if (prfx.PrefixSID == nil || prfx.PrefixSID.IsEmpty()) && prfx.Action != "del" {
+				glog.Errorf("missing PrefixSID for DSD route %s", prfx.Address)
+				continue
+			}
 		case *mup.ST1Route:
 			teid, qfi := r.TEID, r.QFI
 			prfx.Prefix = net.IP(r.Prefix).String()
@@ -105,6 +119,7 @@ func (p *producer) mup(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 			prfx.QFI = &qfi
 			prfx.EndpointAddress = net.IP(r.EndpointAddress).String()
 			prfx.EndpointLen = r.EndpointAddressLength
+			prfx.TLVs = r.TLVs
 			if r.SourceAddress != nil {
 				prfx.SourceAddress = net.IP(r.SourceAddress).String()
 			}

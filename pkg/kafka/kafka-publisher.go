@@ -99,59 +99,68 @@ type publisher struct {
 	topicPrefix  string
 }
 
-func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
+// topicForMessage maps a BMP message type to its Kafka topic.
+// It returns false for unsupported message types.
+func topicForMessage(t int) (string, bool) {
 	switch t {
 	case bmp.PeerStateChangeMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, PeerTopic), key, msg)
+		return PeerTopic, true
 	case bmp.UnicastPrefixMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, UnicastMessageTopic), key, msg)
+		return UnicastMessageTopic, true
 	case bmp.UnicastPrefixV4Msg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, UnicastMessageV4Topic), key, msg)
+		return UnicastMessageV4Topic, true
 	case bmp.UnicastPrefixV6Msg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, UnicastMessageV6Topic), key, msg)
+		return UnicastMessageV6Topic, true
 	case bmp.LSNodeMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, LSNodeMessageTopic), key, msg)
+		return LSNodeMessageTopic, true
 	case bmp.LSLinkMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, LSLinkMessageTopic), key, msg)
+		return LSLinkMessageTopic, true
 	case bmp.L3VPNMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, L3vpnMessageTopic), key, msg)
+		return L3vpnMessageTopic, true
 	case bmp.L3VPNV4Msg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, L3vpnMessageV4Topic), key, msg)
+		return L3vpnMessageV4Topic, true
 	case bmp.L3VPNV6Msg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, L3vpnMessageV6Topic), key, msg)
+		return L3vpnMessageV6Topic, true
 	case bmp.LSPrefixMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, LSPrefixMessageTopic), key, msg)
+		return LSPrefixMessageTopic, true
 	case bmp.LSSRv6SIDMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, LSSRv6SIDMessageTopic), key, msg)
+		return LSSRv6SIDMessageTopic, true
 	case bmp.EVPNMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, EVPNMessageTopic), key, msg)
+		return EVPNMessageTopic, true
 	case bmp.SRPolicyMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, SRPolicyMessageTopic), key, msg)
+		return SRPolicyMessageTopic, true
 	case bmp.SRPolicyV4Msg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, SRPolicyMessageV4Topic), key, msg)
+		return SRPolicyMessageV4Topic, true
 	case bmp.SRPolicyV6Msg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, SRPolicyMessageV6Topic), key, msg)
+		return SRPolicyMessageV6Topic, true
 	case bmp.FlowspecMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, FlowspecMessageTopic), key, msg)
+		return FlowspecMessageTopic, true
 	case bmp.FlowspecV4Msg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, FlowspecMessageV4Topic), key, msg)
+		return FlowspecMessageV4Topic, true
 	case bmp.FlowspecV6Msg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, FlowspecMessageV6Topic), key, msg)
+		return FlowspecMessageV6Topic, true
 	case bmp.VPLSMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, VPLSMessageTopic), key, msg)
+		return VPLSMessageTopic, true
 	case bmp.MUPMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, MUPMessageTopic), key, msg)
+		return MUPMessageTopic, true
 	case bmp.MUPV4Msg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, MUPMessageV4Topic), key, msg)
+		return MUPMessageV4Topic, true
 	case bmp.MUPV6Msg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, MUPMessageV6Topic), key, msg)
+		return MUPMessageV6Topic, true
 	case bmp.StatsReportMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, StatsMessageTopic), key, msg)
+		return StatsMessageTopic, true
 	case bmp.BMPRawMsg:
-		return p.produceMessage(WithTopicPrefix(p.topicPrefix, RawMessageTopic), key, msg)
+		return RawMessageTopic, true
 	}
+	return "", false
+}
 
-	return fmt.Errorf("not implemented")
+func (p *publisher) PublishMessage(t int, key []byte, msg []byte) error {
+	topic, ok := topicForMessage(t)
+	if !ok {
+		return fmt.Errorf("not implemented")
+	}
+	return p.produceMessage(WithTopicPrefix(p.topicPrefix, topic), key, msg)
 }
 
 func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {

@@ -47,6 +47,7 @@ type ST1Route struct {
 	// SourceAddress is nil when SourceAddressLength is 0, the draft leaves
 	// the source address to local configuration in that case.
 	SourceAddress []byte
+	TLVs          []*TLV
 }
 
 // UnmarshalST1Route parses a Type 1 Session Transformed route
@@ -119,10 +120,13 @@ func UnmarshalST1Route(b []byte, ipv6 bool) (*ST1Route, error) {
 	// None of the TLVs draft Section 3.1.5 defines applies to a Type 1 ST
 	// route, and a TLV received by a route type it does not apply to MUST be
 	// ignored. The framing is still validated, Section 3.1.3.1 makes a TLV
-	// parsing error a malformed NLRI, but nothing is kept.
-	if _, err := unmarshalTLVs(b[p:]); err != nil {
+	// parsing error a malformed NLRI, TLVs are kept to provide lossless
+	// monitoring or future-extension visibility.
+	tlvs, err := unmarshalTLVs(b[p:])
+	if err != nil {
 		return nil, err
 	}
+	r.TLVs = tlvs
 
 	return r, nil
 }
@@ -148,6 +152,7 @@ func (r *ST1Route) MarshalJSON() ([]byte, error) {
 		EndpointAddress string `json:"endpoint_address,omitempty"`
 		EndpointLen     uint8  `json:"endpoint_len"`
 		SourceAddress   string `json:"source_address,omitempty"`
+		TLVs            []*TLV `json:"tlvs,omitempty"`
 	}{
 		RD:              r.RD.String(),
 		Prefix:          net.IP(r.Prefix).String(),
@@ -156,6 +161,7 @@ func (r *ST1Route) MarshalJSON() ([]byte, error) {
 		QFI:             r.QFI,
 		EndpointAddress: net.IP(r.EndpointAddress).String(),
 		EndpointLen:     r.EndpointAddressLength,
+		TLVs:            r.TLVs,
 	}
 	if r.SourceAddress != nil {
 		v.SourceAddress = net.IP(r.SourceAddress).String()
