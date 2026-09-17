@@ -1,6 +1,7 @@
 package ls
 
 import (
+	"encoding/binary"
 	"strings"
 	"testing"
 
@@ -405,5 +406,37 @@ func TestUnmarshalLSNLRI71_UnmarshalErrors(t *testing.T) {
 				t.Fatal("expected error for bad payload, got nil")
 			}
 		})
+	}
+}
+
+// lsInterASTLV encodes a BGP-LS TLV for the SAFI 71 Inter-AS fixture.
+func lsInterASTLV(typ uint16, value []byte) []byte {
+	b := make([]byte, 4, 4+len(value))
+	binary.BigEndian.PutUint16(b[0:2], typ)
+	binary.BigEndian.PutUint16(b[2:4], uint16(len(value)))
+	return append(b, value...)
+}
+
+// TestUnmarshalLSNLRI71InterASLink verifies NLRI type 7 dispatches to the Inter-AS decoder.
+func TestUnmarshalLSNLRI71InterASLink(t *testing.T) {
+	local := append(lsInterASTLV(512, []byte{0, 0, 0xfd, 0xe8}), lsInterASTLV(515, []byte{10, 0, 0, 1})...)
+	local = append(local, lsInterASTLV(1028, []byte{192, 0, 2, 1})...)
+	body := []byte{byte(base.OSPFv2), 0, 0, 0, 0, 0, 0, 0, 1}
+	body = append(body, lsInterASTLV(256, local)...)
+	body = append(body, lsInterASTLV(270, []byte{0, 0, 0xfd, 0xe9})...)
+	body = append(body, lsInterASTLV(271, []byte{192, 0, 2, 2})...)
+	element := make([]byte, 4, 4+len(body))
+	binary.BigEndian.PutUint16(element[0:2], 7)
+	binary.BigEndian.PutUint16(element[2:4], uint16(len(body)))
+	element = append(element, body...)
+	nlri, err := UnmarshalLSNLRI71(element, false)
+	if err != nil {
+		t.Fatalf("UnmarshalLSNLRI71: %v", err)
+	}
+	if len(nlri.NLRI) != 1 {
+		t.Fatalf("elements = %d, want 1", len(nlri.NLRI))
+	}
+	if _, ok := nlri.NLRI[0].LS.(*base.InterASLinkNLRI); !ok {
+		t.Fatalf("decoded type = %T, want *base.InterASLinkNLRI", nlri.NLRI[0].LS)
 	}
 }

@@ -168,6 +168,13 @@ func TestProcessNLRI72SubTypes_LinkAndPrefixRDStamped(t *testing.T) {
 	if rec.msgs[0].msgType != bmp.LSLinkMsg {
 		t.Errorf("msg[0].msgType = %d, want LSLinkMsg %d", rec.msgs[0].msgType, bmp.LSLinkMsg)
 	}
+	var linkMsg LSLink
+	if err := json.Unmarshal(rec.msgs[0].payload, &linkMsg); err != nil {
+		t.Fatalf("unmarshal LSLink: %v", err)
+	}
+	if linkMsg.RemoteNodeASN != 65000 || linkMsg.RemoteASN != 0 {
+		t.Errorf("normal link ASN fields: remote_node_asn=%d remote_asn=%d", linkMsg.RemoteNodeASN, linkMsg.RemoteASN)
+	}
 	if rec.msgs[1].msgType != bmp.LSPrefixMsg {
 		t.Errorf("msg[1].msgType = %d, want LSPrefixMsg %d", rec.msgs[1].msgType, bmp.LSPrefixMsg)
 	}
