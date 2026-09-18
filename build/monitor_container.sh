@@ -2,6 +2,7 @@
 
 cn=$1
 router_cn=${2:-xr-1}
+router_ip=${3:-10.1.1.3}
 cid=$(docker ps --filter "name=${cn}" --format '{{.ID}}' | head -1)
 
 if [[ ${cid} == "" ]]; then
@@ -45,7 +46,7 @@ i=0
 
 while [ ${done} == false ]; do
 
-        msg=$(docker logs ${cid} 2>&1 | grep "client 10.1.1.3")
+        msg=$(docker logs ${cid} 2>&1 | grep "client ${router_ip}")
         if [[ ${msg} != "" ]]; then
                 done=true
                 found=true
@@ -60,12 +61,12 @@ while [ ${done} == false ]; do
 done
 
 if [[ ${found} == true ]]; then
-        echo "bmp session with 10.1.1.3 came up"
+        echo "bmp session with ${router_ip} came up"
 else
-    echo "container ${cn} failed to establish bmp session with 10.1.1.3, check gobmp and ${router_cn} containers' logs..."
+    echo "container ${cn} failed to establish bmp session with ${router_ip}, check gobmp and ${router_cn} containers' logs..."
 	docker logs ${cid}
 	docker logs "${router_cn}"
         exit 1
 fi 
 
-exit 0 
+exit 0

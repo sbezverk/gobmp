@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "name": "mup-ipv6-isd-withdraw",
+  "description": "Inject the ipv6/bgp-mup MUP withdraw fixture and validate the decoded AFI/SAFI 1/85 or 2/85 BMP message.",
+  "tags": [
+    "mup",
+    "ipv6",
+    "route-type-1",
+    "withdraw",
+    "gobgp"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv6/bgp-mup",
+      "action": "withdraw",
+      "nlri": {
+        "arch_type": 1,
+        "route_type": 1,
+        "route_data": {
+          "rd": [
+            0,
+            0,
+            0,
+            100,
+            0,
+            0,
+            0,
+            100
+          ],
+          "prefix_length": 64,
+          "prefix": [
+            32,
+            1,
+            13,
+            184,
+            0,
+            1,
+            0,
+            0
+          ]
+        }
+      },
+      "extended_communities": [
+        {
+          "type": "route_target",
+          "format": "ipv4",
+          "ipv4": "192.0.2.254",
+          "local": 100
+        },
+        {
+          "type": "raw",
+          "type_high": 12,
+          "type_low": 4,
+          "value_hex": "c00002010064"
+        }
+      ]
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.mup_v6",
+    "timeout": "120",
+    "match": {
+      "action": "del",
+      "route_type": 1,
+      "vpn_rd": "100:100",
+      "prefix": "2001:db8:1::",
+      "prefix_len": 64
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "del",
+      "router_ip": "172.30.0.2",
+      "peer_ip": "172.30.0.3",
+      "peer_type": 0,
+      "peer_asn": 65000,
+      "vpn_rd": "100:100",
+      "vpn_rd_type": 0,
+      "is_ipv4": false,
+      "arch_type": 1,
+      "route_type": 1,
+      "is_nexthop_ipv4": false,
+      "is_adj_rib_in_post_policy": true,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false,
+      "is_loc_rib_filtered": false,
+      "prefix": "2001:db8:1::",
+      "prefix_len": 64
+    },
+    "contains": {
+      "base_attrs": {
+        "is_atomic_agg": false
+      }
+    },
+    "present": [
+      "timestamp",
+      "base_attrs"
+    ],
+    "non_empty": [
+      "hash",
+      "router_hash",
+      "peer_hash",
+      "base_attrs.base_attr_hash"
+    ],
+    "absent": [
+      "error",
+      "is_eor"
+    ]
+  }
+}
+
