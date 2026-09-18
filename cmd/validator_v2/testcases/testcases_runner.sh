@@ -3,11 +3,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VALIDATOR_BIN="${VALIDATOR_BIN:-${SCRIPT_DIR}/validator}"
+TESTCASE_DIR="${TESTCASE_DIR:-${SCRIPT_DIR}}"
 API_SRV="${API_SRV:-http://127.0.0.1:8080}"
 KAFKA_SRV="${KAFKA_SRV:-127.0.0.1:9092}"
 VALIDATOR_VERBOSITY="${VALIDATOR_VERBOSITY:-3}"
 
-echo "Running validator test cases found in ${SCRIPT_DIR} folder"
+echo "Running validator test cases found in ${TESTCASE_DIR} folder"
 echo "Using validator binary: ${VALIDATOR_BIN}"
 
 total=0
@@ -25,7 +26,11 @@ while IFS= read -r file; do
     failed=$((failed + 1))
     echo "Test case $file failed with exit code $rc"
   fi
-done < <(find "${SCRIPT_DIR}" -name "*.json" -type f | sort)
+done < <(
+  for file in "${TESTCASE_DIR}"/*.json; do
+    [ -f "${file}" ] && printf '%s\n' "${file}"
+  done | sort
+)
 
 echo "Validator test case summary: total=$total passed=$passed failed=$failed"
 
