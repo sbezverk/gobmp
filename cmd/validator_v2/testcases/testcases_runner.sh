@@ -26,7 +26,11 @@ while IFS= read -r file; do
     failed=$((failed + 1))
     echo "Test case $file failed with exit code $rc"
   fi
-done < <(find "${TESTCASE_DIR}" -name "*.json" -type f | sort)
+done < <(
+  for file in "${TESTCASE_DIR}"/*.json; do
+    [ -f "${file}" ] && printf '%s\n' "${file}"
+  done | sort
+)
 
 echo "Validator test case summary: total=$total passed=$passed failed=$failed"
 
