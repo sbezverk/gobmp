@@ -459,6 +459,19 @@ jobs:
           echo "127.0.0.1 kafka-mup" | sudo tee -a /etc/hosts
       - name: Start GoBGP MUP integration testbed
         run: docker compose -f "$VALIDATOR_MUP_TESTBED_COMPOSE" up --detach
+      - name: Wait for Kafka broker and consumer-group coordinator
+        run: |
+          for attempt in {1..60}; do
+            if docker exec kafka-mup kafka-topics \
+              --bootstrap-server localhost:9092 \
+              --list >/dev/null 2>&1; then
+              echo "Kafka broker is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs kafka-mup
+          exit 1
       - name: Check gobmp Kafka and BMP sessions
         run: ./build/monitor_container.sh gobmp-mup gobgp-mup 172.30.0.2
       - name: Wait for bgpinjector MUP BGP session

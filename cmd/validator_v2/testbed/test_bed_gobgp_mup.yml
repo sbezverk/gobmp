@@ -55,6 +55,12 @@ services:
       ZOOKEEPER: zookeeper-mup:2181
       KAFKA_TOPICS: "gobmp.parsed.peer:1:1:delete gobmp.parsed.unicast_prefix:1:1:delete gobmp.parsed.unicast_prefix_v4:1:1:delete gobmp.parsed.unicast_prefix_v6:1:1:delete gobmp.parsed.ls_node:1:1:delete gobmp.parsed.ls_link:1:1:delete gobmp.parsed.l3vpn:1:1:delete gobmp.parsed.l3vpn_v4:1:1:delete gobmp.parsed.l3vpn_v6:1:1:delete gobmp.parsed.sr_policy:1:1:delete gobmp.parsed.sr_policy_v4:1:1:delete gobmp.parsed.sr_policy_v6:1:1:delete gobmp.parsed.flowspec:1:1:delete gobmp.parsed.flowspec_v4:1:1:delete gobmp.parsed.flowspec_v6:1:1:delete gobmp.parsed.ls_prefix:1:1:delete gobmp.parsed.ls_srv6_sid:1:1:delete gobmp.parsed.evpn:1:1:delete gobmp.parsed.statistics:1:1:delete gobmp.parsed.mup:1:1:delete gobmp.parsed.mup_v4:1:1:delete gobmp.parsed.mup_v6:1:1:delete"
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # This testbed intentionally has one broker. Without these settings,
+      # Kafka cannot create __consumer_offsets with its default RF of 3 and
+      # validator-v2 consumer groups remain stuck at CoordinatorNotAvailable.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       ALLOW_PLAINTEXT_LISTENER: "yes"
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-mup:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
