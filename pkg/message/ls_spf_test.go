@@ -147,6 +147,48 @@ func TestValidateLSNLRI80(t *testing.T) {
 			wantErr: "protocol ID",
 		},
 		{
+			name:    "node type does not match NLRI type",
+			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: &base.LinkNLRI{}}}},
+			update:  testLSUpdate(testLSSequence()),
+			wantErr: "node NLRI has unexpected type",
+		},
+		{
+			name:    "node descriptor is required",
+			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: &base.NodeNLRI{ProtocolID: base.Direct}}}},
+			update:  testLSUpdate(testLSSequence()),
+			wantErr: "missing node descriptor",
+		},
+		{
+			name:    "link type does not match NLRI type",
+			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: testLSNode(base.Direct)}}},
+			update:  testLSUpdate(testLSSequence()),
+			wantErr: "link NLRI has unexpected type",
+		},
+		{
+			name:    "non-direct link protocol",
+			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: &base.LinkNLRI{ProtocolID: base.OSPFv2}}}},
+			update:  testLSUpdate(testLSSequence()),
+			wantErr: "link NLRI has protocol ID",
+		},
+		{
+			name:    "link local descriptor is required",
+			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: &base.LinkNLRI{ProtocolID: base.Direct, RemoteNode: testLSNodeDescriptor()}}}},
+			update:  testLSUpdate(testLSSequence()),
+			wantErr: "link local node descriptor",
+		},
+		{
+			name:    "link remote descriptor is required",
+			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: &base.LinkNLRI{ProtocolID: base.Direct, LocalNode: testLSNodeDescriptor()}}}},
+			update:  testLSUpdate(testLSSequence()),
+			wantErr: "link remote node descriptor",
+		},
+		{
+			name:    "prefix type does not match NLRI type",
+			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 3, LS: testLSNode(base.Direct)}}},
+			update:  testLSUpdate(testLSSequence()),
+			wantErr: "prefix NLRI has unexpected type",
+		},
+		{
 			name:    "link metric is required",
 			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: link}}},
 			update:  testLSUpdate(testLSSequence()),
