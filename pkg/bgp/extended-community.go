@@ -366,9 +366,11 @@ func type6(subType uint8, value []byte) string {
 	var s string
 	switch subType {
 	case 0x01:
-		l := make([]byte, 4)
-		copy(l, value[3:])
-		s = fmt.Sprintf("%d:%d", value[0], binary.BigEndian.Uint32(l))
+		// RFC 7432 7.5: ESI Label is an RFC 3032 label stack entry (3
+		// octets, label in the high-order 20 bits) like base.MakeLabel.
+		esiLabel := uint32(value[3])<<16 | uint32(value[4])<<8 | uint32(value[5]&0xf0)
+		esiLabel >>= 4
+		s = fmt.Sprintf("%d:%d", value[0], esiLabel)
 	case 0x02:
 		fallthrough
 	case 0x03:
