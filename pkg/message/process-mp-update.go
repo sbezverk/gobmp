@@ -256,6 +256,8 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 		p.processNLRI71SubTypes(nlri, operation, ph, update)
 	case 72:
 		p.processNLRI72SubTypes(nlri, operation, ph, update)
+	case 80:
+		p.processNLRI80SubTypes(nlri, operation, ph, update)
 	default:
 		switch n := nlri.(type) {
 		case *bgp.MPReachNLRI:

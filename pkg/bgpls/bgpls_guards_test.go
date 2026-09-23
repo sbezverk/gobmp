@@ -457,7 +457,7 @@ func TestGetNodeFlags(t *testing.T) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GetIGPMetric — variable-length 1–3 bytes, invalid lengths return 0
+// GetIGPMetric — variable-length 1–4 bytes, invalid lengths return 0
 // ─────────────────────────────────────────────────────────────────────────────
 
 func TestGetIGPMetric(t *testing.T) {
@@ -480,6 +480,11 @@ func TestGetIGPMetric(t *testing.T) {
 			name: "3-byte metric = 65536",
 			tlv:  TLV{Type: 1095, Length: 3, Value: []byte{0x01, 0x00, 0x00}},
 			want: 65536,
+		},
+		{
+			name: "4-byte metric = 65537",
+			tlv:  TLV{Type: 1095, Length: 4, Value: []byte{0x00, 0x01, 0x00, 0x01}},
+			want: 65537,
 		},
 		{
 			name: "length 0 — returns 0",
