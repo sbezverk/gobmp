@@ -1,12 +1,16 @@
 package pmsi
 
 import (
+	"bytes"
 	"testing"
 )
 
-// TestParsePMSITunnel_NoLabel tests PMSI tunnel without MPLS label (L bit = 0)
-func TestParsePMSITunnel_NoLabel(t *testing.T) {
-	// Flags=0x00 (L bit not set), TunnelType=7 (Ingress Replication), TunnelID=4 bytes
+// TestParsePMSITunnel_LabelPresentWithLBitClear proves the label is parsed
+// even when the Leaf Information Required flag (bit 0) is clear - that bit
+// is unrelated to whether the label field is on the wire (RFC 6514 S5).
+func TestParsePMSITunnel_LabelPresentWithLBitClear(t *testing.T) {
+	// Flags=0x00 (L bit not set), TunnelType=7 (Ingress Replication),
+	// Label bytes 0A 00 00, TunnelID=1 byte (0x01).
 	data := []byte{0x00, 0x07, 0x0A, 0x00, 0x00, 0x01}
 
 	tunnel, err := ParsePMSITunnel(data)
@@ -20,11 +24,15 @@ func TestParsePMSITunnel_NoLabel(t *testing.T) {
 	if tunnel.TunnelType != TunnelTypeIngressRepl {
 		t.Errorf("TunnelType = %d, want %d", tunnel.TunnelType, TunnelTypeIngressRepl)
 	}
-	if tunnel.MPLSLabel != nil {
-		t.Errorf("MPLSLabel should be nil when L bit not set")
+	if tunnel.MPLSLabel == nil || *tunnel.MPLSLabel != 40960 {
+		t.Errorf("MPLSLabel = %v, want 40960", tunnel.MPLSLabel)
 	}
-	if len(tunnel.TunnelIdentifier) != 4 {
-		t.Errorf("TunnelIdentifier length = %d, want 4", len(tunnel.TunnelIdentifier))
+	if tunnel.RawLabel != 655360 {
+		t.Errorf("RawLabel = %d, want 655360", tunnel.RawLabel)
+	}
+	want := []byte{0x01}
+	if !bytes.Equal(tunnel.TunnelIdentifier, want) {
+		t.Errorf("TunnelIdentifier = %x, want %x", tunnel.TunnelIdentifier, want)
 	}
 }
 
@@ -85,7 +93,7 @@ func TestParsePMSITunnel_AllTunnelTypes(t *testing.T) {
 
 	for _, tt := range types {
 		t.Run(tt.name, func(t *testing.T) {
-			data := []byte{0x00, uint8(tt.tunnelType), 0x00, 0x00}
+			data := []byte{0x00, uint8(tt.tunnelType), 0x00, 0x00, 0x00}
 
 			tunnel, err := ParsePMSITunnel(data)
 			if err != nil {
@@ -107,7 +115,7 @@ func TestParsePMSITunnel_TooShort(t *testing.T) {
 	}{
 		{"Empty", []byte{}},
 		{"OneByte", []byte{0x01}},
-		{"LabelMissing", []byte{0x01, 0x07}}, // L bit set but no label
+		{"LabelTruncated", []byte{0x01, 0x07, 0x00, 0x00}}, // label always required, only 2 of 3 bytes here
 	}
 
 	for _, tt := range tests {
@@ -122,8 +130,8 @@ func TestParsePMSITunnel_TooShort(t *testing.T) {
 
 // TestParsePMSITunnel_EmptyTunnelID tests PMSI with no tunnel identifier
 func TestParsePMSITunnel_EmptyTunnelID(t *testing.T) {
-	// Flags=0x00, TunnelType=0 (no tunnel)
-	data := []byte{0x00, 0x00}
+	// Flags=0x00, TunnelType=0 (no tunnel), Label=0, no bytes after it
+	data := []byte{0x00, 0x00, 0x00, 0x00, 0x00}
 
 	tunnel, err := ParsePMSITunnel(data)
 	if err != nil {
@@ -135,29 +143,55 @@ func TestParsePMSITunnel_EmptyTunnelID(t *testing.T) {
 	}
 }
 
-// TestParsePMSITunnel_LargeTunnelID tests PMSI with large tunnel identifier
+// TestParsePMSITunnel_LargeTunnelID tests PMSI with a large tunnel identifier
+// after the label - the first 3 trailing bytes are always the label, not
+// part of the identifier.
 func TestParsePMSITunnel_LargeTunnelID(t *testing.T) {
-	// Create data with large tunnel identifier
-	tunnelID := make([]byte, 100)
-	for i := range tunnelID {
-		tunnelID[i] = byte(i)
+	trailing := make([]byte, 100)
+	for i := range trailing {
+		trailing[i] = byte(i)
 	}
 
-	data := append([]byte{0x00, 0x02}, tunnelID...) // Type=mLDP
+	data := append([]byte{0x00, 0x02}, trailing...) // Type=mLDP
 
 	tunnel, err := ParsePMSITunnel(data)
 	if err != nil {
 		t.Fatalf("ParsePMSITunnel() error = %v", err)
 	}
 
-	if len(tunnel.TunnelIdentifier) != 100 {
-		t.Errorf("TunnelIdentifier length = %d, want 100", len(tunnel.TunnelIdentifier))
+	if len(tunnel.TunnelIdentifier) != 97 {
+		t.Errorf("TunnelIdentifier length = %d, want 97", len(tunnel.TunnelIdentifier))
 	}
 
-	for i := 0; i < 100; i++ {
-		if tunnel.TunnelIdentifier[i] != byte(i) {
-			t.Errorf("TunnelIdentifier[%d] = %d, want %d", i, tunnel.TunnelIdentifier[i], i)
+	for i := 0; i < 97; i++ {
+		want := byte(i + 3) // trailing[0:3] was consumed as the label
+		if tunnel.TunnelIdentifier[i] != want {
+			t.Errorf("TunnelIdentifier[%d] = %d, want %d", i, tunnel.TunnelIdentifier[i], want)
 		}
+	}
+}
+
+// TestParsePMSITunnel_LabelAlwaysPresent_RT3VNI proves the Leaf Information
+// Required flag (bit 0) does not gate the label: RFC 6514 S5 fixes the
+// attribute layout as Flags+TunnelType+Label(3)+TunnelIdentifier regardless
+// of flags. Bytes captured from the evpn02 lab's RT-3 pmsi_tunnel (flags=0,
+// tunnel_type=6): the mis-parsed tunnel_identifier "AAPyCgABAg==" decodes to
+// 00 03 F2 0A 00 01 02 - the first 3 bytes are the label (raw 24-bit
+// 0x0003F2 = 1010, the VNI per RFC 8365 S5.1.3), and 10.0.1.2 is the
+// originating router's actual tunnel identifier.
+func TestParsePMSITunnel_LabelAlwaysPresent_RT3VNI(t *testing.T) {
+	data := []byte{0x00, 0x06, 0x00, 0x03, 0xF2, 0x0A, 0x00, 0x01, 0x02}
+
+	tunnel, err := ParsePMSITunnel(data)
+	if err != nil {
+		t.Fatalf("ParsePMSITunnel() error = %v", err)
+	}
+	if tunnel.RawLabel != 1010 {
+		t.Errorf("RawLabel = %d, want 1010", tunnel.RawLabel)
+	}
+	want := []byte{0x0A, 0x00, 0x01, 0x02}
+	if !bytes.Equal(tunnel.TunnelIdentifier, want) {
+		t.Errorf("TunnelIdentifier = %x, want %x", tunnel.TunnelIdentifier, want)
 	}
 }
 
