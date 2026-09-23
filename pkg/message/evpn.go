@@ -78,14 +78,17 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 				prfx.IPLength = *ip
 				gw := e.GetEVPNGWAddr()
 				addr := e.GetEVPNIPAddr()
-				if prfx.IPLength <= 32 {
+				// Address family comes from the byte length on the wire
+				// (4 vs 16), not from the prefix length: an EVPN RT-5 IPv6
+				// prefix can carry a length <= 32.
+				if len(addr) == net.IPv4len || len(gw) == net.IPv4len {
 					if addr != nil {
 						prfx.IPAddress = net.IP(addr).To4().String()
 					}
 					if gw != nil {
 						prfx.GWAddress = net.IP(gw).To4().String()
 					}
-				} else if prfx.IPLength <= 128 {
+				} else {
 					if addr != nil {
 						prfx.IPAddress = net.IP(addr).To16().String()
 					}
