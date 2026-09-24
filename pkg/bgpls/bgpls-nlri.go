@@ -418,14 +418,32 @@ func (ls *NLRI) GetIGPMetric() uint32 {
 			continue
 		}
 		m := make([]byte, 4)
-		// RFC 9552 permits a variable-length metric. RFC 9815 Section 5.2.2
-		// requires the four-octet form for BGP-LS-SPF.
-		if tlv.Length < 1 || tlv.Length > 4 || len(tlv.Value) < int(tlv.Length) {
-			glog.Errorf("Invalid length %d (value %d bytes) for IGP Metric TLV 1095, expected 1 through 4", tlv.Length, len(tlv.Value))
+		// 1095 TLV has variable length
+		// 1, 2 or 3 bytes, depending on the length copying the actual value into the right position.
+		if tlv.Length < 1 || tlv.Length > 3 || len(tlv.Value) < int(tlv.Length) {
+			glog.Errorf("Invalid length %d (value %d bytes) for IGP Metric TLV 1095, expected 1, 2 or 3", tlv.Length, len(tlv.Value))
 			return 0
 		}
 		copy(m[4-tlv.Length:], tlv.Value[:tlv.Length])
 		return binary.BigEndian.Uint32(m)
+	}
+
+	return 0
+}
+
+// GetIGPMetricSPF returns the IGP Metric using the four-octet form mandated
+// by RFC 9815 Section 5.2.2 for BGP-LS-SPF (AFI 16388 / SAFI 80). Unlike
+// GetIGPMetric, it does not accept the shorter RFC 9552 encodings.
+func (ls *NLRI) GetIGPMetricSPF() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1095 {
+			continue
+		}
+		if tlv.Length != 4 || len(tlv.Value) != 4 {
+			glog.Errorf("Invalid length %d (value %d bytes) for BGP-LS-SPF IGP Metric TLV 1095, expected 4", tlv.Length, len(tlv.Value))
+			return 0
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
 	}
 
 	return 0

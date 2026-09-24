@@ -457,7 +457,7 @@ func TestGetNodeFlags(t *testing.T) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GetIGPMetric — variable-length 1–4 bytes, invalid lengths return 0
+// GetIGPMetric — variable-length 1–3 bytes (RFC 9552), invalid lengths return 0
 // ─────────────────────────────────────────────────────────────────────────────
 
 func TestGetIGPMetric(t *testing.T) {
@@ -482,9 +482,9 @@ func TestGetIGPMetric(t *testing.T) {
 			want: 65536,
 		},
 		{
-			name: "4-byte metric = 65537",
+			name: "4-byte metric — returns 0 (RFC 9552 caps at 3 bytes)",
 			tlv:  TLV{Type: 1095, Length: 4, Value: []byte{0x00, 0x01, 0x00, 0x01}},
-			want: 65537,
+			want: 0,
 		},
 		{
 			name: "length 0 — returns 0",
@@ -508,6 +508,48 @@ func TestGetIGPMetric(t *testing.T) {
 			nlri := &NLRI{LS: []TLV{tt.tlv}}
 			if got := nlri.GetIGPMetric(); got != tt.want {
 				t.Errorf("GetIGPMetric() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GetIGPMetricSPF — exact 4-byte form only (RFC 9815 §5.2.2), else returns 0
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestGetIGPMetricSPF(t *testing.T) {
+	tests := []struct {
+		name string
+		tlv  TLV
+		want uint32
+	}{
+		{
+			name: "4-byte metric = 65537",
+			tlv:  TLV{Type: 1095, Length: 4, Value: []byte{0x00, 0x01, 0x00, 0x01}},
+			want: 65537,
+		},
+		{
+			name: "3-byte metric — returns 0 (RFC 9815 requires four-octet form)",
+			tlv:  TLV{Type: 1095, Length: 3, Value: []byte{0x01, 0x00, 0x00}},
+			want: 0,
+		},
+		{
+			name: "length 0 — returns 0",
+			tlv:  TLV{Type: 1095, Length: 0, Value: []byte{}},
+			want: 0,
+		},
+		{
+			name: "TLV absent — returns 0",
+			tlv:  TLV{Type: 9999, Length: 4, Value: []byte{0, 0, 0, 1}},
+			want: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nlri := &NLRI{LS: []TLV{tt.tlv}}
+			if got := nlri.GetIGPMetricSPF(); got != tt.want {
+				t.Errorf("GetIGPMetricSPF() = %d, want %d", got, tt.want)
 			}
 		})
 	}

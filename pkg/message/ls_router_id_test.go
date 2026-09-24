@@ -110,7 +110,7 @@ func TestLSLink_RouterID_ByTLVPresence(t *testing.T) {
 				Link:       &base.LinkDescriptor{LinkTLV: map[uint16]base.TLV{}},
 			}
 			p := &producer{}
-			msg, err := p.lsLink(link, "", 0, newPeerHeader(), tt.attr)
+			msg, err := p.lsLink(link, "", 0, newPeerHeader(), tt.attr, false)
 			if err != nil {
 				t.Fatalf("lsLink() error: %v", err)
 			}

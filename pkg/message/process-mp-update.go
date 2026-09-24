@@ -253,7 +253,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 			}
 		}
 	case 71:
-		p.processNLRI71SubTypes(nlri, operation, ph, update)
+		p.processNLRI71SubTypes(nlri, operation, ph, update, false)
 	case 72:
 		p.processNLRI72SubTypes(nlri, operation, ph, update)
 	case 80:
@@ -270,7 +270,7 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 	}
 }
 
-func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
+func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update, spf bool) {
 	// NLRI 71 carries 6 known sub type
 	ls, err := nlri.GetNLRI71()
 	if err != nil {
@@ -302,7 +302,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 71 type 2: expected *base.LinkNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, spf)
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue
@@ -390,7 +390,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 72 type 2: expected *base.LinkNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, false)
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue

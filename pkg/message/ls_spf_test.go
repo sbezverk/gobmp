@@ -9,6 +9,7 @@ import (
 
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
+	"github.com/sbezverk/gobmp/pkg/bgpls"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/ls"
 )
@@ -67,45 +68,172 @@ func testLSUpdate(tlvs ...lsSPFTLV) *bgp.Update {
 	return &bgp.Update{PathAttributes: []bgp.PathAttribute{{AttributeType: 29, Attribute: attribute}}}
 }
 
+func testLSAttribute(tlvs ...lsSPFTLV) *bgpls.NLRI {
+	attribute := &bgpls.NLRI{}
+	for _, tlv := range tlvs {
+		attribute.LS = append(attribute.LS, bgpls.TLV{Type: tlv.typeID, Length: uint16(len(tlv.value)), Value: tlv.value})
+	}
+	return attribute
+}
+
 func testLSSequence() lsSPFTLV {
 	return lsSPFTLV{typeID: bgpLSSPFSequenceNumberTLV, value: []byte{0, 0, 0, 0, 0, 0, 0, 1}}
 }
 
-func TestValidateLSNLRI80(t *testing.T) {
-	node := testLSNode(base.Direct)
+func testLSStatus() lsSPFTLV {
+	return lsSPFTLV{typeID: bgpLSSPFStatusTLV, value: []byte{1}}
+}
+
+// TestValidateLSNLRI80Element unit-tests the per-Element structural and
+// metric checks in isolation, independent of the attribute-level sequence
+// number/status gating covered by TestSplitLSNLRI80.
+func TestValidateLSNLRI80Element(t *testing.T) {
 	link := &base.LinkNLRI{ProtocolID: base.Direct, LocalNode: testLSNodeDescriptor(), RemoteNode: testLSNodeDescriptor()}
-	prefix := &base.PrefixNLRI{LocalNode: testLSNodeDescriptor()}
+	prefix := &base.PrefixNLRI{ProtocolID: base.Direct, LocalNode: testLSNodeDescriptor()}
+
 	tests := []struct {
-		name    string
-		nlri    *ls.NLRI71
-		update  *bgp.Update
-		wantErr string
+		name      string
+		element   ls.Element
+		attribute *bgpls.NLRI
+		wantErr   string
 	}{
 		{
-			name:   "node with sequence number",
-			nlri:   &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
-			update: testLSUpdate(testLSSequence()),
+			name:    "valid node",
+			element: ls.Element{Type: 1, LS: testLSNode(base.Direct)},
 		},
 		{
-			name:   "link with four octet IGP metric",
-			nlri:   &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: link}}},
-			update: testLSUpdate(testLSSequence(), lsSPFTLV{typeID: bgpLSIGPMetricTLV, value: []byte{0, 0, 0, 10}}),
+			name:    "non-direct node protocol",
+			element: ls.Element{Type: 1, LS: testLSNode(base.OSPFv2)},
+			wantErr: "protocol ID",
 		},
 		{
-			name:   "prefix with four octet metric",
-			nlri:   &ls.NLRI71{NLRI: []ls.Element{{Type: 3, LS: prefix}}},
-			update: testLSUpdate(testLSSequence(), lsSPFTLV{typeID: bgpLSPrefixMetricTLV, value: []byte{0, 0, 0, 10}}),
+			name:    "node type does not match NLRI type",
+			element: ls.Element{Type: 1, LS: &base.LinkNLRI{}},
+			wantErr: "node NLRI has unexpected type",
 		},
 		{
-			name:   "attribute discard preserves NLRI",
-			nlri:   &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
-			update: &bgp.Update{},
+			name:    "node descriptor is required",
+			element: ls.Element{Type: 1, LS: &base.NodeNLRI{ProtocolID: base.Direct}},
+			wantErr: "missing node descriptor",
 		},
 		{
-			name:    "missing sequence number",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
-			update:  testLSUpdate(lsSPFTLV{typeID: 1024, value: []byte{0}}),
-			wantErr: "sequence number",
+			name: "missing BGP Router ID",
+			element: ls.Element{Type: 1, LS: &base.NodeNLRI{
+				ProtocolID: base.Direct,
+				LocalNode: &base.NodeDescriptor{SubTLV: map[uint16]base.TLV{
+					512: {Type: 512, Length: 4, Value: []byte{0, 0, 0xfd, 0xe8}},
+				}},
+			}},
+			wantErr: "TLV 516",
+		},
+		{
+			name:      "valid link",
+			element:   ls.Element{Type: 2, LS: link},
+			attribute: testLSAttribute(lsSPFTLV{typeID: bgpLSIGPMetricTLV, value: []byte{0, 0, 0, 10}}),
+		},
+		{
+			name:    "link type does not match NLRI type",
+			element: ls.Element{Type: 2, LS: testLSNode(base.Direct)},
+			wantErr: "link NLRI has unexpected type",
+		},
+		{
+			name:    "non-direct link protocol",
+			element: ls.Element{Type: 2, LS: &base.LinkNLRI{ProtocolID: base.OSPFv2}},
+			wantErr: "link NLRI has protocol ID",
+		},
+		{
+			name:    "link local descriptor is required",
+			element: ls.Element{Type: 2, LS: &base.LinkNLRI{ProtocolID: base.Direct, RemoteNode: testLSNodeDescriptor()}},
+			wantErr: "link local node descriptor",
+		},
+		{
+			name:    "link remote descriptor is required",
+			element: ls.Element{Type: 2, LS: &base.LinkNLRI{ProtocolID: base.Direct, LocalNode: testLSNodeDescriptor()}},
+			wantErr: "link remote node descriptor",
+		},
+		{
+			name:      "link metric is required",
+			element:   ls.Element{Type: 2, LS: link},
+			attribute: testLSAttribute(),
+			wantErr:   "metric TLV",
+		},
+		{
+			name:      "link metric must be four octets",
+			element:   ls.Element{Type: 2, LS: link},
+			attribute: testLSAttribute(lsSPFTLV{typeID: bgpLSIGPMetricTLV, value: []byte{10}}),
+			wantErr:   "metric TLV",
+		},
+		{
+			name:      "valid prefix",
+			element:   ls.Element{Type: 3, LS: prefix},
+			attribute: testLSAttribute(lsSPFTLV{typeID: bgpLSPrefixMetricTLV, value: []byte{0, 0, 0, 10}}),
+		},
+		{
+			name:    "prefix type does not match NLRI type",
+			element: ls.Element{Type: 3, LS: testLSNode(base.Direct)},
+			wantErr: "prefix NLRI has unexpected type",
+		},
+		{
+			name:    "non-direct prefix protocol",
+			element: ls.Element{Type: 4, LS: &base.PrefixNLRI{ProtocolID: base.OSPFv2, LocalNode: testLSNodeDescriptor()}},
+			wantErr: "prefix NLRI has protocol ID",
+		},
+		{
+			name:      "prefix metric is required",
+			element:   ls.Element{Type: 3, LS: prefix},
+			attribute: testLSAttribute(),
+			wantErr:   "metric TLV",
+		},
+		{
+			name:    "unsupported element type is rejected",
+			element: ls.Element{Type: 6, LS: nil},
+			wantErr: "not supported",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateLSNLRI80Element(tt.element, tt.attribute)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("validateLSNLRI80Element() unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("validateLSNLRI80Element() error = %v, want %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestSplitLSNLRI80 covers attribute-level validation (shared by every
+// Element) and the per-Element valid/invalid split used to withdraw only
+// the Elements that fail validation.
+func TestSplitLSNLRI80(t *testing.T) {
+	node := testLSNode(base.Direct)
+	badNode := testLSNode(base.OSPFv2)
+
+	tests := []struct {
+		name        string
+		nlri        *ls.NLRI71
+		update      *bgp.Update
+		wantErr     string
+		wantValid   int
+		wantInvalid int
+	}{
+		{
+			name:      "node with sequence number and status",
+			nlri:      &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
+			update:    testLSUpdate(testLSSequence(), testLSStatus()),
+			wantValid: 1,
+		},
+		{
+			name:        "attribute discard preserves NLRI",
+			nlri:        &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
+			update:      &bgp.Update{},
+			wantValid:   1,
+			wantInvalid: 0,
 		},
 		{
 			name:    "nil update",
@@ -114,7 +242,7 @@ func TestValidateLSNLRI80(t *testing.T) {
 		},
 		{
 			name:    "nil NLRI",
-			update:  testLSUpdate(testLSSequence()),
+			update:  testLSUpdate(testLSSequence(), testLSStatus()),
 			wantErr: "NLRI is nil",
 		},
 		{
@@ -124,75 +252,22 @@ func TestValidateLSNLRI80(t *testing.T) {
 			wantErr: "invalid bgp-ls attribute",
 		},
 		{
+			name:    "missing sequence number",
+			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
+			update:  testLSUpdate(testLSStatus()),
+			wantErr: "sequence number",
+		},
+		{
 			name:    "invalid sequence number length",
 			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
-			update:  testLSUpdate(lsSPFTLV{typeID: bgpLSSPFSequenceNumberTLV, value: make([]byte, 7)}),
+			update:  testLSUpdate(lsSPFTLV{typeID: bgpLSSPFSequenceNumberTLV, value: make([]byte, 7)}, testLSStatus()),
 			wantErr: "sequence number TLV has length 7",
 		},
 		{
-			name: "missing BGP Router ID",
-			nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: &base.NodeNLRI{
-				ProtocolID: base.Direct,
-				LocalNode: &base.NodeDescriptor{SubTLV: map[uint16]base.TLV{
-					512: {Type: 512, Length: 4, Value: []byte{0, 0, 0xfd, 0xe8}},
-				}},
-			}}}},
+			name:    "missing status TLV",
+			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
 			update:  testLSUpdate(testLSSequence()),
-			wantErr: "TLV 516",
-		},
-		{
-			name:    "non-direct node protocol",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: testLSNode(base.OSPFv2)}}},
-			update:  testLSUpdate(testLSSequence()),
-			wantErr: "protocol ID",
-		},
-		{
-			name:    "node type does not match NLRI type",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: &base.LinkNLRI{}}}},
-			update:  testLSUpdate(testLSSequence()),
-			wantErr: "node NLRI has unexpected type",
-		},
-		{
-			name:    "node descriptor is required",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: &base.NodeNLRI{ProtocolID: base.Direct}}}},
-			update:  testLSUpdate(testLSSequence()),
-			wantErr: "missing node descriptor",
-		},
-		{
-			name:    "link type does not match NLRI type",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: testLSNode(base.Direct)}}},
-			update:  testLSUpdate(testLSSequence()),
-			wantErr: "link NLRI has unexpected type",
-		},
-		{
-			name:    "non-direct link protocol",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: &base.LinkNLRI{ProtocolID: base.OSPFv2}}}},
-			update:  testLSUpdate(testLSSequence()),
-			wantErr: "link NLRI has protocol ID",
-		},
-		{
-			name:    "link local descriptor is required",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: &base.LinkNLRI{ProtocolID: base.Direct, RemoteNode: testLSNodeDescriptor()}}}},
-			update:  testLSUpdate(testLSSequence()),
-			wantErr: "link local node descriptor",
-		},
-		{
-			name:    "link remote descriptor is required",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: &base.LinkNLRI{ProtocolID: base.Direct, LocalNode: testLSNodeDescriptor()}}}},
-			update:  testLSUpdate(testLSSequence()),
-			wantErr: "link remote node descriptor",
-		},
-		{
-			name:    "prefix type does not match NLRI type",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 3, LS: testLSNode(base.Direct)}}},
-			update:  testLSUpdate(testLSSequence()),
-			wantErr: "prefix NLRI has unexpected type",
-		},
-		{
-			name:    "link metric is required",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: link}}},
-			update:  testLSUpdate(testLSSequence()),
-			wantErr: "metric TLV",
+			wantErr: "requires status TLV",
 		},
 		{
 			name:    "reserved status value",
@@ -201,42 +276,57 @@ func TestValidateLSNLRI80(t *testing.T) {
 			wantErr: "reserved value",
 		},
 		{
-			name:   "unknown status value is preserved",
-			nlri:   &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
-			update: testLSUpdate(testLSSequence(), lsSPFTLV{typeID: bgpLSSPFStatusTLV, value: []byte{254}}),
-		},
-		{
-			name:    "all IGP metrics must be four octets",
-			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 2, LS: link}}},
-			update:  testLSUpdate(testLSSequence(), lsSPFTLV{typeID: bgpLSIGPMetricTLV, value: []byte{0, 0, 0, 10}}, lsSPFTLV{typeID: bgpLSIGPMetricTLV, value: []byte{10}}),
-			wantErr: "metric TLV",
-		},
-		{
 			name:    "invalid status length",
 			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
 			update:  testLSUpdate(testLSSequence(), lsSPFTLV{typeID: bgpLSSPFStatusTLV, value: []byte{1, 2}}),
 			wantErr: "status TLV has length 2",
 		},
+		{
+			name: "one malformed element is withdrawn without discarding the valid one",
+			nlri: &ls.NLRI71{NLRI: []ls.Element{
+				{Type: 1, LS: node},
+				{Type: 1, LS: badNode},
+			}},
+			update:      testLSUpdate(testLSSequence(), testLSStatus()),
+			wantValid:   1,
+			wantInvalid: 1,
+		},
+		{
+			name: "unsupported element type is withdrawn, not published unchecked",
+			nlri: &ls.NLRI71{NLRI: []ls.Element{
+				{Type: 1, LS: node},
+				{Type: 6, LS: nil},
+			}},
+			update:      testLSUpdate(testLSSequence(), testLSStatus()),
+			wantValid:   1,
+			wantInvalid: 1,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateLSNLRI80(tt.nlri, tt.update)
-			if tt.wantErr == "" {
-				if err != nil {
-					t.Fatalf("validateLSNLRI80() unexpected error: %v", err)
+			valid, invalid, err := splitLSNLRI80(tt.nlri, tt.update)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("splitLSNLRI80() error = %v, want %q", err, tt.wantErr)
 				}
 				return
 			}
-			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
-				t.Fatalf("validateLSNLRI80() error = %v, want %q", err, tt.wantErr)
+			if err != nil {
+				t.Fatalf("splitLSNLRI80() unexpected error: %v", err)
+			}
+			if len(valid.NLRI) != tt.wantValid {
+				t.Errorf("splitLSNLRI80() valid = %d elements, want %d", len(valid.NLRI), tt.wantValid)
+			}
+			if len(invalid.NLRI) != tt.wantInvalid {
+				t.Errorf("splitLSNLRI80() invalid = %d elements, want %d", len(invalid.NLRI), tt.wantInvalid)
 			}
 		})
 	}
 }
 
 func TestProcessNLRI80SubTypesRejectsInvalidInput(t *testing.T) {
-	validUpdate := testLSUpdate(testLSSequence())
+	validUpdate := testLSUpdate(testLSSequence(), testLSStatus())
 	tests := []struct {
 		name   string
 		nlri   bgp.MPNLRI
@@ -251,11 +341,6 @@ func TestProcessNLRI80SubTypesRejectsInvalidInput(t *testing.T) {
 			name:   "decode failure",
 			nlri:   lsSPFMockNLRI{err: errors.New("decode failure")},
 			update: validUpdate,
-		},
-		{
-			name:   "nil update",
-			nlri:   lsSPFMockNLRI{nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: testLSNode(base.Direct)}}}},
-			update: nil,
 		},
 	}
 
@@ -278,7 +363,7 @@ func TestProcessNLRI80SubTypesTreatsMalformedAddAsWithdraw(t *testing.T) {
 		lsSPFMockNLRI{nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: testLSNode(base.OSPFv2)}}}},
 		AddPrefix,
 		minimalPeerHeader(),
-		testLSUpdate(testLSSequence()),
+		testLSUpdate(testLSSequence(), testLSStatus()),
 	)
 
 	if len(publisher.msgs) != 1 {
@@ -293,6 +378,35 @@ func TestProcessNLRI80SubTypesTreatsMalformedAddAsWithdraw(t *testing.T) {
 	}
 }
 
+func TestProcessNLRI80SubTypesWithdrawsOnlyMalformedElement(t *testing.T) {
+	publisher := &recordingPublisher{}
+	p := &producer{publisher: publisher}
+	p.processNLRI80SubTypes(
+		lsSPFMockNLRI{nlri: &ls.NLRI71{NLRI: []ls.Element{
+			{Type: 1, LS: testLSNode(base.Direct)},
+			{Type: 1, LS: testLSNode(base.OSPFv2)},
+		}}},
+		AddPrefix,
+		minimalPeerHeader(),
+		testLSUpdate(testLSSequence(), testLSStatus()),
+	)
+
+	if len(publisher.msgs) != 2 {
+		t.Fatalf("processNLRI80SubTypes() published %d messages, want 2", len(publisher.msgs))
+	}
+	actions := map[string]int{}
+	for _, msg := range publisher.msgs {
+		var published LSNode
+		if err := json.Unmarshal(msg.payload, &published); err != nil {
+			t.Fatalf("published LSNode JSON: %v", err)
+		}
+		actions[published.Action]++
+	}
+	if actions["add"] != 1 || actions["del"] != 1 {
+		t.Errorf("published actions = %v, want one add and one del", actions)
+	}
+}
+
 func TestProcessMPUpdateLSNLRI80(t *testing.T) {
 	publisher := &recordingPublisher{}
 	p := &producer{publisher: publisher}
@@ -302,7 +416,7 @@ func TestProcessMPUpdateLSNLRI80(t *testing.T) {
 		NextHopAddressLength: 4,
 		NextHopAddress:       []byte{192, 0, 2, 2},
 		NLRI:                 testLSNodeNLRI80(),
-	}, AddPrefix, minimalPeerHeader(), testLSUpdate(testLSSequence()))
+	}, AddPrefix, minimalPeerHeader(), testLSUpdate(testLSSequence(), testLSStatus()))
 
 	if len(publisher.msgs) != 1 {
 		t.Fatalf("processMPUpdate() published %d messages, want 1", len(publisher.msgs))
