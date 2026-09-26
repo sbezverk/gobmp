@@ -354,3 +354,36 @@ func TestUnicast_ValidNLRI_Publishes(t *testing.T) {
 		t.Errorf("RouterHash = %q, want %q", msgs[0].RouterHash, "abc123")
 	}
 }
+
+// TestEVPN_EoR verifies an empty EVPN MP_UNREACH is published as End-of-RIB
+// (RFC 4724 §2) instead of failing as a parse error.
+func TestEVPN_EoR(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	// Adj-RIB-In post-policy (L=1)
+	ph := makePeerHeader(t, bmp.PeerType0, 0x40)
+	nlri, err := bgp.UnmarshalMPUnReachNLRI([]byte{0x00, 0x19, 0x46}, map[int]bool{})
+	if err != nil {
+		t.Fatalf("UnmarshalMPUnReachNLRI: %v", err)
+	}
+
+	msgs, err := p.evpn(nlri, 1, ph, &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}})
+	if err != nil {
+		t.Fatalf("evpn() error: %v", err)
+	}
+	if len(msgs) != 1 {
+		t.Fatalf("evpn() returned %d messages, want 1", len(msgs))
+	}
+	r := msgs[0]
+	if !r.IsEOR {
+		t.Error("IsEOR = false, want true")
+	}
+	if r.Action != "del" {
+		t.Errorf("Action = %q, want %q", r.Action, "del")
+	}
+	if !r.IsAdjRIBInPost {
+		t.Error("IsAdjRIBInPost = false, want true")
+	}
+	if r.PeerIP != ph.GetPeerAddrString() {
+		t.Errorf("PeerIP = %q, want %q", r.PeerIP, ph.GetPeerAddrString())
+	}
+}
