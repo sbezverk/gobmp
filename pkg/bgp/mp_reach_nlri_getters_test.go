@@ -1,6 +1,7 @@
 package bgp
 
 import (
+	"bytes"
 	"errors"
 	"strings"
 	"testing"
@@ -374,14 +375,20 @@ func TestMPReachNLRI_GetNLRIRTC(t *testing.T) {
 	}
 }
 
-// TestMPReachNLRI_GetNLRIMCASTVPN_WithData exercises the ipv6 flag path in GetNLRIMCASTVPN.
+// TestMPReachNLRI_GetNLRIMCASTVPN_WithData exercises GetNLRIMCASTVPN for a
+// Type 4 (Leaf A-D) route. Per RFC 6514 Section 4.4, the Route Key carries
+// its own route type + length header, so it is self-describing; per RFC
+// 6515 Section 1/2 the Originating Router's IP Address family comes from
+// its own length (16 bytes here), never from the AFI (AddressFamilyID).
 func TestMPReachNLRI_GetNLRIMCASTVPN_WithData(t *testing.T) {
-	// Type 4 (Leaf A-D) with AFI=2: RD(8) + OriginatorIP(16) = 24 bytes min
-	type4Data := []byte{
+	routeKey := []byte{
+		0x01, 0x08, // Route Key: referenced route type 1, length 8
 		0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD 100:200
+	}
+	type4Data := append(routeKey,
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // Originator IP 2001:db8::1
-	}
+	)
 	nlri := []byte{0x04, byte(len(type4Data))}
 	nlri = append(nlri, type4Data...)
 
@@ -401,6 +408,36 @@ func TestMPReachNLRI_GetNLRIMCASTVPN_WithData(t *testing.T) {
 	origIP := route.Route[0].GetMCASTVPNOriginatorIP()
 	if len(origIP) != 16 {
 		t.Fatalf("expected 16-byte IPv6 originator IP, got %d bytes", len(origIP))
+	}
+}
+
+// TestMPReachNLRI_GetNLRIMCASTVPN_AFI2_IPv4Originator is the AF-4
+// mismatched-proxy case end to end: AFI 2 (IPv6 customer MVPN) over an IPv4
+// provider core carries a 4-byte Originating Router's IP (RFC 6515 Section 2).
+func TestMPReachNLRI_GetNLRIMCASTVPN_AFI2_IPv4Originator(t *testing.T) {
+	type4Data := []byte{
+		0x01, 0x0c, // Route Key: referenced route type 1, length 12
+		0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD 100:200
+		10, 0, 0, 1, // referenced route's Originating Router IP
+		10, 0, 0, 2, // Originator IP 10.0.0.2
+	}
+	nlri := append([]byte{0x04, byte(len(type4Data))}, type4Data...)
+
+	mp := &MPReachNLRI{
+		AddressFamilyID:    2,
+		SubAddressFamilyID: 5,
+		NLRI:               nlri,
+		addPath:            map[int]bool{},
+	}
+	route, err := mp.GetNLRIMCASTVPN()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(route.Route) != 1 {
+		t.Fatalf("expected 1 route, got %d", len(route.Route))
+	}
+	if got := route.Route[0].GetMCASTVPNOriginatorIP(); !bytes.Equal(got, []byte{10, 0, 0, 2}) {
+		t.Fatalf("originator IP = %v, want 10.0.0.2", got)
 	}
 }
 

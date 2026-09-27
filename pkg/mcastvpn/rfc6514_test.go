@@ -463,86 +463,228 @@ func TestRFC6514_Type3_InterfaceMethods(t *testing.T) {
 }
 
 // --- RFC 6514 Section 4.4: Leaf A-D (Type 4) ---
+//
+// Per RFC 6514 Section 4.4, the Route Key is the referenced route's full
+// NLRI, so it carries its own 1-octet route type + 1-octet length header
+// (RFC 6514 Section 4). Per RFC 6515 Section 1/2, the Originating Router's
+// IP Address family MUST NOT be inferred from the AFI: it is whatever
+// remains after the self-describing Route Key, and its family comes from
+// its own length (4 or 16). The pre-fix tests below built the Route Key as
+// a bare value with no header and inferred the originator length from an
+// "ipv6" flag derived from AFI -- both wrong per RFC; fixed here.
 
-func TestRFC6514_Type4_IPv4RouteKey(t *testing.T) {
-	// Route key = Type 3 NLRI data (without type/length): RD + src_len + src + grp_len + grp + orig
-	rd := makeRD(100, 100)
-	routeKey := rd
-	routeKey = append(routeKey, 32)
-	routeKey = append(routeKey, 192, 168, 1, 1)
-	routeKey = append(routeKey, 32)
-	routeKey = append(routeKey, 224, 0, 0, 1)
-	routeKey = append(routeKey, 10, 0, 0, 1)
+// makeSPMSIValue builds an S-PMSI A-D route-type-specific value (RD + source
+// + group), used as the payload an example Leaf A-D Route Key references.
+func makeSPMSIValue(rd []byte, src, grp [4]byte) []byte {
+	v := append([]byte{}, rd...)
+	v = append(v, 32)
+	v = append(v, src[:]...)
+	v = append(v, 32)
+	v = append(v, grp[:]...)
+	return v
+}
 
+// wrapNLRI prefixes value with its MCAST-VPN route type/length header
+// (RFC 6514 Section 4).
+func wrapNLRI(routeType byte, value []byte) []byte {
+	return append([]byte{routeType, byte(len(value))}, value...)
+}
+
+func TestRFC6514_Type4_IPv4Canonical(t *testing.T) {
+	routeKey := wrapNLRI(3, makeSPMSIValue(makeRD(100, 100), [4]byte{192, 168, 1, 1}, [4]byte{224, 0, 0, 1}))
 	origIP := []byte{10, 0, 0, 2}
-	input := routeKey[:len(routeKey):len(routeKey)]
-	input = append(input, origIP...)
+	input := append(append([]byte{}, routeKey...), origIP...)
 
-	got, err := UnmarshalType4(input, false)
+	got, err := UnmarshalType4(input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !bytes.Equal(got.RouteKey, routeKey) {
-		t.Error("RouteKey mismatch")
+		t.Errorf("RouteKey = %x, want %x", got.RouteKey, routeKey)
 	}
 	if !bytes.Equal(got.OriginatorIP, origIP) {
-		t.Error("OriginatorIP mismatch")
+		t.Errorf("OriginatorIP = %x, want %x", got.OriginatorIP, origIP)
 	}
 }
 
-func TestRFC6514_Type4_TooShort(t *testing.T) {
-	_, err := UnmarshalType4(make([]byte, 3), false)
-	if err == nil {
-		t.Fatal("expected error for input shorter than minimum")
-	}
-}
+func TestRFC6514_Type4_IPv6Canonical(t *testing.T) {
+	routeKey := wrapNLRI(3, makeSPMSIValue(makeRD(100, 100), [4]byte{192, 168, 1, 1}, [4]byte{224, 0, 0, 1}))
+	origIP := []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1} // 2001:db8::1
+	input := append(append([]byte{}, routeKey...), origIP...)
 
-func TestRFC6514_Type4_RouteKeyTooShort(t *testing.T) {
-	// 4 bytes total is below minimum 12 (8 RD + 4 IPv4 originator)
-	_, err := UnmarshalType4([]byte{10, 0, 0, 1}, false)
-	if err == nil {
-		t.Fatal("expected error for input shorter than minimum")
-	}
-}
-
-func TestRFC6514_Type4_IPv6Originator(t *testing.T) {
-	rd := makeRD(100, 100)
-	routeKey := rd
-	routeKey = append(routeKey, 32)                                                // src_len
-	routeKey = append(routeKey, 192, 168, 1, 1)                                    // src
-	routeKey = append(routeKey, 32)                                                // grp_len
-	routeKey = append(routeKey, 224, 0, 0, 1)                                      // grp
-	origIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1} // 2001:db8::1
-	input := append(routeKey, origIPv6...)
-
-	got, err := UnmarshalType4(input, true)
+	got, err := UnmarshalType4(input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(got.OriginatorIP) != 16 {
-		t.Errorf("OriginatorIP length = %d, want 16", len(got.OriginatorIP))
+	if !bytes.Equal(got.RouteKey, routeKey) {
+		t.Errorf("RouteKey = %x, want %x", got.RouteKey, routeKey)
 	}
-	if len(got.RouteKey) != len(routeKey) {
-		t.Errorf("RouteKey length = %d, want %d", len(got.RouteKey), len(routeKey))
+	if !bytes.Equal(got.OriginatorIP, origIP) {
+		t.Errorf("OriginatorIP = %x, want %x", got.OriginatorIP, origIP)
+	}
+}
+
+// TestRFC6514_Type4_AFI2_IPv4Originator_Mismatch reproduces the confirmed bug
+// (docs/af-discriminator-audit.md AF-4): an AFI 2 (IPv6) customer MVPN over
+// an IPv4 provider core carries a 4-byte Originating Router's IP. Fails
+// against the pre-fix code, which infers a 16-byte originator from the AFI
+// and either rejects the route outright or steals bytes from the Route Key.
+func TestRFC6514_Type4_AFI2_IPv4Originator_Mismatch(t *testing.T) {
+	routeKey := wrapNLRI(1, append(append([]byte{}, makeRD(1, 1)...), 10, 0, 0, 1))
+	origIP := []byte{10, 0, 0, 2} // 4-byte originator despite AFI 2
+	input := append(append([]byte{}, routeKey...), origIP...)
+
+	got, err := UnmarshalType4(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !bytes.Equal(got.RouteKey, routeKey) {
+		t.Errorf("RouteKey = %x, want %x", got.RouteKey, routeKey)
+	}
+	if !bytes.Equal(got.OriginatorIP, origIP) {
+		t.Errorf("OriginatorIP = %x, want %x", got.OriginatorIP, origIP)
+	}
+}
+
+// TestRFC6514_Type4_AFI1_IPv6Originator_Mismatch is the mirror mismatch: AFI
+// 1 (IPv4) customer MVPN over an IPv6 provider core, 16-byte originator.
+func TestRFC6514_Type4_AFI1_IPv6Originator_Mismatch(t *testing.T) {
+	routeKey := wrapNLRI(1, append(append([]byte{}, makeRD(1, 1)...),
+		0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
+	origIP := []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+	input := append(append([]byte{}, routeKey...), origIP...)
+
+	got, err := UnmarshalType4(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !bytes.Equal(got.RouteKey, routeKey) {
+		t.Errorf("RouteKey = %x, want %x", got.RouteKey, routeKey)
+	}
+	if !bytes.Equal(got.OriginatorIP, origIP) {
+		t.Errorf("OriginatorIP = %x, want %x", got.OriginatorIP, origIP)
+	}
+}
+
+func TestRFC6514_Type4_HeaderTooShort(t *testing.T) {
+	// Fewer than 2 bytes: no room for the Route Key's type+length header.
+	_, err := UnmarshalType4([]byte{4})
+	if err == nil {
+		t.Fatal("expected error for input shorter than Route Key header")
+	}
+}
+
+func TestRFC6514_Type4_RouteKeyLengthExceedsBuffer(t *testing.T) {
+	// Route Key length byte (200) claims more data than is present.
+	_, err := UnmarshalType4([]byte{1, 200, 10, 0, 0, 1})
+	if err == nil {
+		t.Fatal("expected error when Route Key length exceeds remaining bytes")
+	}
+}
+
+func TestRFC6514_Type4_OriginatorLengthInvalid(t *testing.T) {
+	tests := []struct {
+		name          string
+		originatorLen int
+	}{
+		{"zero-length originator", 0},
+		{"5-byte originator", 5},
+		{"15-byte originator", 15},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			routeKey := wrapNLRI(1, makeRD(1, 1))
+			input := append(append([]byte{}, routeKey...), make([]byte, tt.originatorLen)...)
+			if _, err := UnmarshalType4(input); err == nil {
+				t.Fatalf("expected error for %d-byte originator", tt.originatorLen)
+			}
+		})
+	}
+}
+
+// TestRFC7524_Type4_GTM covers the RFC 7524 Section 6.2.2 global table
+// multicast Leaf A-D form: a Route Key with no type/length header, detected by
+// an RD of all 0x00 or all 0xff.
+func TestRFC7524_Type4_GTM(t *testing.T) {
+	v6 := func(last byte) []byte {
+		return []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, last}
+	}
+	cat := func(parts ...[]byte) []byte {
+		var b []byte
+		for _, p := range parts {
+			b = append(b, p...)
+		}
+		return b
+	}
+	rd0 := make([]byte, 8)
+	rdFF := bytes.Repeat([]byte{0xff}, 8)
+	tests := []struct {
+		name     string
+		routeKey []byte
+		origIP   []byte
+	}{
+		{
+			name:     "(S,G) RD 0, octet lengths, IPv4 PE and originator",
+			routeKey: cat(rd0, []byte{4, 192, 0, 2, 1, 4, 232, 1, 1, 1}, []byte{10, 0, 0, 1}),
+			origIP:   []byte{10, 0, 0, 2},
+		},
+		{
+			name:     "(*,G) RD ff, wildcard source, bit lengths",
+			routeKey: cat(rdFF, []byte{0, 32, 232, 1, 1, 1}, []byte{10, 0, 0, 1}),
+			origIP:   []byte{10, 0, 0, 2},
+		},
+		{
+			name:     "IPv4 (S,G) with IPv6 PE and originator",
+			routeKey: cat(rd0, []byte{4, 192, 0, 2, 1, 4, 232, 1, 1, 1}, v6(1)),
+			origIP:   v6(2),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := UnmarshalType4(cat(tt.routeKey, tt.origIP))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !bytes.Equal(got.RouteKey, tt.routeKey) {
+				t.Errorf("RouteKey = %x, want %x", got.RouteKey, tt.routeKey)
+			}
+			if !bytes.Equal(got.OriginatorIP, tt.origIP) {
+				t.Errorf("OriginatorIP = %x, want %x", got.OriginatorIP, tt.origIP)
+			}
+		})
+	}
+}
+
+func TestRFC7524_Type4_GTM_Invalid(t *testing.T) {
+	rd0 := make([]byte, 8)
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{"missing source length", rd0},
+		{"invalid source length", append(append([]byte{}, rd0...), 5, 1, 2, 3, 4, 5)},
+		{"truncated group", append(append([]byte{}, rd0...), 0, 4, 232)},
+		{"mixed-family PE and originator (20 bytes)", append(append([]byte{}, rd0...), 0, 0,
+			10, 0, 0, 1, 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalType4(tt.input); err == nil {
+				t.Fatal("expected error")
+			}
+		})
 	}
 }
 
 func TestRFC6514_Type4_IPv6ViaUnmarshalMCASTVPNNLRI(t *testing.T) {
-	rd := makeRD(100, 100)
-	routeKey := rd
-	routeKey = append(routeKey, 32)
-	routeKey = append(routeKey, 192, 168, 1, 1)
-	routeKey = append(routeKey, 32)
-	routeKey = append(routeKey, 224, 0, 0, 1)
+	routeKey := wrapNLRI(3, makeSPMSIValue(makeRD(100, 100), [4]byte{192, 168, 1, 1}, [4]byte{224, 0, 0, 1}))
 	origIPv6 := []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	type4Data := append(routeKey, origIPv6...)
+	type4Data := append(append([]byte{}, routeKey...), origIPv6...)
 
-	// Build full NLRI: RouteType(1) + Length(1) + Data
-	nlri := []byte{0x04, byte(len(type4Data))}
-	nlri = append(nlri, type4Data...)
+	// Build full NLRI: RouteType(4) + Length(1) + Data
+	nlri := wrapNLRI(4, type4Data)
 
-	// ipv6=true to test AFI=2 path
-	route, err := UnmarshalMCASTVPNNLRI(nlri, true)
+	route, err := UnmarshalMCASTVPNNLRI(nlri)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -556,17 +698,10 @@ func TestRFC6514_Type4_IPv6ViaUnmarshalMCASTVPNNLRI(t *testing.T) {
 }
 
 func TestRFC6514_Type4_InterfaceMethods(t *testing.T) {
-	rd := makeRD(100, 100)
-	routeKey := rd
-	routeKey = append(routeKey, 32)
-	routeKey = append(routeKey, 192, 168, 1, 1)
-	routeKey = append(routeKey, 32)
-	routeKey = append(routeKey, 224, 0, 0, 1)
-	routeKey = append(routeKey, 10, 0, 0, 1)
-	input := routeKey[:len(routeKey):len(routeKey)]
-	input = append(input, 10, 0, 0, 2)
+	routeKey := wrapNLRI(3, makeSPMSIValue(makeRD(100, 100), [4]byte{192, 168, 1, 1}, [4]byte{224, 0, 0, 1}))
+	input := append(append([]byte{}, routeKey...), 10, 0, 0, 2)
 
-	got, err := UnmarshalType4(input, false)
+	got, err := UnmarshalType4(input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1020,7 +1155,7 @@ func TestRFC6514_Dispatcher_AllRouteTypes(t *testing.T) {
 	input = append(input, t2nlri...)
 	input = append(input, t5nlri...)
 
-	route, err := UnmarshalMCASTVPNNLRI(input, false)
+	route, err := UnmarshalMCASTVPNNLRI(input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1043,7 +1178,7 @@ func TestRFC6514_Dispatcher_UnknownRouteType(t *testing.T) {
 		0x08, 0x04, // Route Type 8 (undefined), length 4
 		0x00, 0x00, 0x00, 0x00,
 	}
-	_, err := UnmarshalMCASTVPNNLRI(input, false)
+	_, err := UnmarshalMCASTVPNNLRI(input)
 	if err == nil {
 		t.Fatal("expected error for unknown route type")
 	}
@@ -1053,14 +1188,14 @@ func TestRFC6514_Dispatcher_UnknownRouteType(t *testing.T) {
 }
 
 func TestRFC6514_Dispatcher_EmptyInput(t *testing.T) {
-	_, err := UnmarshalMCASTVPNNLRI([]byte{}, false)
+	_, err := UnmarshalMCASTVPNNLRI([]byte{})
 	if err == nil {
 		t.Fatal("expected error for empty input")
 	}
 }
 
 func TestRFC6514_Dispatcher_TruncatedHeader(t *testing.T) {
-	_, err := UnmarshalMCASTVPNNLRI([]byte{0x01}, false)
+	_, err := UnmarshalMCASTVPNNLRI([]byte{0x01})
 	if err == nil {
 		t.Fatal("expected error for truncated header")
 	}
@@ -1071,7 +1206,7 @@ func TestRFC6514_Dispatcher_LengthExceedsData(t *testing.T) {
 		0x01, 0x0c, // Type 1, length 12
 		0x00, 0x00, 0x00, 0x64, // Only 4 bytes instead of 12
 	}
-	_, err := UnmarshalMCASTVPNNLRI(input, false)
+	_, err := UnmarshalMCASTVPNNLRI(input)
 	if err == nil {
 		t.Fatal("expected error for length exceeding data")
 	}
@@ -1082,7 +1217,7 @@ func TestRFC6514_Dispatcher_RouteTypeZero(t *testing.T) {
 		0x00, 0x04, // Route Type 0 (invalid)
 		0x00, 0x00, 0x00, 0x00,
 	}
-	_, err := UnmarshalMCASTVPNNLRI(input, false)
+	_, err := UnmarshalMCASTVPNNLRI(input)
 	if err == nil {
 		t.Fatal("expected error for route type 0")
 	}
@@ -1099,7 +1234,7 @@ func TestRFC6514_NLRIAccessors(t *testing.T) {
 	t1nlri := []byte{0x01, byte(len(t1data))}
 	t1nlri = append(t1nlri, t1data...)
 
-	route, err := UnmarshalMCASTVPNNLRI(t1nlri, false)
+	route, err := UnmarshalMCASTVPNNLRI(t1nlri)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1139,7 +1274,7 @@ func TestRFC6514_NLRIAccessors_Type6WithSourceAS(t *testing.T) {
 	t6nlri := []byte{0x06, byte(len(t6data))}
 	t6nlri = append(t6nlri, t6data...)
 
-	route, err := UnmarshalMCASTVPNNLRI(t6nlri, false)
+	route, err := UnmarshalMCASTVPNNLRI(t6nlri)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1438,14 +1573,9 @@ func TestRFC6514_InterfaceCompliance(t *testing.T) {
 			return UnmarshalType3(data)
 		}},
 		{"Type4", func() (RouteTypeSpec, error) {
-			data := rd
-			data = append(data, 32)
-			data = append(data, 192, 168, 1, 1)
-			data = append(data, 32)
-			data = append(data, 224, 0, 0, 1)
-			data = append(data, 10, 0, 0, 1)
-			data = append(data, 10, 0, 0, 2)
-			return UnmarshalType4(data, false)
+			routeKey := wrapNLRI(3, makeSPMSIValue(rd, [4]byte{192, 168, 1, 1}, [4]byte{224, 0, 0, 1}))
+			data := append(append([]byte{}, routeKey...), 10, 0, 0, 2)
+			return UnmarshalType4(data)
 		}},
 		{"Type5", func() (RouteTypeSpec, error) {
 			data := rd
@@ -1550,13 +1680,15 @@ func TestRFC6514_MultiNLRI_AllSevenTypes(t *testing.T) {
 	t3data = append(t3data, 10, 0, 0, 1)
 	t3 := buildNLRI(3, t3data)
 
-	// Type 4: route key (>= 8 bytes) + orig IPv4
-	t4key := rd
-	t4key = append(t4key, 32, 192, 168, 1, 1)
-	t4key = append(t4key, 32, 224, 0, 0, 1)
-	t4key = append(t4key, 10, 0, 0, 1)
-	t4data := t4key[:len(t4key):len(t4key)]
-	t4data = append(t4data, 10, 0, 0, 2)
+	// Type 4: Route Key is the referenced Type 3 route's full NLRI (own
+	// type+length header, RFC 6514 Section 4.4), followed by the
+	// Originating Router's IP.
+	t4RouteKeyValue := rd[:len(rd):len(rd)]
+	t4RouteKeyValue = append(t4RouteKeyValue, 32, 192, 168, 1, 1)
+	t4RouteKeyValue = append(t4RouteKeyValue, 32, 224, 0, 0, 1)
+	t4RouteKeyValue = append(t4RouteKeyValue, 10, 0, 0, 1)
+	t4RouteKey := buildNLRI(3, t4RouteKeyValue)
+	t4data := append(t4RouteKey, 10, 0, 0, 2)
 	t4 := buildNLRI(4, t4data)
 
 	// Type 5: RD + src + grp
@@ -1588,7 +1720,7 @@ func TestRFC6514_MultiNLRI_AllSevenTypes(t *testing.T) {
 	input = append(input, t6...)
 	input = append(input, t7...)
 
-	route, err := UnmarshalMCASTVPNNLRI(input, false)
+	route, err := UnmarshalMCASTVPNNLRI(input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1619,7 +1751,7 @@ func TestRFC6514_Dispatcher_ErrorInMiddleNLRI(t *testing.T) {
 
 	input := t1[:len(t1):len(t1)]
 	input = append(input, bad...)
-	_, err := UnmarshalMCASTVPNNLRI(input, false)
+	_, err := UnmarshalMCASTVPNNLRI(input)
 	if err == nil {
 		t.Fatal("expected error when second NLRI fails to parse")
 	}
