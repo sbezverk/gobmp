@@ -566,3 +566,56 @@ func TestProcessMPUpdateLSNLRI80(t *testing.T) {
 		t.Errorf("published LSNode = action %q protocol %d ASN %d, want add/%d/65000", published.Action, published.ProtocolID, published.ASN, base.Direct)
 	}
 }
+
+func TestProcessMPUpdateLSNLRI71(t *testing.T) {
+	tests := []struct {
+		name         string
+		reach        []byte
+		wantAction   string
+		wantProtocol base.ProtoID
+		wantASN      uint32
+	}{
+		{
+			name: "direct node",
+			// RFC 9552 Section 5.2: BGP-LS Node NLRI in an AFI 16388/SAFI 71 MP_REACH_NLRI.
+			reach: []byte{
+				0x40, 0x04, 0x47, 0x04, 0xc0, 0x00, 0x02, 0x02, 0x00,
+				0x00, 0x01, 0x00, 0x1d, 0x04, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x10, 0x02,
+				0x00, 0x00, 0x04, 0x00, 0x00, 0xfd, 0xe8, 0x02, 0x04,
+				0x00, 0x04, 0xc0, 0x00, 0x02, 0x01,
+			},
+			wantAction:   "add",
+			wantProtocol: base.Direct,
+			wantASN:      65000,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nlri, err := bgp.UnmarshalMPReachNLRI(tt.reach, false, map[int]bool{})
+			if err != nil {
+				t.Fatalf("UnmarshalMPReachNLRI() error = %v", err)
+			}
+
+			publisher := &recordingPublisher{}
+			p := &producer{publisher: publisher}
+			p.processMPUpdate(nlri, AddPrefix, minimalPeerHeader(), minimalUpdate())
+
+			if len(publisher.msgs) != 1 {
+				t.Fatalf("processMPUpdate() published %d messages, want 1", len(publisher.msgs))
+			}
+			if publisher.msgs[0].msgType != bmp.LSNodeMsg {
+				t.Fatalf("processMPUpdate() topic = %d, want LSNode topic %d", publisher.msgs[0].msgType, bmp.LSNodeMsg)
+			}
+
+			var got LSNode
+			if err := json.Unmarshal(publisher.msgs[0].payload, &got); err != nil {
+				t.Fatalf("published LSNode JSON: %v", err)
+			}
+			if got.Action != tt.wantAction || got.ProtocolID != tt.wantProtocol || got.ASN != tt.wantASN {
+				t.Errorf("published LSNode = action %q protocol %d ASN %d, want %q/%d/%d", got.Action, got.ProtocolID, got.ASN, tt.wantAction, tt.wantProtocol, tt.wantASN)
+			}
+		})
+	}
+}
