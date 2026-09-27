@@ -101,6 +101,67 @@ func TestNodeDescriptorGetOSPFAreaID(t *testing.T) {
 	}
 }
 
+// TestNodeDescriptorGetIGPRouterID covers AF-7 (RFC 9552 Section 5.2.1.4):
+// IGP Router-ID length identifies the node type - 4 (OSPF non-pseudonode),
+// 6 (IS-IS non-pseudonode), 7 (IS-IS pseudonode), 8 (OSPF pseudonode) or 16
+// (Direct/Static IPv6 address), discriminated on len(tlv.Value).
+func TestNodeDescriptorGetIGPRouterID(t *testing.T) {
+	tests := []struct {
+		name string
+		nd   *NodeDescriptor
+		want string
+	}{
+		{
+			name: "4-byte OSPF non-pseudonode router-ID",
+			nd:   makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 4, Value: []byte{10, 0, 0, 1}}}),
+			want: "10.0.0.1",
+		},
+		{
+			name: "6-byte IS-IS non-pseudonode ISO System-ID",
+			nd:   makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 6, Value: []byte{0x00, 0x00, 0x0c, 0x00, 0x12, 0x34}}}),
+			want: "0000.0c00.1234",
+		},
+		{
+			name: "7-byte IS-IS pseudonode (System-ID + PSN)",
+			nd:   makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 7, Value: []byte{0x00, 0x00, 0x0c, 0x00, 0x12, 0x34, 0x01}}}),
+			want: "0000.0c00.1234.01",
+		},
+		{
+			name: "8-byte OSPF pseudonode (DR router-ID + DR interface addr)",
+			nd:   makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 8, Value: []byte{10, 0, 0, 1, 192, 168, 1, 1}}}),
+			want: "10.0.0.1:192.168.1.1",
+		},
+		{
+			name: "mismatched-proxy: tlv.Length says 4 but Value is 8 bytes (OSPF pseudonode)",
+			nd:   makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 4, Value: []byte{10, 0, 0, 1, 192, 168, 1, 1}}}),
+			want: "10.0.0.1:192.168.1.1",
+		},
+		{
+			name: "16-byte Direct/Static IPv6 address",
+			nd: makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 16, Value: []byte{
+				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}}}),
+			want: "2001:db8::1",
+		},
+		{
+			name: "TLV absent",
+			nd:   makeNodeDesc(nil),
+			want: "",
+		},
+		{
+			name: "undefined length keeps raw hex",
+			nd:   makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 5, Value: []byte{1, 2, 3, 4, 5}}}),
+			want: "0102.0304.05",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.nd.GetIGPRouterID(); got != tt.want {
+				t.Errorf("GetIGPRouterID() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestNodeDescriptorGetBGPRouterID(t *testing.T) {
 	tests := []struct {
 		name    string

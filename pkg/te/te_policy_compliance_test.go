@@ -872,11 +872,15 @@ func TestTEPolicy_Interface_IPv4(t *testing.T) {
 	}
 }
 
+// TestTEPolicy_Interface_ValidLengths covers the 21-octet IPv6 form (5
+// header/ID octets + 16-octet Interface Address, draft-ietf-idr-te-lsp-
+// distribution Section 4.6.1). Previously encoded a 23-octet/18-octet-address
+// input, which was the AF-6 bug this sub-TLV's decoder accepted incorrectly.
 func TestTEPolicy_Interface_ValidLengths(t *testing.T) {
-	b := make([]byte, 23)
+	b := make([]byte, 21)
 	b[0] = 0x00
 	binary.BigEndian.PutUint32(b[1:5], 200)
-	testAddr := make([]byte, 18)
+	testAddr := make([]byte, 16)
 	copy(b[5:], testAddr)
 
 	got, err := UnmarshalLocalMPLSCrossConnectInterface(b)
@@ -886,13 +890,39 @@ func TestTEPolicy_Interface_ValidLengths(t *testing.T) {
 	if got.LocalInterfaceID != 200 {
 		t.Errorf("LocalInterfaceID = %d, want 200", got.LocalInterfaceID)
 	}
-	if len(got.InterfaceAddr) != 18 {
-		t.Errorf("InterfaceAddr length = %d, want 18", len(got.InterfaceAddr))
+	if len(got.InterfaceAddr) != 16 {
+		t.Errorf("InterfaceAddr length = %d, want 16", len(got.InterfaceAddr))
+	}
+}
+
+// TestTEPolicy_Interface_IPv6 covers AF-6 (docs/af-discriminator-audit.md):
+// per draft-ietf-idr-te-lsp-distribution Section 4.6.1, the MPLS Cross
+// Connect Interface sub-TLV is "Flags(1) + Local Interface Identifier(4) +
+// Interface Address (4 or 16 octets)", so a conforming IPv6 interface
+// address sub-TLV is 5+16=21 octets, not 23.
+func TestTEPolicy_Interface_IPv6(t *testing.T) {
+	b := make([]byte, 21)
+	b[0] = 0x00
+	binary.BigEndian.PutUint32(b[1:5], 200)
+	addr := []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	copy(b[5:], addr)
+
+	got, err := UnmarshalLocalMPLSCrossConnectInterface(b)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.LocalInterfaceID != 200 {
+		t.Errorf("LocalInterfaceID = %d, want 200", got.LocalInterfaceID)
+	}
+	if !bytes.Equal(got.InterfaceAddr, addr) {
+		t.Errorf("InterfaceAddr = %v, want %v", got.InterfaceAddr, addr)
 	}
 }
 
 func TestTEPolicy_Interface_InvalidLength(t *testing.T) {
-	for _, size := range []int{0, 4, 8, 10, 22, 24} {
+	// 23 is now invalid: draft-ietf-idr-te-lsp-distribution Section 4.6.1 only
+	// allows length 9 (IPv4) or 21 (IPv6); 23 was the pre-fix bug length.
+	for _, size := range []int{0, 4, 8, 10, 22, 23, 24} {
 		b := make([]byte, size)
 		_, err := UnmarshalLocalMPLSCrossConnectInterface(b)
 		if err == nil {

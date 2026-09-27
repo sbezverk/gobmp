@@ -285,7 +285,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 71 type 1: expected *base.NodeNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update, ph.IsRemotePeerIPv6())
+			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_node message with error: %+v", err)
 				continue
@@ -300,7 +300,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 71 type 2: expected *base.LinkNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, ph.IsRemotePeerIPv6())
+			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue
@@ -372,7 +372,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 72 type 1: expected *base.NodeNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update, ph.IsRemotePeerIPv6())
+			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_node message with error: %+v", err)
 				continue
@@ -388,7 +388,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 72 type 2: expected *base.LinkNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, ph.IsRemotePeerIPv6())
+			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue
