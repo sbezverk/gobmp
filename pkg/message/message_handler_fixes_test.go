@@ -387,3 +387,41 @@ func TestEVPN_EoR(t *testing.T) {
 		t.Errorf("PeerIP = %q, want %q", r.PeerIP, ph.GetPeerAddrString())
 	}
 }
+
+// TestEVPN_EoR_LocRIB verifies an EVPN End-of-RIB from a Loc-RIB peer carries
+// IsLocRIB and the table name (RFC 9069).
+func TestEVPN_EoR_LocRIB(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+
+	ph := makePeerHeader(t, bmp.PeerType3, 0x00)
+	tableKey := ph.GetPeerBGPIDString() + ph.GetPeerDistinguisherString()
+	p.tableLock.Lock()
+	p.tableProperties[tableKey] = PerTableProperties{
+		addPathCapable: make(map[int]bool),
+		tableInfoTLVs: []bmp.InformationalTLV{
+			{InformationType: 3, Information: []byte("VRF-EVPN-EoR")},
+		},
+	}
+	p.tableLock.Unlock()
+	nlri, err := bgp.UnmarshalMPUnReachNLRI([]byte{0x00, 0x19, 0x46}, map[int]bool{})
+	if err != nil {
+		t.Fatalf("UnmarshalMPUnReachNLRI: %v", err)
+	}
+
+	msgs, err := p.evpn(nlri, 1, ph, &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}})
+	if err != nil {
+		t.Fatalf("evpn() error: %v", err)
+	}
+	if len(msgs) != 1 {
+		t.Fatalf("evpn() returned %d messages, want 1", len(msgs))
+	}
+	if !msgs[0].IsEOR {
+		t.Error("IsEOR = false, want true")
+	}
+	if !msgs[0].IsLocRIB {
+		t.Error("IsLocRIB = false, want true")
+	}
+	if msgs[0].TableName != "VRF-EVPN-EoR" {
+		t.Errorf("TableName = %q, want %q", msgs[0].TableName, "VRF-EVPN-EoR")
+	}
+}
