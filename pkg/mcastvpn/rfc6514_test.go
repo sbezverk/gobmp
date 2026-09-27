@@ -638,6 +638,13 @@ func TestRFC7524_Type4_GTM(t *testing.T) {
 			routeKey: cat(rd0, []byte{4, 192, 0, 2, 1, 4, 232, 1, 1, 1}, v6(1)),
 			origIP:   v6(2),
 		},
+		{
+			name: "IPv6 (S,G) with bit and octet lengths",
+			// RFC 7524 Section 6.2.2: 128-bit Source and 16-octet Group
+			// lengths both select IPv6 addresses.
+			routeKey: cat(rd0, []byte{128}, v6(1), []byte{16}, v6(2), v6(3)),
+			origIP:   v6(4),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -658,19 +665,30 @@ func TestRFC7524_Type4_GTM(t *testing.T) {
 func TestRFC7524_Type4_GTM_Invalid(t *testing.T) {
 	rd0 := make([]byte, 8)
 	tests := []struct {
-		name  string
-		input []byte
+		name    string
+		input   []byte
+		wantErr string
 	}{
-		{"missing source length", rd0},
-		{"invalid source length", append(append([]byte{}, rd0...), 5, 1, 2, 3, 4, 5)},
-		{"truncated group", append(append([]byte{}, rd0...), 0, 4, 232)},
-		{"mixed-family PE and originator (20 bytes)", append(append([]byte{}, rd0...), 0, 0,
+		{name: "missing source length", input: rd0},
+		{name: "invalid source length", input: append(append([]byte{}, rd0...), 5, 1, 2, 3, 4, 5)},
+		{name: "truncated group", input: append(append([]byte{}, rd0...), 0, 4, 232)},
+		{name: "mixed-family PE and originator (20 bytes)", input: append(append([]byte{}, rd0...), 0, 0,
 			10, 0, 0, 1, 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2)},
+		{
+			name: "mixed zero Route Key is not GTM",
+			// RFC 7524 Section 6.2.2: GTM requires an all-zero or all-0xff RD.
+			input:   []byte{0, 0, 1, 0, 0, 0, 0, 0},
+			wantErr: "invalid originating router IP length: 6 bytes (expected 4 or 16)",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := UnmarshalType4(tt.input); err == nil {
+			_, err := UnmarshalType4(tt.input)
+			if err == nil {
 				t.Fatal("expected error")
+			}
+			if tt.wantErr != "" && err.Error() != tt.wantErr {
+				t.Errorf("error = %q, want %q", err, tt.wantErr)
 			}
 		})
 	}

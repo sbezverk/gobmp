@@ -441,6 +441,49 @@ func TestMPReachNLRI_GetNLRIMCASTVPN_AFI2_IPv4Originator(t *testing.T) {
 	}
 }
 
+func TestMPReachNLRI_GetNLRIMVPN_Type4(t *testing.T) {
+	tests := []struct {
+		name           string
+		nlri           []byte
+		wantOriginator []byte
+	}{
+		{
+			name: "SAFI 129 Leaf A-D IPv4 originator",
+			// RFC 6514 Section 4.4: Route Key is a complete Type 1 NLRI,
+			// followed by the Originating Router's IP Address.
+			nlri: []byte{
+				0x04, 0x12, // Leaf A-D route type and length
+				0x01, 0x0c, // Route Key: Intra-AS I-PMSI A-D type and length
+				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD 100:200
+				10, 0, 0, 1, // Route Key Originating Router's IP Address
+				10, 0, 0, 2, // Originating Router's IP Address
+			},
+			wantOriginator: []byte{10, 0, 0, 2},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mp := &MPReachNLRI{
+				AddressFamilyID:    1,
+				SubAddressFamilyID: 129,
+				NLRI:               tt.nlri,
+				addPath:            map[int]bool{},
+			}
+			route, err := mp.GetNLRIMVPN()
+			if err != nil {
+				t.Fatalf("GetNLRIMVPN() error = %v", err)
+			}
+			if len(route.Route) != 1 {
+				t.Fatalf("route count = %d, want 1", len(route.Route))
+			}
+			if got := route.Route[0].GetMCASTVPNOriginatorIP(); !bytes.Equal(got, tt.wantOriginator) {
+				t.Errorf("originator IP = %v, want %v", got, tt.wantOriginator)
+			}
+		})
+	}
+}
+
 // ---------------------------------------------------------------------------
 // MPReachNLRI.GetFlowspecNLRI stubs
 // ---------------------------------------------------------------------------
