@@ -45,6 +45,21 @@ func testLSNode(protocol base.ProtoID) *base.NodeNLRI {
 	return &base.NodeNLRI{ProtocolID: protocol, LocalNode: testLSNodeDescriptor()}
 }
 
+// testLSLinkWithAF returns a Direct link whose AF Link Descriptor TLV (1185)
+// has the given length and first value octet.
+func testLSLinkWithAF(length int, value byte) *base.LinkNLRI {
+	v := make([]byte, length)
+	v[0] = value
+	return &base.LinkNLRI{
+		ProtocolID: base.Direct,
+		LocalNode:  testLSNodeDescriptor(),
+		RemoteNode: testLSNodeDescriptor(),
+		Link: &base.LinkDescriptor{LinkTLV: map[uint16]base.TLV{
+			bgpLSSPFAFLinkDescriptorTLV: {Type: bgpLSSPFAFLinkDescriptorTLV, Length: uint16(length), Value: v},
+		}},
+	}
+}
+
 func testLSNodeNLRI80() []byte {
 	descriptor := []byte{
 		0x01, 0x00, 0x00, 0x10,
@@ -174,15 +189,60 @@ func TestValidateLSNLRI80Element(t *testing.T) {
 			wantErr: "prefix NLRI has unexpected type",
 		},
 		{
-			name:    "non-direct prefix protocol",
-			element: ls.Element{Type: 4, LS: &base.PrefixNLRI{ProtocolID: base.OSPFv2, LocalNode: testLSNodeDescriptor()}},
-			wantErr: "prefix NLRI has protocol ID",
+			name:      "prefix protocol is the prefix origin, not Direct",
+			element:   ls.Element{Type: 4, LS: &base.PrefixNLRI{ProtocolID: base.OSPFv2, LocalNode: testLSNodeDescriptor()}},
+			attribute: testLSAttribute(),
 		},
 		{
-			name:      "prefix metric is required",
+			name:    "prefix local descriptor is required",
+			element: ls.Element{Type: 3, LS: &base.PrefixNLRI{ProtocolID: base.ISISL2}},
+			wantErr: "missing node descriptor",
+		},
+		{
+			name:      "prefix metric is optional",
 			element:   ls.Element{Type: 3, LS: prefix},
 			attribute: testLSAttribute(),
-			wantErr:   "metric TLV",
+		},
+		{
+			name:      "present prefix metric must be four octets",
+			element:   ls.Element{Type: 3, LS: prefix},
+			attribute: testLSAttribute(lsSPFTLV{typeID: bgpLSPrefixMetricTLV, value: []byte{10}}),
+			wantErr:   "metric TLV 1155 has length 1",
+		},
+		{
+			name:      "link with valid AF link descriptor",
+			element:   ls.Element{Type: 2, LS: testLSLinkWithAF(1, 2)},
+			attribute: testLSAttribute(lsSPFTLV{typeID: bgpLSIGPMetricTLV, value: []byte{0, 0, 0, 10}}),
+		},
+		{
+			name: "link without AF link descriptor",
+			element: ls.Element{Type: 2, LS: &base.LinkNLRI{
+				ProtocolID: base.Direct,
+				LocalNode:  testLSNodeDescriptor(),
+				RemoteNode: testLSNodeDescriptor(),
+				Link:       &base.LinkDescriptor{LinkTLV: map[uint16]base.TLV{}},
+			}},
+			attribute: testLSAttribute(lsSPFTLV{typeID: bgpLSIGPMetricTLV, value: []byte{0, 0, 0, 10}}),
+		},
+		{
+			name:      "link with undefined AF link descriptor value is ignored",
+			element:   ls.Element{Type: 2, LS: testLSLinkWithAF(1, 3)},
+			attribute: testLSAttribute(lsSPFTLV{typeID: bgpLSIGPMetricTLV, value: []byte{0, 0, 0, 10}}),
+		},
+		{
+			name:    "link with reserved AF link descriptor value 0",
+			element: ls.Element{Type: 2, LS: testLSLinkWithAF(1, 0)},
+			wantErr: "address family link descriptor TLV has reserved value 0",
+		},
+		{
+			name:    "link with reserved AF link descriptor value 255",
+			element: ls.Element{Type: 2, LS: testLSLinkWithAF(1, 255)},
+			wantErr: "address family link descriptor TLV has reserved value 255",
+		},
+		{
+			name:    "link with malformed AF link descriptor length",
+			element: ls.Element{Type: 2, LS: testLSLinkWithAF(2, 1)},
+			wantErr: "address family link descriptor TLV has length 2",
 		},
 		{
 			name:    "unsupported element type is rejected",
@@ -264,10 +324,16 @@ func TestSplitLSNLRI80(t *testing.T) {
 			wantErr: "sequence number TLV has length 7",
 		},
 		{
-			name:    "missing status TLV",
+			name:      "status TLV is optional",
+			nlri:      &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
+			update:    testLSUpdate(testLSSequence()),
+			wantValid: 1,
+		},
+		{
+			name:    "reserved status value 255",
 			nlri:    &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: node}}},
-			update:  testLSUpdate(testLSSequence()),
-			wantErr: "requires status TLV",
+			update:  testLSUpdate(testLSSequence(), lsSPFTLV{typeID: bgpLSSPFStatusTLV, value: []byte{255}}),
+			wantErr: "reserved value 255",
 		},
 		{
 			name:    "reserved status value",
@@ -342,17 +408,23 @@ func TestProcessNLRI80SubTypesRejectsInvalidInput(t *testing.T) {
 			nlri:   lsSPFMockNLRI{err: errors.New("decode failure")},
 			update: validUpdate,
 		},
+		{
+			name: "nil update does not panic",
+			nlri: lsSPFMockNLRI{nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 1, LS: testLSNode(base.Direct)}}}},
+		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			publisher := &recordingPublisher{}
-			p := &producer{publisher: publisher}
-			p.processNLRI80SubTypes(tt.nlri, AddPrefix, minimalPeerHeader(), tt.update)
-			if len(publisher.msgs) != 0 {
-				t.Fatalf("processNLRI80SubTypes() published %d messages, want 0", len(publisher.msgs))
-			}
-		})
+		for _, op := range []int{AddPrefix, DelPrefix} {
+			t.Run(tt.name, func(t *testing.T) {
+				publisher := &recordingPublisher{}
+				p := &producer{publisher: publisher}
+				p.processNLRI80SubTypes(tt.nlri, op, minimalPeerHeader(), tt.update)
+				if len(publisher.msgs) != 0 {
+					t.Fatalf("processNLRI80SubTypes() published %d messages, want 0", len(publisher.msgs))
+				}
+			})
+		}
 	}
 }
 
@@ -375,6 +447,68 @@ func TestProcessNLRI80SubTypesTreatsMalformedAddAsWithdraw(t *testing.T) {
 	}
 	if published.Action != "del" {
 		t.Errorf("published Action = %q, want del", published.Action)
+	}
+}
+
+// TestProcessNLRI80SubTypesWithdrawPaths covers the RFC 9815 Section 7.1
+// treat-as-withdraw paths and the plain withdrawal passthrough.
+func TestProcessNLRI80SubTypesWithdrawPaths(t *testing.T) {
+	linkMetric := lsSPFTLV{typeID: bgpLSIGPMetricTLV, value: []byte{0, 0, 0, 10}}
+	tests := []struct {
+		name       string
+		element    ls.Element
+		operation  int
+		update     *bgp.Update
+		wantAction string
+	}{
+		{
+			name:       "withdrawal is published as del",
+			element:    ls.Element{Type: 1, LS: testLSNode(base.Direct)},
+			operation:  DelPrefix,
+			update:     testLSUpdate(),
+			wantAction: "del",
+		},
+		{
+			name:       "reserved status withdraws the NLRI",
+			element:    ls.Element{Type: 1, LS: testLSNode(base.Direct)},
+			operation:  AddPrefix,
+			update:     testLSUpdate(testLSSequence(), lsSPFTLV{typeID: bgpLSSPFStatusTLV, value: []byte{255}}),
+			wantAction: "del",
+		},
+		{
+			name:       "reserved AF link descriptor withdraws the link",
+			element:    ls.Element{Type: 2, LS: testLSLinkWithAF(1, 0)},
+			operation:  AddPrefix,
+			update:     testLSUpdate(testLSSequence(), linkMetric),
+			wantAction: "del",
+		},
+		{
+			name:       "link without status TLV is published",
+			element:    ls.Element{Type: 2, LS: testLSLinkWithAF(1, 1)},
+			operation:  AddPrefix,
+			update:     testLSUpdate(testLSSequence(), linkMetric),
+			wantAction: "add",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			publisher := &recordingPublisher{}
+			p := &producer{publisher: publisher}
+			p.processNLRI80SubTypes(lsSPFMockNLRI{nlri: &ls.NLRI71{NLRI: []ls.Element{tt.element}}}, tt.operation, minimalPeerHeader(), tt.update)
+			if len(publisher.msgs) != 1 {
+				t.Fatalf("processNLRI80SubTypes() published %d messages, want 1", len(publisher.msgs))
+			}
+			var published struct {
+				Action string `json:"action"`
+			}
+			if err := json.Unmarshal(publisher.msgs[0].payload, &published); err != nil {
+				t.Fatalf("published JSON: %v", err)
+			}
+			if published.Action != tt.wantAction {
+				t.Errorf("published Action = %q, want %q", published.Action, tt.wantAction)
+			}
+		})
 	}
 }
 

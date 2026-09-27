@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	bgpLSSPFSequenceNumberTLV = 1181
-	bgpLSSPFStatusTLV         = 1184
-	bgpLSIGPMetricTLV         = 1095
-	bgpLSPrefixMetricTLV      = 1155
+	bgpLSSPFSequenceNumberTLV   = 1181
+	bgpLSSPFStatusTLV           = 1184
+	bgpLSSPFAFLinkDescriptorTLV = 1185
+	bgpLSIGPMetricTLV           = 1095
+	bgpLSPrefixMetricTLV        = 1155
 )
 
 type nlri80 interface {
@@ -36,6 +37,12 @@ func (n nlri71View) GetNLRI71() (*ls.NLRI71, error) {
 // Per RFC 9815 Sections 5.1 and 5.2, its NLRI wire encoding is BGP-LS with
 // additional receiver-side validation before existing BGP-LS publication.
 func (p *producer) processNLRI80SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
+	// The lsNode/lsLink/lsPrefix handlers dereference update on every
+	// path, including the treat-as-withdraw path below.
+	if update == nil {
+		glog.Errorf("bgp-ls-spf update is nil")
+		return
+	}
 	spfNLRI, ok := nlri.(nlri80)
 	if !ok {
 		glog.Errorf("bgp-ls-spf NLRI does not implement GetNLRI80")
@@ -141,27 +148,28 @@ func validateLSNLRI80Element(element ls.Element, attribute *bgpls.NLRI) error {
 		if err := validateLSNLRI80NodeDescriptor(link.RemoteNode); err != nil {
 			return fmt.Errorf("bgp-ls-spf link remote node descriptor: %w", err)
 		}
-		return validateLSNLRI80Metric(bgpLSIGPMetricTLV, attribute)
+		if err := validateLSNLRI80AFLinkDescriptor(link.Link); err != nil {
+			return err
+		}
+		return validateLSNLRI80Metric(bgpLSIGPMetricTLV, attribute, true)
 	case 3, 4:
+		// Per RFC 9815 Section 5.2, the Prefix NLRI Protocol-ID is the
+		// prefix origin, so Direct is not required.
 		prefix, ok := element.LS.(*base.PrefixNLRI)
 		if !ok {
 			return fmt.Errorf("bgp-ls-spf prefix NLRI has unexpected type %T", element.LS)
 		}
-		if prefix.ProtocolID != base.Direct {
-			return fmt.Errorf("bgp-ls-spf prefix NLRI has protocol ID %d, want %d", prefix.ProtocolID, base.Direct)
-		}
 		if err := validateLSNLRI80NodeDescriptor(prefix.LocalNode); err != nil {
 			return err
 		}
-		return validateLSNLRI80Metric(bgpLSPrefixMetricTLV, attribute)
+		return validateLSNLRI80Metric(bgpLSPrefixMetricTLV, attribute, false)
 	default:
 		return fmt.Errorf("bgp-ls-spf NLRI element type %d is not supported", element.Type)
 	}
 }
 
-// validateLSNLRI80NodeDescriptor checks the mandatory BGP Router ID (512)
-// and BGP Confederation Member AS Number (516) sub-TLVs per RFC 9815
-// Section 5.2.1.
+// validateLSNLRI80NodeDescriptor checks the mandatory Autonomous System (512)
+// and BGP Router-ID (516) sub-TLVs per RFC 9815 Section 5.2.
 func validateLSNLRI80NodeDescriptor(descriptor *base.NodeDescriptor) error {
 	if descriptor == nil {
 		return fmt.Errorf("missing node descriptor")
@@ -182,7 +190,7 @@ func validateLSNLRI80NodeDescriptor(descriptor *base.NodeDescriptor) error {
 }
 
 // validateLSNLRI80Attribute checks that the BGP-LS Attribute carries exactly
-// one well-formed SPF Sequence Number TLV (1181) per RFC 9815 Section 5.2.2.
+// one well-formed SPF Sequence Number TLV (1181) per RFC 9815 Section 5.2.4.
 func validateLSNLRI80Attribute(attribute *bgpls.NLRI) error {
 	sequenceNumbers := 0
 	for _, tlv := range attribute.LS {
@@ -200,10 +208,11 @@ func validateLSNLRI80Attribute(attribute *bgpls.NLRI) error {
 	return nil
 }
 
-// validateLSNLRI80Metric checks that the BGP-LS Attribute carries a
-// well-formed, mandatory four-octet metric TLV of the given type, per
-// RFC 9815 Section 5.2.2.
-func validateLSNLRI80Metric(metricType uint16, attribute *bgpls.NLRI) error {
+// validateLSNLRI80Metric checks that every metric TLV of the given type is
+// four octets. Per RFC 9815 Section 5.2.2 a Link NLRI without IGP Metric
+// (1095) is malformed (required=true); per Section 5.2.3 a Prefix NLRI
+// without Prefix Metric (1155) is only excluded from SPF, not malformed.
+func validateLSNLRI80Metric(metricType uint16, attribute *bgpls.NLRI, required bool) error {
 	found := false
 	for _, tlv := range attribute.LS {
 		if tlv.Type != metricType {
@@ -214,22 +223,21 @@ func validateLSNLRI80Metric(metricType uint16, attribute *bgpls.NLRI) error {
 			return fmt.Errorf("bgp-ls-spf metric TLV %d has length %d, want 4", metricType, tlv.Length)
 		}
 	}
-	if !found {
+	if required && !found {
 		return fmt.Errorf("bgp-ls-spf NLRI requires metric TLV %d", metricType)
 	}
 	return nil
 }
 
-// validateLSNLRI80Status checks that the BGP-LS Attribute carries exactly
-// one well-formed, non-reserved SPF Status TLV (1184) per RFC 9815
-// Section 5.2.2. The Status TLV is mandatory for every BGP-LS-SPF Update.
+// validateLSNLRI80Status checks every SPF Status TLV (1184) present in the
+// BGP-LS Attribute is one octet and not a reserved value (0 or 255). Per
+// RFC 9815 Sections 5.2.1.1, 5.2.2.2 and 5.2.3.1 the TLV is optional: when
+// absent the object is up/reachable, so absence is not an error.
 func validateLSNLRI80Status(attribute *bgpls.NLRI) error {
-	found := false
 	for _, tlv := range attribute.LS {
 		if tlv.Type != bgpLSSPFStatusTLV {
 			continue
 		}
-		found = true
 		if tlv.Length != 1 || len(tlv.Value) != 1 {
 			return fmt.Errorf("bgp-ls-spf status TLV has length %d, want 1", tlv.Length)
 		}
@@ -237,8 +245,26 @@ func validateLSNLRI80Status(attribute *bgpls.NLRI) error {
 			return fmt.Errorf("bgp-ls-spf status TLV has reserved value %d", tlv.Value[0])
 		}
 	}
-	if !found {
-		return fmt.Errorf("bgp-ls-spf NLRI requires status TLV %d", bgpLSSPFStatusTLV)
+	return nil
+}
+
+// validateLSNLRI80AFLinkDescriptor checks an optional Address Family Link
+// Descriptor TLV (1185) is one octet and not a reserved value (0 or 255).
+// Per RFC 9815 Sections 5.2.2.1 and 7.1 a malformed TLV makes the Link NLRI
+// malformed; undefined values (3-254) are ignored, not rejected.
+func validateLSNLRI80AFLinkDescriptor(link *base.LinkDescriptor) error {
+	if link == nil {
+		return nil
+	}
+	tlv, ok := link.LinkTLV[bgpLSSPFAFLinkDescriptorTLV]
+	if !ok {
+		return nil
+	}
+	if tlv.Length != 1 || len(tlv.Value) != 1 {
+		return fmt.Errorf("bgp-ls-spf address family link descriptor TLV has length %d, want 1", tlv.Length)
+	}
+	if tlv.Value[0] == 0 || tlv.Value[0] == 255 {
+		return fmt.Errorf("bgp-ls-spf address family link descriptor TLV has reserved value %d", tlv.Value[0])
 	}
 	return nil
 }
