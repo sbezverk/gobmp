@@ -55,7 +55,7 @@ func testLSLinkWithAF(length int, value byte) *base.LinkNLRI {
 		LocalNode:  testLSNodeDescriptor(),
 		RemoteNode: testLSNodeDescriptor(),
 		Link: &base.LinkDescriptor{LinkTLV: map[uint16]base.TLV{
-			bgpLSSPFAFLinkDescriptorTLV: {Type: bgpLSSPFAFLinkDescriptorTLV, Length: uint16(length), Value: v},
+			base.AFLinkDescriptorTLV: {Type: base.AFLinkDescriptorTLV, Length: uint16(length), Value: v},
 		}},
 	}
 }
@@ -577,6 +577,89 @@ func TestProcessMPUpdateLSNLRI80(t *testing.T) {
 	}
 	if published.Action != "add" || published.ProtocolID != base.Direct || published.ASN != 65000 {
 		t.Errorf("published LSNode = action %q protocol %d ASN %d, want add/%d/65000", published.Action, published.ProtocolID, published.ASN, base.Direct)
+	}
+}
+
+// testLSLinkNLRI80 returns a Direct Link NLRI whose link descriptors carry one
+// Address Family Link Descriptor TLV (1185) per entry in afValues.
+func testLSLinkNLRI80(afValues ...[]byte) []byte {
+	nodeDescriptor := func(typeID byte) []byte {
+		return []byte{
+			0x01, typeID, 0x00, 0x10,
+			0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0xfd, 0xe8,
+			0x02, 0x04, 0x00, 0x04, 0xc0, 0x00, 0x02, 0x01,
+		}
+	}
+	payload := append([]byte{byte(base.Direct)}, make([]byte, 8)...)
+	payload = append(payload, nodeDescriptor(0x00)...)
+	payload = append(payload, nodeDescriptor(0x01)...)
+	for _, af := range afValues {
+		payload = append(payload, 0x04, 0xa1, 0x00, byte(len(af)))
+		payload = append(payload, af...)
+	}
+	return append([]byte{0x00, 0x02, 0x00, byte(len(payload))}, payload...)
+}
+
+// TestProcessMPUpdateLSNLRI80RepeatedAFLinkTLV decodes AFI 16388 MP_REACH_NLRI
+// and MP_UNREACH_NLRI attributes from wire bytes. Per RFC 9815 Section 5.2.2.1
+// an unnumbered link may carry "separate Address Family Link Descriptor TLVs
+// for IPv4 and IPv6"; the Link NLRI must be published, an undefined value
+// (3-254) is ignored, and a reserved value or wrong length in any instance
+// makes it malformed (treat-as-withdraw, Section 7.1). SAFI 71 shares the
+// link descriptor parser, so it must accept the repeated TLV too.
+func TestProcessMPUpdateLSNLRI80RepeatedAFLinkTLV(t *testing.T) {
+	tests := []struct {
+		name       string
+		safi       byte
+		withdraw   bool
+		afValues   [][]byte
+		wantAction string
+	}{
+		{name: "IPv4 and IPv6 AF link descriptors", safi: 80, afValues: [][]byte{{1}, {2}}, wantAction: "add"},
+		{name: "same value repeated", safi: 80, afValues: [][]byte{{1}, {1}}, wantAction: "add"},
+		{name: "undefined value in second instance", safi: 80, afValues: [][]byte{{1}, {7}}, wantAction: "add"},
+		{name: "reserved value in second instance", safi: 80, afValues: [][]byte{{1}, {255}}, wantAction: "del"},
+		{name: "wrong length in second instance", safi: 80, afValues: [][]byte{{1}, {2, 0}}, wantAction: "del"},
+		{name: "withdraw with IPv4 and IPv6 AF link descriptors", safi: 80, withdraw: true, afValues: [][]byte{{1}, {2}}, wantAction: "del"},
+		{name: "SAFI 71 with IPv4 and IPv6 AF link descriptors", safi: 71, afValues: [][]byte{{1}, {2}}, wantAction: "add"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var nlri bgp.MPNLRI
+			var err error
+			operation := AddPrefix
+			if tt.withdraw {
+				unreach := append([]byte{0x40, 0x04, tt.safi}, testLSLinkNLRI80(tt.afValues...)...)
+				nlri, err = bgp.UnmarshalMPUnReachNLRI(unreach, map[int]bool{})
+				operation = DelPrefix
+			} else {
+				reach := []byte{0x40, 0x04, tt.safi, 0x04, 0xc0, 0x00, 0x02, 0x02, 0x00}
+				reach = append(reach, testLSLinkNLRI80(tt.afValues...)...)
+				nlri, err = bgp.UnmarshalMPReachNLRI(reach, false, map[int]bool{})
+			}
+			if err != nil {
+				t.Fatalf("unmarshal MP NLRI error = %v", err)
+			}
+
+			publisher := &recordingPublisher{}
+			p := &producer{publisher: publisher}
+			metric := lsSPFTLV{typeID: bgpLSIGPMetricTLV, value: []byte{0, 0, 0, 10}}
+			p.processMPUpdate(nlri, operation, minimalPeerHeader(), testLSUpdate(testLSSequence(), metric))
+
+			if len(publisher.msgs) != 1 {
+				t.Fatalf("processMPUpdate() published %d messages, want 1", len(publisher.msgs))
+			}
+			if publisher.msgs[0].msgType != bmp.LSLinkMsg {
+				t.Fatalf("processMPUpdate() topic = %d, want LSLink topic %d", publisher.msgs[0].msgType, bmp.LSLinkMsg)
+			}
+			var got LSLink
+			if err := json.Unmarshal(publisher.msgs[0].payload, &got); err != nil {
+				t.Fatalf("published LSLink JSON: %v", err)
+			}
+			if got.Action != tt.wantAction {
+				t.Errorf("published LSLink action = %q, want %q", got.Action, tt.wantAction)
+			}
+		})
 	}
 }
 

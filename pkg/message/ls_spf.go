@@ -13,11 +13,10 @@ import (
 )
 
 const (
-	bgpLSSPFSequenceNumberTLV   = 1181
-	bgpLSSPFStatusTLV           = 1184
-	bgpLSSPFAFLinkDescriptorTLV = 1185
-	bgpLSIGPMetricTLV           = 1095
-	bgpLSPrefixMetricTLV        = 1155
+	bgpLSSPFSequenceNumberTLV = 1181
+	bgpLSSPFStatusTLV         = 1184
+	bgpLSIGPMetricTLV         = 1095
+	bgpLSPrefixMetricTLV      = 1155
 )
 
 type nlri80 interface {
@@ -255,23 +254,23 @@ func validateLSNLRI80Status(attribute *bgpls.NLRI) error {
 	return nil
 }
 
-// validateLSNLRI80AFLinkDescriptor checks an optional Address Family Link
+// validateLSNLRI80AFLinkDescriptor checks every optional Address Family Link
 // Descriptor TLV (1185) is one octet and not a reserved value (0 or 255).
-// Per RFC 9815 Sections 5.2.2.1 and 7.1 a malformed TLV makes the Link NLRI
-// malformed; undefined values (3-254) are ignored, not rejected.
+// Per RFC 9815 Section 5.2.2.1 an unnumbered link may carry separate TLVs for
+// IPv4 and IPv6, so each instance is checked. Per Sections 5.2.2.1 and 7.1 a
+// malformed TLV makes the Link NLRI malformed; undefined values (3-254) are
+// ignored, not rejected.
 func validateLSNLRI80AFLinkDescriptor(link *base.LinkDescriptor) error {
 	if link == nil {
 		return nil
 	}
-	tlv, ok := link.LinkTLV[bgpLSSPFAFLinkDescriptorTLV]
-	if !ok {
-		return nil
-	}
-	if tlv.Length != 1 || len(tlv.Value) != 1 {
-		return fmt.Errorf("bgp-ls-spf address family link descriptor TLV has length %d, want 1", tlv.Length)
-	}
-	if tlv.Value[0] == 0 || tlv.Value[0] == 255 {
-		return fmt.Errorf("bgp-ls-spf address family link descriptor TLV has reserved value %d", tlv.Value[0])
+	for _, tlv := range link.GetAFLinkTLVs() {
+		if tlv.Length != 1 || len(tlv.Value) != 1 {
+			return fmt.Errorf("bgp-ls-spf address family link descriptor TLV has length %d, want 1", tlv.Length)
+		}
+		if tlv.Value[0] == 0 || tlv.Value[0] == 255 {
+			return fmt.Errorf("bgp-ls-spf address family link descriptor TLV has reserved value %d", tlv.Value[0])
+		}
 	}
 	return nil
 }
