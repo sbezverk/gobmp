@@ -327,7 +327,9 @@ func type3(subType uint8, value []byte) string {
 	case 0xb:
 		s = fmt.Sprintf("%d", binary.BigEndian.Uint32(value[0:4]))
 	case 0xc:
-		s = fmt.Sprintf("%d", binary.BigEndian.Uint16(value[2:4]))
+		// RFC 9012 4.1: Value = Reserved(2)+Reserved(2)+Tunnel Type(2);
+		// the tunnel type is the last two octets, not value[2:4].
+		s = fmt.Sprintf("%d", binary.BigEndian.Uint16(value[4:6]))
 	default:
 		s = fmt.Sprintf("%d", binary.BigEndian.Uint32(value[0:4]))
 	}
