@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "name": "mup-ipv4-st1-withdraw",
+  "description": "Inject the ipv4/bgp-mup MUP withdraw fixture and validate the decoded AFI/SAFI 1/85 or 2/85 BMP message.",
+  "tags": [
+    "mup",
+    "ipv4",
+    "route-type-3",
+    "withdraw",
+    "gobgp"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/bgp-mup",
+      "action": "withdraw",
+      "nlri": {
+        "arch_type": 1,
+        "route_type": 3,
+        "route_data": {
+          "rd": [
+            0,
+            0,
+            0,
+            100,
+            0,
+            0,
+            0,
+            100
+          ],
+          "prefix_length": 32,
+          "prefix": [
+            192,
+            0,
+            2,
+            1
+          ],
+          "teid": [
+            0,
+            0,
+            48,
+            57
+          ],
+          "qfi": 9,
+          "end_point_address_length": 32,
+          "end_point_address": "10.0.0.1",
+          "source_address_length": 32,
+          "source_address": "10.0.0.3",
+          "tlvs": []
+        }
+      },
+      "extended_communities": [
+        {
+          "type": "route_target",
+          "format": "ipv4",
+          "ipv4": "192.0.2.253",
+          "local": 100
+        }
+      ]
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.mup_v4",
+    "timeout": "120",
+    "match": {
+      "action": "del",
+      "route_type": 3,
+      "vpn_rd": "100:100",
+      "prefix": "192.0.2.1",
+      "prefix_len": 32,
+      "teid": 12345
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "del",
+      "router_ip": "172.30.0.2",
+      "peer_ip": "172.30.0.3",
+      "peer_type": 0,
+      "peer_asn": 65000,
+      "vpn_rd": "100:100",
+      "vpn_rd_type": 0,
+      "is_ipv4": true,
+      "arch_type": 1,
+      "route_type": 3,
+      "is_nexthop_ipv4": true,
+      "is_adj_rib_in_post_policy": true,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false,
+      "is_loc_rib_filtered": false,
+      "prefix": "192.0.2.1",
+      "prefix_len": 32,
+      "endpoint_address": "10.0.0.1",
+      "endpoint_len": 32,
+      "teid": 12345,
+      "qfi": 9,
+      "source_address": "10.0.0.3"
+    },
+    "contains": {
+      "base_attrs": {
+        "is_atomic_agg": false
+      }
+    },
+    "present": [
+      "timestamp",
+      "base_attrs"
+    ],
+    "non_empty": [
+      "hash",
+      "router_hash",
+      "peer_hash",
+      "base_attrs.base_attr_hash"
+    ],
+    "absent": [
+      "error",
+      "is_eor"
+    ]
+  }
+}
+

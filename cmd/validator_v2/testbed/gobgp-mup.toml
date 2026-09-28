@@ -1,0 +1,27 @@
+[global.config]
+  as = 65001
+  router-id = "172.30.0.2"
+  local-address-list = ["172.30.0.2"]
+
+[[bmp-servers]]
+  [bmp-servers.config]
+    address = "172.30.0.4"
+    port = 5000
+    route-monitoring-policy = "post-policy"
+
+[[neighbors]]
+  [neighbors.config]
+    neighbor-address = "172.30.0.3"
+    peer-as = 65000
+
+  [[neighbors.afi-safis]]
+    [neighbors.afi-safis.config]
+      afi-safi-name = "ipv4-mup"
+
+  [[neighbors.afi-safis]]
+    [neighbors.afi-safis.config]
+      afi-safi-name = "ipv6-mup"
+
+  [neighbors.apply-policy.config]
+    default-import-policy = "accept-route"
+    default-export-policy = "accept-route"

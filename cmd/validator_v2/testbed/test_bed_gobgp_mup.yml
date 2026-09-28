@@ -1,0 +1,119 @@
+networks:
+  bgp-mup:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+services:
+  gobmp:
+    image: localhost/gobmp:cicd
+    container_name: gobmp-mup
+    hostname: gobmp-mup
+    restart: on-failure
+    expose:
+      - 5000
+    entrypoint:
+      - /gobmp
+      - --source-port=5000
+      - --split-af=true
+      - --v=9
+      - --kafka-server=kafka-mup:9092
+    cap_add:
+      - NET_ADMIN
+    networks:
+      bgp-mup:
+        ipv4_address: 172.30.0.4
+    depends_on:
+      - kafka-mup
+
+  zookeeper-mup:
+    image: zookeeper:3.7.0
+    restart: always
+    expose:
+      - 2181
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      bgp-mup:
+        ipv4_address: 172.30.0.5
+
+  kafka-mup:
+    image: confluentinc/cp-kafka:7.3.1
+    container_name: kafka-mup
+    restart: always
+    depends_on:
+      - zookeeper-mup
+    ports:
+      - 9092:9092
+    expose:
+      - 9092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-mup:2181
+      ZOOKEEPER: zookeeper-mup:2181
+      KAFKA_TOPICS: "gobmp.parsed.peer:1:1:delete gobmp.parsed.unicast_prefix:1:1:delete gobmp.parsed.unicast_prefix_v4:1:1:delete gobmp.parsed.unicast_prefix_v6:1:1:delete gobmp.parsed.ls_node:1:1:delete gobmp.parsed.ls_link:1:1:delete gobmp.parsed.l3vpn:1:1:delete gobmp.parsed.l3vpn_v4:1:1:delete gobmp.parsed.l3vpn_v6:1:1:delete gobmp.parsed.sr_policy:1:1:delete gobmp.parsed.sr_policy_v4:1:1:delete gobmp.parsed.sr_policy_v6:1:1:delete gobmp.parsed.flowspec:1:1:delete gobmp.parsed.flowspec_v4:1:1:delete gobmp.parsed.flowspec_v6:1:1:delete gobmp.parsed.ls_prefix:1:1:delete gobmp.parsed.ls_srv6_sid:1:1:delete gobmp.parsed.evpn:1:1:delete gobmp.parsed.statistics:1:1:delete gobmp.parsed.mup:1:1:delete gobmp.parsed.mup_v4:1:1:delete gobmp.parsed.mup_v6:1:1:delete"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # This testbed intentionally has one broker. Without these settings,
+      # Kafka cannot create __consumer_offsets with its default RF of 3 and
+      # validator-v2 consumer groups remain stuck at CoordinatorNotAvailable.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-mup:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      BOOTSTRAP_SERVERS: kafka-mup:9092
+    networks:
+      bgp-mup:
+        ipv4_address: 172.30.0.6
+    healthcheck:
+      test: ps augwwx | egrep [S]upportedKafka
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  gobgp:
+    # CI builds this image from the pinned official osrg/gobgp source tag.
+    image: ${GOBGP_IMAGE:-localhost/gobgp-mup:v4.8.0}
+    container_name: gobgp-mup
+    hostname: gobgp-mup
+    restart: on-failure
+    command: ["/usr/local/bin/gobgpd", "-f", "/config/gobgp.toml"]
+    volumes:
+      - ./gobgp-mup.toml:/config/gobgp.toml:ro
+    networks:
+      bgp-mup:
+        ipv4_address: 172.30.0.2
+    depends_on:
+      - gobmp
+
+  bgpinjector:
+    image: ${BGPINJECTOR_IMAGE:-docker.io/sbezverk/bgpinjector:latest}
+    container_name: bgpinjector-mup
+    hostname: bgpinjector-mup
+    restart: on-failure
+    ports:
+      - 8080:8080
+    expose:
+      - 8080
+    entrypoint:
+      - /bgpinjector
+      - --api-address=0.0.0.0:8080
+      - --speaker-address=172.30.0.2:179
+      - --router-id=172.30.0.3
+      - --local-as=65000
+      - --hold-time=30
+      - --retry-interval=1s
+      - --next-hop-mode=preserve
+      - --rate=1
+      - --ingress-type=none
+    cap_add:
+      - NET_ADMIN
+    networks:
+      bgp-mup:
+        ipv4_address: 172.30.0.3
+    depends_on:
+      - gobgp

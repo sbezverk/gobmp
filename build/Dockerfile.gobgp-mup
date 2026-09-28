@@ -1,0 +1,24 @@
+# GoBGP does not publish a current versioned runtime image from its official
+# Docker Hub repository. Build the test image from the official upstream tag.
+ARG GOBGP_VERSION=v4.8.0
+
+FROM golang:1.25-alpine AS builder
+
+ARG GOBGP_VERSION
+
+RUN apk add --no-cache git
+
+WORKDIR /src
+RUN git clone --depth 1 --branch "${GOBGP_VERSION}" https://github.com/osrg/gobgp.git .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/gobgpd ./cmd/gobgpd && \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/gobgp ./cmd/gobgp
+
+FROM alpine:3.22
+
+RUN apk add --no-cache ca-certificates
+
+COPY --from=builder /out/gobgpd /usr/local/bin/gobgpd
+COPY --from=builder /out/gobgp /usr/local/bin/gobgp
+
+ENTRYPOINT ["/usr/local/bin/gobgpd"]
