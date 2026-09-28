@@ -90,6 +90,14 @@ func UnmarshalEVPNLeafAD(b []byte) (*LeafAD, error) {
 	if len(b) < 2 {
 		return nil, fmt.Errorf("invalid length of Leaf A-D route: need at least 2 bytes for Route Key header, have %d", len(b))
 	}
+	// The Route Key "is the NLRI of the route for which this Leaf A-D route
+	// is generated" (RFC 9572 Section 3.3); every EVPN route type has a
+	// non-empty Route Type specific field, so a zero Length embeds no route.
+	// The embedded Route Type is not restricted: Section 3.3 allows "other
+	// types of routes that may be defined in the future".
+	if b[1] == 0 {
+		return nil, fmt.Errorf("invalid Leaf A-D Route Key: embedded route type %d has zero length", b[0])
+	}
 	keyLen := 2 + int(b[1])
 	if keyLen > len(b) {
 		return nil, fmt.Errorf("invalid length of Leaf A-D route: Route Key declares %d bytes, have %d remaining", keyLen, len(b))

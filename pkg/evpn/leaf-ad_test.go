@@ -30,20 +30,6 @@ func TestUnmarshalEVPNLeafAD_Valid(t *testing.T) {
 		wantOriginatorIP  []byte
 	}{
 		{
-			// Smallest Route Key the parser accepts: just the Type+Length
-			// header with a zero-length value (2 bytes total). Not a valid
-			// EVPN route; it exercises the forward-parse boundary.
-			name: "IPv4 originator with minimal (2-byte header) route key",
-			input: []byte{
-				0x01, 0x00, // Route Key: Type=1, Length=0 (no value)
-				32,           // Originator's Addr Length = 32 bits
-				192, 0, 2, 1, // Originator's Addr - 192.0.2.1
-			},
-			wantRouteKeyLen:   2,
-			wantOriginatorLen: 32,
-			wantOriginatorIP:  []byte{192, 0, 2, 1},
-		},
-		{
 			name: "IPv4 originator with IMET route key",
 			input: append(
 				imetRouteKey(200),
@@ -52,17 +38,6 @@ func TestUnmarshalEVPNLeafAD_Valid(t *testing.T) {
 			wantRouteKeyLen:   19,
 			wantOriginatorLen: 32,
 			wantOriginatorIP:  []byte{198, 51, 100, 1},
-		},
-		{
-			name: "IPv6 originator with minimal (2-byte header) route key",
-			input: []byte{
-				0x01, 0x00, // Route Key: Type=1, Length=0 (no value)
-				128,                                                        // Originator's Addr Length = 128 bits
-				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, // 2001:db8::1
-			},
-			wantRouteKeyLen:   2,
-			wantOriginatorLen: 128,
-			wantOriginatorIP:  []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 		},
 		{
 			name: "IPv6 originator with Type 9 Per-Region I-PMSI route key",
@@ -107,7 +82,7 @@ func TestUnmarshalEVPNLeafAD_Valid(t *testing.T) {
 			wantOriginatorIP:  []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
 		},
 		{
-			// RFC 9572 AF-5 counterexample: Route Key = IMET route whose RD
+			// RFC 9572 Section 3.3 counterexample: Route Key = IMET route whose RD
 			// carries IPv4 10.0.0.128 (last octet 0x80/128), immediately
 			// followed by an IPv4 (32-bit) originator. Backward parsing
 			// (unmodified code) reads b[len-17]==128 and misreads this as a
@@ -182,6 +157,26 @@ func TestUnmarshalEVPNLeafAD_Invalid(t *testing.T) {
 			name:        "too short - only 1 byte, no room for Route Key header",
 			input:       []byte{0x01},
 			errContains: "invalid length",
+		},
+		{
+			// RFC 9572 Section 3.3: the Route Key is the NLRI of the
+			// triggering route; a zero-length value embeds no route.
+			name: "zero-length Route Key value with IPv4 originator",
+			input: []byte{
+				0x01, 0x00, // Route Key: Type=1, Length=0 (no value)
+				32,           // Originator's Addr Length = 32 bits
+				192, 0, 2, 1, // Originator's Addr - 192.0.2.1
+			},
+			errContains: "embedded route type 1 has zero length",
+		},
+		{
+			name: "zero-length Route Key value with IPv6 originator",
+			input: []byte{
+				0x0a, 0x00, // Route Key: Type=10 (S-PMSI A-D), Length=0
+				128,                                                        // Originator's Addr Length = 128 bits
+				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, // 2001:db8::1
+			},
+			errContains: "embedded route type 10 has zero length",
 		},
 		{
 			name: "Route Key length byte exceeds remaining buffer",
