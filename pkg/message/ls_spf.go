@@ -121,8 +121,9 @@ func splitLSNLRI80(nlri *ls.NLRI71, update *bgp.Update) (valid, invalid *ls.NLRI
 
 // validateLSNLRI80Element validates one Element's descriptor and mandatory
 // metric TLV per RFC 9815 Section 5.2.1 (Node/Link/Prefix constraints).
-// Element types outside RFC 9815's defined set are rejected rather than
-// published unvalidated.
+// Other Element types pass through unchanged: RFC 9552 Section 5.2, "An
+// implementation MUST handle unknown Link-State NLRI types as opaque objects
+// and MUST preserve and propagate them."
 func validateLSNLRI80Element(element ls.Element, attribute *bgpls.NLRI) error {
 	switch element.Type {
 	case 1:
@@ -164,12 +165,15 @@ func validateLSNLRI80Element(element ls.Element, attribute *bgpls.NLRI) error {
 		}
 		return validateLSNLRI80Metric(bgpLSPrefixMetricTLV, attribute, false)
 	default:
-		return fmt.Errorf("bgp-ls-spf NLRI element type %d is not supported", element.Type)
+		return nil
 	}
 }
 
-// validateLSNLRI80NodeDescriptor checks the mandatory Autonomous System (512)
-// and BGP Router-ID (516) sub-TLVs per RFC 9815 Section 5.2.
+// validateLSNLRI80NodeDescriptor checks the length of the Autonomous System
+// (512) and BGP Router-ID (516) sub-TLVs that RFC 9815 Section 5.2 requires.
+// An absent one is not malformed: per RFC 9815 Section 5.1.1, "If a mandatory
+// TLV is not present, the NLRI MUST NOT be used in the BGP SPF route
+// calculation", which is the SPF speaker's decision, not a withdrawal.
 func validateLSNLRI80NodeDescriptor(descriptor *base.NodeDescriptor) error {
 	if descriptor == nil {
 		return fmt.Errorf("missing node descriptor")
@@ -182,8 +186,11 @@ func validateLSNLRI80NodeDescriptor(descriptor *base.NodeDescriptor) error {
 		{typeID: 516, length: 4},
 	} {
 		tlv, ok := descriptor.SubTLV[typeAndLength.typeID]
-		if !ok || tlv.Length != typeAndLength.length || len(tlv.Value) != int(typeAndLength.length) {
-			return fmt.Errorf("node descriptor requires TLV %d with length %d", typeAndLength.typeID, typeAndLength.length)
+		if !ok {
+			continue
+		}
+		if tlv.Length != typeAndLength.length || len(tlv.Value) != int(typeAndLength.length) {
+			return fmt.Errorf("node descriptor TLV %d has length %d, want %d", typeAndLength.typeID, tlv.Length, typeAndLength.length)
 		}
 	}
 	return nil

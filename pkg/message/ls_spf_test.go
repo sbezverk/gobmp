@@ -132,14 +132,26 @@ func TestValidateLSNLRI80Element(t *testing.T) {
 			wantErr: "missing node descriptor",
 		},
 		{
-			name: "missing BGP Router ID",
+			// RFC 9815 Section 5.1.1: a missing mandatory TLV excludes the
+			// NLRI from SPF; it is not malformed.
+			name: "missing BGP Router ID is not malformed",
 			element: ls.Element{Type: 1, LS: &base.NodeNLRI{
 				ProtocolID: base.Direct,
 				LocalNode: &base.NodeDescriptor{SubTLV: map[uint16]base.TLV{
 					512: {Type: 512, Length: 4, Value: []byte{0, 0, 0xfd, 0xe8}},
 				}},
 			}},
-			wantErr: "TLV 516",
+		},
+		{
+			name: "BGP Router ID with wrong length",
+			element: ls.Element{Type: 1, LS: &base.NodeNLRI{
+				ProtocolID: base.Direct,
+				LocalNode: &base.NodeDescriptor{SubTLV: map[uint16]base.TLV{
+					512: {Type: 512, Length: 4, Value: []byte{0, 0, 0xfd, 0xe8}},
+					516: {Type: 516, Length: 3, Value: []byte{10, 0, 0}},
+				}},
+			}},
+			wantErr: "TLV 516 has length 3, want 4",
 		},
 		{
 			name:      "valid link",
@@ -245,9 +257,10 @@ func TestValidateLSNLRI80Element(t *testing.T) {
 			wantErr: "address family link descriptor TLV has length 2",
 		},
 		{
-			name:    "unsupported element type is rejected",
+			// RFC 9552 Section 5.2: other NLRI types are preserved and
+			// propagated, not validated against Node/Link/Prefix rules.
+			name:    "SRv6 SID element type passes through",
 			element: ls.Element{Type: 6, LS: nil},
-			wantErr: "not supported",
 		},
 	}
 
@@ -358,14 +371,14 @@ func TestSplitLSNLRI80(t *testing.T) {
 			wantInvalid: 1,
 		},
 		{
-			name: "unsupported element type is withdrawn, not published unchecked",
+			name: "SRv6 SID element type is preserved, not withdrawn",
 			nlri: &ls.NLRI71{NLRI: []ls.Element{
 				{Type: 1, LS: node},
 				{Type: 6, LS: nil},
 			}},
 			update:      testLSUpdate(testLSSequence(), testLSStatus()),
-			wantValid:   1,
-			wantInvalid: 1,
+			wantValid:   2,
+			wantInvalid: 0,
 		},
 	}
 
