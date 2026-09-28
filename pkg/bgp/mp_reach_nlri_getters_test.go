@@ -382,8 +382,9 @@ func TestMPReachNLRI_GetNLRIRTC(t *testing.T) {
 // its own length (16 bytes here), never from the AFI (AddressFamilyID).
 func TestMPReachNLRI_GetNLRIMCASTVPN_WithData(t *testing.T) {
 	routeKey := []byte{
-		0x01, 0x08, // Route Key: referenced route type 1, length 8
+		0x01, 0x0c, // Route Key: referenced route type 1, length 12
 		0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD 100:200
+		0x0a, 0x00, 0x00, 0x01, // referenced route's Originating Router 10.0.0.1
 	}
 	type4Data := append(routeKey,
 		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,

@@ -474,14 +474,15 @@ func TestRFC6514_Type3_InterfaceMethods(t *testing.T) {
 // "ipv6" flag derived from AFI -- both wrong per RFC; fixed here.
 
 // makeSPMSIValue builds an S-PMSI A-D route-type-specific value (RD + source
-// + group), used as the payload an example Leaf A-D Route Key references.
+// + group + Originating Router's IP 10.0.0.1, RFC 6514 Section 4.3), used as
+// the payload an example Leaf A-D Route Key references.
 func makeSPMSIValue(rd []byte, src, grp [4]byte) []byte {
 	v := append([]byte{}, rd...)
 	v = append(v, 32)
 	v = append(v, src[:]...)
 	v = append(v, 32)
 	v = append(v, grp[:]...)
-	return v
+	return append(v, 10, 0, 0, 1)
 }
 
 // wrapNLRI prefixes value with its MCAST-VPN route type/length header
@@ -525,7 +526,7 @@ func TestRFC6514_Type4_IPv6Canonical(t *testing.T) {
 }
 
 // TestRFC6514_Type4_AFI2_IPv4Originator_Mismatch reproduces the confirmed bug
-// (docs/af-discriminator-audit.md AF-4): an AFI 2 (IPv6) customer MVPN over
+// (RFC 6515 Section 2): an AFI 2 (IPv6) customer MVPN over
 // an IPv4 provider core carries a 4-byte Originating Router's IP. Fails
 // against the pre-fix code, which infers a 16-byte originator from the AFI
 // and either rejects the route outright or steals bytes from the Route Key.
@@ -593,7 +594,7 @@ func TestRFC6514_Type4_OriginatorLengthInvalid(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			routeKey := wrapNLRI(1, makeRD(1, 1))
+			routeKey := wrapNLRI(1, append(append([]byte{}, makeRD(1, 1)...), 10, 0, 0, 1))
 			input := append(append([]byte{}, routeKey...), make([]byte, tt.originatorLen)...)
 			if _, err := UnmarshalType4(input); err == nil {
 				t.Fatalf("expected error for %d-byte originator", tt.originatorLen)
@@ -629,8 +630,9 @@ func TestRFC7524_Type4_GTM(t *testing.T) {
 			origIP:   []byte{10, 0, 0, 2},
 		},
 		{
-			name:     "(*,G) RD ff, wildcard source, bit lengths",
-			routeKey: cat(rdFF, []byte{0, 32, 232, 1, 1, 1}, []byte{10, 0, 0, 1}),
+			// RFC 7524 Section 6.2.2: for (*,G) the Multicast Source is the RP.
+			name:     "(*,G) RD ff, RP as source",
+			routeKey: cat(rdFF, []byte{4, 192, 0, 2, 9, 4, 232, 1, 1, 1}, []byte{10, 0, 0, 1}),
 			origIP:   []byte{10, 0, 0, 2},
 		},
 		{
@@ -639,11 +641,14 @@ func TestRFC7524_Type4_GTM(t *testing.T) {
 			origIP:   v6(2),
 		},
 		{
-			name: "IPv6 (S,G) with bit and octet lengths",
-			// RFC 7524 Section 6.2.2: 128-bit Source and 16-octet Group
-			// lengths both select IPv6 addresses.
-			routeKey: cat(rd0, []byte{128}, v6(1), []byte{16}, v6(2), v6(3)),
+			name:     "IPv6 (S,G) with IPv6 PE and originator",
+			routeKey: cat(rd0, []byte{16}, v6(1), []byte{16}, v6(2), v6(3)),
 			origIP:   v6(4),
+		},
+		{
+			name:     "IPv6 (S,G) with IPv4 PE and originator",
+			routeKey: cat(rd0, []byte{16}, v6(1), []byte{16}, v6(2), []byte{10, 0, 0, 1}),
+			origIP:   []byte{10, 0, 0, 2},
 		},
 	}
 	for _, tt := range tests {
@@ -671,14 +676,88 @@ func TestRFC7524_Type4_GTM_Invalid(t *testing.T) {
 	}{
 		{name: "missing source length", input: rd0},
 		{name: "invalid source length", input: append(append([]byte{}, rd0...), 5, 1, 2, 3, 4, 5)},
-		{name: "truncated group", input: append(append([]byte{}, rd0...), 0, 4, 232)},
-		{name: "mixed-family PE and originator (20 bytes)", input: append(append([]byte{}, rd0...), 0, 0,
+		// RFC 7524 Section 6.2.2: lengths are "either 4 or 16"; the RFC 6625
+		// wildcard (0) and RFC 6514 bit lengths (32/128) are other encodings.
+		{
+			name:    "wildcard source length 0",
+			input:   append(append([]byte{}, rd0...), 0, 4, 232, 1, 1, 1, 10, 0, 0, 1, 10, 0, 0, 2),
+			wantErr: "invalid GTM multicast address length 0 (expected 4 or 16)",
+		},
+		{
+			name:    "wildcard group length 0",
+			input:   append(append([]byte{}, rd0...), 4, 192, 0, 2, 1, 0, 10, 0, 0, 1, 10, 0, 0, 2),
+			wantErr: "invalid GTM multicast address length 0 (expected 4 or 16)",
+		},
+		{
+			name:    "bit-length source 32",
+			input:   append(append([]byte{}, rd0...), 32, 192, 0, 2, 1, 4, 232, 1, 1, 1, 10, 0, 0, 1, 10, 0, 0, 2),
+			wantErr: "invalid GTM multicast address length 32 (expected 4 or 16)",
+		},
+		{
+			name:    "bit-length group 128",
+			input:   append(append([]byte{}, rd0...), 4, 192, 0, 2, 1, 128, 232, 1, 1, 1, 10, 0, 0, 1, 10, 0, 0, 2),
+			wantErr: "invalid GTM multicast address length 128 (expected 4 or 16)",
+		},
+		{
+			name:    "bit-length group 32",
+			input:   append(append([]byte{}, rd0...), 4, 192, 0, 2, 1, 32, 232, 1, 1, 1, 10, 0, 0, 1, 10, 0, 0, 2),
+			wantErr: "invalid GTM multicast address length 32 (expected 4 or 16)",
+		},
+		{
+			name:    "bit-length source 128",
+			input:   append(append([]byte{}, rd0...), 128, 192, 0, 2, 1, 4, 232, 1, 1, 1, 10, 0, 0, 1, 10, 0, 0, 2),
+			wantErr: "invalid GTM multicast address length 128 (expected 4 or 16)",
+		},
+		{name: "truncated group", input: append(append([]byte{}, rd0...), 4, 192, 0, 2, 1, 4, 232)},
+		{name: "mixed-family PE and originator (20 bytes)", input: append(append([]byte{}, rd0...), 4, 192, 0, 2, 1, 4, 232, 1, 1, 1,
 			10, 0, 0, 1, 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2)},
 		{
 			name: "mixed zero Route Key is not GTM",
 			// RFC 7524 Section 6.2.2: GTM requires an all-zero or all-0xff RD.
 			input:   []byte{0, 0, 1, 0, 0, 0, 0, 0},
-			wantErr: "invalid originating router IP length: 6 bytes (expected 4 or 16)",
+			wantErr: "invalid Type4 Route Key route type 0 (expected 1, 2 or 3)",
+		},
+		{
+			// RFC 7524 Section 6.2.2: a framed Route Key's type is 1, 2 or 3.
+			name:    "framed Route Key with route type 4",
+			input:   []byte{4, 1, 0xaa, 10, 0, 0, 1},
+			wantErr: "invalid Type4 Route Key route type 4 (expected 1, 2 or 3)",
+		},
+		{
+			// RFC 7524 Section 6.2.2: types 5 and above are not trigger routes,
+			// even with an RD that is not all 0x00 or all 0xff.
+			name:    "framed Route Key with route type 0xfe",
+			input:   []byte{0xfe, 1, 0xaa, 10, 0, 0, 1},
+			wantErr: "invalid Type4 Route Key route type 254 (expected 1, 2 or 3)",
+		},
+		{
+			name:    "framed Route Key with zero length",
+			input:   []byte{3, 0, 10, 0, 0, 1},
+			wantErr: "invalid Type4 Route Key: embedded route type 3: invalid Type3 length: 0 bytes (minimum 10)",
+		},
+		{
+			// RFC 6515 Section 2: the embedded I-PMSI route's own originator
+			// must be 4 or 16 octets; 1-7 bytes cannot even hold its RD.
+			name:    "embedded Type 1 shorter than an RD",
+			input:   []byte{1, 1, 0, 10, 0, 0, 2},
+			wantErr: "invalid Type4 Route Key: embedded route type 1: invalid Type1 length: 1 bytes (minimum 12)",
+		},
+		{
+			name: "embedded Type 1 with 3-byte originator",
+			input: []byte{1, 11, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 0,
+				10, 0, 0, 2},
+			wantErr: "invalid Type4 Route Key: embedded route type 1: invalid Type1 length: 11 bytes (minimum 12)",
+		},
+		{
+			name:    "embedded Type 2 not 12 bytes",
+			input:   []byte{2, 8, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 0, 2},
+			wantErr: "invalid Type4 Route Key: embedded route type 2: invalid Type2 length: 8 bytes (expected 12)",
+		},
+		{
+			name: "embedded Type 3 with 5-byte originator",
+			input: []byte{3, 23, 0, 0, 0, 1, 0, 0, 0, 1, 32, 192, 0, 2, 1, 32, 232, 1, 1, 1, 10, 0, 0, 1, 0,
+				10, 0, 0, 2},
+			wantErr: "invalid Type4 Route Key: embedded route type 3: invalid originating router IP length: 5 bytes (expected 4 or 16)",
 		},
 	}
 	for _, tt := range tests {

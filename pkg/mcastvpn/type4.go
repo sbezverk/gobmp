@@ -48,6 +48,25 @@ func UnmarshalType4(b []byte) (*Type4, error) {
 	if keyLen > len(b) {
 		return nil, fmt.Errorf("invalid Type4 Route Key length %d: exceeds remaining %d bytes", b[1], len(b)-2)
 	}
+	// RFC 7524 Section 6.2.2: "If the value of this octet is 0x01, 0x02, or
+	// 0x03, then this Leaf A-D route was originated in response to an S-PMSI
+	// or I-PMSI A-D route." Any other non-GTM value is neither form. The
+	// embedded route is validated by its own parser, so the RFC 6515 Section 2
+	// originator-length rule applies to it as it does to a top-level route.
+	var err error
+	switch b[0] {
+	case 1:
+		_, err = UnmarshalType1(b[2:keyLen])
+	case 2:
+		_, err = UnmarshalType2(b[2:keyLen])
+	case 3:
+		_, err = UnmarshalType3(b[2:keyLen])
+	default:
+		return nil, fmt.Errorf("invalid Type4 Route Key route type %d (expected 1, 2 or 3)", b[0])
+	}
+	if err != nil {
+		return nil, fmt.Errorf("invalid Type4 Route Key: embedded route type %d: %w", b[0], err)
+	}
 	originatorLen := len(b) - keyLen
 	if originatorLen != 4 && originatorLen != 16 {
 		return nil, fmt.Errorf("invalid originating router IP length: %d bytes (expected 4 or 16)", originatorLen)
@@ -77,19 +96,16 @@ func isGTMRouteKey(b []byte) bool {
 	return true
 }
 
-// gtmAddrLen converts an RFC 7524 Section 6.2.2 Multicast Source/Group Length
-// to octets. The length is accepted in octets (4/16) or, as in RFC 6514 S-PMSI
-// routes, in bits (32/128); 0 is a wildcard (RFC 6625).
+// gtmAddrLen validates an RFC 7524 Section 6.2.2 Multicast Source/Group
+// Length: "Multicast Source Length and Multicast Group Length are set to
+// either 4 or 16". The bit lengths (32/128) of RFC 6514 S-PMSI routes and the
+// RFC 6625 wildcard (0) belong to other encodings and are rejected here.
 func gtmAddrLen(l byte) (int, error) {
 	switch l {
-	case 0:
-		return 0, nil
-	case 4, 32:
-		return 4, nil
-	case 16, 128:
-		return 16, nil
+	case 4, 16:
+		return int(l), nil
 	default:
-		return 0, fmt.Errorf("invalid GTM multicast address length %d", l)
+		return 0, fmt.Errorf("invalid GTM multicast address length %d (expected 4 or 16)", l)
 	}
 }
 
