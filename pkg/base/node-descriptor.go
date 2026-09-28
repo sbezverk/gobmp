@@ -61,7 +61,22 @@ func (nd *NodeDescriptor) GetOSPFAreaID() string {
 // from an IPv4 or IPv6 address", so 16 octets is an IPv6 address. Length is
 // discriminated from len(tlv.Value), not the separate tlv.Length field, so
 // the two can never disagree.
+//
+// An 8-octet value is ambiguous without the NLRI Protocol-ID, so it is
+// returned as raw hex; use GetIGPRouterIDWithProtocol when the Protocol-ID
+// is known.
 func (nd *NodeDescriptor) GetIGPRouterID() string {
+	return nd.GetIGPRouterIDWithProtocol(0)
+}
+
+// GetIGPRouterIDWithProtocol returns the IGP Router ID decoded for the NLRI
+// Protocol-ID proto. Per RFC 9552 Section 5.2.1.4 an 8-octet value is "the
+// 4-octet Router-ID of the [DR] followed by the 4-octet IPv4 address of the
+// DR's interface to the LAN" for an OSPFv2 pseudonode, but "the 4-octet
+// Router-ID of the [DR] followed by the 4-octet interface identifier of the
+// DR's interface to the LAN" for an OSPFv3 pseudonode: the Protocol-ID, not
+// the length, selects how the second half is rendered.
+func (nd *NodeDescriptor) GetIGPRouterIDWithProtocol(proto ProtoID) string {
 	tlv, ok := nd.SubTLV[515]
 	if !ok {
 		return ""
@@ -75,10 +90,18 @@ func (nd *NodeDescriptor) GetIGPRouterID() string {
 		// + 1-octet PSN): hex-encoded, 2-byte groups dot-separated.
 		return isisNodeIDHex(tlv.Value)
 	case 8:
-		// OSPF pseudonode: 4-octet DR Router-ID + 4-octet DR interface IPv4
-		// address (OSPFv2) or interface identifier (OSPFv3), rendered
-		// "a.b.c.d:e.f.g.h" as in the RFC 9552 Section 5.11 example.
-		return net.IP(tlv.Value[0:4]).To4().String() + ":" + net.IP(tlv.Value[4:8]).To4().String()
+		// OSPF pseudonode: 4-octet DR Router-ID followed by the DR interface
+		// IPv4 address (OSPFv2, "a.b.c.d:e.f.g.h") or the 32-bit interface
+		// identifier (OSPFv3, "a.b.c.d:<decimal>").
+		dr := net.IP(tlv.Value[0:4]).To4().String()
+		switch proto {
+		case OSPFv2:
+			return dr + ":" + net.IP(tlv.Value[4:8]).To4().String()
+		case OSPFv3:
+			return dr + ":" + strconv.FormatUint(uint64(binary.BigEndian.Uint32(tlv.Value[4:8])), 10)
+		default:
+			return isisNodeIDHex(tlv.Value)
+		}
 	case 16:
 		// Direct or Static configuration: IPv6 address.
 		return net.IP(tlv.Value).String()

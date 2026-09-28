@@ -45,7 +45,7 @@ func (sr *SIDNLRI) GetSRv6SIDIGPRouterID() string {
 	if sr.LocalNode == nil {
 		return ""
 	}
-	return sr.LocalNode.GetIGPRouterID()
+	return sr.LocalNode.GetIGPRouterIDWithProtocol(sr.ProtocolID)
 }
 
 // GetSRv6SIDASN returns Autonomous System Number used to uniquely identify BGP-LS domain

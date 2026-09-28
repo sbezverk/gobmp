@@ -92,8 +92,8 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	}
 	lsprefix, err := update.GetBGPLSAttribute()
 	if err == nil {
-		// Hardening per AF-3 (docs/af-discriminator-audit.md): router-ID TLV
-		// is chosen by which TLV is present, not by the prefix NLRI type.
+		// The router-ID TLV (RFC 9552 Section 5.3.1.4, TLV 1028/1029) is
+		// chosen by which TLV is present, not by the prefix NLRI type.
 		// Prefer IPv4, fall back to IPv6.
 		msg.RouterID = lsprefix.GetLocalIPv4RouterID()
 		if msg.RouterID == "" {

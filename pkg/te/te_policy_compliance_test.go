@@ -875,7 +875,7 @@ func TestTEPolicy_Interface_IPv4(t *testing.T) {
 // TestTEPolicy_Interface_ValidLengths covers the 21-octet IPv6 form (5
 // header/ID octets + 16-octet Interface Address, draft-ietf-idr-te-lsp-
 // distribution Section 4.6.1). Previously encoded a 23-octet/18-octet-address
-// input, which was the AF-6 bug this sub-TLV's decoder accepted incorrectly.
+// input, which this sub-TLV's decoder previously accepted incorrectly.
 func TestTEPolicy_Interface_ValidLengths(t *testing.T) {
 	b := make([]byte, 21)
 	b[0] = 0x00
@@ -895,8 +895,7 @@ func TestTEPolicy_Interface_ValidLengths(t *testing.T) {
 	}
 }
 
-// TestTEPolicy_Interface_IPv6 covers AF-6 (docs/af-discriminator-audit.md):
-// per draft-ietf-idr-te-lsp-distribution Section 4.6.1, the MPLS Cross
+// TestTEPolicy_Interface_IPv6: per draft-ietf-idr-te-lsp-distribution Section 4.6.1, the MPLS Cross
 // Connect Interface sub-TLV is "Flags(1) + Local Interface Identifier(4) +
 // Interface Address (4 or 16 octets)", so a conforming IPv6 interface
 // address sub-TLV is 5+16=21 octets, not 23.

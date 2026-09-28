@@ -101,15 +101,18 @@ func TestNodeDescriptorGetOSPFAreaID(t *testing.T) {
 	}
 }
 
-// TestNodeDescriptorGetIGPRouterID covers AF-7 (RFC 9552 Section 5.2.1.4):
+// TestNodeDescriptorGetIGPRouterID covers RFC 9552 Section 5.2.1.4:
 // IGP Router-ID length identifies the node type - 4 (OSPF non-pseudonode),
 // 6 (IS-IS non-pseudonode), 7 (IS-IS pseudonode), 8 (OSPF pseudonode) or 16
-// (Direct/Static IPv6 address), discriminated on len(tlv.Value).
+// (Direct/Static IPv6 address), discriminated on len(tlv.Value). An 8-byte
+// value additionally needs the NLRI Protocol-ID: OSPFv2 carries an IPv4
+// interface address, OSPFv3 a 32-bit interface identifier.
 func TestNodeDescriptorGetIGPRouterID(t *testing.T) {
 	tests := []struct {
-		name string
-		nd   *NodeDescriptor
-		want string
+		name  string
+		nd    *NodeDescriptor
+		proto ProtoID
+		want  string
 	}{
 		{
 			name: "4-byte OSPF non-pseudonode router-ID",
@@ -127,14 +130,33 @@ func TestNodeDescriptorGetIGPRouterID(t *testing.T) {
 			want: "0000.0c00.1234.01",
 		},
 		{
-			name: "8-byte OSPF pseudonode (DR router-ID + DR interface addr)",
-			nd:   makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 8, Value: []byte{10, 0, 0, 1, 192, 168, 1, 1}}}),
-			want: "10.0.0.1:192.168.1.1",
+			name:  "8-byte OSPFv2 pseudonode (DR router-ID + DR interface IPv4 address)",
+			nd:    makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 8, Value: []byte{10, 0, 0, 1, 192, 168, 1, 1}}}),
+			proto: OSPFv2,
+			want:  "10.0.0.1:192.168.1.1",
 		},
 		{
-			name: "mismatched-proxy: tlv.Length says 4 but Value is 8 bytes (OSPF pseudonode)",
-			nd:   makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 4, Value: []byte{10, 0, 0, 1, 192, 168, 1, 1}}}),
-			want: "10.0.0.1:192.168.1.1",
+			name:  "8-byte OSPFv3 pseudonode (DR router-ID + DR interface identifier)",
+			nd:    makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 8, Value: []byte{10, 0, 0, 1, 0, 0, 0x01, 0x02}}}),
+			proto: OSPFv3,
+			want:  "10.0.0.1:258",
+		},
+		{
+			name:  "mismatched-proxy: OSPFv3 interface identifier that looks like an IPv4 address",
+			nd:    makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 8, Value: []byte{10, 0, 0, 1, 192, 168, 1, 1}}}),
+			proto: OSPFv3,
+			want:  "10.0.0.1:3232235777",
+		},
+		{
+			name: "8-byte value without Protocol-ID keeps raw hex",
+			nd:   makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 8, Value: []byte{10, 0, 0, 1, 192, 168, 1, 1}}}),
+			want: "0a00.0001.c0a8.0101",
+		},
+		{
+			name:  "mismatched-proxy: tlv.Length says 4 but Value is 8 bytes (OSPFv2 pseudonode)",
+			nd:    makeNodeDesc(map[uint16]TLV{515: {Type: 515, Length: 4, Value: []byte{10, 0, 0, 1, 192, 168, 1, 1}}}),
+			proto: OSPFv2,
+			want:  "10.0.0.1:192.168.1.1",
 		},
 		{
 			name: "16-byte Direct/Static IPv6 address",
@@ -155,8 +177,39 @@ func TestNodeDescriptorGetIGPRouterID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.nd.GetIGPRouterID(); got != tt.want {
-				t.Errorf("GetIGPRouterID() = %q, want %q", got, tt.want)
+			if got := tt.nd.GetIGPRouterIDWithProtocol(tt.proto); got != tt.want {
+				t.Errorf("GetIGPRouterIDWithProtocol(%d) = %q, want %q", tt.proto, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestNodeNLRIGetIGPRouterIDProtocol decodes wire-format Node NLRIs so the
+// Protocol-ID byte, not a test-supplied value, selects the 8-byte rendering.
+func TestNodeNLRIGetIGPRouterIDProtocol(t *testing.T) {
+	tests := []struct {
+		name  string
+		proto ProtoID
+		want  string
+	}{
+		{name: "OSPFv2 pseudonode", proto: OSPFv2, want: "10.0.0.1:192.168.1.1"},
+		{name: "OSPFv3 pseudonode", proto: OSPFv3, want: "10.0.0.1:3232235777"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := []byte{
+				byte(tt.proto),
+				0, 0, 0, 0, 0, 0, 0, 0, // Identifier
+				0x01, 0x00, 0x00, 0x0c, // Local Node Descriptors, length 12
+				0x02, 0x03, 0x00, 0x08, // IGP Router-ID TLV 515, length 8
+				10, 0, 0, 1, 192, 168, 1, 1,
+			}
+			n, err := UnmarshalNodeNLRI(b)
+			if err != nil {
+				t.Fatalf("UnmarshalNodeNLRI() error = %v", err)
+			}
+			if got := n.GetNodeIGPRouterID(); got != tt.want {
+				t.Errorf("GetNodeIGPRouterID() = %q, want %q", got, tt.want)
 			}
 		})
 	}
