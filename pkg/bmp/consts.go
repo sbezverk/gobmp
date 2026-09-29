@@ -80,6 +80,9 @@ const (
 	MUPV4Msg = 224
 	// MUPV6Msg defines BMP Route Monitoring message carrying BGP-MUP IPv6 NLRI
 	MUPV6Msg = 226
+	// LSOpaqueMsg defines BMP Route Monitoring message carrying a BGP-LS NLRI
+	// of a type gobmp does not decode, published raw per RFC 9552 §5.2
+	LSOpaqueMsg = 23
 	// BMPRawMsg defines BMP RAW message type for unprocessed BMP messages
 	BMPRawMsg = 255
 )

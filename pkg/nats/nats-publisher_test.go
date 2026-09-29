@@ -46,6 +46,7 @@ func TestTopicForMessage(t *testing.T) {
 		{bmp.L3VPNV6Msg, l3vpnMessageV6Topic, true},
 		{bmp.LSPrefixMsg, lsPrefixMessageTopic, true},
 		{bmp.LSSRv6SIDMsg, lsSRv6SIDMessageTopic, true},
+		{bmp.LSOpaqueMsg, lsOpaqueMessageTopic, true},
 		{bmp.EVPNMsg, evpnMessageTopic, true},
 		{bmp.SRPolicyMsg, srPolicyMessageTopic, true},
 		{bmp.SRPolicyV4Msg, srPolicyMessageV4Topic, true},

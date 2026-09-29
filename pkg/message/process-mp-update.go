@@ -342,8 +342,22 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
 				continue
 			}
+		case 5:
+			glog.Warningf("NLRI 71 Sub type 5 (TE Policy) is decoded but not published")
 		default:
-			glog.Warningf("Unknown NLRI 71 Sub type %d", e.Type)
+			safi := uint8(71)
+			if spf {
+				safi = 80
+			}
+			msg, err := p.lsOpaque(e.Type, e.LS, safi, nlri.GetNextHop(), operation, ph)
+			if err != nil {
+				glog.Errorf("failed to produce ls_opaque message with error: %+v", err)
+				continue
+			}
+			if err := p.marshalAndPublish(&msg, bmp.LSOpaqueMsg, []byte(msg.RouterHash)); err != nil {
+				glog.Errorf("failed to process LSOpaque message with error: %+v", err)
+				continue
+			}
 		}
 
 	}
@@ -433,8 +447,19 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
 				continue
 			}
+		case 5:
+			glog.Warningf("NLRI 72 Sub type 5 (TE Policy) is decoded but not published")
 		default:
-			glog.Warningf("Unknown NLRI 72 Sub type %d", e.Type)
+			msg, err := p.lsOpaque(e.Type, e.LS, 72, nlri.GetNextHop(), operation, ph)
+			if err != nil {
+				glog.Errorf("failed to produce ls_opaque message with error: %+v", err)
+				continue
+			}
+			msg.RD = rd
+			if err := p.marshalAndPublish(&msg, bmp.LSOpaqueMsg, []byte(msg.RouterHash)); err != nil {
+				glog.Errorf("failed to process LSOpaque message with error: %+v", err)
+				continue
+			}
 		}
 	}
 }

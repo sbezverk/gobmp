@@ -419,8 +419,16 @@ func TestProcessNLRI72SubTypes_UnknownSubType(t *testing.T) {
 	p := &producer{publisher: rec}
 	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
 	p.processNLRI72SubTypes(mock, 0, ph, &bgp.Update{})
-	if len(rec.msgs) != 0 {
-		t.Errorf("unknown sub type should not publish; got %d messages", len(rec.msgs))
+	// RFC 9552 §5.2: unknown Link-State NLRI types MUST be preserved and propagated.
+	if len(rec.msgs) != 1 || rec.msgs[0].msgType != bmp.LSOpaqueMsg {
+		t.Fatalf("unknown sub type: got %d messages, want 1 on LSOpaque topic", len(rec.msgs))
+	}
+	var got LSOpaque
+	if err := json.Unmarshal(rec.msgs[0].payload, &got); err != nil {
+		t.Fatalf("published LSOpaque JSON: %v", err)
+	}
+	if got.NLRIType != 99 || got.NLRI != "ab" || got.RD != rd.String() || got.SAFI != 72 {
+		t.Errorf("published LSOpaque = type %d NLRI %q RD %q SAFI %d, want 99/ab/%q/72", got.NLRIType, got.NLRI, got.RD, got.SAFI, rd.String())
 	}
 }
 

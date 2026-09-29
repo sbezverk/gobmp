@@ -35,6 +35,7 @@ func TestPublishMessageTopics(t *testing.T) {
 		{name: "L3VPN IPv6", msgType: bmp.L3VPNV6Msg, topic: L3vpnMessageV6Topic},
 		{name: "LS prefix", msgType: bmp.LSPrefixMsg, topic: LSPrefixMessageTopic},
 		{name: "LS SRv6 SID", msgType: bmp.LSSRv6SIDMsg, topic: LSSRv6SIDMessageTopic},
+		{name: "LS opaque", msgType: bmp.LSOpaqueMsg, topic: LSOpaqueMessageTopic},
 		{name: "EVPN", msgType: bmp.EVPNMsg, topic: EVPNMessageTopic},
 		{name: "SR policy", msgType: bmp.SRPolicyMsg, topic: SRPolicyMessageTopic},
 		{name: "SR policy IPv4", msgType: bmp.SRPolicyV4Msg, topic: SRPolicyMessageV4Topic},
