@@ -10,7 +10,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update, isIPv6 bool) (*LSLink, error) {
+func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSLink, error) {
 	var operation string
 	switch op {
 	case 0:
@@ -106,12 +106,18 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		msg.AreaID = "0"
 	}
 	if lslink, err := update.GetBGPLSAttribute(); err == nil {
-		if isIPv6 {
+		// RFC 9552 Section 5.3.2.1: local/remote IPv4 (1028/1030) and IPv6
+		// (1029/1031) router-ID TLVs are chosen by which TLV is present, never
+		// by the BMP peer's address family (V-flag) - both local and remote
+		// auxiliary router-IDs MUST be included independently of peer
+		// transport. Prefer IPv4, fall back to IPv6.
+		msg.RouterID = lslink.GetLocalIPv4RouterID()
+		if msg.RouterID == "" {
 			msg.RouterID = lslink.GetLocalIPv6RouterID()
+		}
+		msg.RemoteRouterID = lslink.GetRemoteIPv4RouterID()
+		if msg.RemoteRouterID == "" {
 			msg.RemoteRouterID = lslink.GetRemoteIPv6RouterID()
-		} else {
-			msg.RouterID = lslink.GetLocalIPv4RouterID()
-			msg.RemoteRouterID = lslink.GetRemoteIPv4RouterID()
 		}
 		if msd, err := lslink.GetLinkMSD(); err == nil {
 			msg.LinkMSD = msd

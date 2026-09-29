@@ -91,12 +91,12 @@ func (l *LinkNLRI) GetRemoteASN() uint32 {
 
 // GetLocalIGPRouterID returns value of Local node IGP router id
 func (l *LinkNLRI) GetLocalIGPRouterID() string {
-	return l.LocalNode.GetIGPRouterID()
+	return l.LocalNode.GetIGPRouterIDWithProtocol(l.ProtocolID)
 }
 
 // GetRemoteIGPRouterID returns value of Remote node IGP router id
 func (l *LinkNLRI) GetRemoteIGPRouterID() string {
-	return l.RemoteNode.GetIGPRouterID()
+	return l.RemoteNode.GetIGPRouterIDWithProtocol(l.ProtocolID)
 }
 
 // UnmarshalLinkNLRI builds Link NLRI object

@@ -73,7 +73,7 @@ func (p *PrefixNLRI) GetPrefixLSID() uint32 {
 
 // GetLocalIGPRouterID returns value of Local node IGP router id
 func (p *PrefixNLRI) GetLocalIGPRouterID() string {
-	return p.LocalNode.GetIGPRouterID()
+	return p.LocalNode.GetIGPRouterIDWithProtocol(p.ProtocolID)
 }
 
 // GetLocalASN returns value of Local Node's ASN

@@ -33,7 +33,7 @@ func (n *NodeNLRI) GetNodeLSID() uint32 {
 
 // GetNodeIGPRouterID returns a value of Node Descriptor TLV IGP Router ID
 func (n *NodeNLRI) GetNodeIGPRouterID() string {
-	return n.LocalNode.GetIGPRouterID()
+	return n.LocalNode.GetIGPRouterIDWithProtocol(n.ProtocolID)
 }
 
 // GetNodeASN returns Autonomous System Number used to uniqely identify BGP-LS domain

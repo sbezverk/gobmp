@@ -47,7 +47,7 @@ func TestLSNode_PopulatesOpaqueNodeAttribute(t *testing.T) {
 	}
 
 	p := &producer{}
-	msg, err := p.lsNode(node, "", 0, newPeerHeader(), update, false)
+	msg, err := p.lsNode(node, "", 0, newPeerHeader(), update)
 	if err != nil {
 		t.Fatalf("lsNode() error: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestLSLink_PopulatesOpaqueLinkAttribute(t *testing.T) {
 	}
 
 	p := &producer{}
-	msg, err := p.lsLink(link, "", 0, newPeerHeader(), update, false)
+	msg, err := p.lsLink(link, "", 0, newPeerHeader(), update)
 	if err != nil {
 		t.Fatalf("lsLink() error: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestLSNode_NoBGPLSAttributeLeavesOpaqueNil(t *testing.T) {
 		PathAttributes: []bgp.PathAttribute{},
 	}
 	p := &producer{}
-	msg, err := p.lsNode(node, "", 0, newPeerHeader(), update, false)
+	msg, err := p.lsNode(node, "", 0, newPeerHeader(), update)
 	if err != nil {
 		t.Fatalf("lsNode() error: %v", err)
 	}
