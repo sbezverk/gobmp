@@ -9,10 +9,31 @@ import (
 	"github.com/sbezverk/tools"
 )
 
+// AFLinkDescriptorTLV is the BGP-LS-SPF Address Family Link Descriptor TLV.
+// Per RFC 9815 Section 5.2.2.1 it may repeat: "an unnumbered link can be used
+// for both the IPv4 and IPv6 SPF computation by advertising separate Address
+// Family Link Descriptor TLVs for IPv4 and IPv6".
+const AFLinkDescriptorTLV = 1185
+
 // LinkDescriptor defines Link Descriptor object
 // https://tools.ietf.org/html/rfc7752#section-3.2.2
 type LinkDescriptor struct {
 	LinkTLV map[uint16]TLV
+	// AFLinkTLV holds every Address Family Link Descriptor TLV (1185) in
+	// wire order; LinkTLV keeps only the first.
+	AFLinkTLV []TLV
+}
+
+// GetAFLinkTLVs returns every Address Family Link Descriptor TLV (1185). A
+// descriptor built without UnmarshalLinkDescriptor falls back to LinkTLV.
+func (l *LinkDescriptor) GetAFLinkTLVs() []TLV {
+	if len(l.AFLinkTLV) > 0 {
+		return l.AFLinkTLV
+	}
+	if tlv, ok := l.LinkTLV[AFLinkDescriptorTLV]; ok {
+		return []TLV{tlv}
+	}
+	return nil
 }
 
 // GetLinkID returns Local and Remote Link ID as a slice of uint32
@@ -82,11 +103,12 @@ func UnmarshalLinkDescriptor(b []byte) (*LinkDescriptor, error) {
 	}
 	ld := LinkDescriptor{}
 	p := 0
-	ltlv, err := UnmarshalTLV(b[p : p+len(b)])
+	ltlv, repeated, err := unmarshalTLV(b[p:p+len(b)], map[uint16]bool{AFLinkDescriptorTLV: true})
 	if err != nil {
 		return nil, err
 	}
 	ld.LinkTLV = ltlv
+	ld.AFLinkTLV = repeated[AFLinkDescriptorTLV]
 
 	return &ld, nil
 }

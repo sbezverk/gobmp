@@ -58,7 +58,7 @@ func UnmarshalLSNLRI71(b []byte, pathID bool) (*NLRI71, error) {
 		p += 2
 		el.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		if el.Length == 0 {
+		if el.Length == 0 && isKnownNLRIType(el.Type) {
 			return nil, fmt.Errorf("NLRI71 TLV type %d has invalid zero length at offset %d", el.Type, p-4)
 		}
 		if p+int(el.Length) > len(b) {
@@ -90,9 +90,8 @@ func UnmarshalLSNLRI71(b []byte, pathID bool) (*NLRI71, error) {
 				return nil, err
 			}
 			el.LS = n
-			// TE Policy (SR Policy) NLRI - handled below in case 5
-			// Reference: draft-ietf-idr-te-lsp-distribution-14
 		case 5:
+			// SR Policy Candidate Path NLRI, RFC 9857 §3
 			n, err := te.UnmarshalTEPolicyNLRI(b[p : p+int(el.Length)])
 			if err != nil {
 				return nil, err
@@ -114,4 +113,15 @@ func UnmarshalLSNLRI71(b []byte, pathID bool) (*NLRI71, error) {
 	}
 
 	return &ls, nil
+}
+
+// maxKnownNLRIType is the highest Link-State NLRI type this package decodes
+// (1-4 RFC 9552 §5.2, 5 RFC 9857 §3, 6 RFC 9514 §6).
+const maxKnownNLRIType = 6
+
+// isKnownNLRIType reports whether t is a Link-State NLRI type decoded by this
+// package. Unknown types are kept as opaque bytes (RFC 9552 §5.2), and an
+// unknown type with no value portion has length zero (RFC 9552 §5.1).
+func isKnownNLRIType(t uint16) bool {
+	return t >= 1 && t <= maxKnownNLRIType
 }

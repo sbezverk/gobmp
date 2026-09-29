@@ -431,6 +431,24 @@ func (ls *NLRI) GetIGPMetric() uint32 {
 	return 0
 }
 
+// GetIGPMetricSPF returns the IGP Metric using the four-octet form mandated
+// by RFC 9815 Section 5.2.2 for BGP-LS-SPF (AFI 16388 / SAFI 80). Unlike
+// GetIGPMetric, it does not accept the shorter RFC 9552 encodings.
+func (ls *NLRI) GetIGPMetricSPF() uint32 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1095 {
+			continue
+		}
+		if tlv.Length != 4 || len(tlv.Value) != 4 {
+			glog.Errorf("Invalid length %d (value %d bytes) for BGP-LS-SPF IGP Metric TLV 1095, expected 4", tlv.Length, len(tlv.Value))
+			return 0
+		}
+		return binary.BigEndian.Uint32(tlv.Value)
+	}
+
+	return 0
+}
+
 // GetPrefixMetric returns  Prefix Metric
 func (ls *NLRI) GetPrefixMetric() uint32 {
 	for _, tlv := range ls.LS {

@@ -126,6 +126,29 @@ func TestUnmarshalLSNLRI71_ZeroLengthTLV(t *testing.T) {
 	}
 }
 
+// TestUnmarshalLSNLRI71_ZeroLengthUnknownType checks that an unknown NLRI type
+// with no value portion is kept, and does not drop the element after it.
+// RFC 9552 §5.1: "a TLV with no value portion would have a length of zero".
+func TestUnmarshalLSNLRI71_ZeroLengthUnknownType(t *testing.T) {
+	input := []byte{
+		0x00, 0x64, 0x00, 0x00, // Type 100, Length 0
+		0x00, 0x63, 0x00, 0x03, 0xde, 0xad, 0xbe, // Type 99, Length 3
+	}
+	got, err := UnmarshalLSNLRI71(input, false)
+	if err != nil {
+		t.Fatalf("UnmarshalLSNLRI71() error = %v", err)
+	}
+	if len(got.NLRI) != 2 {
+		t.Fatalf("UnmarshalLSNLRI71() returned %d elements, want 2", len(got.NLRI))
+	}
+	if b, ok := got.NLRI[0].LS.([]byte); !ok || got.NLRI[0].Type != 100 || len(b) != 0 {
+		t.Errorf("element 0 = type %d LS %#v, want type 100 with empty []byte", got.NLRI[0].Type, got.NLRI[0].LS)
+	}
+	if got.NLRI[1].Type != 99 {
+		t.Errorf("element 1 type = %d, want 99", got.NLRI[1].Type)
+	}
+}
+
 func TestUnmarshalLSNLRI71_TruncatedValue(t *testing.T) {
 	// Type=1 (Node), Length=100 but only 2 bytes of value
 	input := []byte{

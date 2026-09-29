@@ -65,6 +65,17 @@ func (mp *MPUnReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
 }
 
+// GetNLRI80 checks for BGP-LS-SPF NLRI (AFI 16388 / SAFI 80) and decodes its
+// RFC 9552 wire format. Per RFC 9815 Section 5.1.1, it uses the BGP-LS encoding.
+func (mp *MPUnReachNLRI) GetNLRI80() (*ls.NLRI71, error) {
+	if mp.AddressFamilyID == 16388 && mp.SubAddressFamilyID == 80 {
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		return ls.UnmarshalLSNLRI71(mp.WithdrawnRoutes, pathID)
+	}
+
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
+}
+
 // GetNLRI72 checks for presence of NLRI 72 (BGP-LS-VPN, RFC 9552 §5.2)
 // in the NLRI 15 NLRI data and if AFI/SAFI matches 16388/72 instantiates an NLRI72 object.
 func (mp *MPUnReachNLRI) GetNLRI72() (*ls.NLRI72, error) {
