@@ -86,6 +86,55 @@ func TestProcessMPUpdateLSOpaque(t *testing.T) {
 	}
 }
 
+// TestProcessMPUpdateLSOpaqueZeroLength checks that an unknown NLRI type with
+// no value portion is published and does not drop the NLRI after it. RFC 9552
+// Section 5.1: "a TLV with no value portion would have a length of zero".
+func TestProcessMPUpdateLSOpaqueZeroLength(t *testing.T) {
+	zeroLength := []byte{0x00, 0x64, 0x00, 0x00} // type 100, length 0
+	tests := []struct {
+		name   string
+		safi   byte
+		nlri   []byte
+		update *bgp.Update
+	}{
+		{name: "SAFI 71", safi: 71, nlri: append(append([]byte{}, zeroLength...), testLSUnknownNLRI...), update: minimalUpdate()},
+		{name: "SAFI 72", safi: 72, nlri: append(append(append(append([]byte{}, testRD...), zeroLength...), testRD...), testLSUnknownNLRI...), update: minimalUpdate()},
+		{name: "SAFI 80", safi: 80, nlri: append(append([]byte{}, zeroLength...), testLSUnknownNLRI...), update: testLSUpdate(testLSSequence())},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reach := append([]byte{0x40, 0x04, tt.safi, 0x04, 0xc0, 0x00, 0x02, 0x02, 0x00}, tt.nlri...)
+			nlri, err := bgp.UnmarshalMPReachNLRI(reach, false, map[int]bool{})
+			if err != nil {
+				t.Fatalf("unmarshal MP NLRI error = %v", err)
+			}
+			publisher := &recordingPublisher{}
+			p := &producer{publisher: publisher}
+			p.processMPUpdate(nlri, AddPrefix, minimalPeerHeader(), tt.update)
+
+			if len(publisher.msgs) != 2 {
+				t.Fatalf("processMPUpdate() published %d messages, want 2", len(publisher.msgs))
+			}
+			want := []struct {
+				nlriType uint16
+				nlri     string
+			}{{100, ""}, {99, "deadbe"}}
+			for i, w := range want {
+				if publisher.msgs[i].msgType != bmp.LSOpaqueMsg {
+					t.Errorf("message %d topic = %d, want %d", i, publisher.msgs[i].msgType, bmp.LSOpaqueMsg)
+				}
+				var got LSOpaque
+				if err := json.Unmarshal(publisher.msgs[i].payload, &got); err != nil {
+					t.Fatalf("published LSOpaque JSON: %v", err)
+				}
+				if got.NLRIType != w.nlriType || got.NLRI != w.nlri || got.Action != "add" {
+					t.Errorf("message %d = type %d NLRI %q action %q, want %d/%q/add", i, got.NLRIType, got.NLRI, got.Action, w.nlriType, w.nlri)
+				}
+			}
+		})
+	}
+}
+
 // TestProcessMPUpdateLSTEPolicyNotOpaque checks that a TE Policy NLRI (type
 // 5), which gobmp decodes but does not publish, is not sent to the opaque
 // topic as a decoded struct.
