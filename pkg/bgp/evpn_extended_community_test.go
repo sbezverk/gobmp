@@ -1,6 +1,7 @@
 package bgp
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -39,5 +40,15 @@ func TestEncapExtCommunityTunnelType(t *testing.T) {
 	}
 	if got := ext.String(); got != want {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestEncapExtCommunityShortValue(t *testing.T) {
+	// makeExtCommunity enforces 8 octets, so exercise type3 directly.
+	for _, value := range [][]byte{{0, 0, 0, 0}, {0, 0, 0, 0, 0}} {
+		want := fmt.Sprintf("invalid-type3-length=%d", len(value))
+		if got := type3(0x0c, value); got != want {
+			t.Errorf("type3(0x0c, % x) = %q, want %q", value, got, want)
+		}
 	}
 }
