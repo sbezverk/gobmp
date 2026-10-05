@@ -24,8 +24,8 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 		glog.Infof("All attributes in evpn update: %+v", update.GetAllAttributeID())
 	}
 	evpn, err := nlri.GetNLRIEVPN()
-	if errors.Is(err, evpnpkg.ErrEmptyNLRI) {
-		// Empty NLRI signals End-of-RIB per RFC 4724 §2 and is encoded as a withdrawal.
+	if errors.Is(err, evpnpkg.ErrEmptyNLRI) && op == DelPrefix {
+		// Only an empty MP_UNREACH_NLRI is End-of-RIB (RFC 4724 §2); an empty MP_REACH is not.
 		prfx := EVPNPrefix{
 			Action:      "del",
 			RouterHash:  ph.Identity.RouterHash,

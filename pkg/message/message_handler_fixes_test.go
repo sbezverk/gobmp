@@ -388,6 +388,24 @@ func TestEVPN_EoR(t *testing.T) {
 	}
 }
 
+// TestEVPN_EmptyMPReachIsNotEoR verifies only an empty MP_UNREACH is End-of-RIB (RFC 4724 §2).
+func TestEVPN_EmptyMPReachIsNotEoR(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	ph := makePeerHeader(t, bmp.PeerType0, 0x40)
+	nlri, err := bgp.UnmarshalMPUnReachNLRI([]byte{0x00, 0x19, 0x46}, map[int]bool{})
+	if err != nil {
+		t.Fatalf("UnmarshalMPUnReachNLRI: %v", err)
+	}
+
+	msgs, err := p.evpn(nlri, AddPrefix, ph, &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}})
+	if err == nil {
+		t.Error("evpn() error = nil, want error for empty MP_REACH")
+	}
+	if len(msgs) != 0 {
+		t.Errorf("evpn() returned %d messages, want 0", len(msgs))
+	}
+}
+
 // TestEVPN_EoR_LocRIB verifies an EVPN End-of-RIB from a Loc-RIB peer carries
 // IsLocRIB and the table name (RFC 9069).
 func TestEVPN_EoR_LocRIB(t *testing.T) {
