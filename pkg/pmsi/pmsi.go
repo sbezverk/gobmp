@@ -16,16 +16,16 @@ const (
 	TunnelTypeMLDP TunnelType = 2
 	// TunnelTypePIM indicates PIM-SSM Tree (RFC 6514)
 	TunnelTypePIM TunnelType = 3
-	// TunnelTypePIMBidir indicates PIM-SM Tree (bidirectional) (RFC 6514)
-	TunnelTypePIMBidir TunnelType = 4
-	// TunnelTypePIMSM indicates PIM-SM Tree (sparse mode) (RFC 6514)
-	TunnelTypePIMSM TunnelType = 5
-	// TunnelTypeBIER indicates BIIER (RFC 6514)
-	TunnelTypeBIER TunnelType = 6
+	// TunnelTypePIMSM indicates PIM-SM Tree (RFC 6514)
+	TunnelTypePIMSM TunnelType = 4
+	// TunnelTypePIMBidir indicates BIDIR-PIM Tree (RFC 6514)
+	TunnelTypePIMBidir TunnelType = 5
 	// TunnelTypeIngressRepl indicates Ingress Replication (RFC 6514)
-	TunnelTypeIngressRepl TunnelType = 7
+	TunnelTypeIngressRepl TunnelType = 6
 	// TunnelTypeMLDPMP2MP indicates mLDP MP2MP LSP (RFC 6514)
-	TunnelTypeMLDPMP2MP TunnelType = 8
+	TunnelTypeMLDPMP2MP TunnelType = 7
+	// TunnelTypeBIER indicates BIER (RFC 8556)
+	TunnelTypeBIER TunnelType = 11
 )
 
 // PMSITunnel represents RFC 6514 PMSI Tunnel Attribute for EVPN Type 3

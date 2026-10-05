@@ -9,9 +9,9 @@ import (
 // even when the Leaf Information Required flag (bit 0) is clear - that bit
 // is unrelated to whether the label field is on the wire (RFC 6514 S5).
 func TestParsePMSITunnel_LabelPresentWithLBitClear(t *testing.T) {
-	// Flags=0x00 (L bit not set), TunnelType=7 (Ingress Replication),
+	// Flags=0x00 (L bit not set), TunnelType=6 (Ingress Replication),
 	// Label bytes 0A 00 00, TunnelID=1 byte (0x01).
-	data := []byte{0x00, 0x07, 0x0A, 0x00, 0x00, 0x01}
+	data := []byte{0x00, 0x06, 0x0A, 0x00, 0x00, 0x01}
 
 	tunnel, err := ParsePMSITunnel(data)
 	if err != nil {
@@ -115,7 +115,7 @@ func TestParsePMSITunnel_TooShort(t *testing.T) {
 	}{
 		{"Empty", []byte{}},
 		{"OneByte", []byte{0x01}},
-		{"LabelTruncated", []byte{0x01, 0x07, 0x00, 0x00}}, // label always required, only 2 of 3 bytes here
+		{"LabelTruncated", []byte{0x01, 0x06, 0x00, 0x00}}, // label always required, only 2 of 3 bytes here
 	}
 
 	for _, tt := range tests {
@@ -198,10 +198,10 @@ func TestParsePMSITunnel_LabelAlwaysPresent_RT3VNI(t *testing.T) {
 // TestParsePMSITunnel_RFC6514_Example tests parsing of RFC 6514 example
 func TestParsePMSITunnel_RFC6514_Example(t *testing.T) {
 	// Simulate RFC 6514 Ingress Replication example
-	// Flags=0x01 (L bit set), Type=7, Label=1000, TunnelID=192.0.2.1 (4 bytes)
+	// Flags=0x01 (L bit set), Type=6, Label=1000, TunnelID=192.0.2.1 (4 bytes)
 	data := make([]byte, 9)
 	data[0] = 0x01 // L bit set
-	data[1] = 0x07 // Ingress Replication
+	data[1] = 0x06 // Ingress Replication
 
 	// MPLS label 1000 (0x3E8) in RFC 6514 format
 	data[2] = 0x00 // bits 19-12
@@ -230,5 +230,27 @@ func TestParsePMSITunnel_RFC6514_Example(t *testing.T) {
 	}
 	if len(tunnel.TunnelIdentifier) != 4 {
 		t.Errorf("TunnelIdentifier length = %d, want 4", len(tunnel.TunnelIdentifier))
+	}
+}
+
+// TestTunnelTypeCodes pins the RFC 6514 S5 / RFC 8556 code points as literals.
+func TestTunnelTypeCodes(t *testing.T) {
+	for name, tt := range map[string]struct {
+		got  TunnelType
+		want uint8
+	}{
+		"NoTunnel":    {TunnelTypeNoTunnel, 0},
+		"RSVP-TE":     {TunnelTypeRSVPTE, 1},
+		"mLDP":        {TunnelTypeMLDP, 2},
+		"PIM-SSM":     {TunnelTypePIM, 3},
+		"PIM-SM":      {TunnelTypePIMSM, 4},
+		"BIDIR-PIM":   {TunnelTypePIMBidir, 5},
+		"IngressRepl": {TunnelTypeIngressRepl, 6},
+		"mLDP-MP2MP":  {TunnelTypeMLDPMP2MP, 7},
+		"BIER":        {TunnelTypeBIER, 11},
+	} {
+		if uint8(tt.got) != tt.want {
+			t.Errorf("%s = %d, want %d", name, tt.got, tt.want)
+		}
 	}
 }
