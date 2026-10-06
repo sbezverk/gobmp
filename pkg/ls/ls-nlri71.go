@@ -104,6 +104,13 @@ func UnmarshalLSNLRI71(b []byte, pathID bool) (*NLRI71, error) {
 				return nil, err
 			}
 			el.LS = n
+		case 7:
+			// Decode the Inter-AS half-link using the draft-44 descriptor layout.
+			n, err := base.UnmarshalInterASLinkNLRI(b[p : p+int(el.Length)])
+			if err != nil {
+				return nil, err
+			}
+			el.LS = n
 		default:
 			el.LS = make([]byte, el.Length)
 			copy(el.LS.([]byte), b[p:p+int(el.Length)])

@@ -105,6 +105,16 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	default:
 		msg.AreaID = "0"
 	}
+	populateLSLinkAttributes(&msg, update, isIPv6)
+
+	return &msg, nil
+}
+
+// populateLSLinkAttributes applies BGP-LS path-attribute metrics and properties shared by intra-AS and Inter-AS links.
+func populateLSLinkAttributes(msg *LSLink, update *bgp.Update, isIPv6 bool) {
+	if msg == nil || update == nil {
+		return
+	}
 	if lslink, err := update.GetBGPLSAttribute(); err == nil {
 		// RFC 9552 Section 5.3.2.1: local/remote IPv4 (1028/1030) and IPv6
 		// (1029/1031) router-ID TLVs are chosen by which TLV is present, never
@@ -174,6 +184,4 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 		}
 		msg.OpaqueLinkAttribute = lslink.GetOpaqueLinkAttribute()
 	}
-
-	return &msg, nil
 }
