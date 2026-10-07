@@ -544,6 +544,7 @@ topics in this table are shown for `--split-af=true` (the default):
 | `gobmp.parsed.ls_link` | BGP-LS Link NLRIs |
 | `gobmp.parsed.ls_prefix` | BGP-LS Prefix NLRIs |
 | `gobmp.parsed.ls_srv6_sid` | BGP-LS SRv6 SID NLRIs |
+| `gobmp.parsed.ls_opaque` | BGP-LS NLRIs of types gobmp does not decode, raw hex (RFC 9552 §5.2) |
 | `gobmp.parsed.sr_policy_v4` | SR Policy v4 NLRIs |
 | `gobmp.parsed.sr_policy_v6` | SR Policy v6 NLRIs |
 | `gobmp.parsed.flowspec_v4` | FlowSpec v4 rules |

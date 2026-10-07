@@ -639,6 +639,37 @@ type LSSRv6SID struct {
 	RD string `json:"route_distinguisher,omitempty"`
 }
 
+// LSOpaque defines the structure of a BGP-LS NLRI whose type gobmp does not
+// decode. Per RFC 9552 §5.2, "An implementation MUST handle unknown
+// Link-State NLRI types as opaque objects and MUST preserve and propagate
+// them", so the NLRI is published with its raw value instead of dropped.
+type LSOpaque struct {
+	Action     string `json:"action,omitempty"`
+	RouterHash string `json:"router_hash,omitempty"`
+	RouterIP   string `json:"router_ip,omitempty"`
+	PeerHash   string `json:"peer_hash,omitempty"`
+	PeerIP     string `json:"peer_ip,omitempty"`
+	PeerType   uint8  `json:"peer_type"`
+	PeerASN    uint32 `json:"peer_asn,omitempty"`
+	Timestamp  string `json:"timestamp,omitempty"`
+	Nexthop    string `json:"nexthop,omitempty"`
+	// SAFI is the BGP-LS SAFI the NLRI was carried under (71, 72 or 80).
+	SAFI     uint8  `json:"safi"`
+	NLRIType uint16 `json:"nlri_type"`
+	// NLRI is the hex-encoded NLRI value, excluding the 4-byte Type/Length header.
+	NLRI string `json:"nlri"`
+	// Values are assigned based on PerPeerHeader flags
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+	// RD is the BGP-LS-VPN Route Distinguisher (RFC 9552 §5.2); set only
+	// for NLRI carried under AFI 16388 / SAFI 72, otherwise omitted.
+	RD string `json:"route_distinguisher,omitempty"`
+}
+
 // EVPNPrefix defines the structure of EVPN message
 type EVPNPrefix struct {
 	Key            string              `json:"_key,omitempty"`

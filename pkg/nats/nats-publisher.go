@@ -24,6 +24,7 @@ const (
 	l3vpnMessageV6Topic    = "gobmp.parsed.l3vpn_v6"
 	lsPrefixMessageTopic   = "gobmp.parsed.ls_prefix"
 	lsSRv6SIDMessageTopic  = "gobmp.parsed.ls_srv6_sid"
+	lsOpaqueMessageTopic   = "gobmp.parsed.ls_opaque"
 	evpnMessageTopic       = "gobmp.parsed.evpn"
 	srPolicyMessageTopic   = "gobmp.parsed.sr_policy"
 	srPolicyMessageV4Topic = "gobmp.parsed.sr_policy_v4"
@@ -86,6 +87,8 @@ func topicForMessage(t int) (string, bool) {
 		return lsPrefixMessageTopic, true
 	case bmp.LSSRv6SIDMsg:
 		return lsSRv6SIDMessageTopic, true
+	case bmp.LSOpaqueMsg:
+		return lsOpaqueMessageTopic, true
 	case bmp.EVPNMsg:
 		return evpnMessageTopic, true
 	case bmp.SRPolicyMsg:

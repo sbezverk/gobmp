@@ -45,6 +45,9 @@ func NLRIMessageType(afi uint16, safi uint8) int {
 	// 16388 BGP-LS : 72 BGP-LS-VPN [RFC 9552]
 	case afi == 16388 && safi == 72:
 		return 72
+	// 16388 BGP-LS : 80 BGP-LS-SPF [RFC 9815 Section 5.1]
+	case afi == 16388 && safi == 80:
+		return 80
 	// 1 IP (IP version 4) : 1 unicast forwarding
 	case afi == 1 && safi == 1:
 		return 1

@@ -10,7 +10,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSLink, error) {
+func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update, spf bool) (*LSLink, error) {
 	var operation string
 	switch op {
 	case 0:
@@ -130,7 +130,11 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 				msg.RemoteLinkID = ids[1]
 			}
 		}
-		msg.IGPMetric = lslink.GetIGPMetric()
+		if spf {
+			msg.IGPMetric = lslink.GetIGPMetricSPF()
+		} else {
+			msg.IGPMetric = lslink.GetIGPMetric()
+		}
 		msg.TEDefaultMetric = lslink.GetTEDefaultMetric()
 		msg.AdminGroup = lslink.GetAdminGroup()
 		msg.MaxLinkBW = lslink.GetMaxLinkBandwidth()

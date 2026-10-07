@@ -253,9 +253,11 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 			}
 		}
 	case 71:
-		p.processNLRI71SubTypes(nlri, operation, ph, update)
+		p.processNLRI71SubTypes(nlri, operation, ph, update, false)
 	case 72:
 		p.processNLRI72SubTypes(nlri, operation, ph, update)
+	case 80:
+		p.processNLRI80SubTypes(nlri, operation, ph, update)
 	default:
 		switch n := nlri.(type) {
 		case *bgp.MPReachNLRI:
@@ -268,8 +270,9 @@ func (p *producer) processMPUpdate(nlri bgp.MPNLRI, operation int, ph *bmp.PerPe
 	}
 }
 
-func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
-	// NLRI 71 carries 6 known sub type
+func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update, spf bool) {
+	// SAFI 71 and SAFI 80 (spf) carry the same Link-State NLRI types; unknown
+	// types are published as LSOpaque (RFC 9552 §5.2).
 	ls, err := nlri.GetNLRI71()
 	if err != nil {
 		glog.Errorf("failed to NLRI 71 with error: %+v", err)
@@ -300,7 +303,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 71 type 2: expected *base.LinkNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, spf)
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue
@@ -340,8 +343,22 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
 				continue
 			}
+		case 5:
+			glog.Warningf("NLRI 71 Sub type 5 (TE Policy) is decoded but not published")
 		default:
-			glog.Warningf("Unknown NLRI 71 Sub type %d", e.Type)
+			safi := uint8(71)
+			if spf {
+				safi = 80
+			}
+			msg, err := p.lsOpaque(e.Type, e.LS, safi, nlri.GetNextHop(), operation, ph)
+			if err != nil {
+				glog.Errorf("failed to produce ls_opaque message with error: %+v", err)
+				continue
+			}
+			if err := p.marshalAndPublish(&msg, bmp.LSOpaqueMsg, []byte(msg.RouterHash)); err != nil {
+				glog.Errorf("failed to process LSOpaque message with error: %+v", err)
+				continue
+			}
 		}
 
 	}
@@ -351,7 +368,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 // (AFI 16388 / SAFI 72, RFC 9552 §5.2). Sub-NLRI handling is identical to
 // SAFI 71; the only difference is each Element carries an 8-byte Route
 // Distinguisher that scopes the link/node/prefix to a VPN. The RD is stamped
-// onto the produced LSNode/LSLink/LSPrefix/LSSRv6SID message so downstream consumers
+// onto the produced LSNode/LSLink/LSPrefix/LSSRv6SID/LSOpaque message so downstream consumers
 // can distinguish per-tenant topology.
 func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp.PerPeerHeader, update *bgp.Update) {
 	ls, err := nlri.GetNLRI72()
@@ -388,7 +405,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 72 type 2: expected *base.LinkNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, false)
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue
@@ -431,8 +448,19 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
 				continue
 			}
+		case 5:
+			glog.Warningf("NLRI 72 Sub type 5 (TE Policy) is decoded but not published")
 		default:
-			glog.Warningf("Unknown NLRI 72 Sub type %d", e.Type)
+			msg, err := p.lsOpaque(e.Type, e.LS, 72, nlri.GetNextHop(), operation, ph)
+			if err != nil {
+				glog.Errorf("failed to produce ls_opaque message with error: %+v", err)
+				continue
+			}
+			msg.RD = rd
+			if err := p.marshalAndPublish(&msg, bmp.LSOpaqueMsg, []byte(msg.RouterHash)); err != nil {
+				glog.Errorf("failed to process LSOpaque message with error: %+v", err)
+				continue
+			}
 		}
 	}
 }

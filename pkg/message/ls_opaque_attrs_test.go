@@ -75,7 +75,7 @@ func TestLSLink_PopulatesOpaqueLinkAttribute(t *testing.T) {
 	}
 
 	p := &producer{}
-	msg, err := p.lsLink(link, "", 0, newPeerHeader(), update)
+	msg, err := p.lsLink(link, "", 0, newPeerHeader(), update, false)
 	if err != nil {
 		t.Fatalf("lsLink() error: %v", err)
 	}

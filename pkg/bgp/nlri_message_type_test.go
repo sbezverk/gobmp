@@ -12,6 +12,7 @@ func TestNLRIMessageType(t *testing.T) {
 	}{
 		// BGP-LS
 		{"BGP-LS AFI=16388 SAFI=71", 16388, 71, 71},
+		{"BGP-LS-SPF AFI=16388 SAFI=80", 16388, 80, 80},
 
 		// IPv4 unicast
 		{"IPv4 unicast AFI=1 SAFI=1", 1, 1, 1},
