@@ -706,6 +706,7 @@ type EVPNPrefix struct {
 	MACLength      uint8               `json:"mac_len,omitempty"`
 	RouteType      uint8               `json:"route_type,omitempty"`
 	PMSITunnel     *pmsi.PMSITunnel    `json:"pmsi_tunnel,omitempty"` // RFC 6514 PMSI Tunnel for Type 3 routes
+	IsEOR          bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
