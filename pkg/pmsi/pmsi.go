@@ -16,31 +16,39 @@ const (
 	TunnelTypeMLDP TunnelType = 2
 	// TunnelTypePIM indicates PIM-SSM Tree (RFC 6514)
 	TunnelTypePIM TunnelType = 3
-	// TunnelTypePIMBidir indicates PIM-SM Tree (bidirectional) (RFC 6514)
-	TunnelTypePIMBidir TunnelType = 4
-	// TunnelTypePIMSM indicates PIM-SM Tree (sparse mode) (RFC 6514)
-	TunnelTypePIMSM TunnelType = 5
-	// TunnelTypeBIER indicates BIIER (RFC 6514)
-	TunnelTypeBIER TunnelType = 6
+	// TunnelTypePIMSM indicates PIM-SM Tree (RFC 6514)
+	TunnelTypePIMSM TunnelType = 4
+	// TunnelTypePIMBidir indicates BIDIR-PIM Tree (RFC 6514)
+	TunnelTypePIMBidir TunnelType = 5
 	// TunnelTypeIngressRepl indicates Ingress Replication (RFC 6514)
-	TunnelTypeIngressRepl TunnelType = 7
+	TunnelTypeIngressRepl TunnelType = 6
 	// TunnelTypeMLDPMP2MP indicates mLDP MP2MP LSP (RFC 6514)
-	TunnelTypeMLDPMP2MP TunnelType = 8
+	TunnelTypeMLDPMP2MP TunnelType = 7
+	// TunnelTypeBIER indicates BIER (RFC 8556)
+	TunnelTypeBIER TunnelType = 11
 )
 
 // PMSITunnel represents RFC 6514 PMSI Tunnel Attribute for EVPN Type 3
-// Format: Flags (1 byte) + Tunnel Type (1 byte) + MPLS Label (3 bytes, optional) + Tunnel Identifier (variable)
+// Format: Flags (1 byte) + Tunnel Type (1 byte) + MPLS Label (3 bytes) + Tunnel Identifier (variable)
 type PMSITunnel struct {
-	Flags            uint8      `json:"flags"`
-	TunnelType       TunnelType `json:"tunnel_type"`
-	MPLSLabel        *uint32    `json:"mpls_label,omitempty"`        // 20-bit label, nil if L bit not set
-	TunnelIdentifier []byte     `json:"tunnel_identifier,omitempty"` // Variable length, type-specific
+	Flags      uint8      `json:"flags"`
+	TunnelType TunnelType `json:"tunnel_type"`
+	// MPLSLabel is the 20-bit label value (RFC 6514 S5). The Leaf Information
+	// Required flag (bit 0 of Flags) governs whether a receiver must respond
+	// with Leaf A-D routes, not whether the label field is present - RFC 6514
+	// fixes this attribute's layout regardless of flags.
+	MPLSLabel *uint32 `json:"mpls_label,omitempty"`
+	// RawLabel is the label's raw 24-bit value, unshifted. For a VXLAN tunnel
+	// this is the VNI (RFC 8365 S5.1.3), the same raw/shifted relationship
+	// EVPNPrefix.RawLabels/Labels already carries for route types 2 and 5.
+	RawLabel         uint32 `json:"raw_label"`
+	TunnelIdentifier []byte `json:"tunnel_identifier,omitempty"` // Variable length, type-specific
 }
 
 // ParsePMSITunnel parses PMSI Tunnel Attribute from raw bytes (RFC 6514 Section 4)
 func ParsePMSITunnel(data []byte) (*PMSITunnel, error) {
-	if len(data) < 2 {
-		return nil, fmt.Errorf("PMSI tunnel data too short: %d bytes, expected at least 2", len(data))
+	if len(data) < 5 {
+		return nil, fmt.Errorf("PMSI tunnel data too short: %d bytes, expected at least 5 (flags+type+label)", len(data))
 	}
 
 	tunnel := &PMSITunnel{
@@ -48,23 +56,14 @@ func ParsePMSITunnel(data []byte) (*PMSITunnel, error) {
 		TunnelType: TunnelType(data[1]),
 	}
 
-	offset := 2
+	// Label occupies upper 20 bits of the 3-byte field, followed by 3-bit EXP
+	// and 1-bit S (RFC 6514 S5) - same encoding as base.MakeLabel.
+	tunnel.RawLabel = uint32(data[2])<<16 | uint32(data[3])<<8 | uint32(data[4])
+	label := uint32(data[2])<<12 | uint32(data[3])<<4 | uint32(data[4])>>4
+	tunnel.MPLSLabel = &label
 
-	// Check L bit (bit 0 in Flags) to determine if MPLS Label is present
-	if tunnel.Flags&0x01 != 0 {
-		if len(data) < 5 {
-			return nil, fmt.Errorf("PMSI tunnel missing MPLS label: data length %d, expected at least 5", len(data))
-		}
-		// Parse 20-bit MPLS label from 3 bytes (RFC 6514 Section 5)
-		// Label occupies upper 20 bits, followed by 3-bit EXP and 1-bit S
-		label := uint32(data[2])<<12 | uint32(data[3])<<4 | uint32(data[4])>>4
-		tunnel.MPLSLabel = &label
-		offset = 5
-	}
-
-	// Rest is tunnel identifier (format depends on tunnel type)
-	if offset < len(data) {
-		tunnel.TunnelIdentifier = data[offset:]
+	if len(data) > 5 {
+		tunnel.TunnelIdentifier = data[5:]
 	}
 
 	return tunnel, nil
