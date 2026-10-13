@@ -165,26 +165,33 @@ func TestUnmarshalMCASTVPNNLRI(t *testing.T) {
 			fail: false,
 		},
 		{
+			// RFC 6514 Section 4.4: the Route Key is the referenced route's
+			// full NLRI, i.e. it carries its own route type + length header
+			// (here: Type 3 S-PMSI A-D, value length 22). The Originating
+			// Router's IP is whatever remains, per its own length -- not
+			// inferred from the enclosing AFI (RFC 6515 Section 1/2).
 			name: "Type 4 - Leaf A-D",
 			input: []byte{
-				0x04, // Route Type 4
-				0x1a, // Length 26 (route key 22 + orig IP 4)
-				// Route Key: Type 3 data without route type/length
+				0x04,                                           // Route Type 4
+				0x1c,                                           // Length 28 (route key header 2 + route key value 22 + orig IP 4)
+				0x03,                                           // Route Key: referenced route type 3 (S-PMSI A-D)
+				0x16,                                           // Route Key: referenced route length 22
 				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64, // RD
 				0x20,                   // Source Length
 				0xc0, 0xa8, 0x01, 0x01, // Source
 				0x20,                   // Group Length
 				0xe0, 0x00, 0x00, 0x01, // Group
-				0x0a, 0x00, 0x00, 0x01, // Originator (part of route key)
+				0x0a, 0x00, 0x00, 0x01, // Originator (part of referenced route)
 				0x0a, 0x00, 0x00, 0x02, // Originating Router IP for Type 4
 			},
 			expect: &Route{
 				Route: []*NLRI{
 					{
 						RouteType: 4,
-						Length:    26,
+						Length:    28,
 						RouteTypeSpec: &Type4{
 							RouteKey: []byte{
+								0x03, 0x16,
 								0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
 								0x20, 0xc0, 0xa8, 0x01, 0x01,
 								0x20, 0xe0, 0x00, 0x00, 0x01,
@@ -396,7 +403,7 @@ func TestUnmarshalMCASTVPNNLRI(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := UnmarshalMCASTVPNNLRI(tt.input, false)
+			got, err := UnmarshalMCASTVPNNLRI(tt.input)
 			if err != nil && !tt.fail {
 				t.Fatalf("expected to succeed but failed with error: %+v", err)
 			}

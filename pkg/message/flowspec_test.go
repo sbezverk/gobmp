@@ -12,6 +12,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/mcastvpn"
+	"github.com/sbezverk/gobmp/pkg/mup"
 	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/vpls"
@@ -189,6 +190,7 @@ func (m *flowspecMockNLRI) GetNLRI73() (*srpolicy.NLRI73, error)          { retu
 func (m *flowspecMockNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error)     { return nil, nil }
 func (m *flowspecMockNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)         { return nil, nil }
 func (m *flowspecMockNLRI) GetNLRIRTC() (*rtc.Route, error)               { return nil, nil }
+func (m *flowspecMockNLRI) GetNLRIMUP() (*mup.Route, error)               { return nil, nil }
 
 // minimalPeerHeader returns a PerPeerHeader usable in producer tests.
 func minimalPeerHeader() *bmp.PerPeerHeader {

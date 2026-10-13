@@ -32,7 +32,7 @@ func (t *IPPrefix) getESI() *ESI {
 }
 
 func (t *IPPrefix) getTag() []byte {
-	return nil
+	return t.EthTag
 }
 
 func (t *IPPrefix) getMAC() *MACAddress {

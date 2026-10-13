@@ -191,3 +191,37 @@ func TestUnmarshalPrefixNLRI(t *testing.T) {
 		})
 	}
 }
+
+// TestPrefixNLRIGetIGPRouterIDProtocol decodes an 8-octet IGP Router-ID
+// through UnmarshalPrefixNLRI, so the Prefix NLRI Protocol-ID must reach the
+// decoder (RFC 9552 Section 5.2.1.4).
+func TestPrefixNLRIGetIGPRouterIDProtocol(t *testing.T) {
+	tests := []struct {
+		name  string
+		proto ProtoID
+		want  string
+	}{
+		{name: "OSPFv2 pseudonode", proto: OSPFv2, want: "10.0.0.1:192.168.1.1"},
+		{name: "OSPFv3 pseudonode", proto: OSPFv3, want: "10.0.0.1:3232235777"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := []byte{
+				byte(tt.proto),
+				0, 0, 0, 0, 0, 0, 0, 0, // Identifier
+				0x01, 0x00, 0x00, 0x0c, // Local Node Descriptors, length 12
+				0x02, 0x03, 0x00, 0x08, // IGP Router-ID TLV 515, length 8
+				10, 0, 0, 1, 192, 168, 1, 1,
+				0x01, 0x09, 0x00, 0x04, // IP Reachability Information TLV 265
+				24, 10, 0, 0,
+			}
+			p, err := UnmarshalPrefixNLRI(b, true)
+			if err != nil {
+				t.Fatalf("UnmarshalPrefixNLRI() error = %v", err)
+			}
+			if got := p.GetLocalIGPRouterID(); got != tt.want {
+				t.Errorf("GetLocalIGPRouterID() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

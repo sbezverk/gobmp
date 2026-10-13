@@ -337,11 +337,22 @@ type LocalMPLSCrossConnectInterface struct {
 }
 
 // UnmarshalLocalMPLSCrossConnectInterface instantiates Local MPLS Cross Connect Interface Sub TLV object
+//
+// Per draft-ietf-idr-te-lsp-distribution Section 4.6.1:
+//
+//	+-+-+-+-+-+-+-+-+
+//	|     Flags     |
+//	+-+-+-+-+-+-+-+-+
+//	|          Local Interface Identifier (4 octets)                |
+//	//         Interface Address (4 or 16 octets)                  //
+//
+// "Length: 9 or 21." (Flags(1) + Local Interface Identifier(4) + Interface
+// Address(4 or 16) = 9 or 21 octets).
 func UnmarshalLocalMPLSCrossConnectInterface(b []byte) (*LocalMPLSCrossConnectInterface, error) {
 	if glog.V(6) {
 		glog.Infof("Local MPLS Cross Connect Interface Sub TLV Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) != 9 && len(b) != 23 {
+	if len(b) != 9 && len(b) != 21 {
 		return nil, fmt.Errorf("invalid length %d to decode Local MPLS Cross Connect Interface Sub TLV", len(b))
 	}
 	i := &LocalMPLSCrossConnectInterface{}
@@ -354,8 +365,8 @@ func UnmarshalLocalMPLSCrossConnectInterface(b []byte) (*LocalMPLSCrossConnectIn
 	case 4:
 		i.InterfaceAddr = make([]byte, 4)
 		copy(i.InterfaceAddr, b[p:])
-	case 18:
-		i.InterfaceAddr = make([]byte, 18)
+	case 16:
+		i.InterfaceAddr = make([]byte, 16)
 		copy(i.InterfaceAddr, b[p:])
 	}
 

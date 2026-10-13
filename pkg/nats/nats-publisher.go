@@ -24,6 +24,7 @@ const (
 	l3vpnMessageV6Topic    = "gobmp.parsed.l3vpn_v6"
 	lsPrefixMessageTopic   = "gobmp.parsed.ls_prefix"
 	lsSRv6SIDMessageTopic  = "gobmp.parsed.ls_srv6_sid"
+	lsOpaqueMessageTopic   = "gobmp.parsed.ls_opaque"
 	evpnMessageTopic       = "gobmp.parsed.evpn"
 	srPolicyMessageTopic   = "gobmp.parsed.sr_policy"
 	srPolicyMessageV4Topic = "gobmp.parsed.sr_policy_v4"
@@ -32,6 +33,9 @@ const (
 	flowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
 	flowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
 	vplsMessageTopic       = "gobmp.parsed.vpls"
+	mupMessageTopic        = "gobmp.parsed.mup"
+	mupMessageV4Topic      = "gobmp.parsed.mup_v4"
+	mupMessageV6Topic      = "gobmp.parsed.mup_v6"
 	statsMessageTopic      = "gobmp.parsed.statistics"
 	rawMessageTopic        = "gobmp.raw"
 	parsedWildcardSubject  = "gobmp.parsed.*"
@@ -83,6 +87,8 @@ func topicForMessage(t int) (string, bool) {
 		return lsPrefixMessageTopic, true
 	case bmp.LSSRv6SIDMsg:
 		return lsSRv6SIDMessageTopic, true
+	case bmp.LSOpaqueMsg:
+		return lsOpaqueMessageTopic, true
 	case bmp.EVPNMsg:
 		return evpnMessageTopic, true
 	case bmp.SRPolicyMsg:
@@ -99,6 +105,12 @@ func topicForMessage(t int) (string, bool) {
 		return flowspecMessageV6Topic, true
 	case bmp.VPLSMsg:
 		return vplsMessageTopic, true
+	case bmp.MUPMsg:
+		return mupMessageTopic, true
+	case bmp.MUPV4Msg:
+		return mupMessageV4Topic, true
+	case bmp.MUPV6Msg:
+		return mupMessageV6Topic, true
 	case bmp.StatsReportMsg:
 		return statsMessageTopic, true
 	case bmp.BMPRawMsg:

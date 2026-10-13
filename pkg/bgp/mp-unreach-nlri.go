@@ -12,6 +12,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/mcastvpn"
 	"github.com/sbezverk/gobmp/pkg/multicast"
+	"github.com/sbezverk/gobmp/pkg/mup"
 	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/unicast"
@@ -59,6 +60,17 @@ func (mp *MPUnReachNLRI) GetNLRI71() (*ls.NLRI71, error) {
 			return nil, err
 		}
 		return nlri71, nil
+	}
+
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
+}
+
+// GetNLRI80 checks for BGP-LS-SPF NLRI (AFI 16388 / SAFI 80) and decodes its
+// RFC 9552 wire format. Per RFC 9815 Section 5.1.1, it uses the BGP-LS encoding.
+func (mp *MPUnReachNLRI) GetNLRI80() (*ls.NLRI71, error) {
+	if mp.AddressFamilyID == 16388 && mp.SubAddressFamilyID == 80 {
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		return ls.UnmarshalLSNLRI71(mp.WithdrawnRoutes, pathID)
 	}
 
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
@@ -218,7 +230,7 @@ func (mp *MPUnReachNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) {
 // GetNLRIMCASTVPN instantiates a MCAST-VPN NLRI structure based on withdrawn routes
 func (mp *MPUnReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 5 {
-		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes, mp.AddressFamilyID == 2)
+		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes)
 	}
 
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
@@ -227,7 +239,7 @@ func (mp *MPUnReachNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error) {
 // GetNLRIMVPN instantiates Multicast VPN (SAFI 129) NLRI
 func (mp *MPUnReachNLRI) GetNLRIMVPN() (*mcastvpn.Route, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 129 {
-		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes, mp.AddressFamilyID == 2)
+		return mcastvpn.UnmarshalMCASTVPNNLRI(mp.WithdrawnRoutes)
 	}
 
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
@@ -237,6 +249,16 @@ func (mp *MPUnReachNLRI) GetNLRIMVPN() (*mcastvpn.Route, error) {
 func (mp *MPUnReachNLRI) GetNLRIRTC() (*rtc.Route, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 132 {
 		return rtc.UnmarshalRTCNLRI(mp.WithdrawnRoutes)
+	}
+
+	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")
+}
+
+// GetNLRIMUP checks whether MP_UNREACH_NLRI carries BGP-MUP NLRI (SAFI 85) and, if so, instantiates a MUP NLRI object from withdrawn routes.
+func (mp *MPUnReachNLRI) GetNLRIMUP() (*mup.Route, error) {
+	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == mup.SAFI {
+		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
+		return mup.UnmarshalMUPNLRI(mp.WithdrawnRoutes, mp.AddressFamilyID == 2, pathID)
 	}
 
 	return nil, NewNLRINotFoundError(mp.AddressFamilyID, mp.SubAddressFamilyID, "MP_UNREACH_NLRI")

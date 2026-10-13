@@ -5,6 +5,22 @@ import (
 	"testing"
 )
 
+// imetRouteKey builds a conforming EVPN Route Key: the full embedded NLRI
+// (Type(1) + Length(1) + Value) of an Inclusive Multicast Ethernet Tag
+// (Type 3 / IMET) route -- one of the PMSI routes that RFC 9572 Section 3.3
+// says triggers a Leaf A-D route. rdLastOctet lets tests control the last
+// byte of the RD's embedded IPv4 address (used for the RD/originator
+// collision counterexample).
+func imetRouteKey(rdLastOctet byte) []byte {
+	return []byte{
+		3, 17, // Route Key header: Type=3 (IMET), Length=17
+		0, 1, 10, 0, 0, rdLastOctet, 0, 1, // RD: Type 1, IP 10.0.0.<rdLastOctet>, assigned number 1
+		0, 0, 0, 0, // Ethernet Tag
+		32,          // IP Address Length
+		10, 1, 1, 1, // IP Address
+	}
+}
+
 func TestUnmarshalEVPNLeafAD_Valid(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -14,128 +30,89 @@ func TestUnmarshalEVPNLeafAD_Valid(t *testing.T) {
 		wantOriginatorIP  []byte
 	}{
 		{
-			name: "IPv4 originator with minimal route key",
-			input: []byte{
-				// Route Key (1 byte - minimal embedded NLRI)
-				0x01,
-				// Originator Address Length (1 byte) = 32 bits
-				32,
-				// Originator Address (4 bytes) - 192.0.2.1
-				192, 0, 2, 1,
-			},
-			wantRouteKeyLen:   1,
+			name: "IPv4 originator with IMET route key",
+			input: append(
+				imetRouteKey(200),
+				append([]byte{32}, []byte{198, 51, 100, 1}...)...,
+			),
+			wantRouteKeyLen:   19,
 			wantOriginatorLen: 32,
-			wantOriginatorIP:  []byte{192, 0, 2, 1},
-		},
-		{
-			name: "IPv4 originator with Type 3 IMET route key",
-			input: []byte{
-				// Route Key - Type 3 IMET A-D route (RD + EthTag + IPLen + IP)
-				// RD (8 bytes)
-				0, 0, 0, 100, 0, 0, 0, 200,
-				// Ethernet Tag (4 bytes)
-				0, 0, 0, 0,
-				// IP Address Length (1 byte) = 32 bits
-				32,
-				// IP Address (4 bytes) - 198.51.100.1
-				198, 51, 100, 1,
-				// Originator Address Length (1 byte) = 32 bits
-				32,
-				// Originator Address (4 bytes) - 192.0.2.1
-				192, 0, 2, 1,
-			},
-			wantRouteKeyLen:   17, // 8 + 4 + 1 + 4
-			wantOriginatorLen: 32,
-			wantOriginatorIP:  []byte{192, 0, 2, 1},
-		},
-		{
-			name: "IPv6 originator with minimal route key",
-			input: []byte{
-				// Route Key (1 byte - minimal embedded NLRI)
-				0x01,
-				// Originator Address Length (1 byte) = 128 bits
-				128,
-				// Originator Address (16 bytes) - 2001:db8::1
-				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-			},
-			wantRouteKeyLen:   1,
-			wantOriginatorLen: 128,
-			wantOriginatorIP:  []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			wantOriginatorIP:  []byte{198, 51, 100, 1},
 		},
 		{
 			name: "IPv6 originator with Type 9 Per-Region I-PMSI route key",
 			input: []byte{
-				// Route Key - Type 9 Per-Region I-PMSI A-D route (20 bytes)
-				// RD (8 bytes)
-				0, 0, 0, 100, 0, 0, 0, 200,
+				9, 20, // Route Key header: Type=9 (Per-Region I-PMSI A-D), Length=20
+				// RD (8 bytes): Type 1, 10.0.0.100, assigned number 200
+				0, 1, 10, 0, 0, 100, 0, 200,
 				// Ethernet Tag (4 bytes)
 				0, 0, 0, 1,
 				// Region ID (8 bytes)
 				0, 0, 0, 0, 0, 0, 0, 10,
-				// Originator Address Length (1 byte) = 128 bits
+				// Originator's Addr Length (1 byte) = 128 bits
 				128,
-				// Originator Address (16 bytes) - 2001:db8::1
+				// Originator's Addr (16 bytes) - 2001:db8::1
 				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 			},
-			wantRouteKeyLen:   20,
+			wantRouteKeyLen:   22,
 			wantOriginatorLen: 128,
 			wantOriginatorIP:  []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 		},
 		{
+			// Route Key is a large embedded NLRI (Type/Length header framing
+			// a 100-byte value); only the 2-byte header is inspected by the
+			// parser, so the value content is immaterial.
 			name: "IPv4 originator with large route key",
 			input: append(
-				// Route Key (100 bytes of test data)
-				bytes.Repeat([]byte{0xAA}, 100),
-				// Originator Address Length (1 byte) = 32 bits
-				32,
-				// Originator Address (4 bytes) - 203.0.113.1
-				203, 0, 113, 1,
+				append([]byte{7, 100}, bytes.Repeat([]byte{0xAA}, 100)...),
+				append([]byte{32}, []byte{203, 0, 113, 1}...)...,
 			),
-			wantRouteKeyLen:   100,
+			wantRouteKeyLen:   102,
 			wantOriginatorLen: 32,
 			wantOriginatorIP:  []byte{203, 0, 113, 1},
 		},
 		{
 			name: "IPv6 originator with large route key",
 			input: append(
-				// Route Key (100 bytes of test data)
-				bytes.Repeat([]byte{0xBB}, 100),
-				// Originator Address Length (1 byte) = 128 bits
-				128,
-				// Originator Address (16 bytes) - 2001:db8::2
-				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+				append([]byte{7, 100}, bytes.Repeat([]byte{0xBB}, 100)...),
+				append([]byte{128}, []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}...)...,
 			),
-			wantRouteKeyLen:   100,
+			wantRouteKeyLen:   102,
 			wantOriginatorLen: 128,
 			wantOriginatorIP:  []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
 		},
 		{
-			name: "IPv6 originator where byte 11 is 32 (edge case for backward parsing)",
+			// RFC 9572 Section 3.3 counterexample: Route Key = IMET route whose RD
+			// carries IPv4 10.0.0.128 (last octet 0x80/128), immediately
+			// followed by an IPv4 (32-bit) originator. Backward parsing
+			// (unmodified code) reads b[len-17]==128 and misreads this as a
+			// 128-bit IPv6 originator with a 7-byte truncated Route Key.
+			// Forward parsing (this fix) must decode the IPv4 originator
+			// 2.2.2.2 and the full 19-byte Route Key.
+			name: "RD last octet 0x80 does not misdetect IPv6 originator",
 			input: append(
-				// Route Key (10 bytes of test data)
-				bytes.Repeat([]byte{0xCC}, 10),
-				// Originator Address Length (1 byte) = 128 bits
-				128,
-				// Originator Address (16 bytes) with 11th byte equal to 32 (0x20)
-				0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 32, 11, 12, 13, 14, 15,
+				imetRouteKey(128),
+				append([]byte{32}, []byte{2, 2, 2, 2}...)...,
 			),
-			wantRouteKeyLen:   10,
-			wantOriginatorLen: 128,
-			wantOriginatorIP:  []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 32, 11, 12, 13, 14, 15},
+			wantRouteKeyLen:   19,
+			wantOriginatorLen: 32,
+			wantOriginatorIP:  []byte{2, 2, 2, 2},
 		},
 		{
-			name: "RouteKey ending with 128 followed by IPv4 originator",
+			// Mirror case: a conforming Route Key whose IPv6 originator
+			// address happens to contain byte 0x20 (32) at address[11]
+			// (i.e. buffer offset len(b)-5). Backward parsing tries the
+			// IPv4 branch only if the IPv6 branch fails first, and here the
+			// IPv6 branch correctly matches -- this asserts forward parsing
+			// gives the same (correct) result, not a false IPv4 match.
+			name: "IPv6 originator with 0x20 at offset len-5 does not misdetect IPv4",
 			input: append(
-				// Route Key ending with byte 128 (0x80)
-				[]byte{10, 20, 128},
-				// Originator Address Length (1 byte) = 32 bits
-				32,
-				// Originator Address (4 bytes) - 203.0.113.5
-				203, 0, 113, 5,
+				imetRouteKey(200),
+				append([]byte{128}, []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 32, 11, 12, 13, 14, 15}...)...,
 			),
-			wantRouteKeyLen:   3,
-			wantOriginatorLen: 32,
-			wantOriginatorIP:  []byte{203, 0, 113, 5},
+			wantRouteKeyLen:   19,
+			wantOriginatorLen: 128,
+			wantOriginatorIP:  []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 32, 11, 12, 13, 14, 15},
 		},
 	}
 
@@ -146,27 +123,18 @@ func TestUnmarshalEVPNLeafAD_Valid(t *testing.T) {
 				t.Fatalf("UnmarshalEVPNLeafAD() error = %v, want nil", err)
 			}
 
-			// Verify Route Key length
 			if len(got.RouteKey) != tt.wantRouteKeyLen {
 				t.Errorf("RouteKey length = %d, want %d", len(got.RouteKey), tt.wantRouteKeyLen)
 			}
-
-			// Verify Route Key content
 			if !bytes.Equal(got.RouteKey, tt.input[0:tt.wantRouteKeyLen]) {
-				t.Errorf("RouteKey content mismatch")
+				t.Errorf("RouteKey content mismatch: got %v, want %v", got.RouteKey, tt.input[0:tt.wantRouteKeyLen])
 			}
-
-			// Verify Originator Address Length
 			if got.OriginatorAddrLen != tt.wantOriginatorLen {
 				t.Errorf("OriginatorAddrLen = %d, want %d", got.OriginatorAddrLen, tt.wantOriginatorLen)
 			}
-
-			// Verify Originator Address
 			if !bytes.Equal(got.OriginatorAddr, tt.wantOriginatorIP) {
 				t.Errorf("OriginatorAddr = %v, want %v", got.OriginatorAddr, tt.wantOriginatorIP)
 			}
-
-			// Verify interface implementation returns correct object
 			if got.GetRouteTypeSpec() != got {
 				t.Errorf("GetRouteTypeSpec() should return self")
 			}
@@ -186,93 +154,92 @@ func TestUnmarshalEVPNLeafAD_Invalid(t *testing.T) {
 			errContains: "invalid length",
 		},
 		{
-			name:        "too short - only 1 byte",
+			name:        "too short - only 1 byte, no room for Route Key header",
 			input:       []byte{0x01},
 			errContains: "invalid length",
 		},
 		{
-			name:        "too short - only 5 bytes",
-			input:       []byte{0x01, 0x02, 0x03, 0x04, 0x05},
+			// RFC 9572 Section 3.3: the Route Key is the NLRI of the
+			// triggering route; a zero-length value embeds no route.
+			name: "zero-length Route Key value with IPv4 originator",
+			input: []byte{
+				0x01, 0x00, // Route Key: Type=1, Length=0 (no value)
+				32,           // Originator's Addr Length = 32 bits
+				192, 0, 2, 1, // Originator's Addr - 192.0.2.1
+			},
+			errContains: "embedded route type 1 has zero length",
+		},
+		{
+			name: "zero-length Route Key value with IPv6 originator",
+			input: []byte{
+				0x0a, 0x00, // Route Key: Type=10 (S-PMSI A-D), Length=0
+				128,                                                        // Originator's Addr Length = 128 bits
+				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, // 2001:db8::1
+			},
+			errContains: "embedded route type 10 has zero length",
+		},
+		{
+			name: "Route Key length byte exceeds remaining buffer",
+			input: []byte{
+				3, 200, // Route Key header claims Length=200
+				0, 1, 10, 0, 0, 200, // but only a handful of bytes follow
+			},
 			errContains: "invalid length",
 		},
 		{
-			name: "empty RouteKey with IPv6 originator (exactly 17 bytes, first byte 128)",
+			name: "Route Key consumes entire buffer, no Originator's Addr Length byte",
 			input: []byte{
-				// Originator Address Length at position 0 (1 byte) = 128 bits
-				128,
-				// Originator Address (16 bytes) - 2001:db8::1
-				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+				0x01, 0x02, 0xAA, 0xBB, // Type=1, Length=2, value = AA BB
 			},
-			errContains: "RouteKey must be at least 1 byte",
+			errContains: "missing Originator's Addr Length byte",
 		},
 		{
 			name: "invalid originator length - not 32 or 128",
-			input: []byte{
-				// Route Key (1 byte)
-				0x01,
-				// Originator Address Length (1 byte) = 64 (invalid)
-				64,
-				// Originator Address (4 bytes)
-				192, 0, 2, 1,
-			},
+			input: append(
+				imetRouteKey(200),
+				append([]byte{64}, []byte{192, 0, 2, 1}...)...,
+			),
 			errContains: "invalid originator address length",
 		},
 		{
 			name: "invalid originator length - zero",
-			input: []byte{
-				// Route Key (1 byte)
-				0x01,
-				// Originator Address Length (1 byte) = 0 (invalid)
-				0,
-				// Originator Address (4 bytes)
-				192, 0, 2, 1,
-			},
+			input: append(
+				imetRouteKey(200),
+				append([]byte{0}, []byte{192, 0, 2, 1}...)...,
+			),
 			errContains: "invalid originator address length",
 		},
 		{
 			name: "invalid originator length - 16 instead of 32",
-			input: []byte{
-				// Route Key (1 byte)
-				0x01,
-				// Originator Address Length (1 byte) = 16 (invalid)
-				16,
-				// Originator Address (4 bytes)
-				192, 0, 2, 1,
-			},
+			input: append(
+				imetRouteKey(200),
+				append([]byte{16}, []byte{192, 0, 2, 1}...)...,
+			),
 			errContains: "invalid originator address length",
 		},
 		{
-			name: "truncated IPv4 originator - missing address bytes",
-			input: []byte{
-				// Route Key (1 byte)
-				0x01,
-				// Originator Address Length (1 byte) = 32
-				32,
-				// Originator Address (only 2 bytes instead of 4) - TRUNCATED
-				192, 0,
-			},
-			errContains: "invalid length",
+			name: "mismatched length - IPv4 originator length byte but only 2 bytes remain",
+			input: append(
+				imetRouteKey(200),
+				append([]byte{32}, []byte{192, 0}...)...,
+			),
+			errContains: "requires 4 bytes, have 2",
 		},
 		{
-			name: "truncated IPv6 originator - missing address bytes",
-			input: []byte{
-				// Route Key (1 byte)
-				0x01,
-				// Originator Address Length (1 byte) = 128
-				128,
-				// Originator Address (only 8 bytes instead of 16) - TRUNCATED
-				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0,
-			},
-			errContains: "invalid originator address length",
+			name: "mismatched length - IPv4 originator length byte but 5 bytes remain",
+			input: append(
+				imetRouteKey(200),
+				append([]byte{32}, []byte{192, 0, 2, 1, 0xFF}...)...,
+			),
+			errContains: "requires 4 bytes, have 5",
 		},
 		{
-			name: "buffer too short for IPv6 check",
-			input: []byte{
-				// Only 16 bytes total - not enough for IPv6 (needs 17+)
-				0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-				0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
-			},
-			errContains: "invalid originator address length",
+			name: "mismatched length - IPv6 originator length byte but only 8 bytes remain",
+			input: append(
+				imetRouteKey(200),
+				append([]byte{128}, []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0}...)...,
+			),
+			errContains: "requires 16 bytes, have 8",
 		},
 	}
 
@@ -296,7 +263,6 @@ func TestLeafAD_InterfaceMethods(t *testing.T) {
 		OriginatorAddr:    []byte{192, 0, 2, 1},
 	}
 
-	// Test all interface methods return expected nil values
 	if rd := l.getRD(); rd != "" {
 		t.Errorf("getRD() = %q, want empty string", rd)
 	}

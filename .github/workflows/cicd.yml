@@ -348,7 +348,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       VALIDATOR_TESTBED_COMPOSE: ./cmd/validator_v2/testbed/test_bed_injector_multinode_kafka.yml
-      BGPINJECTOR_IMAGE: sbezverk/bgpinjector:v0.0.1-linux-amd64
+      BGPINJECTOR_IMAGE: docker.io/sbezverk/bgpinjector:latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v7
@@ -409,6 +409,102 @@ jobs:
       - name: Cleanup validator v2 integration testbed
         if: always()
         run: docker compose -f "$VALIDATOR_TESTBED_COMPOSE" down
+
+  # ==============================================================================
+  # Validator v2 BGP-MUP Integration Tests (GoBGP-driven, AFI/SAFI 1/85 and 2/85)
+  # ==============================================================================
+  integration_tests_validator_v2_mup:
+    needs: [tests]
+    strategy:
+        matrix:
+          os: [ubuntu-latest]
+          go-version: [1.25.x]
+    runs-on: ${{ matrix.os }}
+    env:
+      VALIDATOR_MUP_TESTBED_COMPOSE: ./cmd/validator_v2/testbed/test_bed_gobgp_mup.yml
+      BGPINJECTOR_IMAGE: docker.io/sbezverk/bgpinjector:latest
+      GOBGP_VERSION: v4.8.0
+      GOBGP_IMAGE: localhost/gobgp-mup:v4.8.0
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v7
+      - name: setup host kernel parameters
+        run: ./build/set_kernel_params.sh
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: "**/go.sum"
+      - name: Build gobmp container
+        run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
+      - name: Build validator v2 binary
+        run: make validator-v2
+      - name: Build GoBGP image from official upstream source
+        run: |
+          docker build \
+            --build-arg GOBGP_VERSION="$GOBGP_VERSION" \
+            --tag "$GOBGP_IMAGE" \
+            --file ./build/Dockerfile.gobgp-mup \
+            .
+      - name: Pull bgpinjector container
+        run: docker pull "$BGPINJECTOR_IMAGE"
+      - name: Check local images
+        run: docker images
+      - name: Add Kafka broker name to /etc/hosts
+        run: |
+          echo "127.0.0.1 kafka-mup" | sudo tee -a /etc/hosts
+      - name: Start GoBGP MUP integration testbed
+        run: docker compose -f "$VALIDATOR_MUP_TESTBED_COMPOSE" up --detach
+      - name: Wait for Kafka broker and consumer-group coordinator
+        run: |
+          for attempt in {1..60}; do
+            if docker exec kafka-mup kafka-topics \
+              --bootstrap-server localhost:9092 \
+              --list >/dev/null 2>&1; then
+              echo "Kafka broker is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs kafka-mup
+          exit 1
+      - name: Check gobmp Kafka and BMP sessions
+        run: ./build/monitor_container.sh gobmp-mup gobgp-mup 172.30.0.2
+      - name: Wait for bgpinjector MUP BGP session
+        run: |
+          API=http://127.0.0.1:8080 \
+          REQUIRED_FAMILIES="ipv4/bgp-mup ipv6/bgp-mup" \
+          ./cmd/validator_v2/testcases/wait_for_bgp_established.sh
+      - name: Run validator v2 BGP-MUP test cases
+        run: |
+          VALIDATOR_BIN="$PWD/bin/validator_v2" \
+          TESTCASE_DIR="$PWD/cmd/validator_v2/testcases/mup" \
+          API_SRV=http://127.0.0.1:8080 \
+          KAFKA_SRV=127.0.0.1:9092 \
+          ./cmd/validator_v2/testcases/testcases_runner.sh
+      - name: Collect BGP-MUP integration logs
+        if: always()
+        run: |
+          mkdir -p /tmp/logs/validator-v2-mup
+          docker ps -a > /tmp/logs/validator-v2-mup/docker-ps.txt 2>&1 || true
+          docker compose -f "$VALIDATOR_MUP_TESTBED_COMPOSE" ps > /tmp/logs/validator-v2-mup/compose-ps.txt 2>&1 || true
+          curl -s http://127.0.0.1:8080/v1/session > /tmp/logs/validator-v2-mup/bgpinjector-session.json 2>&1 || true
+          for container in gobmp-mup gobgp-mup bgpinjector-mup zookeeper-mup kafka-mup; do
+            docker logs "$container" > "/tmp/logs/validator-v2-mup/${container}.log" 2>&1 || true
+          done
+      - name: Upload BGP-MUP integration logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-validator-v2-mup
+          path: /tmp/logs/validator-v2-mup/
+      - name: Cleanup BGP-MUP integration testbed
+        if: always()
+        run: docker compose -f "$VALIDATOR_MUP_TESTBED_COMPOSE" down
 
   # ==============================================================================
   # RFC Compliance Validation (BGP-LS RFC 7752 & RFC 9085)

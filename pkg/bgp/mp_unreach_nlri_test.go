@@ -1,6 +1,7 @@
 package bgp
 
 import (
+	"bytes"
 	"errors"
 	"strings"
 	"testing"
@@ -412,6 +413,49 @@ func TestMPUnReachNLRI_GetNLRIRTC(t *testing.T) {
 			}
 			if route.NLRI[0].Length != 0 {
 				t.Errorf("AFI=%d SAFI=%d: expected wildcard NLRI (Length=0), got Length=%d", tt.afi, tt.safi, route.NLRI[0].Length)
+			}
+		})
+	}
+}
+
+func TestMPUnReachNLRI_GetMCASTVPN(t *testing.T) {
+	tests := []struct {
+		name string
+		safi uint8
+	}{
+		{name: "MCAST-VPN SAFI 5", safi: 5},
+		{name: "MVPN SAFI 129", safi: 129},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// RFC 6514 Section 4.4: Leaf A-D contains a complete Type 1
+			// Route Key and the Originating Router's IP Address.
+			mp := &MPUnReachNLRI{
+				AddressFamilyID:    1,
+				SubAddressFamilyID: tt.safi,
+				WithdrawnRoutes: []byte{
+					0x04, 0x12, // Leaf A-D route type and length
+					0x01, 0x0c, // Route Key: Intra-AS I-PMSI A-D type and length
+					0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // RD 100:200
+					10, 0, 0, 1, // Route Key Originating Router's IP Address
+					10, 0, 0, 2, // Originating Router's IP Address
+				},
+				addPath: map[int]bool{},
+			}
+			get := mp.GetNLRIMCASTVPN
+			if tt.safi == 129 {
+				get = mp.GetNLRIMVPN
+			}
+			route, err := get()
+			if err != nil {
+				t.Fatalf("withdrawn route parse error = %v", err)
+			}
+			if len(route.Route) != 1 {
+				t.Fatalf("route count = %d, want 1", len(route.Route))
+			}
+			if got := route.Route[0].GetMCASTVPNOriginatorIP(); !bytes.Equal(got, []byte{10, 0, 0, 2}) {
+				t.Errorf("originator IP = %v, want 10.0.0.2", got)
 			}
 		})
 	}

@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "name": "mup-ipv4-st2-announce",
+  "description": "Inject the ipv4/bgp-mup MUP announce fixture and validate the decoded AFI/SAFI 1/85 or 2/85 BMP message.",
+  "tags": [
+    "mup",
+    "ipv4",
+    "route-type-4",
+    "announce",
+    "gobgp"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/bgp-mup",
+      "action": "announce",
+      "nlri": {
+        "arch_type": 1,
+        "route_type": 4,
+        "route_data": {
+          "rd": [
+            0,
+            0,
+            0,
+            100,
+            0,
+            0,
+            0,
+            100
+          ],
+          "end_point_address_length": 64,
+          "end_point_address": "10.0.0.1",
+          "teid": [
+            0,
+            0,
+            48,
+            57
+          ],
+          "tlvs": [
+            {
+              "type": 1,
+              "length": 5,
+              "value": [
+                0,
+                0,
+                48,
+                57,
+                9
+              ]
+            },
+            {
+              "type": 2,
+              "length": 4,
+              "value": [
+                10,
+                0,
+                0,
+                9
+              ]
+            },
+            {
+              "type": 3,
+              "length": 4,
+              "value": [
+                10,
+                0,
+                0,
+                10
+              ]
+            }
+          ]
+        }
+      },
+      "next_hops": [
+        "10.0.0.2"
+      ],
+      "as_path_segments": [
+        {
+          "type": "as_sequence",
+          "asns": [
+            65000
+          ]
+        }
+      ],
+      "origin": "igp",
+      "extended_communities": [
+        {
+          "type": "route_target",
+          "format": "two_octet_as",
+          "asn": 100,
+          "local": 100
+        },
+        {
+          "type": "raw",
+          "type_high": 12,
+          "type_low": 2,
+          "value_hex": "fa56ea000064"
+        }
+      ]
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.mup_v4",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "route_type": 4,
+      "vpn_rd": "100:100",
+      "teid": 12345,
+      "endpoint_address": "10.0.0.1",
+      "endpoint_len": 64
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "router_ip": "172.30.0.2",
+      "peer_ip": "172.30.0.3",
+      "peer_type": 0,
+      "peer_asn": 65000,
+      "vpn_rd": "100:100",
+      "vpn_rd_type": 0,
+      "is_ipv4": true,
+      "arch_type": 1,
+      "route_type": 4,
+      "is_nexthop_ipv4": true,
+      "is_adj_rib_in_post_policy": true,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false,
+      "is_loc_rib_filtered": false,
+      "endpoint_address": "10.0.0.1",
+      "endpoint_len": 64,
+      "teid": 12345,
+      "qfi": 9,
+      "nexthop": "10.0.0.2",
+      "origin_as": 65000
+    },
+    "contains": {
+      "base_attrs": {
+        "is_atomic_agg": false,
+        "origin": "igp",
+        "as_path": [
+          65000
+        ],
+        "as_path_count": 1
+      },
+      "tlvs": [
+        {
+          "type": 1,
+          "teid": 12345,
+          "qfi": 9
+        },
+        {
+          "type": 2,
+          "address": "10.0.0.9"
+        },
+        {
+          "type": 3,
+          "address": "10.0.0.10"
+        }
+      ]
+    },
+    "present": [
+      "timestamp",
+      "base_attrs"
+    ],
+    "non_empty": [
+      "hash",
+      "router_hash",
+      "peer_hash",
+      "base_attrs.base_attr_hash"
+    ],
+    "absent": [
+      "error",
+      "is_eor"
+    ]
+  }
+}
+

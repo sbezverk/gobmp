@@ -80,13 +80,11 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 		prfx.Nexthop = nlri.GetNextHop()
 		if nlri.IsIPv6NLRI() {
 			prfx.IsIPv4 = false
-			prfx.IsNexthopIPv4 = false
 			a := make([]byte, 16)
 			copy(a, e.Prefix)
 			prfx.Prefix = net.IP(a).To16().String()
 		} else {
 			prfx.IsIPv4 = true
-			prfx.IsNexthopIPv4 = true
 			a := make([]byte, 4)
 			copy(a, e.Prefix)
 			prfx.Prefix = net.IP(a).To4().String()
@@ -97,6 +95,14 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 				}
 				prfx.PrefixLen = 32
 			}
+		}
+		// RFC 8950 §3 (updating RFC 4760 §3, SAFI 2 multicast): the next hop's
+		// address family is determined by the Length of Next Hop field, not the
+		// NLRI AFI; a 16-byte ::ffff: next hop is IPv4-mapped (RFC 4798).
+		if prfx.Nexthop == "" {
+			prfx.IsNexthopIPv4 = prfx.IsIPv4
+		} else {
+			prfx.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
 		}
 		prfxs = append(prfxs, prfx)
 	}

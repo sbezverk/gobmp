@@ -33,7 +33,7 @@ func (t *MACIPAdvertisement) getESI() *ESI {
 }
 
 func (t *MACIPAdvertisement) getTag() []byte {
-	return nil
+	return t.EthTag
 }
 
 func (t *MACIPAdvertisement) getMAC() *MACAddress {

@@ -62,8 +62,7 @@ func (n *NLRI) GetMCASTVPNSourceAS() uint32 {
 }
 
 // UnmarshalMCASTVPNNLRI instantiates a MCAST-VPN NLRI object.
-// ipv6 indicates AFI=2, used by Type 4 to determine originator IP address length.
-func UnmarshalMCASTVPNNLRI(b []byte, ipv6 bool) (*Route, error) {
+func UnmarshalMCASTVPNNLRI(b []byte) (*Route, error) {
 	if glog.V(6) {
 		glog.Infof("MCAST-VPN NLRI Raw: %s", tools.MessageHex(b))
 	}
@@ -108,7 +107,7 @@ func UnmarshalMCASTVPNNLRI(b []byte, ipv6 bool) (*Route, error) {
 			}
 		case 4:
 			// Leaf A-D route
-			n.RouteTypeSpec, err = UnmarshalType4(b[p:p+l], ipv6)
+			n.RouteTypeSpec, err = UnmarshalType4(b[p : p+l])
 			if err != nil {
 				return nil, fmt.Errorf("failed to unmarshal type 4 route: %w", err)
 			}

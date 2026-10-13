@@ -9,7 +9,7 @@ import (
 )
 
 // lsInterASLink maps a decoded Inter-AS half-link and its BGP-LS attributes into the shared LSLink schema.
-func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update, isIPv6 bool) (*LSLink, error) {
+func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSLink, error) {
 	if p == nil {
 		return nil, fmt.Errorf("message producer is nil")
 	}
@@ -126,6 +126,6 @@ func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op 
 		msg.AreaID = "0"
 	}
 	// Apply TE metrics and other path attributes through the common link enrichment path.
-	populateLSLinkAttributes(&msg, update, isIPv6)
+	populateLSLinkAttributes(&msg, update, false)
 	return &msg, nil
 }

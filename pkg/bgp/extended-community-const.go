@@ -113,6 +113,13 @@ const (
 	// Keeps "vni=" as the canonical prefix; the transitive variant (ECPVirtualNetworkID, Transitive Two-Octet AS-Specific subtype 0x80) uses "t-vni=".
 	ECPVNIID = "vni="
 
+	// ECPMUPDirectSegment extended community prefix for the Direct Segment sub-types
+	// of the BGP MUP Extended Community	[draft-ietf-bess-mup-safi]
+	ECPMUPDirectSegment = "mup-ds="
+	// ECPMUPInterworkSegment extended community prefix for the Interwork Segment sub-types
+	// of the BGP MUP Extended Community	[draft-ietf-bess-mup-safi]
+	ECPMUPInterworkSegment = "mup-is="
+
 	// ECPFlowspec extended community prefix for Flowspec extended community
 	ECPFlowspec = "flowspec="
 

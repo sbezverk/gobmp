@@ -11,6 +11,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/flowspec"
 	"github.com/sbezverk/gobmp/pkg/ls"
 	"github.com/sbezverk/gobmp/pkg/mcastvpn"
+	"github.com/sbezverk/gobmp/pkg/mup"
 	"github.com/sbezverk/gobmp/pkg/rtc"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
 	"github.com/sbezverk/gobmp/pkg/vpls"
@@ -37,6 +38,7 @@ func (m *evpnMockNLRI) GetAllFlowspecNLRI() ([]*flowspec.NLRI, error) { return n
 func (m *evpnMockNLRI) GetNLRIMCASTVPN() (*mcastvpn.Route, error)     { return nil, nil }
 func (m *evpnMockNLRI) GetNLRIMVPN() (*mcastvpn.Route, error)         { return nil, nil }
 func (m *evpnMockNLRI) GetNLRIRTC() (*rtc.Route, error)               { return nil, nil }
+func (m *evpnMockNLRI) GetNLRIMUP() (*mup.Route, error)               { return nil, nil }
 func (m *evpnMockNLRI) GetNextHop() string                            { return m.nextHop }
 func (m *evpnMockNLRI) IsIPv6NLRI() bool                              { return m.isIPv6 }
 func (m *evpnMockNLRI) IsNextHopIPv6() bool                           { return m.isIPv6 }
@@ -123,6 +125,52 @@ func TestEvpnIPv6Address(t *testing.T) {
 	}
 	if prfxs[0].IPLength != 128 {
 		t.Errorf("IPLength = %d, want 128", prfxs[0].IPLength)
+	}
+}
+
+// buildEVPNType5IPv6ShortPrefixWire is buildEVPNType5IPv6Wire with an
+// IPAddrLength <= 32, the case message/evpn.go's "prfx.IPLength <= 32 means
+// IPv4" branch mis-handles: prefix length and address family are unrelated,
+// and an EVPN RT-5 IPv6 prefix can carry a short prefix length.
+func buildEVPNType5IPv6ShortPrefixWire() []byte {
+	wire := buildEVPNType5IPv6Wire()
+	// IPAddrLength byte sits at offset 2 (RouteType+Length) + 8(RD) + 10(ESI) + 4(EthTag).
+	wire[2+8+10+4] = 32
+	return wire
+}
+
+func TestEvpnType5IPv6ShortPrefixLength(t *testing.T) {
+	prod := &producer{
+		publisher: &mockPublisher{},
+	}
+
+	route, err := evpn.UnmarshalEVPNNLRI(buildEVPNType5IPv6ShortPrefixWire())
+	if err != nil {
+		t.Fatalf("UnmarshalEVPNNLRI() error: %v", err)
+	}
+
+	nlri := &evpnMockNLRI{route: route, nextHop: "2001:db8::1", isIPv6: true}
+	ph := &bmp.PerPeerHeader{
+		PeerType:          0,
+		PeerBGPID:         make([]byte, 4),
+		PeerAddress:       make([]byte, 16),
+		PeerDistinguisher: make([]byte, 8),
+		PeerTimestamp:     make([]byte, 8),
+	}
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	prfxs, err := prod.evpn(nlri, 0, ph, update)
+	if err != nil {
+		t.Fatalf("evpn() error: %v", err)
+	}
+	if len(prfxs) != 1 {
+		t.Fatalf("got %d prefixes, want 1", len(prfxs))
+	}
+	if prfxs[0].IPAddress != "2001:db8::1" {
+		t.Errorf("IPAddress = %q, want '2001:db8::1' (a /32 IPv6 EVPN prefix is still IPv6)", prfxs[0].IPAddress)
+	}
+	if prfxs[0].GWAddress != "2001:db8::2" {
+		t.Errorf("GWAddress = %q, want '2001:db8::2'", prfxs[0].GWAddress)
 	}
 }
 
@@ -262,4 +310,109 @@ func TestEvpnType2ESIAndMAC(t *testing.T) {
 	if prfxs[0].MAC != "aa:bb:cc:dd:ee:ff" {
 		t.Errorf("MAC = %q, want 'aa:bb:cc:dd:ee:ff'", prfxs[0].MAC)
 	}
+}
+
+// buildEVPNType5IPv6WireWithEthTag is buildEVPNType5IPv6Wire with a
+// non-zero Ethernet Tag ID, to catch IPPrefix.getTag() returning nil.
+func buildEVPNType5IPv6WireWithEthTag(ethTag [4]byte) []byte {
+	wire := buildEVPNType5IPv6Wire()
+	// EthTag sits right after RouteType(1)+Length(1)+RD(8)+ESI(10).
+	copy(wire[2+8+10:2+8+10+4], ethTag[:])
+	return wire
+}
+
+func TestEvpnType5EthTag(t *testing.T) {
+	prod := &producer{
+		publisher: &mockPublisher{},
+	}
+
+	route, err := evpn.UnmarshalEVPNNLRI(buildEVPNType5IPv6WireWithEthTag([4]byte{0x00, 0x00, 0x00, 0x2a}))
+	if err != nil {
+		t.Fatalf("UnmarshalEVPNNLRI() error: %v", err)
+	}
+
+	nlri := &evpnMockNLRI{route: route, nextHop: "2001:db8::1", isIPv6: true}
+	ph := &bmp.PerPeerHeader{
+		PeerType:          0,
+		PeerBGPID:         make([]byte, 4),
+		PeerAddress:       make([]byte, 16),
+		PeerDistinguisher: make([]byte, 8),
+		PeerTimestamp:     make([]byte, 8),
+	}
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	prfxs, err := prod.evpn(nlri, 0, ph, update)
+	if err != nil {
+		t.Fatalf("evpn() error: %v", err)
+	}
+	if len(prfxs) != 1 {
+		t.Fatalf("got %d prefixes, want 1", len(prfxs))
+	}
+	if want := []byte{0x00, 0x00, 0x00, 0x2a}; !bytesEqual(prfxs[0].EthTag, want) {
+		t.Errorf("EthTag = %x, want %x", prfxs[0].EthTag, want)
+	}
+}
+
+// buildEVPNType2WireWithEthTag is buildEVPNType2Wire plus a non-zero
+// Ethernet Tag ID, to catch MACIPAdvertisement.getTag() returning nil
+// instead of the parsed tag.
+func buildEVPNType2WireWithEthTag(esi [10]byte, ethTag [4]byte, mac [6]byte) []byte {
+	data := make([]byte, 33)
+	copy(data[8:18], esi[:])
+	copy(data[18:22], ethTag[:])
+	data[22] = 48
+	copy(data[23:29], mac[:])
+	wire := make([]byte, 35)
+	wire[0] = 2
+	wire[1] = 33
+	copy(wire[2:], data)
+	return wire
+}
+
+func TestEvpnType2EthTag(t *testing.T) {
+	prod := &producer{
+		publisher: &mockPublisher{},
+	}
+
+	esi := [10]byte{}
+	ethTag := [4]byte{0x00, 0x00, 0x00, 0x64} // 100
+	mac := [6]byte{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
+
+	route, err := evpn.UnmarshalEVPNNLRI(buildEVPNType2WireWithEthTag(esi, ethTag, mac))
+	if err != nil {
+		t.Fatalf("UnmarshalEVPNNLRI() error: %v", err)
+	}
+
+	nlri := &evpnMockNLRI{route: route, nextHop: "10.0.0.1", isIPv6: false}
+	ph := &bmp.PerPeerHeader{
+		PeerType:          0,
+		PeerBGPID:         make([]byte, 4),
+		PeerAddress:       make([]byte, 16),
+		PeerDistinguisher: make([]byte, 8),
+		PeerTimestamp:     make([]byte, 8),
+	}
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}
+
+	prfxs, err := prod.evpn(nlri, 0, ph, update)
+	if err != nil {
+		t.Fatalf("evpn() error: %v", err)
+	}
+	if len(prfxs) != 1 {
+		t.Fatalf("got %d prefixes, want 1", len(prfxs))
+	}
+	if want := []byte{0x00, 0x00, 0x00, 0x64}; !bytesEqual(prfxs[0].EthTag, want) {
+		t.Errorf("EthTag = %x, want %x", prfxs[0].EthTag, want)
+	}
+}
+
+func bytesEqual(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

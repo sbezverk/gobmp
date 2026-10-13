@@ -84,6 +84,8 @@ goBMP is a production-ready implementation of the BGP Monitoring Protocol ([RFC 
 | SR Policy v6 | 2/73 | Segment Routing Policy for IPv6 |
 | FlowSpec v4 | 1/133 | Flow Specification for IPv4 |
 | FlowSpec v6 | 2/133 | Flow Specification for IPv6 |
+| BGP-MUP v4 | 1/85 | Mobile User Plane for IPv4 |
+| BGP-MUP v6 | 2/85 | Mobile User Plane for IPv6 |
 
 ### Advanced Features
 
@@ -428,7 +430,7 @@ NATS server URL for publishing messages. Example: `--nats-server=nats://nats.exa
 
 Controls Kafka topic separation by address family:
 - `true`: Separate topics for IPv4 and IPv6 (e.g., `gobmp.parsed.unicast_prefix_v4`, `gobmp.parsed.unicast_prefix_v6`)
-- `false`: Combined topic for both address families (e.g., `gobmp.parsed.unicast_prefix`)
+- `false`: Combined topic for both address families (e.g., `gobmp.parsed.unicast_prefix`, `gobmp.parsed.mup`)
 
 Useful for optimizing downstream consumers that only handle specific address families.
 
@@ -440,7 +442,7 @@ Useful for optimizing downstream consumers that only handle specific address fam
 **RAW mode (OpenBMP compatibility):** When enabled, goBMP publishes BMP messages in OpenBMP v2 binary format without parsing the BGP content. This mode:
 - Preserves the original BMP message in binary format
 - Includes OpenBMP-compatible headers (version, collector hash, message length)
-- Publishes to `gobmp.bmp_raw` topic
+- Publishes to `gobmp.raw` topic
 - Allows integration with existing OpenBMP-based pipelines
 
 Use this when you need OpenBMP compatibility or want to defer BGP parsing to downstream consumers.
@@ -527,7 +529,8 @@ services:
 
 ## Kafka Topics
 
-When publishing to Kafka, goBMP creates the following topics (with `--split-af=true`):
+When publishing to Kafka, goBMP creates the following topics. Address-family-specific
+topics in this table are shown for `--split-af=true` (the default):
 
 | Topic | Description |
 |-------|-------------|
@@ -541,11 +544,19 @@ When publishing to Kafka, goBMP creates the following topics (with `--split-af=t
 | `gobmp.parsed.ls_link` | BGP-LS Link NLRIs |
 | `gobmp.parsed.ls_prefix` | BGP-LS Prefix NLRIs |
 | `gobmp.parsed.ls_srv6_sid` | BGP-LS SRv6 SID NLRIs |
+| `gobmp.parsed.ls_opaque` | BGP-LS NLRIs of types gobmp does not decode, raw hex (RFC 9552 §5.2) |
 | `gobmp.parsed.sr_policy_v4` | SR Policy v4 NLRIs |
 | `gobmp.parsed.sr_policy_v6` | SR Policy v6 NLRIs |
 | `gobmp.parsed.flowspec_v4` | FlowSpec v4 rules |
 | `gobmp.parsed.flowspec_v6` | FlowSpec v6 rules |
-| `gobmp.bmp_raw` | RAW OpenBMP binary messages (when `--bmp-raw=true`) |
+| `gobmp.parsed.mup_v4` | MUP v4 routes |
+| `gobmp.parsed.mup_v6` | MUP v6 routes |
+| `gobmp.parsed.mup` | Combined MUP v4/v6 routes (when `--split-af=false`) |
+| `gobmp.raw` | RAW OpenBMP binary messages (when `--bmp-raw=true`) |
+
+When `--split-af=false`, MUP IPv4 and IPv6 messages are published to
+`gobmp.parsed.mup` instead of the split `gobmp.parsed.mup_v4` and
+`gobmp.parsed.mup_v6` topics.
 
 ---
 
@@ -608,6 +619,18 @@ This project follows the licensing terms of the original repository.
 
 ## Migration Guide
 
+### BGP Prefix-SID field migration
+
+`BaseAttributes.BGPPrefixSID` and the root-level `PrefixSID` fields on
+`UnicastPrefix`, `MUPPrefix`, and `L3VPNPrefix` are deprecated and scheduled
+for removal on September 16, 2027. The authoritative source for all
+Prefix-SID references is now `BaseAttributes.PrefixSID`.
+
+Applications should migrate any Prefix-SID reads and processing to
+`BaseAttributes.PrefixSID`. The legacy `BGPPrefixSID` and root-level
+`PrefixSID` fields remain available until the removal date for compatibility
+with existing consumers.
+
 ### Publisher Selection: `--dump=nats` and `--dump=kafka` removed
 
 In previous versions the `--dump` flag accepted `nats` and `kafka` as values to select the message broker. These values are **no longer valid**. `--dump` is now restricted to `console` and `file` only.
@@ -645,4 +668,3 @@ nats_config:
 ```
 
 > **Note:** Specifying both `--kafka-server` and `--nats-server` at the same time (or having both blocks populated in the config file without `--dump`) is now an explicit error.
-

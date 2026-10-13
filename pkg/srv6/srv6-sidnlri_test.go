@@ -124,3 +124,37 @@ func TestUnmarshalSIDNLRI(t *testing.T) {
 		})
 	}
 }
+
+// TestSIDNLRIGetIGPRouterIDProtocol decodes an 8-octet IGP Router-ID through
+// UnmarshalSRv6SIDNLRI, so the SRv6 SID NLRI Protocol-ID must reach the
+// decoder (RFC 9552 Section 5.2.1.4).
+func TestSIDNLRIGetIGPRouterIDProtocol(t *testing.T) {
+	tests := []struct {
+		name  string
+		proto base.ProtoID
+		want  string
+	}{
+		{name: "OSPFv2 pseudonode", proto: base.OSPFv2, want: "10.0.0.1:192.168.1.1"},
+		{name: "OSPFv3 pseudonode", proto: base.OSPFv3, want: "10.0.0.1:3232235777"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := []byte{
+				byte(tt.proto),
+				0, 0, 0, 0, 0, 0, 0, 0, // Identifier
+				0x01, 0x00, 0x00, 0x0c, // Local Node Descriptors, length 12
+				0x02, 0x03, 0x00, 0x08, // IGP Router-ID TLV 515, length 8
+				10, 0, 0, 1, 192, 168, 1, 1,
+				0x02, 0x06, 0x00, 0x10, // SRv6 SID Information TLV 518, length 16
+				0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+			}
+			sr, err := UnmarshalSRv6SIDNLRI(b)
+			if err != nil {
+				t.Fatalf("UnmarshalSRv6SIDNLRI() error = %v", err)
+			}
+			if got := sr.GetSRv6SIDIGPRouterID(); got != tt.want {
+				t.Errorf("GetSRv6SIDIGPRouterID() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

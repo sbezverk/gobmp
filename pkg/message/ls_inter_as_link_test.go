@@ -161,7 +161,7 @@ func TestProcessNLRI71InterASLinkFailures(t *testing.T) {
 	t.Run("decode", func(t *testing.T) {
 		recorder := &recordingPublisher{}
 		p := &producer{publisher: recorder}
-		p.processNLRI71SubTypes(&interASNLRI71Mock{err: errPublishFailure}, 0, ph, update)
+		p.processNLRI71SubTypes(&interASNLRI71Mock{err: errPublishFailure}, 0, ph, update, false)
 		if len(recorder.msgs) != 0 {
 			t.Fatalf("published messages = %d, want 0", len(recorder.msgs))
 		}
@@ -169,7 +169,7 @@ func TestProcessNLRI71InterASLinkFailures(t *testing.T) {
 	t.Run("type", func(t *testing.T) {
 		recorder := &recordingPublisher{}
 		p := &producer{publisher: recorder}
-		p.processNLRI71SubTypes(&interASNLRI71Mock{nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 7, LS: []byte{1}}}}}, 0, ph, update)
+		p.processNLRI71SubTypes(&interASNLRI71Mock{nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 7, LS: []byte{1}}}}}, 0, ph, update, false)
 		if len(recorder.msgs) != 0 {
 			t.Fatalf("published messages = %d, want 0", len(recorder.msgs))
 		}
@@ -177,7 +177,7 @@ func TestProcessNLRI71InterASLinkFailures(t *testing.T) {
 	t.Run("operation", func(t *testing.T) {
 		recorder := &recordingPublisher{}
 		p := &producer{publisher: recorder}
-		p.processNLRI71SubTypes(&interASNLRI71Mock{nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 7, LS: decodedMessageInterASLink(t)}}}}, 2, ph, update)
+		p.processNLRI71SubTypes(&interASNLRI71Mock{nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 7, LS: decodedMessageInterASLink(t)}}}}, 2, ph, update, false)
 		if len(recorder.msgs) != 0 {
 			t.Fatalf("published messages = %d, want 0", len(recorder.msgs))
 		}
@@ -185,11 +185,42 @@ func TestProcessNLRI71InterASLinkFailures(t *testing.T) {
 	t.Run("publish", func(t *testing.T) {
 		publisher := &failingPublisher{}
 		p := &producer{publisher: publisher}
-		p.processNLRI71SubTypes(&interASNLRI71Mock{nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 7, LS: decodedMessageInterASLink(t)}}}}, 0, ph, update)
+		p.processNLRI71SubTypes(&interASNLRI71Mock{nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 7, LS: decodedMessageInterASLink(t)}}}}, 0, ph, update, false)
 		if publisher.calls != 1 {
 			t.Fatalf("publish calls = %d, want 1", publisher.calls)
 		}
 	})
+}
+
+// TestMergedLSLinkAttributes preserves upstream router-ID selection and SAFI-specific metric decoding.
+func TestMergedLSLinkAttributes(t *testing.T) {
+	for _, spf := range []bool{false, true} {
+		metric := []byte{10}
+		if spf {
+			metric = []byte{0, 0, 0, 10}
+		}
+		attributes := messageInterASTLV(1028, []byte{192, 0, 2, 10})
+		attributes = append(attributes, messageInterASTLV(1031, []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20})...)
+		attributes = append(attributes, messageInterASTLV(1095, metric)...)
+		update := &bgp.Update{PathAttributes: []bgp.PathAttribute{{AttributeType: 29, Attribute: attributes}}}
+		var msg LSLink
+		populateLSLinkAttributes(&msg, update, spf)
+		if msg.RouterID != "192.0.2.10" || msg.RemoteRouterID != "2001:db8::14" || msg.IGPMetric != 10 {
+			t.Errorf("spf=%t router_id=%q remote_router_id=%q metric=%d", spf, msg.RouterID, msg.RemoteRouterID, msg.IGPMetric)
+		}
+		if !spf {
+			p := &producer{publisher: &recordingPublisher{}}
+			for _, flags := range []byte{0, 0x80} {
+				linkMsg, err := p.lsInterASLink(decodedMessageInterASLink(t), "", 0, makePeerHeader(t, bmp.PeerType0, flags), update)
+				if err != nil {
+					t.Fatalf("lsInterASLink: %v", err)
+				}
+				if linkMsg.RouterID != msg.RouterID || linkMsg.RemoteRouterID != msg.RemoteRouterID || linkMsg.IGPMetric != 10 {
+					t.Errorf("Inter-AS attributes vary with BMP flags %x: %+v", flags, linkMsg)
+				}
+			}
+		}
+	}
 }
 
 // TestLSInterASLinkNilInputs verifies producer helpers reject or ignore nil pointers without panicking.
@@ -197,22 +228,22 @@ func TestLSInterASLinkNilInputs(t *testing.T) {
 	link := decodedMessageInterASLink(t)
 	ph := makePeerHeader(t, bmp.PeerType0, 0)
 	p := &producer{publisher: &recordingPublisher{}}
-	if _, err := (*producer)(nil).lsInterASLink(link, "", 0, ph, nil, false); err == nil {
+	if _, err := (*producer)(nil).lsInterASLink(link, "", 0, ph, nil); err == nil {
 		t.Error("nil producer returned nil error")
 	}
-	if _, err := p.lsInterASLink(nil, "", 0, ph, nil, false); err == nil {
+	if _, err := p.lsInterASLink(nil, "", 0, ph, nil); err == nil {
 		t.Error("nil Inter-AS NLRI returned nil error")
 	}
-	if _, err := p.lsInterASLink(&base.InterASLinkNLRI{}, "", 0, ph, nil, false); err == nil {
+	if _, err := p.lsInterASLink(&base.InterASLinkNLRI{}, "", 0, ph, nil); err == nil {
 		t.Error("nil LocalNode returned nil error")
 	}
-	if _, err := p.lsInterASLink(&base.InterASLinkNLRI{LocalNode: &base.NodeDescriptor{}}, "", 0, ph, nil, false); err == nil {
+	if _, err := p.lsInterASLink(&base.InterASLinkNLRI{LocalNode: &base.NodeDescriptor{}}, "", 0, ph, nil); err == nil {
 		t.Error("nil Link returned nil error")
 	}
-	if _, err := p.lsInterASLink(link, "", 0, nil, nil, false); err == nil {
+	if _, err := p.lsInterASLink(link, "", 0, nil, nil); err == nil {
 		t.Error("nil per-peer header returned nil error")
 	}
-	if _, err := p.lsInterASLink(link, "", 0, ph, nil, false); err != nil {
+	if _, err := p.lsInterASLink(link, "", 0, ph, nil); err != nil {
 		t.Fatalf("nil update should be ignored: %v", err)
 	}
 	populateLSLinkAttributes(nil, nil, false)
@@ -243,7 +274,7 @@ func TestLSInterASLinkIPv6LocRIB(t *testing.T) {
 	tlvs[insertAt] = remoteIPv6
 	link.Link.TLVs = tlvs
 	p := &producer{publisher: &recordingPublisher{}}
-	msg, err := p.lsInterASLink(link, "2001:db8::ffff", 0, makePeerHeader(t, bmp.PeerType3, 0), &bgp.Update{}, true)
+	msg, err := p.lsInterASLink(link, "2001:db8::ffff", 0, makePeerHeader(t, bmp.PeerType3, 0), &bgp.Update{})
 	if err != nil {
 		t.Fatalf("lsInterASLink: %v", err)
 	}

@@ -66,61 +66,68 @@ func (l *LeafAD) getLabel() []*base.Label {
 	return nil
 }
 
-// UnmarshalEVPNLeafAD parses EVPN Type 11 Leaf A-D route from wire format
-// RFC 9572 Section 3.3
+// UnmarshalEVPNLeafAD parses EVPN Type 11 Leaf A-D route from wire format.
+// RFC 9572 Section 3.3:
 //
-// Wire format: RouteKey (variable) | OriginatorAddrLen (1 byte) | OriginatorAddr (4 or 16 bytes)
-// Since RouteKey has no explicit length field, we parse backwards to identify the originator fields.
+//	+-----------------------------------+
+//	|      Route Key (variable)         |
+//	+-----------------------------------+
+//	|Originator's Addr Length (1 octet) |
+//	+-----------------------------------+
+//	|Originator's Addr (4 or 16 octets) |
+//	+-----------------------------------+
 //
-// NOTE: Backward parsing limitation - if an IPv6 originator has byte 11 equal to 32, the IPv4
-// check could theoretically match incorrectly. This is statistically rare (probability 1/256) and
-// mitigated by trying IPv6 first and validating RouteKey length >= 1 byte per RFC 9572.
+// RFC 9572 Section 3.3: "The Route Key is the NLRI of the route for which
+// this Leaf A-D route is generated." RFC 9572 Section 2 states the Leaf A-D
+// route's "NLRI embeds the entire NLRI of the triggering PMSI A-D route."
+// RFC 9572 Section 3 (quoting RFC 7432) defines that embedded NLRI as
+// Route Type (1 octet) + Length (1 octet) + Route Type specific (variable).
+// The Route Key is therefore self-describing: it MUST be parsed forward
+// from its own Length field, never guessed by scanning backward from the
+// end of the buffer for a byte that merely looks like an originator length.
 func UnmarshalEVPNLeafAD(b []byte) (*LeafAD, error) {
-	// Minimum length: Route Key (1 byte min) + OriginatorAddrLen (1 byte) + OriginatorAddr (4 bytes min) = 6 bytes
-	if len(b) < 6 {
-		return nil, fmt.Errorf("invalid length of Leaf A-D route: need at least 6 bytes, have %d", len(b))
+	// Route Key must contain at least its own Type(1) + Length(1) header.
+	if len(b) < 2 {
+		return nil, fmt.Errorf("invalid length of Leaf A-D route: need at least 2 bytes for Route Key header, have %d", len(b))
+	}
+	// The Route Key "is the NLRI of the route for which this Leaf A-D route
+	// is generated" (RFC 9572 Section 3.3); every EVPN route type has a
+	// non-empty Route Type specific field, so a zero Length embeds no route.
+	// The embedded Route Type is not restricted: Section 3.3 allows "other
+	// types of routes that may be defined in the future".
+	if b[1] == 0 {
+		return nil, fmt.Errorf("invalid Leaf A-D Route Key: embedded route type %d has zero length", b[0])
+	}
+	keyLen := 2 + int(b[1])
+	if keyLen > len(b) {
+		return nil, fmt.Errorf("invalid length of Leaf A-D route: Route Key declares %d bytes, have %d remaining", keyLen, len(b))
 	}
 
-	l := &LeafAD{}
-
-	// Parse from the end to determine where Route Key ends
-	// Try IPv6 first (last 17 bytes: length field + 16 bytes address)
-	// IPv6 is tried first to reduce false positives with IPv4 check
-	if len(b) >= 17 {
-		potentialLenPos := len(b) - 17
-		if b[potentialLenPos] == 128 {
-			// Validate RouteKey length >= 1 byte (RFC 9572 Section 3.3 requires embedded NLRI)
-			if potentialLenPos < 1 {
-				return nil, fmt.Errorf("invalid Leaf A-D route: RouteKey must be at least 1 byte")
-			}
-			// Valid IPv6 case
-			l.OriginatorAddrLen = 128
-			l.OriginatorAddr = make([]byte, 16)
-			copy(l.OriginatorAddr, b[potentialLenPos+1:potentialLenPos+17])
-			l.RouteKey = make([]byte, potentialLenPos)
-			copy(l.RouteKey, b[0:potentialLenPos])
-			return l, nil
-		}
+	rem := b[keyLen:]
+	if len(rem) < 1 {
+		return nil, fmt.Errorf("invalid length of Leaf A-D route: missing Originator's Addr Length byte")
+	}
+	origLen := rem[0]
+	var addrBytes int
+	switch origLen {
+	case 32:
+		addrBytes = 4
+	case 128:
+		addrBytes = 16
+	default:
+		return nil, fmt.Errorf("invalid originator address length in Leaf A-D route: %d, want 32 or 128", origLen)
+	}
+	if len(rem)-1 != addrBytes {
+		return nil, fmt.Errorf("invalid length of Leaf A-D route: originator address length %d requires %d bytes, have %d", origLen, addrBytes, len(rem)-1)
 	}
 
-	// Try IPv4 (last 5 bytes: length field + 4 bytes address)
-	if len(b) >= 5 {
-		potentialLenPos := len(b) - 5
-		if b[potentialLenPos] == 32 {
-			// Validate RouteKey length >= 1 byte (RFC 9572 Section 3.3 requires embedded NLRI)
-			if potentialLenPos < 1 {
-				return nil, fmt.Errorf("invalid Leaf A-D route: RouteKey must be at least 1 byte")
-			}
-			// Valid IPv4 case
-			l.OriginatorAddrLen = 32
-			l.OriginatorAddr = make([]byte, 4)
-			copy(l.OriginatorAddr, b[potentialLenPos+1:potentialLenPos+5])
-			l.RouteKey = make([]byte, potentialLenPos)
-			copy(l.RouteKey, b[0:potentialLenPos])
-			return l, nil
-		}
+	l := &LeafAD{
+		RouteKey:          make([]byte, keyLen),
+		OriginatorAddrLen: origLen,
+		OriginatorAddr:    make([]byte, addrBytes),
 	}
+	copy(l.RouteKey, b[:keyLen])
+	copy(l.OriginatorAddr, rem[1:])
 
-	// Neither valid IPv4 nor IPv6 format found
-	return nil, fmt.Errorf("invalid originator address length in Leaf A-D route")
+	return l, nil
 }

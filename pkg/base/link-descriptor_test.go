@@ -9,6 +9,80 @@ func makeLinkDesc(tlvs map[uint16]TLV) *LinkDescriptor {
 	return &LinkDescriptor{LinkTLV: tlvs}
 }
 
+// TestUnmarshalLinkDescriptorRepeatedAFLinkTLV covers RFC 9815 Section
+// 5.2.2.1: an unnumbered link may carry separate Address Family Link
+// Descriptor TLVs (1185) for IPv4 and IPv6. Other repeated types still fail.
+func TestUnmarshalLinkDescriptorRepeatedAFLinkTLV(t *testing.T) {
+	tests := []struct {
+		name    string
+		b       []byte
+		wantAF  []byte
+		wantErr bool
+	}{
+		{
+			name:   "IPv4 and IPv6 AF link descriptors",
+			b:      []byte{0x04, 0xa1, 0x00, 0x01, 0x01, 0x04, 0xa1, 0x00, 0x01, 0x02},
+			wantAF: []byte{1, 2},
+		},
+		{
+			name: "single AF link descriptor with link IDs",
+			b: []byte{
+				0x01, 0x02, 0x00, 0x08, 0, 0, 0, 1, 0, 0, 0, 2,
+				0x04, 0xa1, 0x00, 0x01, 0x02,
+			},
+			wantAF: []byte{2},
+		},
+		{
+			name:   "no AF link descriptor",
+			b:      []byte{0x01, 0x02, 0x00, 0x08, 0, 0, 0, 1, 0, 0, 0, 2},
+			wantAF: nil,
+		},
+		{
+			name: "repeated link IDs TLV is still rejected",
+			b: []byte{
+				0x01, 0x02, 0x00, 0x08, 0, 0, 0, 1, 0, 0, 0, 2,
+				0x01, 0x02, 0x00, 0x08, 0, 0, 0, 3, 0, 0, 0, 4,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ld, err := UnmarshalLinkDescriptor(tt.b)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("UnmarshalLinkDescriptor() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			got := ld.GetAFLinkTLVs()
+			if len(got) != len(tt.wantAF) {
+				t.Fatalf("GetAFLinkTLVs() returned %d TLVs, want %d", len(got), len(tt.wantAF))
+			}
+			for i, tlv := range got {
+				if tlv.Type != AFLinkDescriptorTLV || len(tlv.Value) != 1 || tlv.Value[0] != tt.wantAF[i] {
+					t.Errorf("GetAFLinkTLVs()[%d] = %+v, want type %d value %d", i, tlv, AFLinkDescriptorTLV, tt.wantAF[i])
+				}
+			}
+			if len(tt.wantAF) > 0 && ld.LinkTLV[AFLinkDescriptorTLV].Value[0] != tt.wantAF[0] {
+				t.Errorf("LinkTLV[1185] = %v, want the first instance %d", ld.LinkTLV[AFLinkDescriptorTLV].Value, tt.wantAF[0])
+			}
+		})
+	}
+}
+
+// TestLinkDescriptorGetAFLinkTLVsFallback covers a descriptor built without
+// UnmarshalLinkDescriptor, which only has LinkTLV set.
+func TestLinkDescriptorGetAFLinkTLVsFallback(t *testing.T) {
+	ld := makeLinkDesc(map[uint16]TLV{
+		AFLinkDescriptorTLV: {Type: AFLinkDescriptorTLV, Length: 1, Value: []byte{1}},
+	})
+	got := ld.GetAFLinkTLVs()
+	if len(got) != 1 || got[0].Value[0] != 1 {
+		t.Errorf("GetAFLinkTLVs() = %+v, want the LinkTLV[1185] instance", got)
+	}
+}
+
 func TestLinkDescriptorGetLinkID(t *testing.T) {
 	tests := []struct {
 		name       string

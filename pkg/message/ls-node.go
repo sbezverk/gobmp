@@ -9,7 +9,7 @@ import (
 )
 
 func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next hop */ string,
-	op int, ph *bmp.PerPeerHeader, update *bgp.Update, isIPv6 bool) (*LSNode, error) {
+	op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSNode, error) {
 	var operation string
 	switch op {
 	case 0:
@@ -76,10 +76,14 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 			msg.AreaID = lsnode.GetISISAreaID()
 		case base.OSPFv2, base.Direct, base.Static, base.OSPFv3, base.BGP, base.RSVPTE, base.SR:
 		}
-		if isIPv6 {
+		// RFC 9552 Sections 5.2.1 and 5.3.1.4: TLVs 1028 (IPv4) and 1029 (IPv6) local
+		// router-ID are chosen by which TLV is present in the attribute, never
+		// by the BMP peer's address family (V-flag) - both may legally be
+		// absent, present alone, or present together. Prefer IPv4, fall back
+		// to IPv6.
+		msg.RouterID = lsnode.GetLocalIPv4RouterID()
+		if msg.RouterID == "" {
 			msg.RouterID = lsnode.GetLocalIPv6RouterID()
-		} else {
-			msg.RouterID = lsnode.GetLocalIPv4RouterID()
 		}
 		if msd, err := lsnode.GetNodeMSD(); err == nil {
 			msg.NodeMSD = msd

@@ -283,6 +283,23 @@ func TestUnmarshalLSNLRI72(t *testing.T) {
 		}
 	})
 
+	// RFC 9552 §5.1: "a TLV with no value portion would have a length of zero".
+	t.Run("zero-length unknown type kept", func(t *testing.T) {
+		input := append(rdType0(100, 1), 0x00, 0x64, 0x00, 0x00) // type 100, length 0
+		input = append(input, rdType0(100, 1)...)
+		input = append(input, 0x00, 0x63, 0x00, 0x01, 0xff) // type 99, length 1
+		got, err := UnmarshalLSNLRI72(input, false)
+		if err != nil {
+			t.Fatalf("UnmarshalLSNLRI72() error = %v", err)
+		}
+		if len(got.NLRI) != 2 || got.NLRI[0].Type != 100 || got.NLRI[1].Type != 99 {
+			t.Fatalf("UnmarshalLSNLRI72() elements = %+v, want types 100 and 99", got.NLRI)
+		}
+		if b, ok := got.NLRI[0].LS.([]byte); !ok || len(b) != 0 {
+			t.Errorf("element 0 LS = %#v, want empty []byte", got.NLRI[0].LS)
+		}
+	})
+
 	t.Run("truncated TLV value rejected", func(t *testing.T) {
 		// Claims length 26 but body is only 5 bytes.
 		input := append(rdType0(100, 1), 0x00, 0x01, 0x00, 0x1A, 0x01, 0x02, 0x03, 0x04, 0x05)

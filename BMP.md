@@ -19,6 +19,7 @@ ls_node
 ls_link
 ls_prefix
 ls_srv6_sid
+ls_opaque
 l3vpn
 evpn
 ```

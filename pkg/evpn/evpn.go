@@ -1,12 +1,17 @@
 package evpn
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/tools"
 )
+
+// ErrEmptyNLRI is returned when EVPN NLRI data has zero length,
+// signaling an End-of-RIB marker per RFC 4724 §2.
+var ErrEmptyNLRI = errors.New("NLRI length is 0")
 
 // RouteTypeSpec defines a method to get a route type specific information
 type RouteTypeSpec interface {
@@ -91,7 +96,7 @@ func UnmarshalEVPNNLRI(b []byte) (*Route, error) {
 		glog.Infof("EVPN NLRI Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
+		return nil, ErrEmptyNLRI
 	}
 	r := Route{
 		Route: make([]*NLRI, 0),

@@ -182,3 +182,42 @@ func TestUnmarshalLinkNLRI(t *testing.T) {
 		})
 	}
 }
+
+// TestLinkNLRIGetIGPRouterIDProtocol decodes an 8-octet IGP Router-ID in both
+// node descriptors through UnmarshalLinkNLRI, so the Link NLRI Protocol-ID
+// must reach the decoder (RFC 9552 Section 5.2.1.4).
+func TestLinkNLRIGetIGPRouterIDProtocol(t *testing.T) {
+	tests := []struct {
+		name       string
+		proto      ProtoID
+		wantLocal  string
+		wantRemote string
+	}{
+		{name: "OSPFv2 pseudonode", proto: OSPFv2, wantLocal: "10.0.0.1:192.168.1.1", wantRemote: "10.0.0.2:192.168.1.1"},
+		{name: "OSPFv3 pseudonode", proto: OSPFv3, wantLocal: "10.0.0.1:3232235777", wantRemote: "10.0.0.2:3232235777"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := []byte{
+				byte(tt.proto),
+				0, 0, 0, 0, 0, 0, 0, 0, // Identifier
+				0x01, 0x00, 0x00, 0x0c, // Local Node Descriptors, length 12
+				0x02, 0x03, 0x00, 0x08, // IGP Router-ID TLV 515, length 8
+				10, 0, 0, 1, 192, 168, 1, 1,
+				0x01, 0x01, 0x00, 0x0c, // Remote Node Descriptors, length 12
+				0x02, 0x03, 0x00, 0x08,
+				10, 0, 0, 2, 192, 168, 1, 1,
+			}
+			l, err := UnmarshalLinkNLRI(b)
+			if err != nil {
+				t.Fatalf("UnmarshalLinkNLRI() error = %v", err)
+			}
+			if got := l.GetLocalIGPRouterID(); got != tt.wantLocal {
+				t.Errorf("GetLocalIGPRouterID() = %q, want %q", got, tt.wantLocal)
+			}
+			if got := l.GetRemoteIGPRouterID(); got != tt.wantRemote {
+				t.Errorf("GetRemoteIGPRouterID() = %q, want %q", got, tt.wantRemote)
+			}
+		})
+	}
+}

@@ -12,6 +12,7 @@ func TestNLRIMessageType(t *testing.T) {
 	}{
 		// BGP-LS
 		{"BGP-LS AFI=16388 SAFI=71", 16388, 71, 71},
+		{"BGP-LS-SPF AFI=16388 SAFI=80", 16388, 80, 80},
 
 		// IPv4 unicast
 		{"IPv4 unicast AFI=1 SAFI=1", 1, 1, 1},
@@ -56,6 +57,10 @@ func TestNLRIMessageType(t *testing.T) {
 		// Route Target Constraint
 		{"RTC v4 AFI=1 SAFI=132", 1, 132, 30},
 		{"RTC v6 AFI=2 SAFI=132", 2, 132, 31},
+
+		// BGP-MUP
+		{"BGP-MUP v4 AFI=1 SAFI=85", 1, 85, 36},
+		{"BGP-MUP v6 AFI=2 SAFI=85", 2, 85, 37},
 
 		// Unknown / unregistered
 		{"unknown AFI=0 SAFI=0", 0, 0, 0},

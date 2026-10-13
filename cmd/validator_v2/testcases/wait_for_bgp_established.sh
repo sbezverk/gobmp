@@ -4,13 +4,17 @@ set -euo pipefail
 API="${API:-http://127.0.0.1:8080}"
 deadline=$((SECONDS + 180))
 
-required_families=(
-  "ipv4/unicast"
-  "ipv6/unicast"
-  "ipv4/labeled-unicast"
-  "vpnv4"
-  "vpnv6"
-)
+if [[ -n "${REQUIRED_FAMILIES:-}" ]]; then
+  read -r -a required_families <<<"${REQUIRED_FAMILIES}"
+else
+  required_families=(
+    "ipv4/unicast"
+    "ipv6/unicast"
+    "ipv4/labeled-unicast"
+    "vpnv4"
+    "vpnv6"
+  )
+fi
 
 while (( SECONDS < deadline )); do
   session="$(curl -fsS "$API/v1/session" 2>/dev/null || true)"

@@ -1,6 +1,7 @@
 package message
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	evpnpkg "github.com/sbezverk/gobmp/pkg/evpn"
 )
 
 const (
@@ -22,6 +24,41 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 		glog.Infof("All attributes in evpn update: %+v", update.GetAllAttributeID())
 	}
 	evpn, err := nlri.GetNLRIEVPN()
+	if errors.Is(err, evpnpkg.ErrEmptyNLRI) && op == DelPrefix {
+		// Only an empty MP_UNREACH_NLRI is End-of-RIB (RFC 4724 §2); an empty MP_REACH is not.
+		prfx := EVPNPrefix{
+			Action:      "del",
+			RouterHash:  ph.Identity.RouterHash,
+			RouterIP:    ph.Identity.RouterIP,
+			PeerHash:    ph.GetPeerHash(),
+			PeerIP:      ph.GetPeerAddrString(),
+			RemoteBGPID: ph.GetPeerBGPIDString(),
+			PeerASN:     ph.PeerAS,
+			Timestamp:   ph.GetPeerTimestamp(),
+			PeerType:    uint8(ph.PeerType),
+			IsEOR:       true,
+			IsIPv4:      !nlri.IsIPv6NLRI(),
+		}
+		if f, err := ph.IsAdjRIBInPost(); err == nil {
+			prfx.IsAdjRIBInPost = f
+		}
+		if f, err := ph.IsAdjRIBOutPost(); err == nil {
+			prfx.IsAdjRIBOutPost = f
+		}
+		if f, err := ph.IsAdjRIBOut(); err == nil {
+			prfx.IsAdjRIBOut = f
+		}
+		if f, err := ph.IsLocRIB(); err == nil {
+			prfx.IsLocRIB = f
+		}
+		if f, err := ph.IsLocRIBFiltered(); err == nil {
+			prfx.IsLocRIBFiltered = f
+		}
+		if prfx.IsLocRIB {
+			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		}
+		return []EVPNPrefix{prfx}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -78,14 +115,17 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 				prfx.IPLength = *ip
 				gw := e.GetEVPNGWAddr()
 				addr := e.GetEVPNIPAddr()
-				if prfx.IPLength <= 32 {
+				// Address family comes from the byte length on the wire
+				// (4 vs 16), not from the prefix length: an EVPN RT-5 IPv6
+				// prefix can carry a length <= 32.
+				if len(addr) == net.IPv4len || len(gw) == net.IPv4len {
 					if addr != nil {
 						prfx.IPAddress = net.IP(addr).To4().String()
 					}
 					if gw != nil {
 						prfx.GWAddress = net.IP(gw).To4().String()
 					}
-				} else if prfx.IPLength <= 128 {
+				} else {
 					if addr != nil {
 						prfx.IPAddress = net.IP(addr).To16().String()
 					}
