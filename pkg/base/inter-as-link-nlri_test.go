@@ -22,9 +22,12 @@ func validInterASLinkNLRI() []byte {
 	local = append(local, interASTLV(515, []byte{10, 0, 0, 1})...)
 	local = append(local, interASTLV(1028, []byte{192, 0, 2, 1})...)
 	local = append(local, interASTLV(1029, []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})...)
+	local = append(local, interASTLV(2000, []byte{0xaa, 0xbb})...)
 	localDescriptor := interASTLV(256, local)
 	links := append(interASTLV(258, []byte{0, 0, 0, 10, 0, 0, 0, 20}), interASTLV(259, []byte{198, 51, 100, 1})...)
 	links = append(links, interASTLV(260, []byte{198, 51, 100, 2})...)
+	links = append(links, interASTLV(261, []byte{0x20, 1, 0x0d, 0xb8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})...)
+	links = append(links, interASTLV(262, []byte{0x20, 1, 0x0d, 0xb8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})...)
 	links = append(links, interASTLV(270, []byte{0, 0, 0xfd, 0xe9})...)
 	links = append(links, interASTLV(271, []byte{192, 0, 2, 2})...)
 	links = append(links, interASTLV(272, []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})...)
@@ -81,6 +84,13 @@ func TestUnmarshalInterASLinkNLRI(t *testing.T) {
 	unknown := nlri.Link.GetAll(999)
 	if len(unknown) != 2 || !bytes.Equal(unknown[0].Value, []byte{0x01}) || !bytes.Equal(unknown[1].Value, []byte{0xaa, 0xbb}) {
 		t.Errorf("duplicate unknown descriptors were not preserved in order: %+v", unknown)
+	}
+	localOpaque := nlri.LocalNodeTLVs[len(nlri.LocalNodeTLVs)-1]
+	if localOpaque.Type != 2000 || !bytes.Equal(localOpaque.Value, []byte{0xaa, 0xbb}) {
+		t.Errorf("unknown local-node descriptor was not preserved: %+v", localOpaque)
+	}
+	if &localOpaque.Value[0] != &nlri.LocalNode.SubTLV[2000].Value[0] {
+		t.Error("local-node lookup copied rather than reused parsed descriptor bytes")
 	}
 	if nlri.LocalNodeHash == "" || nlri.LinkHash == "" {
 		t.Error("descriptor hashes were not populated")
@@ -184,7 +194,7 @@ func TestUnmarshalInterASLinkNLRIProtocolIDs(t *testing.T) {
 func TestInterASRemoteASNUsesFourOctets(t *testing.T) {
 	wire := validInterASLinkNLRI()
 	localLength := int(binary.BigEndian.Uint16(wire[11:13]))
-	remoteASValue := 13 + localLength + 12 + 8 + 8 + 4
+	remoteASValue := 13 + localLength + 12 + 8 + 8 + 20 + 20 + 4
 	binary.BigEndian.PutUint32(wire[remoteASValue:remoteASValue+4], 4200000000)
 	nlri, err := UnmarshalInterASLinkNLRI(wire)
 	if err != nil {
@@ -263,6 +273,44 @@ func TestUnmarshalInterASLinkNLRIMandatoryFields(t *testing.T) {
 				t.Fatalf("error = %v, want substring %q", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+// TestInterASLinkSingletonDuplicates rejects repeated defined descriptors even when their wire ordering is valid.
+func TestInterASLinkSingletonDuplicates(t *testing.T) {
+	for _, typ := range []uint16{258, 259, 260, 261, 262, 270, 271, 272} {
+		t.Run(strconv.Itoa(int(typ)), func(t *testing.T) {
+			wire := validInterASLinkNLRI()
+			localLength := int(binary.BigEndian.Uint16(wire[11:13]))
+			for p := 13 + localLength; p+4 <= len(wire); {
+				length := int(binary.BigEndian.Uint16(wire[p+2 : p+4]))
+				end := p + 4 + length
+				if binary.BigEndian.Uint16(wire[p:p+2]) == typ {
+					duplicate := append([]byte(nil), wire[p:end]...)
+					duplicate[len(duplicate)-1]++
+					wire = append(append(append([]byte(nil), wire[:end]...), duplicate...), wire[end:]...)
+					break
+				}
+				p = end
+			}
+			_, err := UnmarshalInterASLinkNLRI(wire)
+			if err == nil || !strings.Contains(err.Error(), "duplicate singleton") {
+				t.Fatalf("expected duplicate singleton error for TLV %d, got %v", typ, err)
+			}
+		})
+	}
+}
+
+// TestInterASLocalNodeDuplicates rejects repeated sub-TLV types as required by RFC 9552 Section 5.2.1.4.
+func TestInterASLocalNodeDuplicates(t *testing.T) {
+	wire := validInterASLinkNLRI()
+	length := int(binary.BigEndian.Uint16(wire[11:13]))
+	p := 13 + length
+	unknown := append(interASTLV(2001, []byte{1}), interASTLV(2001, []byte{2})...)
+	binary.BigEndian.PutUint16(wire[11:13], uint16(length+len(unknown)))
+	wire = append(append(append([]byte(nil), wire[:p]...), unknown...), wire[p:]...)
+	if _, err := UnmarshalInterASLinkNLRI(wire); err == nil || !strings.Contains(err.Error(), "duplicate") {
+		t.Fatalf("expected duplicate local sub-TLV error, got %v", err)
 	}
 }
 
@@ -357,6 +405,10 @@ func TestUnmarshalInterASLinkNLRIFixedLengths(t *testing.T) {
 		{typ: 1028, value: []byte{1, 2}, oldLen: 4},
 		{typ: 1029, value: []byte{1, 2}, oldLen: 16},
 		{typ: 258, value: []byte{1, 2}, oldLen: 8},
+		{typ: 259, value: []byte{1, 2}, oldLen: 4},
+		{typ: 260, value: []byte{1, 2}, oldLen: 4},
+		{typ: 261, value: []byte{1, 2}, oldLen: 16},
+		{typ: 262, value: []byte{1, 2}, oldLen: 16},
 		{typ: 270, value: []byte{1, 2}, oldLen: 4},
 		{typ: 271, value: []byte{1, 2}, oldLen: 4},
 		{typ: 272, value: []byte{1, 2}, oldLen: 16},

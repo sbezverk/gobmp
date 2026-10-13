@@ -23,6 +23,7 @@ type InterASLinkNLRI struct {
 	ProtocolID    ProtoID
 	Identifier    [8]byte
 	LocalNode     *NodeDescriptor
+	LocalNodeTLVs []TLV
 	Link          *InterASLinkDescriptors
 	LocalNodeHash string
 	LinkHash      string
@@ -268,13 +269,19 @@ func UnmarshalInterASLinkNLRI(b []byte) (*InterASLinkNLRI, error) {
 	}
 	// Decode the mandatory Local Node Descriptor and retain a stable hash for correlation.
 	localNodeBytes := b[p : p+4+ndl]
-	if _, err := unmarshalCanonicalInterASTLVs(localNodeBytes[4:]); err != nil {
+	localTLVs, err := unmarshalCanonicalInterASTLVs(localNodeBytes[4:])
+	if err != nil {
 		return nil, fmt.Errorf("invalid Inter-AS Link Local Node Descriptor ordering: %w", err)
 	}
-	localNode, err := UnmarshalNodeDescriptor(localNodeBytes)
-	if err != nil {
-		return nil, fmt.Errorf("invalid Inter-AS Link Local Node Descriptor: %w", err)
+	// Reuse decoded values for semantic lookup; RFC 9552 Section 5.2.1.4 forbids duplicate node sub-TLV types.
+	localNode := &NodeDescriptor{SubTLV: make(map[uint16]TLV, len(localTLVs))}
+	for i, tlv := range localTLVs {
+		if i > 0 && localTLVs[i-1].Type == tlv.Type {
+			return nil, fmt.Errorf("invalid Inter-AS Link Local Node Descriptor: duplicate sub-TLV type %d", tlv.Type)
+		}
+		localNode.SubTLV[tlv.Type] = tlv
 	}
+	l.LocalNodeTLVs = localTLVs
 	if err := validateInterASLocalNode(localNode, l.ProtocolID); err != nil {
 		return nil, err
 	}
@@ -355,6 +362,7 @@ func validateInterASLinkDescriptors(link *InterASLinkDescriptors) error {
 		return fmt.Errorf("Inter-AS Link Descriptors are nil")
 	}
 	var hasRemoteAS, hasIPv4, hasIPv6 bool
+	var seen uint16
 	for _, tlv := range link.TLVs {
 		var expected uint16
 		switch tlv.Type {
@@ -367,6 +375,12 @@ func validateInterASLinkDescriptors(link *InterASLinkDescriptors) error {
 		default:
 			continue
 		}
+		// Track defined singleton types without allocating; unknown types remain repeatable.
+		bit := uint16(1) << (tlv.Type - 258)
+		if seen&bit != 0 {
+			return fmt.Errorf("duplicate singleton Inter-AS Link Descriptor TLV %d", tlv.Type)
+		}
+		seen |= bit
 		if tlv.Length != expected {
 			return fmt.Errorf("Inter-AS Link Descriptor TLV %d has length %d, expected %d", tlv.Type, tlv.Length, expected)
 		}

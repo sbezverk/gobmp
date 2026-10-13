@@ -26,6 +26,7 @@ func messageInterASLinkElement() []byte {
 	local := append(messageInterASTLV(512, []byte{0, 0, 0xfd, 0xe8}), messageInterASTLV(514, []byte{0, 0, 0, 9})...)
 	local = append(local, messageInterASTLV(515, []byte{10, 0, 0, 1})...)
 	local = append(local, messageInterASTLV(1028, []byte{192, 0, 2, 1})...)
+	local = append(local, messageInterASTLV(2000, []byte{0xaa, 0xbb})...)
 	links := append(messageInterASTLV(258, []byte{0, 0, 0, 10, 0, 0, 0, 20}), messageInterASTLV(259, []byte{198, 51, 100, 1})...)
 	links = append(links, messageInterASTLV(260, []byte{198, 51, 100, 2})...)
 	links = append(links, messageInterASTLV(261, []byte{0x20, 1, 0x0d, 0xb8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})...)
@@ -94,6 +95,9 @@ func TestProcessNLRI71InterASLink(t *testing.T) {
 	}
 	if count := len(got.InterASDescriptors); count < 2 || got.InterASDescriptors[count-2].Type != 999 || got.InterASDescriptors[count-1].Type != 999 || !bytes.Equal(got.InterASDescriptors[count-2].Value, []byte{0x01}) || !bytes.Equal(got.InterASDescriptors[count-1].Value, []byte{0x02}) {
 		t.Errorf("duplicate Inter-AS descriptors were not published in order: %+v", got.InterASDescriptors)
+	}
+	if count := len(got.InterASLocalNodeTLVs); count == 0 || got.InterASLocalNodeTLVs[count-1].Type != 2000 || !bytes.Equal(got.InterASLocalNodeTLVs[count-1].Value, []byte{0xaa, 0xbb}) {
+		t.Errorf("opaque local-node descriptors were not published: %+v", got.InterASLocalNodeTLVs)
 	}
 	if got.LocalASBRIPv4 != "192.0.2.1" || got.RemoteASBRIPv4 != "192.0.2.2" {
 		t.Errorf("unexpected ASBR IDs: local=%q remote=%q", got.LocalASBRIPv4, got.RemoteASBRIPv4)
