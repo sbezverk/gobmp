@@ -31,6 +31,7 @@ func messageInterASLinkElement() []byte {
 	links = append(links, messageInterASTLV(260, []byte{198, 51, 100, 2})...)
 	links = append(links, messageInterASTLV(261, []byte{0x20, 1, 0x0d, 0xb8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})...)
 	links = append(links, messageInterASTLV(262, []byte{0x20, 1, 0x0d, 0xb8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})...)
+	links = append(links, messageInterASTLV(263, []byte{0, 7})...)
 	links = append(links, messageInterASTLV(270, []byte{0, 0, 0xfd, 0xe9})...)
 	links = append(links, messageInterASTLV(271, []byte{192, 0, 2, 2})...)
 	links = append(links, messageInterASTLV(999, []byte{0x01})...)
@@ -110,6 +111,9 @@ func TestProcessNLRI71InterASLink(t *testing.T) {
 	}
 	if got.PathID != 77 {
 		t.Errorf("path ID = %d, want 77", got.PathID)
+	}
+	if got.MTID == nil || got.MTID.MTID != 7 {
+		t.Errorf("published link MT-ID = %+v, want 7", got.MTID)
 	}
 	if got.LocalLinkID != 10 || got.RemoteLinkID != 20 || got.AreaID != "9" {
 		t.Errorf("unexpected link IDs/area: local=%d remote=%d area=%q", got.LocalLinkID, got.RemoteLinkID, got.AreaID)

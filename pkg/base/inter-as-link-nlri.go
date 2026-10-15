@@ -86,10 +86,10 @@ func (d *InterASLinkDescriptors) GetLinkIPv6NeighborAddr() net.IP {
 	return d.ip(262, net.IPv6len)
 }
 
-// GetLinkMTID returns the first Multi-Topology Identifier descriptor.
+// GetLinkMTID returns the single Multi-Topology Identifier allowed in a link descriptor.
 func (d *InterASLinkDescriptors) GetLinkMTID() *MultiTopologyIdentifier {
 	tlv, ok := d.first(263)
-	if !ok {
+	if !ok || len(tlv.Value) != 2 {
 		return nil
 	}
 	mtids, err := UnmarshalMultiTopologyIdentifierTLV(tlv.Value)
@@ -368,6 +368,9 @@ func validateInterASLinkDescriptors(link *InterASLinkDescriptors) error {
 		switch tlv.Type {
 		case 258:
 			expected = 8
+		case 263:
+			// RFC 9552 Section 5.2.2.1 permits exactly one MT-ID in a Link Descriptor.
+			expected = 2
 		case 259, 260, RemoteASNumberType, IPv4RemoteASBRIDType:
 			expected = 4
 		case 261, 262, IPv6RemoteASBRIDType:

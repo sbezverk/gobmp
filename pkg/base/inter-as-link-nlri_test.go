@@ -28,6 +28,7 @@ func validInterASLinkNLRI() []byte {
 	links = append(links, interASTLV(260, []byte{198, 51, 100, 2})...)
 	links = append(links, interASTLV(261, []byte{0x20, 1, 0x0d, 0xb8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})...)
 	links = append(links, interASTLV(262, []byte{0x20, 1, 0x0d, 0xb8, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})...)
+	links = append(links, interASTLV(263, []byte{0, 7})...)
 	links = append(links, interASTLV(270, []byte{0, 0, 0xfd, 0xe9})...)
 	links = append(links, interASTLV(271, []byte{192, 0, 2, 2})...)
 	links = append(links, interASTLV(272, []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2})...)
@@ -80,6 +81,9 @@ func TestUnmarshalInterASLinkNLRI(t *testing.T) {
 	}
 	if got := nlri.GetRemoteASBRIPv6().String(); got != "2001:db8::2" {
 		t.Errorf("remote IPv6 ASBR = %q", got)
+	}
+	if got := nlri.Link.GetLinkMTID(); got == nil || got.MTID != 7 {
+		t.Errorf("link MT-ID = %+v, want 7", got)
 	}
 	unknown := nlri.Link.GetAll(999)
 	if len(unknown) != 2 || !bytes.Equal(unknown[0].Value, []byte{0x01}) || !bytes.Equal(unknown[1].Value, []byte{0xaa, 0xbb}) {
@@ -194,7 +198,7 @@ func TestUnmarshalInterASLinkNLRIProtocolIDs(t *testing.T) {
 func TestInterASRemoteASNUsesFourOctets(t *testing.T) {
 	wire := validInterASLinkNLRI()
 	localLength := int(binary.BigEndian.Uint16(wire[11:13]))
-	remoteASValue := 13 + localLength + 12 + 8 + 8 + 20 + 20 + 4
+	remoteASValue := 13 + localLength + 12 + 8 + 8 + 20 + 20 + 6 + 4
 	binary.BigEndian.PutUint32(wire[remoteASValue:remoteASValue+4], 4200000000)
 	nlri, err := UnmarshalInterASLinkNLRI(wire)
 	if err != nil {
@@ -278,7 +282,7 @@ func TestUnmarshalInterASLinkNLRIMandatoryFields(t *testing.T) {
 
 // TestInterASLinkSingletonDuplicates rejects repeated defined descriptors even when their wire ordering is valid.
 func TestInterASLinkSingletonDuplicates(t *testing.T) {
-	for _, typ := range []uint16{258, 259, 260, 261, 262, 270, 271, 272} {
+	for _, typ := range []uint16{258, 259, 260, 261, 262, 263, 270, 271, 272} {
 		t.Run(strconv.Itoa(int(typ)), func(t *testing.T) {
 			wire := validInterASLinkNLRI()
 			localLength := int(binary.BigEndian.Uint16(wire[11:13]))
@@ -298,6 +302,38 @@ func TestInterASLinkSingletonDuplicates(t *testing.T) {
 				t.Fatalf("expected duplicate singleton error for TLV %d, got %v", typ, err)
 			}
 		})
+	}
+}
+
+// TestInterASLinkMTIDLengths rejects empty, odd-length, and multi-ID link descriptors without truncating them.
+func TestInterASLinkMTIDLengths(t *testing.T) {
+	for _, length := range []int{0, 1, 3, 4, 6} {
+		t.Run(strconv.Itoa(length), func(t *testing.T) {
+			value := make([]byte, length)
+			wire := validInterASLinkNLRI()
+			original := interASTLV(263, []byte{0, 7})
+			replacement := interASTLV(263, value)
+			wire = bytes.Replace(wire, original, replacement, 1)
+			_, err := UnmarshalInterASLinkNLRI(wire)
+			if err == nil || !strings.Contains(err.Error(), "TLV 263") || !strings.Contains(err.Error(), "expected 2") {
+				t.Fatalf("expected TLV 263 length error, got %v", err)
+			}
+			descriptors := &InterASLinkDescriptors{TLVs: []TLV{{Type: 263, Length: uint16(length), Value: value}}}
+			if got := descriptors.GetLinkMTID(); got != nil {
+				t.Errorf("malformed link MT-ID = %+v, want nil", got)
+			}
+		})
+	}
+}
+
+// TestInterASLinkMTIDOptional verifies links without the optional MT-ID descriptor remain valid.
+func TestInterASLinkMTIDOptional(t *testing.T) {
+	nlri, err := UnmarshalInterASLinkNLRI(removeInterASLinkTLV(validInterASLinkNLRI(), 263))
+	if err != nil {
+		t.Fatalf("UnmarshalInterASLinkNLRI: %v", err)
+	}
+	if got := nlri.Link.GetLinkMTID(); got != nil {
+		t.Errorf("absent link MT-ID = %+v, want nil", got)
 	}
 }
 
@@ -409,6 +445,7 @@ func TestUnmarshalInterASLinkNLRIFixedLengths(t *testing.T) {
 		{typ: 260, value: []byte{1, 2}, oldLen: 4},
 		{typ: 261, value: []byte{1, 2}, oldLen: 16},
 		{typ: 262, value: []byte{1, 2}, oldLen: 16},
+		{typ: 263, value: []byte{1}, oldLen: 2},
 		{typ: 270, value: []byte{1, 2}, oldLen: 4},
 		{typ: 271, value: []byte{1, 2}, oldLen: 4},
 		{typ: 272, value: []byte{1, 2}, oldLen: 16},
