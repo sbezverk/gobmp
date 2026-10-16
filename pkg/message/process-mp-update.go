@@ -308,6 +308,8 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue
 			}
+			// Preserve Add-Path identity in the structured LSLink message.
+			msg.PathID = e.PathID
 			if err := p.marshalAndPublish(&msg, bmp.LSLinkMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSLink message with error: %+v", err)
 				continue
@@ -341,6 +343,24 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 			}
 			if err := p.marshalAndPublish(&msg, bmp.LSSRv6SIDMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
+				continue
+			}
+		case 7:
+			// Publish Inter-AS half-links on the existing LSLink topic with explicit ASBR fields.
+			link, ok := e.LS.(*base.InterASLinkNLRI)
+			if !ok {
+				glog.Errorf("NLRI 71 type 7: expected *base.InterASLinkNLRI, got %T", e.LS)
+				continue
+			}
+			msg, err := p.lsInterASLink(link, nlri.GetNextHop(), operation, ph, update)
+			if err != nil {
+				glog.Errorf("failed to produce Inter-AS ls_link message with error: %+v", err)
+				continue
+			}
+			// Preserve Add-Path identity in the structured LSLink message.
+			msg.PathID = e.PathID
+			if err := p.marshalAndPublish(&msg, bmp.LSLinkMsg, []byte(msg.RouterHash)); err != nil {
+				glog.Errorf("failed to process Inter-AS LSLink message with error: %+v", err)
 				continue
 			}
 		case 5:
@@ -411,6 +431,8 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				continue
 			}
 			msg.RD = rd
+			// Preserve Add-Path identity in the structured LSLink message.
+			msg.PathID = e.PathID
 			if err := p.marshalAndPublish(&msg, bmp.LSLinkMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSLink message with error: %+v", err)
 				continue
