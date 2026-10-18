@@ -62,10 +62,34 @@ func (p *producer) processMPReach(attribute []byte, ph *bmp.PerPeerHeader, updat
 		return
 	}
 	reachableUpdate := copyUpdate(update)
+	operation := AddPrefix
 	if reach, ok := nlri.(*bgp.MPReachNLRI); ok {
 		validateNHC(reachableUpdate, reach.AddressFamilyID, reach.SubAddressFamilyID, reach.NextHopAddress, ph)
+		// RFC 7606 Section 2 treats advertised routes as withdrawn. An empty
+		// MP_REACH advertises none and must not become an End-of-RIB marker.
+		if len(reach.NLRI) != 0 {
+			operation = dPathOperation(reachableUpdate, reach.AddressFamilyID, reach.SubAddressFamilyID)
+		}
 	}
-	p.processMPUpdate(nlri, AddPrefix, ph, reachableUpdate)
+	p.processMPUpdate(nlri, operation, ph, reachableUpdate)
+}
+
+// dPathOperation applies RFC 10039 Section 4 error handling to announcements.
+func dPathOperation(update *bgp.Update, afi uint16, safi uint8) int {
+	if update == nil || update.BaseAttributes == nil {
+		return AddPrefix
+	}
+	attributes := update.BaseAttributes
+	if attributes.DPath == nil && attributes.DPathAttr == nil && !attributes.DPathMalformed {
+		return AddPrefix
+	}
+	// RFC 10039 Section 4 item 7 permits D-PATH only on AFI 1/2 SAFI 128
+	// and AFI 25 SAFI 70; other enclosing families require treat-as-withdraw.
+	allowedFamily := ((afi == 1 || afi == 2) && safi == 128) || (afi == 25 && safi == 70)
+	if attributes.DPathMalformed || !allowedFamily {
+		return DelPrefix
+	}
+	return AddPrefix
 }
 
 func (p *producer) processMPUnreach(attribute []byte, ph *bmp.PerPeerHeader, update *bgp.Update) {
@@ -138,7 +162,16 @@ func (p *producer) processBGP4Update(ph *bmp.PerPeerHeader, update *bgp.Update) 
 		}
 		msgs = append(msgs, msg...)
 	}
-	msg, err := p.nlri(AddPrefix, ph, reachableUpdate)
+	operation := AddPrefix
+	if len(reachableUpdate.NLRI) != 0 {
+		operation = dPathOperation(reachableUpdate, 1, 1)
+		if operation == DelPrefix {
+			// Preserve explicit withdrawals while applying RFC 10039 Section 4
+			// treat-as-withdraw to the legacy IPv4 announcements separately.
+			reachableUpdate.WithdrawnRoutes = reachableUpdate.NLRI
+		}
+	}
+	msg, err := p.nlri(operation, ph, reachableUpdate)
 	if err != nil {
 		glog.Errorf("failed to produce original NLRI message with error: %+v", err)
 		return
