@@ -3,6 +3,7 @@ package bmp_test
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -436,6 +437,151 @@ func TestSerializePlaceholdersRequireOutPrePolicy(t *testing.T) {
 		u := &bgp.Update{PathAttributes: []bgp.PathAttribute{a}}
 		if _, err := u.Serialize(); err == nil {
 			t.Fatalf("accepted malformed nonzero attribute %d", a.AttributeType)
+		}
+	}
+}
+
+func TestSerializeStatisticsPeerFlags(t *testing.T) {
+	stats := &bmp.StatsReport{StatsTLV: []bmp.InformationalTLV{{InformationType: 3, Information: []byte{0xff, 0xff, 0xff, 0xff}}}}
+	body, err := stats.Serialize()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, typ := range []bmp.PeerType{0, 1, 2, 3} {
+		for flags := byte(0); ; flags += 0x10 {
+			if typ != 3 || flags == 0 || flags == 0x80 {
+				t.Run(fmt.Sprintf("peer%d/flags%x", typ, flags), func(t *testing.T) {
+					frame, err := (&bmp.Message{PeerHeader: serializationPeer(t, typ, flags), Payload: stats}).Serialize()
+					if typ != 3 && flags&0x10 != 0 {
+						if err == nil || frame != nil {
+							t.Fatalf("Statistics accepted O=1: %x, %v", frame, err)
+						}
+						return
+					}
+					if err != nil || frame[7] != flags || !bytes.Equal(frame[48:], body) {
+						t.Fatalf("Statistics flags/body changed: %x, %v", frame, err)
+					}
+					decodeSerializationFrame(t, frame)
+				})
+			}
+			if flags == 0xf0 {
+				break
+			}
+		}
+	}
+}
+
+func TestSerializePeerDistinguisherByType(t *testing.T) {
+	for _, typ := range []bmp.PeerType{0, 1, 2, 3} {
+		for _, rd := range [][]byte{make([]byte, 8), {0, 0, 0xfd, 0xe8, 0, 0, 0, 1}, {0, 1, 192, 0, 2, 1, 0, 1}, {0, 2, 0, 0, 0xfd, 0xe8, 0, 1}, {0xff, 0xff, 1, 2, 3, 4, 5, 6}} {
+			if typ == bmp.PeerType1 && rd[0] == 0xff {
+				continue // Type 1 fixtures use wire RDs; opaque values belong to types 2 and 3.
+			}
+			t.Run(fmt.Sprintf("peer%d/rd%x", typ, rd), func(t *testing.T) {
+				p := serializationPeer(t, typ, 0)
+				p.PeerDistinguisher = append([]byte(nil), rd...)
+				for _, serialize := range []func() ([]byte, error){p.Serialize, (&bmp.Message{PeerHeader: p, Payload: &bmp.StatsReport{}}).Serialize} {
+					wire, err := serialize()
+					if typ == 0 && !bytes.Equal(rd, make([]byte, 8)) {
+						if err == nil || wire != nil {
+							t.Fatalf("Global Instance accepted nonzero distinguisher: %x, %v", wire, err)
+						}
+						continue
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+					offset := 2
+					if len(wire) != 42 {
+						offset += 6
+					}
+					if !bytes.Equal(wire[offset:offset+8], rd) || !bytes.Equal(p.PeerDistinguisher, rd) {
+						t.Fatal("distinguisher changed")
+					}
+					wire[offset] ^= 0xff
+					if !bytes.Equal(p.PeerDistinguisher, rd) {
+						t.Fatal("distinguisher aliases output")
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestSerializePeerNames(t *testing.T) {
+	unknown := bmp.InformationalTLV{InformationType: 65000, Information: bytes.Repeat([]byte{0xff}, 256)}
+	for _, tc := range []struct {
+		name  string
+		tlvs  []bmp.InformationalTLV
+		valid bool
+	}{
+		{"absent", nil, true},
+		{"unknown", []bmp.InformationalTLV{unknown}, true},
+		{"empty", []bmp.InformationalTLV{{InformationType: 3}}, false},
+		{"one byte", []bmp.InformationalTLV{{InformationType: 3, Information: []byte("a")}}, true},
+		{"255 bytes", []bmp.InformationalTLV{{InformationType: 3, Information: bytes.Repeat([]byte("a"), 255)}}, true},
+		{"256 bytes", []bmp.InformationalTLV{{InformationType: 3, Information: bytes.Repeat([]byte("a"), 256)}}, false},
+		{"multibyte 255 bytes", []bmp.InformationalTLV{{InformationType: 3, Information: append(bytes.Repeat([]byte("я"), 127), 'a')}}, true},
+		{"multibyte 256 bytes", []bmp.InformationalTLV{{InformationType: 3, Information: bytes.Repeat([]byte("я"), 128)}}, false},
+		{"invalid UTF8", []bmp.InformationalTLV{{InformationType: 3, Information: []byte{0xff}}}, false},
+		{"truncated UTF8", []bmp.InformationalTLV{{InformationType: 3, Information: []byte{0xd1}}}, false},
+		{"duplicates and unknown", []bmp.InformationalTLV{{InformationType: 3, Information: []byte("vrf")}, unknown, {InformationType: 3, Information: []byte("таблица")}}, true},
+		{"invalid second name", []bmp.InformationalTLV{{InformationType: 3, Information: []byte("vrf")}, unknown, {InformationType: 3}}, false},
+		{"invalid first name", []bmp.InformationalTLV{{InformationType: 3, Information: []byte{0xff}}, {InformationType: 3, Information: []byte("vrf")}}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var raw []byte
+			for _, tlv := range tc.tlvs {
+				wire, err := tlv.Serialize() // Generic TLVs do not impose name semantics.
+				if err != nil {
+					t.Fatal(err)
+				}
+				raw = append(raw, wire...)
+			}
+			for _, typ := range []bmp.PeerType{0, 3} {
+				up := &bmp.PeerUpMessage{LocalAddress: make([]byte, 16), SentOpen: serializationOpen(), ReceivedOpen: serializationOpen(), Information: tc.tlvs}
+				down := &bmp.PeerDownMessage{Reason: 6, Data: raw}
+				upBody, err := (&bmp.PeerUpMessage{LocalAddress: make([]byte, 16), SentOpen: serializationOpen(), ReceivedOpen: serializationOpen()}).Serialize()
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, call := range []struct {
+					name      string
+					serialize func() ([]byte, error)
+					offset    int
+				}{
+					{"up body", up.Serialize, len(upBody)},
+					{"down body", down.Serialize, 1},
+					{"up frame", (&bmp.Message{PeerHeader: serializationPeer(t, typ, 0), Payload: up}).Serialize, 48 + len(upBody)},
+					{"down frame", (&bmp.Message{PeerHeader: serializationPeer(t, typ, 0), Payload: down}).Serialize, 49},
+				} {
+					wire, err := call.serialize()
+					if !tc.valid {
+						if err == nil || wire != nil {
+							t.Errorf("%s peer%d accepted invalid name: len=%d, %v", call.name, typ, len(wire), err)
+						}
+						continue
+					}
+					if err != nil || !bytes.Equal(wire[call.offset:], raw) {
+						t.Fatalf("%s peer%d changed TLVs: %x, %v", call.name, typ, wire, err)
+					}
+					for i := range wire {
+						wire[i] ^= 0xff
+					}
+					again, err := call.serialize()
+					if err != nil || !bytes.Equal(again[call.offset:], raw) {
+						t.Fatalf("%s aliases input: %v", call.name, err)
+					}
+				}
+			}
+		})
+	}
+	for _, raw := range [][]byte{{0}, {0, 3, 0}, {0, 3, 0, 2, 'a'}} {
+		down := &bmp.PeerDownMessage{Reason: 6, Data: raw}
+		for _, serialize := range []func() ([]byte, error){down.Serialize, (&bmp.Message{PeerHeader: serializationPeer(t, 3, 0), Payload: down}).Serialize} {
+			if wire, err := serialize(); err == nil || wire != nil {
+				t.Fatalf("accepted malformed Peer Down TLV: %x, %v", wire, err)
+			}
 		}
 	}
 }

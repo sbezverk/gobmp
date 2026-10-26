@@ -11,7 +11,7 @@ const maxSerializedBGPMessage = 4096
 
 // Serialize returns a complete BGP OPEN, including its marker. Length, Type,
 // OptParamLen and parameter lengths are derived without modifying o. Capabilities
-// are emitted in code order; their original grouping is not retained by parsing.
+// are packed in one parameter in code order; parsing does not retain grouping.
 // RFC 9072 encoding is selected when ordinary optional parameters do not fit.
 func (o *OpenMessage) Serialize() ([]byte, error) {
 	if o == nil {
@@ -39,6 +39,7 @@ func (o *OpenMessage) Serialize() ([]byte, error) {
 		codes = append(codes, int(code))
 	}
 	sort.Ints(codes)
+	var capabilities []byte
 	for _, code := range codes {
 		for _, data := range o.Capabilities[uint8(code)] {
 			if data == nil || len(data.Value) > 255 {
@@ -48,8 +49,11 @@ func (o *OpenMessage) Serialize() ([]byte, error) {
 			if err := validateCapabilities(value); err != nil {
 				return nil, err
 			}
-			params = append(params, InformationalTLV{Type: 2, Value: value})
+			capabilities = append(capabilities, value...)
 		}
+	}
+	if len(capabilities) != 0 {
+		params = append(params, InformationalTLV{Type: 2, Value: capabilities})
 	}
 	ordinaryLen := 0
 	extended := false

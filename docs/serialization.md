@@ -67,13 +67,18 @@ peer headers, wrong field widths, reserved flags and oversized values.
 Build `PerPeerHeader` using full wire-width slices: eight bytes for the
 distinguisher, sixteen for the peer address, four for the BGP ID and eight for
 the timestamp. IPv4 addresses occupy the final four address bytes, with zero
-padding. Timestamp microseconds must be below 1,000,000.
+padding. Timestamp microseconds must be below 1,000,000. Global Instance peers
+(type 0) require an all-zero distinguisher; this restriction does not apply to
+RD Instance peers (type 1) or locally defined values for types 2 and 3.
 
 Call `peer.SetFlags(flags)` after setting `PeerType`. For types 0–2, bits
 `0x80/0x40/0x20/0x10` select V/L/A/O. In particular, A=1 selects two-byte AS_PATH
 encoding; A=0 selects four-byte encoding. This setter changes the flags and
 rejects reserved bits. Serialization preserves raw ASN widths and checks them
 against the full BMP frame's peer header; it does not convert AS_PATH/AS4_PATH.
+A complete Statistics Report requires O=0, independently of its statistic types
+([RFC 8671 section 6.2](https://www.rfc-editor.org/rfc/rfc8671.html#section-6.2)).
+Route Monitoring retains its normal Adj-RIB-Out flag support.
 
 For Loc-RIB type 3, only F (`0x80`) is defined. The address is zero-filled, while
 the distinguisher may be any locally defined eight-byte value. Full Loc-RIB
@@ -81,10 +86,23 @@ messages enforce AS4 Route Monitoring, reason 6 Peer Down TLVs, and zero-address
 zero-port Peer Up with identical fabricated OPENs containing AS4 capability.
 See [RFC 9069 sections 5.1–5.4](https://www.rfc-editor.org/rfc/rfc9069.html#section-5).
 
+Peer Up and reason-6 Peer Down validate every VRF/Table Name TLV (type 3):
+its value must be valid UTF-8 and contain 1-255 bytes, including multibyte
+characters in the byte count. Absent names and repeated valid names remain
+supported; unknown TLVs retain their bytes and order. These rules apply to both
+the standalone bodies and complete BMP frames, as specified by
+[RFC 9069 sections 5.2.1 and 5.3](https://www.rfc-editor.org/rfc/rfc9069.html#section-5.2.1).
+Generic informational TLVs and Statistics TLV type 3 have separate semantics.
+
 ## BGP inputs and compatibility
 
 OPEN uses both `OptionalParameters` and the `Capabilities` map. Map keys are
-encoded in increasing code order, retaining repeated entries. Supplying raw
+encoded in increasing code order, retaining repeated entries in one packed
+type-2 parameter, as recommended by
+[RFC 5492 section 4](https://www.rfc-editor.org/rfc/rfc5492.html#section-4).
+Packing happens before encoding selection, so parsing and serializing a valid
+large OPEN does not inflate it beyond the 4096-byte limit. Raw optional parameters
+retain their supplied grouping. Supplying raw
 type-2 optional parameters together with a nonempty map is an error. Ordinary
 encoding supports a total of 255 optional-parameter bytes. Above 255, the writer
 uses the [RFC 9072 section 2](https://www.rfc-editor.org/rfc/rfc9072.html#section-2)
