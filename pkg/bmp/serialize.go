@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"unicode/utf8"
 
 	"github.com/sbezverk/gobmp/pkg/bgp"
 )
@@ -41,6 +42,9 @@ func (p *PerPeerHeader) Serialize() ([]byte, error) {
 	}
 	if len(p.PeerDistinguisher) != 8 || len(p.PeerAddress) != 16 || len(p.PeerBGPID) != 4 || len(p.PeerTimestamp) != 8 {
 		return nil, fmt.Errorf("invalid BMP per-peer field width")
+	}
+	if p.PeerType == PeerType0 && binary.BigEndian.Uint64(p.PeerDistinguisher) != 0 {
+		return nil, fmt.Errorf("global instance peer requires a zero distinguisher")
 	}
 	if binary.BigEndian.Uint32(p.PeerTimestamp[4:]) >= 1000000 {
 		return nil, fmt.Errorf("BMP timestamp microseconds must be less than 1000000")
@@ -102,6 +106,17 @@ func serializeTLVs(tlvs []InformationalTLV) ([]byte, error) {
 		b = append(b, v...)
 	}
 	return b, nil
+}
+
+// VRF/Table Name rules apply only to Peer Up and reason-6 Peer Down, not
+// generic informational TLVs or the separate Statistics TLV namespace.
+func validatePeerNames(tlvs []InformationalTLV) error {
+	for _, tlv := range tlvs {
+		if tlv.InformationType == 3 && (len(tlv.Information) == 0 || len(tlv.Information) > 255 || !utf8.Valid(tlv.Information)) {
+			return fmt.Errorf("BMP VRF/Table Name requires 1-255 bytes of valid UTF-8")
+		}
+	}
+	return nil
 }
 
 // Serialize returns an Initiation body. RFC 7854 section 4.3 requires both
@@ -181,8 +196,12 @@ func (p *PeerDownMessage) Serialize() ([]byte, error) {
 			return nil, fmt.Errorf("peer down reason 2 requires a two-byte FSM event")
 		}
 	case 6:
-		if _, err := UnmarshalTLV(p.Data); err != nil {
+		tlvs, err := UnmarshalTLV(p.Data)
+		if err != nil {
 			return nil, fmt.Errorf("invalid Loc-RIB Peer Down TLVs: %w", err)
+		}
+		if err := validatePeerNames(tlvs); err != nil {
+			return nil, err
 		}
 	case 4, 5:
 		if len(p.Data) != 0 {
@@ -217,6 +236,9 @@ func (p *PeerUpMessage) Serialize() ([]byte, error) {
 	recv, err := p.ReceivedOpen.Serialize()
 	if err != nil {
 		return nil, fmt.Errorf("received OPEN: %w", err)
+	}
+	if err := validatePeerNames(p.Information); err != nil {
+		return nil, err
 	}
 	info, err := serializeTLVs(p.Information)
 	if err != nil {
@@ -276,6 +298,10 @@ func (m *Message) Serialize() ([]byte, error) {
 		peer, err = m.PeerHeader.Serialize()
 		if err != nil {
 			return nil, err
+		}
+		// RFC 8671 section 6.2 forbids O=1 in Statistics Reports.
+		if kind == StatsReportMsg && m.PeerHeader.flagO {
+			return nil, fmt.Errorf("BMP Statistics Report requires O=0")
 		}
 		if p, ok := m.Payload.(*PeerUpMessage); ok {
 			if !m.PeerHeader.IsRemotePeerIPv6() && !bytes.Equal(p.LocalAddress[:12], make([]byte, 12)) {
