@@ -207,10 +207,9 @@ func TestL3VPN_TableName(t *testing.T) {
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
-	tableKey := phLocRIB.GetPeerBGPIDString() + phLocRIB.GetPeerDistinguisherString()
+	tableKey := phLocRIB.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("VRF-L3VPN")},
 		},
@@ -259,10 +258,9 @@ func TestUnicast_TableName(t *testing.T) {
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
-	tableKey := phLocRIB.GetPeerBGPIDString() + phLocRIB.GetPeerDistinguisherString()
+	tableKey := phLocRIB.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("default")},
 		},
@@ -305,10 +303,9 @@ func TestBaseNLRI_TableName(t *testing.T) {
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
-	tableKey := phLocRIB.GetPeerBGPIDString() + phLocRIB.GetPeerDistinguisherString()
+	tableKey := phLocRIB.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("global")},
 		},
@@ -369,10 +366,9 @@ func TestMVPN_LocRIB_TableName(t *testing.T) {
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
-	tableKey := phLocRIB.GetPeerBGPIDString() + phLocRIB.GetPeerDistinguisherString()
+	tableKey := phLocRIB.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("VRF-MVPN")},
 		},
@@ -476,10 +472,9 @@ func TestUnicast_EoR_LocRIB(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
 
 	ph := makePeerHeader(t, bmp.PeerType3, 0x00)
-	tableKey := ph.GetPeerBGPIDString() + ph.GetPeerDistinguisherString()
+	tableKey := ph.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("VRF-Test")},
 		},

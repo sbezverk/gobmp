@@ -56,7 +56,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 }
 
 func (p *producer) processMPReach(attribute []byte, ph *bmp.PerPeerHeader, update *bgp.Update) {
-	nlri, err := bgp.UnmarshalMPReachNLRI(attribute, update.HasPrefixSID(), p.GetAddPathCapability(ph.GetTableKey()))
+	nlri, err := bgp.UnmarshalMPReachNLRI(attribute, update.HasPrefixSID(), p.mpAddPathCapability(ph, attribute))
 	if err != nil {
 		glog.Errorf("failed to process MP_REACH_NLRI with error: %+v", err)
 		return
@@ -69,7 +69,7 @@ func (p *producer) processMPReach(attribute []byte, ph *bmp.PerPeerHeader, updat
 }
 
 func (p *producer) processMPUnreach(attribute []byte, ph *bmp.PerPeerHeader, update *bgp.Update) {
-	nlri, err := bgp.UnmarshalMPUnReachNLRI(attribute, p.GetAddPathCapability(ph.GetTableKey()), update.HasPrefixSID())
+	nlri, err := bgp.UnmarshalMPUnReachNLRI(attribute, p.mpAddPathCapability(ph, attribute), update.HasPrefixSID())
 	if err != nil {
 		glog.Errorf("failed to process MP_UNREACH_NLRI with error: %+v", err)
 		return

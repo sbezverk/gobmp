@@ -167,6 +167,6 @@ func setMUPRIBFlags(p *producer, prfx *MUPPrefix, ph *bmp.PerPeerHeader) {
 	}
 	// RFC 9069: Set TableName for LocRIB peers
 	if prfx.IsLocRIB {
-		prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		prfx.TableName = p.getTableName(ph)
 	}
 }
