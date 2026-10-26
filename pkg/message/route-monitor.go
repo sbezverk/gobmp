@@ -34,6 +34,10 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	if routeMonitorMsg.Update == nil {
 		return
 	}
+	if afi, safi, eor := endOfRIBFamily(routeMonitorMsg.Update); eor {
+		p.produceEndOfRIB(msg.PeerHeader, routeMonitorMsg.Update, afi, safi)
+		return
+	}
 	reachIndexes := make([]int, 0, 1)
 	unreachIndexes := make([]int, 0, 1)
 	for i, attr := range routeMonitorMsg.Update.PathAttributes {
@@ -61,6 +65,9 @@ func (p *producer) processMPReach(attribute []byte, ph *bmp.PerPeerHeader, updat
 		glog.Errorf("failed to process MP_REACH_NLRI with error: %+v", err)
 		return
 	}
+	if reach, ok := nlri.(*bgp.MPReachNLRI); ok && len(reach.NLRI) == 0 {
+		return
+	}
 	reachableUpdate := copyUpdate(update)
 	if reach, ok := nlri.(*bgp.MPReachNLRI); ok {
 		validateNHC(reachableUpdate, reach.AddressFamilyID, reach.SubAddressFamilyID, reach.NextHopAddress, ph)
@@ -72,6 +79,10 @@ func (p *producer) processMPUnreach(attribute []byte, ph *bmp.PerPeerHeader, upd
 	nlri, err := bgp.UnmarshalMPUnReachNLRI(attribute, p.GetAddPathCapability(ph.GetTableKey()), update.HasPrefixSID())
 	if err != nil {
 		glog.Errorf("failed to process MP_UNREACH_NLRI with error: %+v", err)
+		return
+	}
+	// Empty MP_UNREACH in a larger UPDATE is not an EOR (RFC 4724 §2).
+	if unreach, ok := nlri.(*bgp.MPUnReachNLRI); ok && len(unreach.WithdrawnRoutes) == 0 {
 		return
 	}
 	p.processMPUpdate(nlri, DelPrefix, ph, withoutNHC(update))

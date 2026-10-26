@@ -83,6 +83,8 @@ const (
 	// LSOpaqueMsg defines BMP Route Monitoring message carrying a BGP-LS NLRI
 	// of a type gobmp does not decode, published raw per RFC 9552 §5.2
 	LSOpaqueMsg = 23
+	// EndOfRIBMsg identifies a received End-of-RIB control marker.
+	EndOfRIBMsg = 24
 	// BMPRawMsg defines BMP RAW message type for unprocessed BMP messages
 	BMPRawMsg = 255
 )

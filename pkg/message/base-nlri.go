@@ -38,8 +38,12 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	prfxs := make([]*UnicastPrefix, 0)
-	// Check if Update carries any routes, if update comes with 0 routes, it is EoR message
+	// Only a minimal empty IPv4 UPDATE is EOR (RFC 4724 §2).
 	if len(routes) == 0 {
+		afi, safi, eor := endOfRIBFamily(update)
+		if op != AddPrefix || !eor || afi != 1 || safi != 1 {
+			return prfxs, nil
+		}
 		if glog.V(6) {
 			glog.Infof("EoR message for Unicast IPv4")
 		}
@@ -54,6 +58,8 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 			Timestamp:     ph.GetPeerTimestamp(),
 			PeerType:      uint8(ph.PeerType),
 			IsEOR:         true,
+			AFI:           1,
+			SAFI:          1,
 			IsIPv4:        true,
 			IsNexthopIPv4: true,
 		}
