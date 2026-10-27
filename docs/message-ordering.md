@@ -34,13 +34,24 @@ backpressure instead of creating a goroutine for every frame; throughput for a
 single busy connection may consequently differ. No throughput improvement is
 claimed.
 
-The producer observes stop between messages and returns when its input channel
-is closed. `PublishMessage` has no cancellation parameter: a call already in
-progress must return before that producer can stop. This change does not add a
-hard shutdown deadline or guarantee that connection closure drains all accepted
-frames to a broker.
+On EOF, connection error or server stop, the connection worker closes its parser
+input and waits for it to drain, then closes producer input and waits for its
+publication calls to finish. A complete frame handed to the parser is accepted.
+All resulting valid messages finish their local publication calls before the
+worker returns; the server waits for every worker before calling publisher.Stop.
+Malformed/unsupported frames and parsed traffic before the first valid Peer Up
+retain the skip rules above. Incomplete trailing frames are never published.
+
+The standalone parser/producer APIs still support an explicit stop signal. The
+server uses input closure instead, so shutdown does not abort an accepted frame.
+`PublishMessage` has no cancellation parameter: a blocked call must return before
+that connection worker and server Stop can finish. No hard shutdown deadline or
+broker-delivery/flush guarantee is added.
 
 Regression tests exercise actual BMP wire frames through the parser/producer
 pipeline, including announcement, withdrawal, explicit End-of-RIB and Peer Down,
 plus RAW byte order, early traffic, queue closure, stop and independent producers.
+Immediate EOF, truncated tails and server stop also verify that accepted parsed
+and RAW publications finish before publisher shutdown, including a blocked final
+publication. Parser closure leaves its output channel owned by the caller.
 These checks do not substitute for real-router or live-broker load acceptance.
