@@ -1,5 +1,9 @@
 # End-of-RIB observations
 
+> **Consumer warning:** EndOfRIB reports a marker received from the BMP wire.
+> It does not prove that route records from other topics have reached or been
+> applied by a consumer, or that its RIB is complete or committed.
+
 goBMP publishes an `EndOfRIB` control message when a Route Monitoring payload
 contains one of the two complete UPDATE forms specified in RFC 4724 section 2:
 
@@ -62,9 +66,25 @@ attempt to publish the observed control marker.
 
 Receipt of this control event means goBMP observed the marker. It does not prove
 that another topic's route records have reached or been committed by a consumer.
-This standalone change adds no producer ordering guarantee. Kafka/NATS topics
-have no new global order, and the compatibility and control records describe the
-same received marker rather than two synchronization completions.
+For each BMP connection, goBMP completes a message's local `PublishMessage`
+calls before processing the next message. Earlier route calls therefore return
+before the compatibility EOR, control EOR, or subsequent PeerDown is processed.
+This standalone PR includes the ordered dispatcher; it requires no other PR to
+be merged first. Separate connection producers remain independent. Parsed route
+and statistics messages received before the first valid PeerUp are logged and
+ignored, so they cannot block processing of a later PeerUp.
+
+Local call order is not a cross-topic delivery or acknowledgment guarantee:
+Kafka returns after enqueueing to its asynchronous producer, and Kafka/NATS
+consumers can apply different topics independently. Publication failures keep
+the existing logging behavior and do not prevent later messages from being
+attempted. The compatibility and control records describe the same received
+marker rather than two synchronization completions. A blocked publisher applies
+backpressure to its connection; the Publisher interface cannot cancel an active
+call, so that Producer invocation cannot return until the call returns. This
+standalone correction adds no connection-stage drain/join. Until PR #499's
+lifecycle changes are also applied, server Stop does not wait for those
+publications.
 
 Consumer-side table state, restart/session handling, stale-route cleanup and
 coordination across subscriptions remain consumer responsibilities. Do not
