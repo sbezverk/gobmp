@@ -30,6 +30,22 @@ Negotiation uses exact AFI/SAFI keys. The adapter to existing MP parser maps
 translates only the current attribute's family, so output message types shared
 by IPv4, IPv6, and VPN FlowSpec cannot mix their capability state.
 
+## Message lifecycle
+
+Each BMP connection processes PeerUp, routes, statistics, and PeerDown in input
+order. PeerUp installs negotiated ADD-PATH and table properties before marking
+the speaker ready. A route completes its local `PublishMessage` calls before a
+later PeerDown or replacement PeerUp can remove or replace those properties.
+This includes updates containing both MP_REACH and MP_UNREACH attributes.
+Parsed route/statistics messages received before the first valid PeerUp are
+logged and skipped, so they cannot block that later PeerUp. Separate connections
+retain separate producers and can progress independently.
+
+The ordering covers local publication calls; it does not establish delivery or
+commit order across broker topics. An active publisher call has no cancellation
+API and can hold up its connection's producer. This correction does not change
+server shutdown or add a parser/producer drain guarantee.
+
 ## Loc-RIB and internal keys
 
 Loc-RIB OPENs are fabricated descriptions of the exported table. Under
@@ -57,5 +73,10 @@ Regression tests cover the negotiation matrix, policy/ASN flag independence,
 family collisions, peer isolation, Loc-RIB replacement and merging, PeerDown,
 raw distinguisher collisions, and public identifier compatibility. Wire tests
 check the prefix and PathID produced by legacy and MP route processing.
+Producer-level regressions block route publication and verify that PeerDown and
+replacement PeerUp cannot overtake it or change the decoding state of its later
+MP attributes. They cover both RIB directions, Loc-RIB table names, and a first
+ADD-PATH route immediately after PeerUp. A separate blocked-installation test
+checks that readiness is not exposed before the properties are installed.
 These are local parser/producer checks; real-router and live-broker acceptance
 are separate validation activities.
