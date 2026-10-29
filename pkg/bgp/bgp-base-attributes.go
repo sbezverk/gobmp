@@ -69,8 +69,10 @@ type BaseAttributes struct {
 	// TraficEng
 	IPv6ExtCommunityList []string `json:"ipv6_ext_community_list,omitempty"` // RFC 5701
 	AIGP                 *AIGP    `json:"aigp,omitempty"`                    // RFC 7311 AIGP Attribute (Type 26)
-	// PEDistinguisherLable
-	LgCommunityList []string `json:"large_community_list,omitempty"`
+	// PEDistinguisherLabels holds the RFC 6514 §8 PE Distinguisher Labels attribute (Type 27).
+	// Left nil when the attribute is malformed.
+	PEDistinguisherLabels []PEDistinguisherLabel `json:"pe_distinguisher_labels,omitempty"`
+	LgCommunityList       []string               `json:"large_community_list,omitempty"`
 	// PrefixSID represents the Prefix Segment Identifier (SID) attribute as defined in RFC 8669.
 	PrefixSID *prefixsid.PSid `json:"prefix_sid,omitempty"`
 	// BGPPrefixSID will be deprecated in favor of PrefixSID on Septermber 16, 2027
@@ -234,6 +236,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "ipv6_ext_community_list mismatch")
 	}
+	if !slices.Equal(ba.PEDistinguisherLabels, oba.PEDistinguisherLabels) {
+		equal = false
+		diffs = append(diffs, "pe_distinguisher_labels mismatch")
+	}
 	if ba.OTC != oba.OTC {
 		equal = false
 		diffs = append(diffs, "otc mismatch: "+strconv.FormatUint(uint64(ba.OTC), 10)+" and "+strconv.FormatUint(uint64(oba.OTC), 10))
@@ -313,6 +319,7 @@ func UnmarshalBGPBaseAttributesWithAS4Hint(b []byte, as4 bool) (*BaseAttributes,
 func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAttributes, error) {
 	baseAttr := BaseAttributes{}
 	dPathSeen := false
+	origLen := -1
 	for _, attr := range attrs {
 		b := attr.Attribute
 		switch attr.AttributeType {
@@ -410,7 +417,19 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 				baseAttr.AIGP = aigp
 			}
 		case 27:
-			// PE Distinguisher Labels - RFC 6514
+			// PE Distinguisher Labels - RFC 6514 §8
+			// A malformed attribute is logged and dropped; treat-as-withdraw is not applied in a collector.
+			labels, err := unmarshalPEDistinguisherLabels(b, func() int {
+				if origLen < 0 { // computed lazily, at most once per call
+					origLen = lookupOriginatorLen(attrs)
+				}
+				return origLen
+			})
+			if err != nil {
+				glog.Errorf("failed to parse PE Distinguisher Labels attribute: %v", err)
+			} else {
+				baseAttr.PEDistinguisherLabels = labels
+			}
 		case 28:
 			// BGP Entropy Label Capability Attribute (deprecated) - RFC 6790, RFC 7447
 		case 29:
