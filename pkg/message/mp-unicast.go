@@ -36,8 +36,11 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			return nil, err
 		}
 	}
-	// Check if Update carries any routes, if update comes with 0 routes, it is EoR message
 	if len(u.NLRI) == 0 {
+		if op != DelPrefix {
+			// Only an empty MP_UNREACH_NLRI is End-of-RIB (RFC 4724 Section 2); an empty MP_REACH is not.
+			return nil, nil
+		}
 		prfx := &UnicastPrefix{
 			Action:      operation,
 			RouterHash:  ph.Identity.RouterHash,

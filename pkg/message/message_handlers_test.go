@@ -448,7 +448,7 @@ func TestUnicast_EoR_RIBFlags(t *testing.T) {
 		unicastRoute: &base.MPNLRI{NLRI: []base.Route{}},
 	}
 
-	msgs, err := p.unicast(nlri, 0, ph, update, false)
+	msgs, err := p.unicast(nlri, DelPrefix, ph, update, false)
 	if err != nil {
 		t.Fatalf("unicast() error: %v", err)
 	}
@@ -495,7 +495,7 @@ func TestUnicast_EoR_LocRIB(t *testing.T) {
 		unicastRoute: &base.MPNLRI{NLRI: []base.Route{}},
 	}
 
-	msgs, err := p.unicast(nlri, 0, ph, update, false)
+	msgs, err := p.unicast(nlri, DelPrefix, ph, update, false)
 	if err != nil {
 		t.Fatalf("unicast() error: %v", err)
 	}
@@ -727,6 +727,73 @@ func TestProcessMPUpdate_UnknownAFISAFI(t *testing.T) {
 
 	// Should not panic — exercises the default case
 	p.processMPUpdate(nlri, 1, ph, update)
+}
+
+// TestUnicast_EoRFromWire verifies, from real UPDATE bytes, that only an empty
+// MP_UNREACH_NLRI is a unicast/labeled-unicast End-of-RIB (RFC 4724 Section 2)
+// and that an empty MP_REACH_NLRI publishes nothing.
+func TestUnicast_EoRFromWire(t *testing.T) {
+	mpAttr := func(typ byte, val []byte) []byte {
+		return append([]byte{0x80, typ, byte(len(val))}, val...)
+	}
+	update := func(attrs ...byte) []byte {
+		return append([]byte{0x00, 0x00, 0x00, byte(len(attrs))}, attrs...)
+	}
+	origin := []byte{0x40, 0x01, 0x01, 0x00}
+	emptyASPath := []byte{0x40, 0x02, 0x00}
+
+	tests := []struct {
+		name      string
+		afi, safi byte
+		nhLen     int
+	}{
+		{"ipv4 unicast", 1, 1, 4},
+		{"ipv6 unicast", 2, 1, 16},
+		{"ipv4 labeled unicast", 1, 4, 4},
+		{"ipv6 labeled unicast", 2, 4, 16},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name+" empty reach", func(t *testing.T) {
+			reach := append([]byte{0x00, tt.afi, tt.safi, byte(tt.nhLen)}, make([]byte, tt.nhLen)...)
+			reach = append(reach, 0x00) // reserved, no NLRI
+			attrs := append(append(append([]byte{}, origin...), emptyASPath...), mpAttr(14, reach)...)
+			u, err := bgp.UnmarshalBGPUpdate(update(attrs...))
+			if err != nil {
+				t.Fatalf("UnmarshalBGPUpdate: %v", err)
+			}
+			pub := &recordingPublisher{}
+			p := NewProducer(pub, false).(*producer)
+			p.produceRouteMonitorMessage(bmp.Message{
+				PeerHeader: makePeerHeader(t, bmp.PeerType0, 0x00),
+				Payload:    &bmp.RouteMonitor{Update: u},
+			})
+			if len(pub.msgs) != 0 {
+				t.Fatalf("published %d messages, want 0", len(pub.msgs))
+			}
+		})
+		t.Run(tt.name+" empty unreach", func(t *testing.T) {
+			u, err := bgp.UnmarshalBGPUpdate(update(mpAttr(15, []byte{0x00, tt.afi, tt.safi})...))
+			if err != nil {
+				t.Fatalf("UnmarshalBGPUpdate: %v", err)
+			}
+			pub := &recordingPublisher{}
+			p := NewProducer(pub, false).(*producer)
+			p.produceRouteMonitorMessage(bmp.Message{
+				PeerHeader: makePeerHeader(t, bmp.PeerType0, 0x00),
+				Payload:    &bmp.RouteMonitor{Update: u},
+			})
+			if len(pub.msgs) != 1 {
+				t.Fatalf("published %d messages, want 1", len(pub.msgs))
+			}
+			var got UnicastPrefix
+			if err := json.Unmarshal(pub.msgs[0].payload, &got); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if !got.IsEOR || got.Action != "del" {
+				t.Errorf("got is_eor=%v action=%q, want true/del", got.IsEOR, got.Action)
+			}
+		})
+	}
 }
 
 func dPathAttribute(kind byte, value []byte) []byte {
