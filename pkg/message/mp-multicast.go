@@ -28,18 +28,25 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 	}
 
 	if len(u.NLRI) == 0 {
-		return []*MulticastPrefix{
-			{
-				Action:     operation,
-				RouterHash: ph.Identity.RouterHash,
-				RouterIP:   ph.Identity.RouterIP,
-				PeerHash:   ph.GetPeerHash(),
-				PeerASN:    ph.PeerAS,
-				Timestamp:  ph.GetPeerTimestamp(),
-				PeerType:   uint8(ph.PeerType),
-				IsEOR:      true,
-			},
-		}, nil
+		// End-of-RIB is an UPDATE that "contains only the MP_UNREACH_NLRI attribute"
+		// with no withdrawn routes (RFC 4724 §2); an empty MP_REACH is not.
+		if op != DelPrefix {
+			return nil, nil
+		}
+		eor := &MulticastPrefix{
+			Action:     operation,
+			RouterHash: ph.Identity.RouterHash,
+			RouterIP:   ph.Identity.RouterIP,
+			PeerHash:   ph.GetPeerHash(),
+			PeerIP:     ph.GetPeerAddrString(),
+			PeerASN:    ph.PeerAS,
+			Timestamp:  ph.GetPeerTimestamp(),
+			PeerType:   uint8(ph.PeerType),
+			IsEOR:      true,
+			IsIPv4:     !nlri.IsIPv6NLRI(),
+		}
+		p.setMulticastRIBFlags(eor, ph)
+		return []*MulticastPrefix{eor}, nil
 	}
 	for _, e := range u.NLRI {
 		prfx := &MulticastPrefix{
@@ -54,25 +61,7 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 			PathID:         int32(e.PathID),
 			BaseAttributes: update.BaseAttributes,
 		}
-		if f, err := ph.IsAdjRIBInPost(); err == nil {
-			prfx.IsAdjRIBInPost = f
-		}
-		if f, err := ph.IsAdjRIBOutPost(); err == nil {
-			prfx.IsAdjRIBOutPost = f
-		}
-		if f, err := ph.IsAdjRIBOut(); err == nil {
-			prfx.IsAdjRIBOut = f
-		}
-		if f, err := ph.IsLocRIB(); err == nil {
-			prfx.IsLocRIB = f
-		}
-		if f, err := ph.IsLocRIBFiltered(); err == nil {
-			prfx.IsLocRIBFiltered = f
-		}
-		// RFC 9069: Set TableName for LocRIB peers
-		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
-		}
+		p.setMulticastRIBFlags(prfx, ph)
 		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 			prfx.OriginAS = ases[len(ases)-1]
 		}
@@ -108,4 +97,27 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 	}
 
 	return prfxs, nil
+}
+
+// setMulticastRIBFlags copies the per-peer-header RIB flags and, for Loc-RIB
+// peers, the table name (RFC 9069) into prfx.
+func (p *producer) setMulticastRIBFlags(prfx *MulticastPrefix, ph *bmp.PerPeerHeader) {
+	if f, err := ph.IsAdjRIBInPost(); err == nil {
+		prfx.IsAdjRIBInPost = f
+	}
+	if f, err := ph.IsAdjRIBOutPost(); err == nil {
+		prfx.IsAdjRIBOutPost = f
+	}
+	if f, err := ph.IsAdjRIBOut(); err == nil {
+		prfx.IsAdjRIBOut = f
+	}
+	if f, err := ph.IsLocRIB(); err == nil {
+		prfx.IsLocRIB = f
+	}
+	if f, err := ph.IsLocRIBFiltered(); err == nil {
+		prfx.IsLocRIBFiltered = f
+	}
+	if prfx.IsLocRIB {
+		prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+	}
 }

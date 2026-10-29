@@ -1,8 +1,6 @@
 package multicast
 
 import (
-	"fmt"
-
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/tools"
@@ -14,7 +12,8 @@ func UnmarshalMulticastNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 		glog.Infof("MP Multicast NLRI Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) == 0 {
-		return nil, fmt.Errorf("NLRI length is 0")
+		// Empty NLRI is not an error; callers decide whether it is End-of-RIB (RFC 4724 §2).
+		return &base.MPNLRI{}, nil
 	}
 	mpnlri := base.MPNLRI{}
 	r, err := base.UnmarshalRoutes(b, pathID)

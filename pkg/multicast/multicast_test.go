@@ -302,7 +302,7 @@ func TestUnmarshalMulticastNLRIErrors(t *testing.T) {
 			name:    "Empty input",
 			input:   []byte{},
 			pathID:  false,
-			wantErr: true,
+			wantErr: false, // empty NLRI is valid input (End-of-RIB candidate, RFC 4724 §2)
 		},
 	}
 	for _, tt := range tests {
@@ -312,8 +312,8 @@ func TestUnmarshalMulticastNLRIErrors(t *testing.T) {
 				t.Errorf("UnmarshalMulticastNLRI() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && got == nil {
-				t.Errorf("UnmarshalMulticastNLRI() returned nil without error")
+			if !tt.wantErr && (got == nil || len(got.NLRI) != 0) {
+				t.Errorf("UnmarshalMulticastNLRI() = %+v, want non-nil with no routes", got)
 			}
 		})
 	}
