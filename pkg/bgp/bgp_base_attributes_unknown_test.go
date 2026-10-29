@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -94,6 +95,83 @@ func TestUnknownPathAttribute_Preserved(t *testing.T) {
 				t.Errorf("Value (len %d) = %x, want (len %d) %x", len(ua.Value), ua.Value, len(tc.wantValue), tc.wantValue)
 			}
 		})
+	}
+}
+
+// TestUnknownPathAttribute_RegisteredUndecoded verifies that IANA-registered
+// attribute types gobmp does not decode (deprecated or unimplemented) are
+// published raw in UnknownAttributes, both at the top level and inside an
+// ATTR_SET, instead of being silently dropped.
+func TestUnknownPathAttribute_RegisteredUndecoded(t *testing.T) {
+	cases := []struct {
+		name  string
+		flags uint8
+		typ   uint8
+		value []byte
+	}{
+		{"DPA", 0xC0, 11, []byte{0, 1, 0, 0, 0, 2}},
+		{"ADVERTISER", 0x80, 12, []byte{192, 0, 2, 1}},
+		{"RCID_PATH", 0x80, 13, []byte{192, 0, 2, 2}},
+		{"SSA", 0xC0, 19, []byte{0x13}},
+		{"Connector", 0xC0, 20, []byte{0x14, 0x14}},
+		{"AS_PATHLIMIT", 0xC0, 21, []byte{5, 0, 0, 0xFD, 0xE9}},
+		{"Traffic Engineering", 0x80, 24, []byte{0x18}},
+		{"Entropy Label Capability empty", 0xC0, 28, nil},
+		{"RFC 8093 type 30", 0xC0, 30, []byte{0x1E}},
+		{"RFC 8093 type 31", 0xC0, 31, []byte{0x1F}},
+		{"BGPsec_Path extended length", 0x90, 33, []byte{0x21, 0x21, 0x21}},
+		{"Community Container", 0xC0, 34, []byte{0x22}},
+		{"SFP", 0xC0, 37, []byte{0x25}},
+		{"BFD Discriminator", 0x80, 38, []byte{0, 1, 0, 0, 0, 0x26}},
+		{"BIER", 0x80, 41, []byte{0x29}},
+		{"Edge Metadata", 0xC0, 42, []byte{0x2A}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := buildAttr(tc.flags, tc.typ, tc.value)
+			if tc.flags&0x10 != 0 {
+				raw = buildAttrExtLen(tc.flags, tc.typ, tc.value)
+			}
+			want := []UnknownPathAttribute{{Type: tc.typ, Flags: tc.flags, Value: tc.value}}
+
+			ba, err := UnmarshalBGPBaseAttributes(raw)
+			if err != nil {
+				t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+			}
+			if !reflect.DeepEqual(ba.UnknownAttributes, want) {
+				t.Errorf("top level UnknownAttributes = %+v, want %+v", ba.UnknownAttributes, want)
+			}
+
+			ba, err = UnmarshalBGPBaseAttributes(buildAttr(0xC0, 128, buildAttrSetValue(65001, raw)))
+			if err != nil {
+				t.Fatalf("UnmarshalBGPBaseAttributes(ATTR_SET): %v", err)
+			}
+			if len(ba.UnknownAttributes) != 0 {
+				t.Errorf("embedded attribute leaked to top level: %+v", ba.UnknownAttributes)
+			}
+			if ba.AttrSet == nil || ba.AttrSet.PathAttributes == nil {
+				t.Fatalf("ATTR_SET not decoded: %+v", ba.AttrSet)
+			}
+			if got := ba.AttrSet.PathAttributes.UnknownAttributes; !reflect.DeepEqual(got, want) {
+				t.Errorf("ATTR_SET UnknownAttributes = %+v, want %+v", got, want)
+			}
+		})
+	}
+}
+
+// TestUnknownPathAttribute_NotDuplicated verifies that MP_REACH_NLRI (14) and
+// MP_UNREACH_NLRI (15), which are decoded from the raw PathAttribute slice,
+// and types 27 and 36, which have dedicated cases, are not published as
+// unknown.
+func TestUnknownPathAttribute_NotDuplicated(t *testing.T) {
+	for _, typ := range []uint8{14, 15, 27, 36} {
+		ba, err := UnmarshalBGPBaseAttributes(buildAttr(0x80, typ, []byte{0x01, 0x02}))
+		if err != nil {
+			t.Fatalf("type %d: UnmarshalBGPBaseAttributes: %v", typ, err)
+		}
+		if len(ba.UnknownAttributes) != 0 {
+			t.Errorf("type %d: UnknownAttributes = %+v, want none", typ, ba.UnknownAttributes)
+		}
 	}
 }
 
