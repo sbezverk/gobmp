@@ -9,7 +9,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
 
-// parseAFISAFIStat parses AFI/SAFI structured TLV (types 9, 10, 16, 17)
+// parseAFISAFIStat parses AFI/SAFI structured TLV (types 9, 10, 16, 17; RFC 9972 types 19, 21-23, 26-28, 30, 32, 34-38, 40-43)
 // Format: 2-byte AFI + 1-byte SAFI + 8-byte Gauge64
 func parseAFISAFIStat(data []byte) (AFISAFIStat, error) {
 	if len(data) < 11 {
@@ -124,6 +124,70 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 				continue
 			}
 			m.PerAFIPostPolicyAdjRIBOut = append(m.PerAFIPostPolicyAdjRIBOut, stat)
+		case 18, 20, 29, 31, 33, 39:
+			if len(tlv.Information) < 8 {
+				glog.Warningf("RFC 9972 stats type %d from peer %s (router %s): need 8 bytes, got %d", tlv.InformationType, m.RemoteIP, m.RouterIP, len(tlv.Information))
+				continue
+			}
+			v := binary.BigEndian.Uint64(tlv.Information)
+			switch tlv.InformationType {
+			case 18:
+				m.PrePolicyAdjRIBIn = v
+			case 20:
+				m.PostPolicyAdjRIBIn = v
+			case 29:
+				m.PostPolicyAdjRIBInThresholdLeft = v
+			case 31:
+				m.LicenseThresholdLeft = v
+			case 33:
+				m.PrePolicyAdjRIBInASPathTooLong = v
+			case 39:
+				m.PrePolicyAdjRIBOutASPathTooLong = v
+			}
+		case 19, 21, 22, 23, 26, 27, 28, 30, 32, 34, 35, 36, 37, 38, 40, 41, 42, 43:
+			stat, err := parseAFISAFIStat(tlv.Information)
+			if err != nil {
+				glog.Warningf("failed to parse RFC 9972 type %d from peer %s (router %s): %v", tlv.InformationType, m.RemoteIP, m.RouterIP, err)
+				continue
+			}
+			switch tlv.InformationType {
+			case 19:
+				m.PerAFIPrePolicyAdjRIBIn = append(m.PerAFIPrePolicyAdjRIBIn, stat)
+			case 21:
+				m.PerAFIPostPolicyAdjRIBIn = append(m.PerAFIPostPolicyAdjRIBIn, stat)
+			case 22:
+				m.PerAFIPrePolicyAdjRIBInRejected = append(m.PerAFIPrePolicyAdjRIBInRejected, stat)
+			case 23:
+				m.PerAFIPostPolicyAdjRIBInAccepted = append(m.PerAFIPostPolicyAdjRIBInAccepted, stat)
+			case 26:
+				m.PerAFIRouteDampingSuppressed = append(m.PerAFIRouteDampingSuppressed, stat)
+			case 27:
+				m.PerAFIGRStale = append(m.PerAFIGRStale, stat)
+			case 28:
+				m.PerAFILLGRStale = append(m.PerAFILLGRStale, stat)
+			case 30:
+				m.PerAFIPostPolicyAdjRIBInThresholdLeft = append(m.PerAFIPostPolicyAdjRIBInThresholdLeft, stat)
+			case 32:
+				m.PerAFILicenseThresholdLeft = append(m.PerAFILicenseThresholdLeft, stat)
+			case 34:
+				m.PerAFIPrePolicyAdjRIBInASPathTooLong = append(m.PerAFIPrePolicyAdjRIBInASPathTooLong, stat)
+			case 35:
+				m.PerAFIPostPolicyAdjRIBInRPKIInvalid = append(m.PerAFIPostPolicyAdjRIBInRPKIInvalid, stat)
+			case 36:
+				m.PerAFIPostPolicyAdjRIBInRPKIValid = append(m.PerAFIPostPolicyAdjRIBInRPKIValid, stat)
+			case 37:
+				m.PerAFIPostPolicyAdjRIBInRPKINotFound = append(m.PerAFIPostPolicyAdjRIBInRPKINotFound, stat)
+			case 38:
+				m.PerAFIPrePolicyAdjRIBOutRejected = append(m.PerAFIPrePolicyAdjRIBOutRejected, stat)
+			case 40:
+				m.PerAFIPrePolicyAdjRIBOutASPathTooLong = append(m.PerAFIPrePolicyAdjRIBOutASPathTooLong, stat)
+			case 41:
+				m.PerAFIPostPolicyAdjRIBOutRPKIInvalid = append(m.PerAFIPostPolicyAdjRIBOutRPKIInvalid, stat)
+			case 42:
+				m.PerAFIPostPolicyAdjRIBOutRPKIValid = append(m.PerAFIPostPolicyAdjRIBOutRPKIValid, stat)
+			case 43:
+				m.PerAFIPostPolicyAdjRIBOutRPKINotFound = append(m.PerAFIPostPolicyAdjRIBOutRPKINotFound, stat)
+			}
 		default:
 			glog.Warningf("unprocessed stats type:%v", tlv.InformationType)
 		}
