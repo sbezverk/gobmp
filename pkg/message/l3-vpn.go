@@ -26,7 +26,11 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 
 	nlril3vpn, err := nlri.GetNLRIL3VPN()
 	if errors.Is(err, l3vpn.ErrEmptyNLRI) {
-		// Empty NLRI signals End-of-RIB per RFC 4724 §2 and is encoded as a withdrawal.
+		// Only an empty MP_UNREACH_NLRI is End-of-RIB (RFC 4724 Section 2); an empty
+		// MP_REACH_NLRI announces nothing and is not published.
+		if op != DelPrefix {
+			return nil, nil
+		}
 		prfx := L3VPNPrefix{
 			Action:      "del",
 			RouterHash:  ph.Identity.RouterHash,

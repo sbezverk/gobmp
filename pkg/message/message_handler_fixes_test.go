@@ -1,6 +1,7 @@
 package message
 
 import (
+	"encoding/json"
 	"net"
 	"testing"
 
@@ -169,6 +170,85 @@ func TestL3VPN_EoR_IPv6(t *testing.T) {
 	}
 	if msgs[0].IsIPv4 {
 		t.Error("IsIPv4 = true, want false for IPv6")
+	}
+}
+
+// TestL3VPN_EmptyReachIsNotEoR verifies an empty NLRI with AddPrefix yields nothing.
+func TestL3VPN_EmptyReachIsNotEoR(t *testing.T) {
+	p := NewProducer(&mockPublisher{}, false).(*producer)
+	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+	nlri := &mockMPNLRI{l3vpnErr: l3vpn.ErrEmptyNLRI}
+
+	msgs, err := p.l3vpn(nlri, AddPrefix, ph, &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}})
+	if err != nil || len(msgs) != 0 {
+		t.Fatalf("l3vpn() = %v, %v; want no messages and no error", msgs, err)
+	}
+}
+
+// TestL3VPN_EoRWire feeds real UPDATE bytes: only an empty MP_UNREACH_NLRI is
+// End-of-RIB (RFC 4724 Section 2); an empty MP_REACH_NLRI is not.
+func TestL3VPN_EoRWire(t *testing.T) {
+	nh4 := append(make([]byte, 8), 192, 0, 2, 1)
+	nh6 := append(make([]byte, 8), 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+	attr := func(typ byte, v []byte) []byte {
+		return append([]byte{0x80, typ, byte(len(v))}, v...)
+	}
+	update := func(attrs ...byte) []byte {
+		return append([]byte{0, 0, 0, byte(len(attrs))}, attrs...)
+	}
+	tests := []struct {
+		name    string
+		afi     byte
+		nh      []byte
+		msgType int
+	}{
+		{"ipv4", 1, nh4, bmp.L3VPNV4Msg},
+		{"ipv6", 2, nh6, bmp.L3VPNV6Msg},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name+"/empty reach", func(t *testing.T) {
+			reach := append([]byte{0, tt.afi, 128, byte(len(tt.nh))}, tt.nh...)
+			reach = append(reach, 0)
+			attrs := append([]byte{0x40, 1, 1, 0, 0x40, 2, 0}, attr(14, reach)...)
+			u, err := bgp.UnmarshalBGPUpdate(update(attrs...))
+			if err != nil {
+				t.Fatalf("UnmarshalBGPUpdate: %v", err)
+			}
+			pub := &recordingPublisher{}
+			p := NewProducer(pub, true).(*producer)
+			p.produceRouteMonitorMessage(bmp.Message{
+				PeerHeader: makePeerHeader(t, bmp.PeerType0, 0),
+				Payload:    &bmp.RouteMonitor{Update: u},
+			})
+			if len(pub.msgs) != 0 {
+				t.Fatalf("published %d messages, want 0", len(pub.msgs))
+			}
+		})
+		t.Run(tt.name+"/empty unreach", func(t *testing.T) {
+			u, err := bgp.UnmarshalBGPUpdate(update(attr(15, []byte{0, tt.afi, 128})...))
+			if err != nil {
+				t.Fatalf("UnmarshalBGPUpdate: %v", err)
+			}
+			pub := &recordingPublisher{}
+			p := NewProducer(pub, true).(*producer)
+			p.produceRouteMonitorMessage(bmp.Message{
+				PeerHeader: makePeerHeader(t, bmp.PeerType0, 0),
+				Payload:    &bmp.RouteMonitor{Update: u},
+			})
+			if len(pub.msgs) != 1 {
+				t.Fatalf("published %d messages, want 1", len(pub.msgs))
+			}
+			if pub.msgs[0].msgType != tt.msgType {
+				t.Errorf("msgType = %d, want %d", pub.msgs[0].msgType, tt.msgType)
+			}
+			var m L3VPNPrefix
+			if err := json.Unmarshal(pub.msgs[0].payload, &m); err != nil {
+				t.Fatalf("json.Unmarshal: %v", err)
+			}
+			if !m.IsEOR || m.Action != "del" {
+				t.Errorf("IsEOR=%v Action=%q, want true/del", m.IsEOR, m.Action)
+			}
+		})
 	}
 }
 
