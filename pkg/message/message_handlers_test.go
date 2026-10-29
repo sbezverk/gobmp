@@ -974,25 +974,61 @@ func TestDPathOperation(t *testing.T) {
 	}
 }
 
-func TestDPathEmptyEVPNReachDoesNotPublishEOR(t *testing.T) {
+func TestDPathUpdateIsNotEndOfRIB(t *testing.T) {
 	malformed := dPathAttribute(36, []byte{1, 0})
 	reach := dPathReach(25, 70, []byte{192, 0, 2, 1}, nil)
 	if published := dPathPublish(t, append(malformed, reach...), nil); len(published) != 0 {
 		t.Fatalf("empty MP_REACH published %d messages, want 0", len(published))
 	}
+	// RFC 4724 Section 2: an UPDATE carrying D-PATH besides the empty
+	// MP_UNREACH is not an End-of-RIB marker.
+	if published := dPathPublish(t, append(malformed, dPathUnreach(25, 70, nil)...), nil); len(published) != 0 {
+		t.Fatalf("D-PATH with empty MP_UNREACH published %d messages, want 0", len(published))
+	}
+}
 
-	// An explicit empty MP_UNREACH remains an end-of-RIB marker.
-	published := dPathPublish(t, append(malformed, dPathUnreach(25, 70, nil)...), nil)
-	if len(published) != 1 || published[0].msgType != bmp.EVPNMsg {
-		t.Fatalf("empty MP_UNREACH publications = %+v, want one EVPN end-of-RIB", published)
+func TestEndOfRIBRequiresBareUpdate(t *testing.T) {
+	publish := func(t *testing.T, attrs []byte) []recordedMsg {
+		t.Helper()
+		wire := append([]byte{0, 0, byte(len(attrs) >> 8), byte(len(attrs))}, attrs...)
+		update, err := bgp.UnmarshalBGPUpdate(wire)
+		if err != nil {
+			t.Fatalf("UnmarshalBGPUpdate: %v", err)
+		}
+		recorder := &recordingPublisher{}
+		p := NewProducer(recorder, true).(*producer)
+		p.produceRouteMonitorMessage(bmp.Message{
+			PeerHeader: makePeerHeader(t, bmp.PeerType0, 0),
+			Payload:    &bmp.RouteMonitor{Update: update},
+		})
+		return recorder.msgs
 	}
-	var got EVPNPrefix
-	if err := json.Unmarshal(published[0].payload, &got); err != nil {
-		t.Fatalf("Unmarshal publication: %v", err)
-	}
-	if !got.IsEOR || got.Action != "del" {
-		t.Errorf("explicit MP_UNREACH IsEOR = %v, action = %q; want true, del", got.IsEOR, got.Action)
-	}
+	t.Run("empty MP_UNREACH only", func(t *testing.T) {
+		published := publish(t, dPathUnreach(25, 70, nil))
+		if len(published) != 1 || published[0].msgType != bmp.EVPNMsg {
+			t.Fatalf("publications = %+v, want one EVPN End-of-RIB", published)
+		}
+		var got EVPNPrefix
+		if err := json.Unmarshal(published[0].payload, &got); err != nil {
+			t.Fatalf("Unmarshal publication: %v", err)
+		}
+		if !got.IsEOR || got.Action != "del" {
+			t.Errorf("IsEOR = %v, action = %q; want true, del", got.IsEOR, got.Action)
+		}
+	})
+	t.Run("empty IPv4 UPDATE", func(t *testing.T) {
+		published := publish(t, nil)
+		if len(published) != 1 || published[0].msgType != bmp.UnicastPrefixV4Msg {
+			t.Fatalf("publications = %+v, want one IPv4 End-of-RIB", published)
+		}
+		var got UnicastPrefix
+		if err := json.Unmarshal(published[0].payload, &got); err != nil {
+			t.Fatalf("Unmarshal publication: %v", err)
+		}
+		if !got.IsEOR {
+			t.Error("IsEOR = false, want true")
+		}
+	})
 }
 
 func TestDPathLegacyExplicitWithdrawals(t *testing.T) {
@@ -1011,19 +1047,12 @@ func TestDPathLegacyExplicitWithdrawals(t *testing.T) {
 		}
 		return messages
 	}
-	t.Run("withdrawal-only preserves existing EOR", func(t *testing.T) {
-		baseline := decode(t, dPathPublishWithWithdraw(t, nil, nil, withdrawn))
-		got := decode(t, dPathPublishWithWithdraw(t, malformed, nil, withdrawn))
-		if len(got) != 2 || len(baseline) != len(got) {
-			t.Fatalf("got %d messages, baseline %d; want 2", len(got), len(baseline))
-		}
-		for i, message := range got {
-			if message.Action != baseline[i].Action || message.Prefix != baseline[i].Prefix || message.IsEOR != baseline[i].IsEOR {
-				t.Errorf("message %d action/prefix/EOR = %q/%q/%v, baseline %q/%q/%v", i, message.Action, message.Prefix, message.IsEOR, baseline[i].Action, baseline[i].Prefix, baseline[i].IsEOR)
+	t.Run("withdrawal-only publishes no EOR", func(t *testing.T) {
+		for _, attrs := range [][]byte{nil, malformed} {
+			got := decode(t, dPathPublishWithWithdraw(t, attrs, nil, withdrawn))
+			if len(got) != 1 || got[0].Action != "del" || got[0].Prefix != "198.51.100.0" || got[0].IsEOR {
+				t.Errorf("publications = %+v, want one withdrawal of 198.51.100.0 without EOR", got)
 			}
-		}
-		if got[0].Action != "del" || got[0].Prefix != "198.51.100.0" || got[0].IsEOR || got[1].Action != "add" || !got[1].IsEOR {
-			t.Errorf("unexpected withdrawal/EOR publications: %+v", got)
 		}
 	})
 	t.Run("mixed announcement and withdrawal", func(t *testing.T) {
