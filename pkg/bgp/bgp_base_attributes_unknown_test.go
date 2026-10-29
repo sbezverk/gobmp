@@ -175,6 +175,78 @@ func TestUnknownPathAttribute_NotDuplicated(t *testing.T) {
 	}
 }
 
+// TestUnknownPathAttribute_FlagBitsPreserved verifies the Partial and
+// Extended Length bits survive on surfaced attributes, including an inner
+// attribute of an ATTR_SET that is itself extended-length encoded.
+func TestUnknownPathAttribute_FlagBitsPreserved(t *testing.T) {
+	t.Run("partial bit", func(t *testing.T) {
+		ba, err := UnmarshalBGPBaseAttributes([]byte{0xE0, 33, 2, 0xAA, 0xBB})
+		if err != nil {
+			t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+		}
+		want := []UnknownPathAttribute{{Type: 33, Flags: 0xE0, Value: []byte{0xAA, 0xBB}}}
+		if !reflect.DeepEqual(ba.UnknownAttributes, want) {
+			t.Errorf("UnknownAttributes = %+v, want %+v", ba.UnknownAttributes, want)
+		}
+	})
+	t.Run("extended length ATTR_SET with extended length inner attribute", func(t *testing.T) {
+		inner := buildAttrExtLen(0xE0, 33, []byte{0xAA, 0xBB})
+		raw := buildAttrExtLen(0xC0, 128, buildAttrSetValue(65001, inner))
+		if raw[0] != 0xD0 || inner[0] != 0xF0 {
+			t.Fatalf("test setup: outer flags %#x, inner flags %#x", raw[0], inner[0])
+		}
+		ba, err := UnmarshalBGPBaseAttributes(raw)
+		if err != nil {
+			t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+		}
+		if len(ba.UnknownAttributes) != 0 {
+			t.Errorf("top level UnknownAttributes = %+v, want none", ba.UnknownAttributes)
+		}
+		if ba.AttrSet == nil || ba.AttrSet.PathAttributes == nil {
+			t.Fatalf("ATTR_SET not decoded: %+v", ba.AttrSet)
+		}
+		want := []UnknownPathAttribute{{Type: 33, Flags: 0xF0, Value: []byte{0xAA, 0xBB}}}
+		if got := ba.AttrSet.PathAttributes.UnknownAttributes; !reflect.DeepEqual(got, want) {
+			t.Errorf("ATTR_SET UnknownAttributes = %+v, want %+v", got, want)
+		}
+	})
+}
+
+// TestUnknownPathAttribute_MalformedAttrSet verifies that an ATTR_SET that
+// cannot be decoded is published raw as unknown type 128 instead of
+// disappearing together with everything inside it.
+func TestUnknownPathAttribute_MalformedAttrSet(t *testing.T) {
+	cases := []struct {
+		name  string
+		value []byte
+	}{
+		{
+			// CLUSTER_LIST length 3 is not a multiple of 4.
+			name:  "malformed inner CLUSTER_LIST",
+			value: buildAttrSetValue(65001, buildAttr(0x80, 10, []byte{1, 2, 3}), buildAttr(0xC0, 33, []byte{9})),
+		},
+		{
+			name:  "nested ATTR_SET",
+			value: buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002))),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ba, err := UnmarshalBGPBaseAttributes(buildAttr(0xC0, 128, tc.value))
+			if err != nil {
+				t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+			}
+			if ba.AttrSet != nil {
+				t.Errorf("AttrSet = %+v, want nil", ba.AttrSet)
+			}
+			want := []UnknownPathAttribute{{Type: 128, Flags: 0xC0, Value: tc.value}}
+			if !reflect.DeepEqual(ba.UnknownAttributes, want) {
+				t.Errorf("UnknownAttributes = %+v, want %+v", ba.UnknownAttributes, want)
+			}
+		})
+	}
+}
+
 // TestUnknownPathAttribute_KnownAndUnknownCoexist verifies that recognised
 // attributes still parse normally when an unknown attribute is also present.
 func TestUnknownPathAttribute_KnownAndUnknownCoexist(t *testing.T) {

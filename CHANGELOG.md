@@ -11,6 +11,7 @@ Message updates and major project changes should be documented here.
 - Producer hot paths allocate less, with unchanged JSON output: the Prefix-SID attribute and next hop are read once per UPDATE, route keys are hashed in one MD5 call, and EVPN ESI/MAC, extended and large communities are formatted without `fmt`
 - SR Policy sub-TLVs are logged only at verbosity 5
 - `base_attrs.unknown_attributes` now includes path attribute types 11–13, 19–21, 24, 28, 30, 31, 33, 34, 37, 38, 41 and 42, which were dropped
+- `base_attrs.unknown_attributes` now includes a malformed ATTR_SET as type 128 instead of only logging it per RFC 6368
 
 ### 2026-10-30
 

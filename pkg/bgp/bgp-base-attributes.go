@@ -495,7 +495,9 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			// ATTR_SET - RFC 6368
 			attrSet, err := UnmarshalAttrSet(b)
 			if err != nil {
-				glog.Errorf("failed to unmarshal ATTR_SET attribute: %v", err)
+				// Publish the undecodable set raw instead of dropping it.
+				glog.Errorf("failed to unmarshal ATTR_SET attribute; publishing raw bytes as unknown attribute 128: %v", err)
+				baseAttr.UnknownAttributes = append(baseAttr.UnknownAttributes, newUnknownPathAttribute(attr))
 			} else {
 				baseAttr.AttrSet = attrSet
 			}
@@ -505,8 +507,8 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			//   11 DPA, 12 ADVERTISER, 13 RCID_PATH/CLUSTER_ID (deprecated, RFC 6938)
 			//   19 SSA, 20 Connector (RFC 6037), 21 AS_PATHLIMIT (all deprecated)
 			//   24 Traffic Engineering (RFC 5543)
-			//   28 Entropy Label Capability (deprecated, RFC 7447)
-			//   30, 31 (deprecated, RFC 8093)
+			//   28 Entropy Label Capability (RFC 6790, deprecated by RFC 7447)
+			//   30, 31 (deprecated, RFC 8093; it also deprecated 129, 241-243)
 			//   33 BGPsec_Path (RFC 8205)
 			//   34 Community Container (draft-ietf-idr-wide-bgp-communities)
 			//   37 SFP (RFC 9015), 38 BFD Discriminator (RFC 9026)
@@ -520,16 +522,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			// Optional/Transitive forwarding distinction is not applied here;
 			// the full flags byte is preserved on UnknownPathAttribute so
 			// consumers can apply their own policy.
-			// b aliases the fresh per-attribute buffer allocated in
-			// unmarshalRawPathAttributes, so no extra copy is needed.
-			ua := UnknownPathAttribute{
-				Type:  attr.AttributeType,
-				Flags: attr.AttributeTypeFlags,
-			}
-			if len(b) > 0 {
-				ua.Value = b
-			}
-			baseAttr.UnknownAttributes = append(baseAttr.UnknownAttributes, ua)
+			baseAttr.UnknownAttributes = append(baseAttr.UnknownAttributes, newUnknownPathAttribute(attr))
 		}
 	}
 	// Hash the raw attribute bytes directly instead of marshaling to JSON
@@ -541,6 +534,20 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 	baseAttr.BaseAttrHash = hex.EncodeToString(h.Sum(digest[:0]))
 
 	return &baseAttr, nil
+}
+
+// newUnknownPathAttribute returns the raw form of attr for UnknownAttributes.
+// attr.Attribute aliases the fresh per-attribute buffer allocated in
+// unmarshalRawPathAttributes, so no extra copy is needed.
+func newUnknownPathAttribute(attr PathAttribute) UnknownPathAttribute {
+	ua := UnknownPathAttribute{
+		Type:  attr.AttributeType,
+		Flags: attr.AttributeTypeFlags,
+	}
+	if len(attr.Attribute) > 0 {
+		ua.Value = attr.Attribute
+	}
+	return ua
 }
 
 // unmarshalAttrOrigin returns the value of Origin attribute
