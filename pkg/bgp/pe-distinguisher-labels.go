@@ -38,12 +38,8 @@ func mcastVPNOriginatorLen(attrs []PathAttribute) int {
 		if err != nil {
 			continue
 		}
-		reach, ok := mp.(*MPReachNLRI)
-		if !ok {
-			continue
-		}
 		// GetNLRIMCASTVPN rejects anything other than AFI 1/2 with SAFI 5.
-		r, err := reach.GetNLRIMCASTVPN()
+		r, err := mp.GetNLRIMCASTVPN()
 		if err != nil {
 			continue
 		}
