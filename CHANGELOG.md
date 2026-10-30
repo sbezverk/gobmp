@@ -4,6 +4,20 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-10-30
+
+#### Changed
+
+- **Breaking:** `tunnel.TypeSRPolicy` value changes from 13 to 15 (RFC 9830 §6.2); new `tunnel.TypeMPLSinUDP` is 13 (RFC 7510); published `tunnel_encap` `type_name` for 13 and 15 changes (see Fixed)
+
+#### Deprecated
+
+- `tunnel.TypeSRv6`: IANA has no SRv6 tunnel type; it is now an alias of `tunnel.TypeSRPolicy` (15)
+
+#### Fixed
+
+- Tunnel Encapsulation (attribute 23) `type_name` follows the IANA BGP Tunnel Encapsulation Attribute Tunnel Types registry: type 13 reads `MPLS-in-UDP` (was `SR Policy`), type 15 reads `SR Policy` (was `SRv6`)
+
 ### 2026-03-01
 
 #### Added
