@@ -8,8 +8,12 @@ const (
 	TypeVXLAN     uint16 = 8  // VXLAN Encapsulation
 	TypeNVGRE     uint16 = 9  // NVGRE Encapsulation
 	TypeMPLSinGRE uint16 = 11 // MPLS in GRE
-	TypeSRPolicy  uint16 = 13 // SR Policy
-	TypeSRv6      uint16 = 15 // Segment Routing with IPv6 Data Plane
+	TypeMPLSinUDP uint16 = 13 // MPLS in UDP Encapsulation (RFC 7510)
+	TypeSRPolicy  uint16 = 15 // SR Policy (RFC 9830 §6.2)
+
+	// Deprecated: IANA assigns no "SRv6" tunnel type; 15 is SR Policy.
+	// Use TypeSRPolicy.
+	TypeSRv6 = TypeSRPolicy
 )
 
 // Sub-TLV Type codes per IANA BGP Tunnel Encapsulation Attribute Sub-TLVs Registry
@@ -31,8 +35,8 @@ var TunnelTypeNames = map[uint16]string{
 	TypeVXLAN:     "VXLAN",
 	TypeNVGRE:     "NVGRE",
 	TypeMPLSinGRE: "MPLS-in-GRE",
+	TypeMPLSinUDP: "MPLS-in-UDP",
 	TypeSRPolicy:  "SR Policy",
-	TypeSRv6:      "SRv6",
 }
 
 // SubTLVTypeNames maps sub-TLV type codes to human-readable names

@@ -29,11 +29,20 @@ Message updates and major project changes should be documented here.
 
 - Generic Transitive extended community (type 0x80) sub-types 0x0b and 0x0c are decoded instead of printing `Subtype unknown=[ ... ]`: E-Tree Info (RFC 7796 §6.2) reads `e-tree-info=RootVLAN=100 LeafVLAN=200 P=true V=true`, traffic-rate-packets (RFC 8955 §7.2) reads `flowspec-traffic-rate-packets=AS: 65000 Rate: 1000 pps` (fractional rates kept, negative reads 0)
 
+#### Changed
+
+- **Breaking:** `tunnel.TypeSRPolicy` value changes from 13 to 15 (RFC 9830 §6.2); new `tunnel.TypeMPLSinUDP` is 13 (RFC 7510); published `tunnel_encap` `type_name` for 13 and 15 changes (see Fixed)
+
+#### Deprecated
+
+- `tunnel.TypeSRv6`: IANA has no SRv6 tunnel type; it is now an alias of `tunnel.TypeSRPolicy` (15)
+
 #### Fixed
 
 - Extended communities of type 0x81 and 0x82 with sub-types other than 0x08 no longer borrow type 0x80 flowspec names (e.g. `81 06 ...` printed `flowspec-traffic-rate=[ ... ]`); per the IANA Generic Transitive Part 2/Part 3 registries they print `Subtype unknown=[ ... ]`
 - Flowspec traffic-rate-bytes (type 0x80, sub-type 0x06) with a negative rate is treated as zero (RFC 8955 §7.1): `80 06 00 00 c4 7a 00 00` (-1000) reads `flowspec-traffic-rate=AS: 0 Rate: 0 bps` instead of `Rate: 4294959296 bps`
 - Flowspec traffic-rate-bytes (type 0x80, sub-type 0x06) is no longer truncated to an integer or wrapped above 536,870,880 B/s: a 10G policer (1.25e9 B/s) reads `Rate: 10000000000 bps` instead of `Rate: 1410065408 bps`, and 0.5 B/s reads `Rate: 4 bps` instead of `0`; NaN and +Inf read `NaN` / `+Inf` instead of `0 bps`
+- Tunnel Encapsulation (attribute 23) `type_name` follows the IANA BGP Tunnel Encapsulation Attribute Tunnel Types registry: type 13 reads `MPLS-in-UDP` (was `SR Policy`), type 15 reads `SR Policy` (was `SRv6`)
 
 ### 2026-03-01
 
