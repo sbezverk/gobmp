@@ -18,14 +18,15 @@ const (
 
 // Sub-TLV Type codes per IANA BGP Tunnel Encapsulation Attribute Sub-TLVs Registry
 const (
-	SubTLVEncapsulation  uint8 = 1  // Encapsulation
-	SubTLVProtocolType   uint8 = 2  // Protocol Type
-	SubTLVColor          uint8 = 3  // Color
-	SubTLVEgressEndpoint uint8 = 4  // Tunnel Egress Endpoint
-	SubTLVUDPDestPort    uint8 = 6  // UDP Destination Port
-	SubTLVEmbeddedLabel  uint8 = 9  // Embedded Label Handling
-	SubTLVPreference     uint8 = 12 // Preference
-	SubTLVBindingSID     uint8 = 13 // Binding SID
+	SubTLVEncapsulation   uint8 = 1  // Encapsulation
+	SubTLVProtocolType    uint8 = 2  // Protocol Type
+	SubTLVIPsecTunnelAuth uint8 = 3  // IPsec Tunnel Authenticator (DEPRECATED)
+	SubTLVColor           uint8 = 4  // Color
+	SubTLVEgressEndpoint  uint8 = 6  // Tunnel Egress Endpoint
+	SubTLVUDPDestPort     uint8 = 8  // UDP Destination Port
+	SubTLVEmbeddedLabel   uint8 = 9  // Embedded Label Handling
+	SubTLVPreference      uint8 = 12 // Preference
+	SubTLVBindingSID      uint8 = 13 // Binding SID
 )
 
 // TunnelTypeNames maps tunnel type codes to human-readable names
@@ -41,14 +42,15 @@ var TunnelTypeNames = map[uint16]string{
 
 // SubTLVTypeNames maps sub-TLV type codes to human-readable names
 var SubTLVTypeNames = map[uint8]string{
-	SubTLVEncapsulation:  "Encapsulation",
-	SubTLVProtocolType:   "Protocol Type",
-	SubTLVColor:          "Color",
-	SubTLVEgressEndpoint: "Tunnel Egress Endpoint",
-	SubTLVUDPDestPort:    "UDP Destination Port",
-	SubTLVEmbeddedLabel:  "Embedded Label Handling",
-	SubTLVPreference:     "Preference",
-	SubTLVBindingSID:     "Binding SID",
+	SubTLVEncapsulation:   "Encapsulation",
+	SubTLVProtocolType:    "Protocol Type",
+	SubTLVIPsecTunnelAuth: "IPsec Tunnel Authenticator (DEPRECATED)",
+	SubTLVColor:           "Color",
+	SubTLVEgressEndpoint:  "Tunnel Egress Endpoint",
+	SubTLVUDPDestPort:     "UDP Destination Port",
+	SubTLVEmbeddedLabel:   "Embedded Label Handling",
+	SubTLVPreference:      "Preference",
+	SubTLVBindingSID:      "Binding SID",
 }
 
 // GetTunnelTypeName returns human-readable name for tunnel type code
