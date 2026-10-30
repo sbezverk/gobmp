@@ -267,7 +267,7 @@ kafka_config:
 nats_config:
   nats_srv: "nats://host:port"  # required to activate NATS publisher
   nats_max_pending_acks: 4096   # max JetStream publishes awaiting acknowledgement
-  nats_ack_timeout_ms: 30000    # acknowledgement wait; a timed-out message is lost
+  nats_ack_timeout_ms: 30000    # acknowledgement wait; a timed-out message may be lost
 
 # Dump publisher configuration (console/file); requires --dump on the CLI to activate
 dump_config:
@@ -441,7 +441,8 @@ a JetStream outage. YAML: `nats_config.nats_max_pending_acks`.
 **Default:** 30000 (30 seconds)
 
 How long a publish waits for its JetStream acknowledgement. A failed or
-timed-out publish is logged (at most once a second) and its message is lost; the
+timed-out publish is logged (at most once a second) and its message may be lost
+(it can still be stored from the reconnect buffer after the server returns); the
 error does not reach the BMP pipeline. YAML: `nats_config.nats_ack_timeout_ms`.
 
 ### BMP Processing Modes

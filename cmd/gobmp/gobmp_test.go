@@ -856,6 +856,8 @@ func TestApplyConfigOverrides_NatsAckOptions_Invalid(t *testing.T) {
 		{"nats-max-pending-acks", "-1"},
 		{"nats-ack-timeout-ms", "0"},
 		{"nats-ack-timeout-ms", "-5"},
+		{"nats-ack-timeout-ms", "86400001"},
+		{"nats-ack-timeout-ms", "9300000000000"},
 	} {
 		fs := newTestFlagSet()
 		if err := fs.Set(tc.name, tc.value); err != nil {
