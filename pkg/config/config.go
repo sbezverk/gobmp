@@ -46,6 +46,14 @@ type DumpConfig struct {
 
 type NATSConfig struct {
 	NatsSrv string `yaml:"nats_srv"`
+	// NatsMaxPendingAcks bounds the JetStream publishes awaiting their
+	// acknowledgement; at the bound publishing waits. 0 means the default
+	// (4096).
+	NatsMaxPendingAcks int `yaml:"nats_max_pending_acks"`
+	// NatsAckTimeoutMs is how long a publish waits for its JetStream
+	// acknowledgement before it is logged as failed and its message
+	// dropped. 0 means the default (30000 ms).
+	NatsAckTimeoutMs int `yaml:"nats_ack_timeout_ms"`
 }
 
 type KafkaConfig struct {

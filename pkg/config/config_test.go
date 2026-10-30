@@ -362,3 +362,25 @@ func TestLoadConfig_MaxPassiveConnections(t *testing.T) {
 		t.Errorf("MaxPassiveConnections = %d, want 10", cfg.MaxPassiveConnections)
 	}
 }
+
+func TestLoadConfig_NATSAckOptions(t *testing.T) {
+	yml := `
+nats_config:
+  nats_srv: "nats://localhost:4222"
+  nats_max_pending_acks: 1024
+  nats_ack_timeout_ms: 10000
+`
+	cfg, err := LoadConfig(writeTemp(t, yml))
+	if err != nil {
+		t.Fatalf("LoadConfig() unexpected error: %v", err)
+	}
+	if cfg.NATSConfig == nil {
+		t.Fatal("NATSConfig is nil, want non-nil")
+	}
+	if cfg.NATSConfig.NatsMaxPendingAcks != 1024 {
+		t.Errorf("NatsMaxPendingAcks = %d, want 1024", cfg.NATSConfig.NatsMaxPendingAcks)
+	}
+	if cfg.NATSConfig.NatsAckTimeoutMs != 10000 {
+		t.Errorf("NatsAckTimeoutMs = %d, want 10000", cfg.NATSConfig.NatsAckTimeoutMs)
+	}
+}
