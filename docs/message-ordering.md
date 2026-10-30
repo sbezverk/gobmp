@@ -59,7 +59,10 @@ The standalone parser/producer APIs still support an explicit stop signal. The
 server uses input closure instead, so shutdown does not abort an accepted frame.
 `PublishMessage` has no cancellation parameter: a blocked call must return before
 that connection worker and server Stop can finish. No hard shutdown deadline or
-broker-delivery/flush guarantee is added.
+broker-delivery/flush guarantee is added. The NATS publisher reconnects for as
+long as the server is away and publishes synchronously: each publish returns
+once JetStream acknowledges it or its wait expires, so its Stop has nothing to
+flush.
 
 Regression tests exercise actual BMP wire frames through the parser/producer
 pipeline, including announcement, withdrawal, explicit End-of-RIB and Peer Down,

@@ -43,7 +43,6 @@ const (
 )
 
 var (
-	maxReconnects = 10
 	natsTimeout   = time.Second
 	waitReconnect = time.Second
 )
@@ -207,18 +206,34 @@ func (p *publisher) createStreams() error {
 	return nil
 }
 
+// connectOptions returns the options of the publisher's NATS connection.
+func connectOptions() []nats.Option {
+	return []nats.Option{
+		nats.Name("gobmp-producer"),
+		// Keep reconnecting however long the server is away: a closed
+		// connection would fail every publish while gobmp keeps running.
+		nats.MaxReconnects(-1),
+		nats.ReconnectWait(waitReconnect),
+		nats.Timeout(natsTimeout),
+		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
+			if err != nil {
+				glog.Warningf("NATS connection lost: %v, reconnecting", err)
+			}
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) {
+			glog.Infof("NATS connection reestablished to %s", nc.ConnectedUrlRedacted())
+		}),
+		nats.ClosedHandler(func(*nats.Conn) {
+			glog.Infof("NATS connection closed")
+		}),
+	}
+}
+
 // NewPublisher instantiates a new instance of a NATS publisher
 func NewPublisher(natsSrv string) (pub.Publisher, error) {
 	glog.Infof("Initializing NATS producer client")
 
-	opts := []nats.Option{
-		nats.Name("gobmp-producer"),
-		nats.MaxReconnects(maxReconnects),
-		nats.ReconnectWait(waitReconnect),
-		nats.Timeout(natsTimeout),
-	}
-
-	nc, err := nats.Connect(natsSrv, opts...)
+	nc, err := nats.Connect(natsSrv, connectOptions()...)
 	if err != nil {
 		return nil, err
 	}

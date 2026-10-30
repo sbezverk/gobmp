@@ -302,3 +302,20 @@ func TestEndOfRIBPublicationAndStream(t *testing.T) {
 		t.Fatal("stream initialization skipped")
 	}
 }
+
+// TestConnectOptions checks that the connection reconnects without limit
+// and logs its transitions.
+func TestConnectOptions(t *testing.T) {
+	o := natsgo.GetDefaultOptions()
+	for _, opt := range connectOptions() {
+		if err := opt(&o); err != nil {
+			t.Fatalf("option: %v", err)
+		}
+	}
+	if o.MaxReconnect != -1 {
+		t.Errorf("MaxReconnect = %d, want -1 (no limit)", o.MaxReconnect)
+	}
+	if o.DisconnectedErrCB == nil || o.ReconnectedCB == nil || o.ClosedCB == nil {
+		t.Error("connection transitions are not all logged")
+	}
+}
