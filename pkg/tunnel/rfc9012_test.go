@@ -159,18 +159,35 @@ func TestRFC9012_SubTLVTypes(t *testing.T) {
 		{2, "Protocol Type"},
 		{3, "IPsec Tunnel Authenticator (DEPRECATED)"},
 		{4, "Color"},
-		{5, "Unknown"},
+		{5, "Load-Balancing Block"},
 		{6, "Tunnel Egress Endpoint"},
 		{8, "UDP Destination Port"},
 		{9, "Embedded Label Handling"},
 		{12, "Preference"},
 		{13, "Binding SID"},
+		// Further IANA registrations (RFC 9012 §14.6, RFC 9830 §6.3, RFC 9015)
+		{7, "DS Field"},
+		{10, "MPLS Label Stack"},
+		{11, "Prefix-SID"},
+		{14, "ENLP"},
+		{15, "Priority"},
+		{16, "SPI/SI Representation"},
+		{20, "SRv6 Binding SID"},
+		{21, "Unknown"},
+		{128, "Segment List"},
+		{129, "SR Policy Candidate Path Name"},
+		{130, "SR Policy Name"},
+		{131, "Reverse Segment List (TEMPORARY)"},
+		{200, "Unknown"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create sub-TLV with zero length
+			// Create sub-TLV with zero length (2-octet length for types >= 128)
 			input := []byte{tt.subTLVType, 0x00}
+			if tt.subTLVType >= 128 {
+				input = append(input, 0x00)
+			}
 			subTLVs, err := UnmarshalSubTLVs(input)
 			if err != nil {
 				t.Fatalf("UnmarshalSubTLVs() error = %v", err)

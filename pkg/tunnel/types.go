@@ -51,6 +51,40 @@ var SubTLVTypeNames = map[uint8]string{
 	SubTLVEmbeddedLabel:   "Embedded Label Handling",
 	SubTLVPreference:      "Preference",
 	SubTLVBindingSID:      "Binding SID",
+
+	// Remaining registered codes, named as in the IANA "BGP Tunnel
+	// Encapsulation Attribute Sub-TLVs" registry without the "sub-TLV" suffix.
+	5:   "Load-Balancing Block",                         // RFC 5640
+	7:   "DS Field",                                     // RFC 9012
+	10:  "MPLS Label Stack",                             // RFC 9012
+	11:  "Prefix-SID",                                   // RFC 9012
+	14:  "ENLP",                                         // RFC 9830
+	15:  "Priority",                                     // RFC 9830
+	16:  "SPI/SI Representation",                        // RFC 9015
+	20:  "SRv6 Binding SID",                             // RFC 9830
+	64:  "IPSEC-SA-ID",                                  // draft-ietf-idr-sdwan-edge-discovery
+	65:  "Extended Port Property",                       // draft-ietf-idr-sdwan-edge-discovery
+	66:  "Underlay ISP Properties",                      // draft-ietf-idr-sdwan-edge-discovery
+	67:  "IPsec SA Nonce",                               // draft-ietf-idr-sdwan-edge-discovery
+	68:  "IPsec Public Key",                             // draft-ietf-idr-sdwan-edge-discovery
+	69:  "IPsec SA Proposal",                            // draft-ietf-idr-sdwan-edge-discovery
+	70:  "Simplified IPsec SA",                          // draft-ietf-idr-sdwan-edge-discovery
+	71:  "IPsec Version",                                // FCFS
+	123: "NRP ID",                                       // draft-ietf-idr-sr-policy-nrp
+	124: "RPF",                                          // draft-ietf-bess-bgp-multicast-controller
+	125: "Tree Label Stack",                             // draft-ietf-bess-bgp-multicast-controller
+	128: "Segment List",                                 // RFC 9830
+	129: "SR Policy Candidate Path Name",                // RFC 9830
+	130: "SR Policy Name",                               // RFC 9830
+	131: "Reverse Segment List (TEMPORARY)",             // draft-ietf-idr-sr-policy-path-segment
+	192: "The WAN ID",                                   // FCFS
+	193: "The Bytes",                                    // FCFS
+	194: "IPSEC DIM",                                    // FCFS
+	195: "IPSEC Key Exchange",                           // FCFS
+	196: "IPSEC SA Proposals",                           // FCFS
+	197: "Service Segment List",                         // FCFS
+	198: "Service Vtep",                                 // FCFS
+	199: "Distributed Etherlink Switch (DES) Adjacency", // FCFS
 }
 
 // GetTunnelTypeName returns human-readable name for tunnel type code

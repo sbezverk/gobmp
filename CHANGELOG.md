@@ -6,6 +6,10 @@ Message updates and major project changes should be documented here.
 
 ### 2026-10-30
 
+#### Added
+
+- Tunnel Encapsulation sub-TLV `type_name` names every code in the IANA BGP Tunnel Encapsulation Attribute Sub-TLVs registry; e.g. 14 `ENLP`, 15 `Priority`, 20 `SRv6 Binding SID`, 128 `Segment List`, 129 `SR Policy Candidate Path Name`, 130 `SR Policy Name`, 131 `Reverse Segment List (TEMPORARY)`, 7 `DS Field`, 10 `MPLS Label Stack`, 11 `Prefix-SID` (all were `Unknown`); unassigned codes still read `Unknown`
+
 #### Changed
 
 - **Breaking:** `tunnel.TypeSRPolicy` value changes from 13 to 15 (RFC 9830 §6.2); new `tunnel.TypeMPLSinUDP` is 13 (RFC 7510); published `tunnel_encap` `type_name` for 13 and 15 changes (see Fixed)
