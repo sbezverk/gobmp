@@ -328,7 +328,7 @@ func UnmarshalVPNFlowspecNLRI(b []byte, ipv6 bool) (*NLRI, error) {
 }
 
 // UnmarshalAllVPNFlowspecNLRI parses one or more VPN FlowSpec NLRIs (SAFI=134) per RFC 8955 Section 6.
-// Returns nil slice with nil error for empty input (withdraw-all signal).
+// Returns nil slice with nil error for empty input (empty route list).
 func UnmarshalAllVPNFlowspecNLRI(b []byte, ipv6 bool) ([]*NLRI, error) {
 	if glog.V(5) {
 		glog.Infof("VPN Flowspec NLRI Raw: %s", tools.MessageHex(b))

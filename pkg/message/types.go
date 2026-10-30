@@ -98,6 +98,8 @@ type UnicastPrefix struct {
 	IsLocRIB         bool   `json:"is_loc_rib"`
 	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
 	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+	AFI              uint16 `json:"afi,omitempty"`
+	SAFI             uint8  `json:"safi,omitempty"`
 }
 
 func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
@@ -512,6 +514,8 @@ type MUPPrefix struct {
 	IsLocRIB         bool   `json:"is_loc_rib"`
 	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
 	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+	AFI              uint16 `json:"afi,omitempty"`
+	SAFI             uint8  `json:"safi,omitempty"`
 }
 
 // L3VPNPrefix defines the structure of Layer 3 VPN message
@@ -553,6 +557,8 @@ type L3VPNPrefix struct {
 	IsLocRIB         bool   `json:"is_loc_rib"`
 	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
 	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+	AFI              uint16 `json:"afi,omitempty"`
+	SAFI             uint8  `json:"safi,omitempty"`
 }
 
 // LSPrefix defines a structure of LS Prefix message
@@ -728,6 +734,8 @@ type EVPNPrefix struct {
 	IsLocRIB         bool   `json:"is_loc_rib"`
 	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
 	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+	AFI              uint16 `json:"afi,omitempty"`
+	SAFI             uint8  `json:"safi,omitempty"`
 }
 
 // VPLSPrefix defines the structure of VPLS message (AFI 25, SAFI 65)
