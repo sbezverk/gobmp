@@ -1005,9 +1005,21 @@ func TestEndOfRIBRequiresBareUpdate(t *testing.T) {
 	}
 	t.Run("empty MP_UNREACH only", func(t *testing.T) {
 		published := publish(t, dPathUnreach(25, 70, nil))
-		if len(published) != 1 || published[0].msgType != bmp.EVPNMsg {
-			t.Fatalf("publications = %+v, want one EVPN End-of-RIB", published)
+
+		findLegacy := false
+		findEoR := false
+		for _, msg := range published {
+			if msg.msgType == bmp.EndOfRIBMsg {
+				findEoR = true
+			}
+			if msg.msgType == bmp.EVPNMsg && msg.payload != nil {
+				findLegacy = true
+			}
 		}
+		if !findEoR || !findLegacy {
+			t.Fatalf("publications = %+v, want one EVPN End-of-RIB and one legacy EVPN EoR", published)
+		}
+
 		var got EVPNPrefix
 		if err := json.Unmarshal(published[0].payload, &got); err != nil {
 			t.Fatalf("Unmarshal publication: %v", err)
@@ -1018,8 +1030,18 @@ func TestEndOfRIBRequiresBareUpdate(t *testing.T) {
 	})
 	t.Run("empty IPv4 UPDATE", func(t *testing.T) {
 		published := publish(t, nil)
-		if len(published) != 1 || published[0].msgType != bmp.UnicastPrefixV4Msg {
-			t.Fatalf("publications = %+v, want one IPv4 End-of-RIB", published)
+		findLegacy := false
+		findEoR := false
+		for _, msg := range published {
+			if msg.msgType == bmp.EndOfRIBMsg {
+				findEoR = true
+			}
+			if msg.msgType == bmp.UnicastPrefixV4Msg && msg.payload != nil {
+				findLegacy = true
+			}
+		}
+		if !findEoR || !findLegacy {
+			t.Fatalf("publications = %+v, want one IPv4 End-of-RIB and one legacy IPv4 EoR", published)
 		}
 		var got UnicastPrefix
 		if err := json.Unmarshal(published[0].payload, &got); err != nil {
