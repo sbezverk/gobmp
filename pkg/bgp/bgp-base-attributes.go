@@ -76,6 +76,12 @@ type BaseAttributes struct {
 	// BGPPrefixSID will be deprecated in favor of PrefixSID on Septermber 16, 2027
 	BGPPrefixSID *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
 	OTC          uint32        `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
+	// DPath holds the decoded RFC 10039 Section 4 D-PATH attribute (type 36).
+	DPath *DPath `json:"d_path,omitempty"`
+	// DPathAttr retains an independent copy of the first D-PATH attribute value.
+	DPathAttr []byte `json:"d_path_attr,omitempty"`
+	// DPathMalformed requests treat-as-withdraw for a malformed D-PATH attribute.
+	DPathMalformed bool `json:"d_path_malformed,omitempty"`
 	// NHCAttr retains the raw NHC attribute value for forensic use.
 	NHCAttr []byte `json:"nhc_attr,omitempty"`
 	// NHC contains the decoded NHC when its characteristics are usable.
@@ -236,6 +242,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "nhc mismatch")
 	}
+	if !bytes.Equal(ba.DPathAttr, oba.DPathAttr) || !reflect.DeepEqual(ba.DPath, oba.DPath) || ba.DPathMalformed != oba.DPathMalformed {
+		equal = false
+		diffs = append(diffs, "d_path mismatch")
+	}
 	if asEqual, asDiffs := ba.AttrSet.Equal(oba.AttrSet); !asEqual {
 		equal = false
 		diffs = append(diffs, asDiffs...)
@@ -302,6 +312,7 @@ func UnmarshalBGPBaseAttributesWithAS4Hint(b []byte, as4 bool) (*BaseAttributes,
 // RFC 7854 §4.2): true = 4-byte, false = 2-byte. Overrides the AS_PATH width heuristic.
 func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAttributes, error) {
 	baseAttr := BaseAttributes{}
+	dPathSeen := false
 	for _, attr := range attrs {
 		b := attr.Attribute
 		switch attr.AttributeType {
@@ -431,7 +442,21 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			// Only to Customer (OTC) - RFC 9234
 			baseAttr.OTC = unmarshalAttrOTC(b)
 		case 36:
-			// BGP Domain Path (D-PATH, TEMPORARY) - draft-ietf-bess-evpn-ipvpn-interworking
+			// RFC 10039 Section 4: discard every instance other than the first,
+			// even when that first instance is empty or malformed.
+			if dPathSeen {
+				continue
+			}
+			dPathSeen = true
+			baseAttr.DPathAttr = append([]byte(nil), b...)
+			dpath, err := UnmarshalDPath(b)
+			if err != nil {
+				// Preserve other attributes and explicit withdrawals. The producer
+				// applies RFC 10039 Section 4 treat-as-withdraw to reachable NLRIs.
+				baseAttr.DPathMalformed = true
+			} else {
+				baseAttr.DPath = dpath
+			}
 		case 37:
 			// SFP attribute - RFC 9015
 		case 38:

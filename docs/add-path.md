@@ -43,8 +43,10 @@ retain separate producers and can progress independently.
 
 The ordering covers local publication calls; it does not establish delivery or
 commit order across broker topics. An active publisher call has no cancellation
-API and can hold up its connection's producer. This correction does not change
-server shutdown or add a parser/producer drain guarantee.
+API and can hold up its connection's producer. Server shutdown retains the
+[per-connection drain and join policy](message-ordering.md): accepted frames
+finish their local publication calls before the publisher stops. A blocked
+publisher call can therefore delay server shutdown too.
 
 ## Loc-RIB and internal keys
 
@@ -78,5 +80,9 @@ replacement PeerUp cannot overtake it or change the decoding state of its later
 MP attributes. They cover both RIB directions, Loc-RIB table names, and a first
 ADD-PATH route immediately after PeerUp. A separate blocked-installation test
 checks that readiness is not exposed before the properties are installed.
+Combined wire regressions cover negotiated ADD-PATH with D-PATH in VPNv4
+announcements and withdrawals in both monitored directions, malformed D-PATH
+treat-as-withdraw, and genuine versus false End-of-RIB markers. A unicast
+withdrawal also checks the negotiated format without VPN parser fallback.
 These are local parser/producer checks; real-router and live-broker acceptance
 are separate validation activities.
