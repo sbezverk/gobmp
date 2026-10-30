@@ -38,6 +38,31 @@ var TunnelTypeNames = map[uint16]string{
 	TypeMPLSinGRE: "MPLS-in-GRE",
 	TypeMPLSinUDP: "MPLS-in-UDP",
 	TypeSRPolicy:  "SR Policy",
+
+	// Remaining registered codes from the IANA "BGP Tunnel Encapsulation
+	// Attribute Tunnel Types" registry; like the entries above, a trailing
+	// " Encapsulation" is dropped.
+	3:  "Transmit tunnel endpoint (DEPRECATED)",                    // RFC 9012
+	4:  "IPsec in Tunnel-mode (DEPRECATED)",                        // RFC 9012
+	5:  "IP in IP tunnel with IPsec Transport Mode (DEPRECATED)",   // RFC 9012
+	6:  "MPLS-in-IP tunnel with IPsec Transport Mode (DEPRECATED)", // RFC 9012
+	7:  "IP in IP",                                                 // RFC 9012
+	10: "MPLS",                                                     // RFC 8365
+	12: "VXLAN GPE",                                                // RFC 8365
+	14: "IPv6 Tunnel",                                              // FCFS
+	16: "Bare",                                                     // FCFS
+	17: "SR Tunnel (DEPRECATED)",                                   // RFC 9125
+	18: "Cloud Security",                                           // FCFS
+	19: "Geneve",                                                   // RFC 8926
+	20: "Any-Encapsulation",                                        // draft-ietf-bess-bgp-multicast-controller
+	21: "GTP Tunnel Type",                                          // FCFS
+	22: "Dynamic Path Selection (DPS) Tunnel",                      // FCFS
+	23: "Originating PE (OPE)",                                     // draft-heitz-bess-evpn-option-b
+	24: "Dynamic Path Selection (DPS) Policy",                      // FCFS
+	25: "SDWAN-Hybrid",                                             // draft-ietf-idr-sdwan-edge-discovery
+	26: "X-over-UDP",                                               // FCFS
+	27: "Distributed Etherlink Switch (DES) Tunnel",                // FCFS
+	28: "ESP-Protected-Payload",                                    // draft-wdh-srv6ops-secservice
 }
 
 // SubTLVTypeNames maps sub-TLV type codes to human-readable names
