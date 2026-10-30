@@ -145,7 +145,11 @@ func TestRFC9012_TunnelTypes(t *testing.T) {
 	}
 }
 
-// TestRFC9012_SubTLVTypes validates common sub-TLV types from IANA registry
+// TestRFC9012_SubTLVTypes validates sub-TLV names against the IANA "BGP
+// Tunnel Encapsulation Attribute Sub-TLVs" registry: 3 = IPsec Tunnel
+// Authenticator (DEPRECATED), 4 = Color, 6 = Tunnel Egress Endpoint, 8 = UDP
+// Destination Port (RFC 9012 Sections 3.1, 3.3.2, 3.4.2, 14.6); 12 and 13
+// per RFC 9830 Section 6.3.
 func TestRFC9012_SubTLVTypes(t *testing.T) {
 	tests := []struct {
 		subTLVType uint8
@@ -153,9 +157,11 @@ func TestRFC9012_SubTLVTypes(t *testing.T) {
 	}{
 		{1, "Encapsulation"},
 		{2, "Protocol Type"},
-		{3, "Color"},
-		{4, "Tunnel Egress Endpoint"},
-		{6, "UDP Destination Port"},
+		{3, "IPsec Tunnel Authenticator (DEPRECATED)"},
+		{4, "Color"},
+		{5, "Unknown"},
+		{6, "Tunnel Egress Endpoint"},
+		{8, "UDP Destination Port"},
 		{9, "Embedded Label Handling"},
 		{12, "Preference"},
 		{13, "Binding SID"},

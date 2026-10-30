@@ -32,6 +32,7 @@ Message updates and major project changes should be documented here.
 #### Changed
 
 - **Breaking:** `tunnel.TypeSRPolicy` value changes from 13 to 15 (RFC 9830 §6.2); new `tunnel.TypeMPLSinUDP` is 13 (RFC 7510); published `tunnel_encap` `type_name` for 13 and 15 changes (see Fixed)
+- **Breaking:** `tunnel.SubTLVColor` changes from 3 to 4, `tunnel.SubTLVEgressEndpoint` from 4 to 6 and `tunnel.SubTLVUDPDestPort` from 6 to 8 (RFC 9012 §3.1, §3.3.2, §3.4.2); new `tunnel.SubTLVIPsecTunnelAuth` is 3; published sub-TLV `type_name` for 3, 4, 6 and 8 changes (see Fixed)
 
 #### Deprecated
 
@@ -43,6 +44,7 @@ Message updates and major project changes should be documented here.
 - Flowspec traffic-rate-bytes (type 0x80, sub-type 0x06) with a negative rate is treated as zero (RFC 8955 §7.1): `80 06 00 00 c4 7a 00 00` (-1000) reads `flowspec-traffic-rate=AS: 0 Rate: 0 bps` instead of `Rate: 4294959296 bps`
 - Flowspec traffic-rate-bytes (type 0x80, sub-type 0x06) is no longer truncated to an integer or wrapped above 536,870,880 B/s: a 10G policer (1.25e9 B/s) reads `Rate: 10000000000 bps` instead of `Rate: 1410065408 bps`, and 0.5 B/s reads `Rate: 4 bps` instead of `0`; NaN and +Inf read `NaN` / `+Inf` instead of `0 bps`
 - Tunnel Encapsulation (attribute 23) `type_name` follows the IANA BGP Tunnel Encapsulation Attribute Tunnel Types registry: type 13 reads `MPLS-in-UDP` (was `SR Policy`), type 15 reads `SR Policy` (was `SRv6`)
+- Tunnel Encapsulation sub-TLV `type_name` follows the IANA BGP Tunnel Encapsulation Attribute Sub-TLVs registry (RFC 9012 §14.6): sub-TLV 4 reads `Color` (was `Tunnel Egress Endpoint`), 6 reads `Tunnel Egress Endpoint` (was `UDP Destination Port`), 8 reads `UDP Destination Port` (was `Unknown`), 3 reads `IPsec Tunnel Authenticator (DEPRECATED)` (was `Color`)
 
 ### 2026-03-01
 
