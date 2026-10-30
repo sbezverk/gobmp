@@ -18,6 +18,7 @@ Message updates and major project changes should be documented here.
 - SR Policy sub-TLVs are logged only at verbosity 5
 - `base_attrs.unknown_attributes` now includes path attribute types 11–13, 19–21, 24, 28, 30, 31, 33, 34, 37, 38, 41 and 42, which were dropped
 - `base_attrs.unknown_attributes` now includes an ATTR_SET that is truncated, holds MP_REACH_NLRI/MP_UNREACH_NLRI, or holds an attribute the parser flags as malformed, published raw as type 128; its routes are treated as withdrawn (RFC 7606 §7.16)
+- NATS publisher publishes to JetStream asynchronously in call order instead of waiting for each message's acknowledgement, with at most `nats_max_pending_acks` (`--nats-max-pending-acks`, default 4096) messages awaiting one and `nats_ack_timeout_ms` (`--nats-ack-timeout-ms`, default 30000) to wait for each. Acknowledgement failures and timeouts no longer reach the caller: they are logged, at most once a second, and the message is lost. During a JetStream outage publishing blocks once the limit is reached, stalling BMP reads (backpressure), and messages whose acknowledgement times out are lost. Stop waits up to 10 s for outstanding acknowledgements, and a publish after Stop returns an error
 
 #### Fixed
 

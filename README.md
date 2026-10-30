@@ -237,6 +237,8 @@ bmp_listen_port: 5000
 split_af: true
 nats_config:
   nats_srv: "nats://nats.example.com:4222"
+  nats_max_pending_acks: 4096   # optional, default 4096
+  nats_ack_timeout_ms: 30000    # optional, default 30000
 ```
 
 **All available fields:**
@@ -264,6 +266,8 @@ kafka_config:
 # NATS publisher (mutually exclusive with kafka_config)
 nats_config:
   nats_srv: "nats://host:port"  # required to activate NATS publisher
+  nats_max_pending_acks: 4096   # max JetStream publishes awaiting acknowledgement
+  nats_ack_timeout_ms: 30000    # acknowledgement wait; a timed-out message is lost
 
 # Dump publisher configuration (console/file); requires --dump on the CLI to activate
 dump_config:
@@ -420,6 +424,25 @@ kafka_config:
 **Default:** none (NATS disabled)
 
 NATS server URL for publishing messages. Example: `--nats-server=nats://nats.example.com:4222`
+
+```
+--nats-max-pending-acks={count}
+```
+**Default:** 4096
+
+Maximum JetStream publishes awaiting acknowledgement. goBMP publishes to NATS
+asynchronously, in order; at this limit a publish waits for an acknowledgement,
+which stalls reads from that BMP connection (backpressure), for example during
+a JetStream outage. YAML: `nats_config.nats_max_pending_acks`.
+
+```
+--nats-ack-timeout-ms={milliseconds}
+```
+**Default:** 30000 (30 seconds)
+
+How long a publish waits for its JetStream acknowledgement. A failed or
+timed-out publish is logged (at most once a second) and its message is lost; the
+error does not reach the BMP pipeline. YAML: `nats_config.nats_ack_timeout_ms`.
 
 ### BMP Processing Modes
 

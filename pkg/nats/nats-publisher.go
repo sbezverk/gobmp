@@ -3,6 +3,7 @@ package nats
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -45,12 +46,61 @@ const (
 var (
 	natsTimeout   = time.Second
 	waitReconnect = time.Second
+	// stopTimeout bounds how long Stop waits for outstanding
+	// acknowledgements.
+	stopTimeout = 10 * time.Second
 )
+
+const (
+	// DefaultMaxPendingAcks is the default bound on publishes awaiting their
+	// JetStream acknowledgement.
+	DefaultMaxPendingAcks = 4096
+	// DefaultAckTimeout is the default time a publish waits for its
+	// acknowledgement before it is reported failed.
+	DefaultAckTimeout = 30 * time.Second
+)
+
+// Config configures a NATS publisher.
+type Config struct {
+	// ServerAddress is the NATS server URL.
+	ServerAddress string
+	// MaxPendingAcks bounds the publishes awaiting their JetStream
+	// acknowledgement; at the bound a publish waits for one, holding up
+	// the BMP connection it publishes. 0 means DefaultMaxPendingAcks.
+	MaxPendingAcks int
+	// AckTimeout is how long a publish waits for its acknowledgement before
+	// it is logged as failed and its message dropped. 0 means
+	// DefaultAckTimeout.
+	AckTimeout time.Duration
+}
+
+// withDefaults returns c with zero fields set to their defaults, or an
+// error for a negative field.
+func (c Config) withDefaults() (Config, error) {
+	if c.MaxPendingAcks < 0 {
+		return c, fmt.Errorf("nats publisher: invalid max pending acks %d: must be >= 0", c.MaxPendingAcks)
+	}
+	if c.AckTimeout < 0 {
+		return c, fmt.Errorf("nats publisher: invalid ack timeout %s: must be >= 0", c.AckTimeout)
+	}
+	if c.MaxPendingAcks == 0 {
+		c.MaxPendingAcks = DefaultMaxPendingAcks
+	}
+	if c.AckTimeout == 0 {
+		c.AckTimeout = DefaultAckTimeout
+	}
+	return c, nil
+}
+
+// errStopped is returned by a publish after Stop.
+var errStopped = errors.New("nats publisher is stopped")
 
 // jetStreamClient is the subset of nats.JetStreamContext used by publisher.
 // Defining a narrow interface lets tests inject a fake without a full NATS server.
 type jetStreamClient interface {
-	PublishMsg(m *nats.Msg, opts ...nats.PubOpt) (*nats.PubAck, error)
+	PublishMsgAsync(m *nats.Msg, opts ...nats.PubOpt) (nats.PubAckFuture, error)
+	PublishAsyncComplete() <-chan struct{}
+	PublishAsyncPending() int
 	AddStream(cfg *nats.StreamConfig, opts ...nats.JSOpt) (*nats.StreamInfo, error)
 	StreamInfo(stream string, opts ...nats.JSOpt) (*nats.StreamInfo, error)
 	UpdateStream(cfg *nats.StreamConfig, opts ...nats.JSOpt) (*nats.StreamInfo, error)
@@ -59,6 +109,41 @@ type jetStreamClient interface {
 type publisher struct {
 	nc *nats.Conn
 	js jetStreamClient
+	// stopCh is closed as Stop begins: a publish waiting for an
+	// acknowledgement slot then returns errStopped, its message dropped,
+	// once its current stalled attempt (up to 200 ms in nats.go) ends, so
+	// that Stop can take mu. The server stops publishing before it calls
+	// Stop, so this only matters for a publish racing Stop.
+	stopCh chan struct{}
+	// mu is held shared by a publish and exclusively by Stop to set
+	// stopped, so that Stop waits only for acknowledgements of publishes
+	// that have returned.
+	mu       sync.RWMutex
+	stopped  bool
+	stopOnce sync.Once
+}
+
+func newPublisher(nc *nats.Conn, js jetStreamClient) *publisher {
+	return &publisher{nc: nc, js: js, stopCh: make(chan struct{})}
+}
+
+// errorLog logs failed publishes at most once a second, as a server outage
+// fails every outstanding one at once.
+type errorLog struct {
+	mu         sync.Mutex
+	last       time.Time
+	suppressed int
+}
+
+func (l *errorLog) log(m *nats.Msg, err error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if now := time.Now(); now.Sub(l.last) >= time.Second {
+		glog.Errorf("NATS JetStream publish to %s failed: %v (%d more failures not logged)", m.Subject, err, l.suppressed)
+		l.last, l.suppressed = now, 0
+		return
+	}
+	l.suppressed++
 }
 
 // topicForMessage maps a BMP message type to its NATS subject.
@@ -140,16 +225,51 @@ func (p *publisher) produceMessage(subject string, key []byte, data []byte) erro
 		Data:    data,
 	}
 
-	_, err := p.js.PublishMsg(msg)
-	if err != nil {
-		return err
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	if p.stopped {
+		return errStopped
 	}
-
-	return nil
+	// Publishing asynchronously keeps the order of the publishes; the
+	// acknowledgements arrive later and failures go to the error handler,
+	// not to the caller.
+	for {
+		_, err := p.js.PublishMsgAsync(msg)
+		if !errors.Is(err, nats.ErrTooManyStalledMsgs) {
+			return err
+		}
+		// MaxPendingAcks publishes await acknowledgement: keep waiting,
+		// which holds up the BMP connection being published.
+		select {
+		case <-p.stopCh:
+			return errStopped
+		default:
+		}
+	}
 }
 
+// Stop waits up to stopTimeout for the acknowledgements of the messages
+// published before, then closes the connection. Publishing after Stop
+// returns an error. Stop may be called more than once.
 func (p *publisher) Stop() {
-	p.nc.Close()
+	p.stopOnce.Do(func() {
+		close(p.stopCh)
+		p.mu.Lock()
+		p.stopped = true
+		p.mu.Unlock()
+		if p.js != nil {
+			t := time.NewTimer(stopTimeout)
+			select {
+			case <-p.js.PublishAsyncComplete():
+			case <-t.C:
+				glog.Errorf("NATS publisher stopping with %d JetStream acknowledgements outstanding after %s", p.js.PublishAsyncPending(), stopTimeout)
+			}
+			t.Stop()
+		}
+		if p.nc != nil {
+			p.nc.Close()
+		}
+	})
 }
 
 // mergeSubjects returns a new slice containing all elements of existing plus
@@ -229,28 +349,47 @@ func connectOptions() []nats.Option {
 	}
 }
 
-// NewPublisher instantiates a new instance of a NATS publisher
+// NewPublisher instantiates a new instance of a NATS publisher with the
+// default acknowledgement settings.
 func NewPublisher(natsSrv string) (pub.Publisher, error) {
-	glog.Infof("Initializing NATS producer client")
+	return NewPublisherWithConfig(&Config{ServerAddress: natsSrv})
+}
 
-	nc, err := nats.Connect(natsSrv, connectOptions()...)
+// NewPublisherWithConfig instantiates a new instance of a NATS publisher.
+func NewPublisherWithConfig(cfg *Config) (pub.Publisher, error) {
+	if cfg == nil {
+		return nil, errors.New("nats publisher: nil config")
+	}
+	c, err := cfg.withDefaults()
+	if err != nil {
+		return nil, err
+	}
+	glog.Infof("Initializing NATS producer client (max pending acks %d, ack timeout %s)", c.MaxPendingAcks, c.AckTimeout)
+
+	nc, err := nats.Connect(c.ServerAddress, connectOptions()...)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a JetStream context
-	js, err := nc.JetStream()
+	errs := &errorLog{}
+	js, err := nc.JetStream(
+		nats.PublishAsyncMaxPending(c.MaxPendingAcks),
+		nats.PublishAsyncTimeout(c.AckTimeout),
+		nats.PublishAsyncErrHandler(func(_ nats.JetStream, m *nats.Msg, err error) {
+			errs.log(m, err)
+		}),
+	)
 	if err != nil {
+		nc.Close()
 		return nil, err
 	}
 
-	p := &publisher{
-		nc: nc,
-		js: js,
-	}
+	p := newPublisher(nc, js)
 
 	// Create the streams
 	if err := p.createStreams(); err != nil {
+		nc.Close()
 		return nil, err
 	}
 
