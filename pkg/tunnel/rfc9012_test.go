@@ -119,6 +119,13 @@ func TestRFC9012_TunnelTypes(t *testing.T) {
 		{11, "MPLS-in-GRE"},
 		{13, "MPLS-in-UDP"},
 		{15, "SR Policy"},
+		{7, "IP in IP"},
+		{10, "MPLS"},
+		{12, "VXLAN GPE"},
+		{17, "SR Tunnel (DEPRECATED)"},
+		{19, "Geneve"},
+		{28, "ESP-Protected-Payload"},
+		{29, "Unknown"},
 	}
 
 	for _, tt := range tests {

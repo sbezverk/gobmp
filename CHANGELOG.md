@@ -29,6 +29,7 @@ Message updates and major project changes should be documented here.
 
 - Generic Transitive extended community (type 0x80) sub-types 0x0b and 0x0c are decoded instead of printing `Subtype unknown=[ ... ]`: E-Tree Info (RFC 7796 §6.2) reads `e-tree-info=RootVLAN=100 LeafVLAN=200 P=true V=true`, traffic-rate-packets (RFC 8955 §7.2) reads `flowspec-traffic-rate-packets=AS: 65000 Rate: 1000 pps` (fractional rates kept, negative reads 0)
 - Tunnel Encapsulation sub-TLV `type_name` names every code in the IANA BGP Tunnel Encapsulation Attribute Sub-TLVs registry; e.g. 14 `ENLP`, 15 `Priority`, 20 `SRv6 Binding SID`, 128 `Segment List`, 129 `SR Policy Candidate Path Name`, 130 `SR Policy Name`, 131 `Reverse Segment List (TEMPORARY)`, 7 `DS Field`, 10 `MPLS Label Stack`, 11 `Prefix-SID` (all were `Unknown`); unassigned codes still read `Unknown`
+- Tunnel Encapsulation `type_name` names every code in the IANA BGP Tunnel Encapsulation Attribute Tunnel Types registry; e.g. 7 `IP in IP`, 10 `MPLS`, 12 `VXLAN GPE`, 19 `Geneve` (RFC 8926), 17 `SR Tunnel (DEPRECATED)` (all were `Unknown`); unassigned codes still read `Unknown`
 
 #### Changed
 
