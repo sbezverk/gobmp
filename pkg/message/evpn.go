@@ -26,6 +26,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	evpn, err := nlri.GetNLRIEVPN()
 	if errors.Is(err, evpnpkg.ErrEmptyNLRI) && op == DelPrefix {
 		// Only an empty MP_UNREACH_NLRI is End-of-RIB (RFC 4724 §2); an empty MP_REACH is not.
+		afi, safi := mpFamily(nlri)
 		prfx := EVPNPrefix{
 			Action:      "del",
 			RouterHash:  ph.Identity.RouterHash,
@@ -37,6 +38,8 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			Timestamp:   ph.GetPeerTimestamp(),
 			PeerType:    uint8(ph.PeerType),
 			IsEOR:       true,
+			AFI:         afi,
+			SAFI:        safi,
 			IsIPv4:      !nlri.IsIPv6NLRI(),
 		}
 		if f, err := ph.IsAdjRIBInPost(); err == nil {
@@ -55,7 +58,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		return []EVPNPrefix{prfx}, nil
 	}
@@ -172,7 +175,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			}
 			// RFC 9069: Set TableName for LocRIB peers
 			if prfx.IsLocRIB {
-				prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+				prfx.TableName = p.getTableName(ph)
 			}
 		}
 		prfxs = append(prfxs, prfx)
