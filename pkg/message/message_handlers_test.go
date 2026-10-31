@@ -967,8 +967,8 @@ func TestDPathOperation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := dPathOperation(tt.update, tt.afi, tt.safi); got != tt.want {
-				t.Errorf("dPathOperation = %d, want %d", got, tt.want)
+			if got := attributeErrorOperation(tt.update, tt.afi, tt.safi); got != tt.want {
+				t.Errorf("attributeErrorOperation = %d, want %d", got, tt.want)
 			}
 		})
 	}
