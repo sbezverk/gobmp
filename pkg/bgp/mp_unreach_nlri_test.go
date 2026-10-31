@@ -332,12 +332,10 @@ func TestMPUnReachNLRI_NLRINotFound(t *testing.T) {
 		}
 	})
 	t.Run("GetNLRI72 happy path", func(t *testing.T) {
-		// 8-byte RD type 0 (100:1) + Node NLRI element from RFC 9552 test data.
-		rd := []byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01}
 		mp72 := &MPUnReachNLRI{
 			AddressFamilyID:    16388,
 			SubAddressFamilyID: 72,
-			WithdrawnRoutes:    append(rd, nodeNLRI71Payload...),
+			WithdrawnRoutes:    nodeNLRI72Payload,
 			addPath:            map[int]bool{72: false},
 		}
 		nlri, err := mp72.GetNLRI72()
