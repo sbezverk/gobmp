@@ -250,6 +250,30 @@ func TestProcessNLRI72SubTypes_SRv6SIDRDStamped(t *testing.T) {
 	}
 }
 
+// TestProcessNLRI71SubTypes_SRv6SID publishes an SRv6 SID NLRI of sub-type 6.
+func TestProcessNLRI71SubTypes_SRv6SID(t *testing.T) {
+	sid, err := srv6.UnmarshalSRv6SIDNLRI([]byte{
+		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x01, 0x00, 0x00, 0x1a,
+		0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0x13, 0xce,
+		0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x93,
+		0x01, 0x07, 0x00, 0x02, 0x00, 0x02,
+		0x02, 0x06, 0x00, 0x10,
+		0x01, 0x92, 0x01, 0x68, 0x00, 0x93, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	})
+	if err != nil {
+		t.Fatalf("UnmarshalSRv6SIDNLRI: %v", err)
+	}
+	rec := &recordingPublisher{}
+	p := &producer{publisher: rec}
+	m := &interASNLRI71Mock{nlri: &ls.NLRI71{NLRI: []ls.Element{{Type: 6, LS: sid}}}}
+	p.processNLRI71SubTypes(m, 0, makePeerHeader(t, bmp.PeerType0, 0), &bgp.Update{}, false)
+	if len(rec.msgs) != 1 || rec.msgs[0].msgType != bmp.LSSRv6SIDMsg {
+		t.Fatalf("published %+v, want one LSSRv6SIDMsg", rec.msgs)
+	}
+}
+
 // failingPublisher returns an error from PublishMessage so we can exercise
 // the publish-failure branches in processNLRI72SubTypes.
 type failingPublisher struct{ calls int }

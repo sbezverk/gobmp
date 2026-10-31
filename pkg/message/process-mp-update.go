@@ -278,6 +278,9 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		glog.Errorf("failed to NLRI 71 with error: %+v", err)
 		return
 	}
+	// The Prefix NLRI of the UPDATE share its BGP-LS Attribute.
+	var prefixAttrs lsPrefixAttrs
+	nextHop := nlri.GetNextHop()
 	for _, e := range ls.NLRI {
 		// ipv4Flag used to differentiate between IPv4 and IPv6 Prefix NLRI messages
 		ipv4Flag := false
@@ -288,7 +291,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 71 type 1: expected *base.NodeNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsNode(n, nextHop, operation, ph, update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_node message with error: %+v", err)
 				continue
@@ -303,7 +306,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 71 type 2: expected *base.LinkNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, spf)
+			msg, err := p.lsLink(l, nextHop, operation, ph, update, spf)
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue
@@ -321,7 +324,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 71 type %d: expected *base.PrefixNLRI, got %T", e.Type, e.LS)
 				continue
 			}
-			msg, err := p.lsPrefix(prfx, nlri.GetNextHop(), operation, ph, update, ipv4Flag)
+			msg, err := p.lsPrefixShared(prfx, nextHop, operation, ph, update, ipv4Flag, &prefixAttrs)
 			if err != nil {
 				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
 				continue
@@ -336,7 +339,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 71 type 6: expected *srv6.SIDNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsSRv6SID(s, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsSRv6SID(s, nextHop, operation, ph, update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
 				continue
@@ -352,7 +355,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 71 type 7: expected *base.InterASLinkNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsInterASLink(link, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsInterASLink(link, nextHop, operation, ph, update)
 			if err != nil {
 				glog.Errorf("failed to produce Inter-AS ls_link message with error: %+v", err)
 				continue
@@ -370,7 +373,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 			if spf {
 				safi = 80
 			}
-			msg, err := p.lsOpaque(e.Type, e.LS, safi, nlri.GetNextHop(), operation, ph)
+			msg, err := p.lsOpaque(e.Type, e.LS, safi, nextHop, operation, ph)
 			if err != nil {
 				glog.Errorf("failed to produce ls_opaque message with error: %+v", err)
 				continue
@@ -396,6 +399,9 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		glog.Errorf("failed to decode NLRI 72 with error: %+v", err)
 		return
 	}
+	// The Prefix NLRI of the UPDATE share its BGP-LS Attribute.
+	var prefixAttrs lsPrefixAttrs
+	nextHop := nlri.GetNextHop()
 	for _, e := range ls.NLRI {
 		rd := ""
 		if e.RD != nil {
@@ -409,7 +415,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 72 type 1: expected *base.NodeNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsNode(n, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsNode(n, nextHop, operation, ph, update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_node message with error: %+v", err)
 				continue
@@ -425,7 +431,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 72 type 2: expected *base.LinkNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsLink(l, nlri.GetNextHop(), operation, ph, update, false)
+			msg, err := p.lsLink(l, nextHop, operation, ph, update, false)
 			if err != nil {
 				glog.Errorf("failed to produce ls_link message with error: %+v", err)
 				continue
@@ -444,7 +450,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 72 type %d: expected *base.PrefixNLRI, got %T", e.Type, e.LS)
 				continue
 			}
-			msg, err := p.lsPrefix(prfx, nlri.GetNextHop(), operation, ph, update, ipv4Flag)
+			msg, err := p.lsPrefixShared(prfx, nextHop, operation, ph, update, ipv4Flag, &prefixAttrs)
 			if err != nil {
 				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
 				continue
@@ -460,7 +466,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("NLRI 72 type 6: expected *srv6.SIDNLRI, got %T", e.LS)
 				continue
 			}
-			msg, err := p.lsSRv6SID(s, nlri.GetNextHop(), operation, ph, update)
+			msg, err := p.lsSRv6SID(s, nextHop, operation, ph, update)
 			if err != nil {
 				glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
 				continue
@@ -473,7 +479,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 		case 5:
 			glog.Warningf("NLRI 72 Sub type 5 (TE Policy) is decoded but not published")
 		default:
-			msg, err := p.lsOpaque(e.Type, e.LS, 72, nlri.GetNextHop(), operation, ph)
+			msg, err := p.lsOpaque(e.Type, e.LS, 72, nextHop, operation, ph)
 			if err != nil {
 				glog.Errorf("failed to produce ls_opaque message with error: %+v", err)
 				continue

@@ -5,6 +5,7 @@ package bgp
 import (
 	"encoding/binary"
 	"fmt"
+	"strconv"
 )
 
 // LgCommunity defines BGP Large Commuity https://tools.ietf.org/html/rfc8092
@@ -27,7 +28,13 @@ func makeLgCommunity(b []byte) (*LgCommunity, error) {
 }
 
 func (lg *LgCommunity) String() string {
-	return fmt.Sprintf("%d:%d:%d", lg.GlobalAdmin, lg.LocalData1, lg.LocalData2)
+	var buf [32]byte
+	s := strconv.AppendUint(buf[:0], uint64(lg.GlobalAdmin), 10)
+	s = append(s, ':')
+	s = strconv.AppendUint(s, uint64(lg.LocalData1), 10)
+	s = append(s, ':')
+	s = strconv.AppendUint(s, uint64(lg.LocalData2), 10)
+	return string(s)
 }
 
 // UnmarshalBGPLgCommunity builds a slice of Large Communities

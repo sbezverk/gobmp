@@ -88,7 +88,9 @@ func TestLSLink_PopulatesOpaqueLinkAttribute(t *testing.T) {
 // TestLSPrefix_PopulatesOpaquePrefixAttribute verifies the lsPrefix producer
 // copies hex-encoded TLV 1157 values into LSPrefix.
 func TestLSPrefix_PopulatesOpaquePrefixAttribute(t *testing.T) {
-	attr29 := buildBGPLSAttrWithOpaque(1157, []byte{0xfe, 0xed})
+	// TLV 1162 (SRv6 Locator): flags, algorithm, reserved, metric 7.
+	attr29 := append(buildBGPLSAttrWithOpaque(1157, []byte{0xfe, 0xed}),
+		buildBGPLSAttrWithOpaque(1162, []byte{0, 0, 0, 0, 0, 0, 0, 7})...)
 
 	// PrefixDescriptor TLV 265 (IP Reachability) carrying 10.0.0.0/24 in
 	// BGP NLRI format: length octet (0x18) + 3 prefix octets.
@@ -117,6 +119,9 @@ func TestLSPrefix_PopulatesOpaquePrefixAttribute(t *testing.T) {
 	want := []string{"feed"}
 	if len(msg.OpaquePrefixAttribute) != len(want) || msg.OpaquePrefixAttribute[0] != want[0] {
 		t.Errorf("OpaquePrefixAttribute = %v, want %v", msg.OpaquePrefixAttribute, want)
+	}
+	if msg.SRv6Locator == nil || msg.SRv6Locator.Metric != 7 {
+		t.Errorf("SRv6Locator = %+v, want metric 7", msg.SRv6Locator)
 	}
 }
 

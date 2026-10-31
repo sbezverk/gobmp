@@ -1,7 +1,6 @@
 package message
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 
@@ -18,6 +17,8 @@ const (
 )
 
 func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
+	p.baseAttrsJSON.start()
+	defer p.baseAttrsJSON.stop()
 	if msg.PeerHeader == nil {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return
@@ -258,7 +259,7 @@ func validateNHC(update *bgp.Update, afi uint16, safi uint8, nextHop []byte, ph 
 
 func (p *producer) marshalAndPublish(msg interface{}, msgType int, hash []byte) error {
 	ensureMessageHash(msg)
-	j, err := json.Marshal(msg)
+	j, err := marshalMessage(msg, &p.baseAttrsJSON)
 	if err != nil {
 		return fmt.Errorf("failed to marshal a message of type %d with error: %w", msgType, err)
 	}
