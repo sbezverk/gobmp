@@ -16,9 +16,7 @@ import (
 func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*UnicastPrefix, error) {
 	var operation string
 	var routes []base.Route
-	// Use per-table AddPath capability
-	addPathCap := p.GetAddPathCapability(ph.GetTableKey())
-	pathID := addPathCap[bgp.NLRIMessageType(1, 1)]
+	pathID := p.addPathEnabled(ph, bgp.AFISAFI{AFI: 1, SAFI: 1})
 	switch op {
 	case 0:
 		operation = "add"
@@ -38,8 +36,12 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 	prfxs := make([]*UnicastPrefix, 0)
-	// Check if Update carries any routes, if update comes with 0 routes, it is EoR message
+	// Only a minimal empty IPv4 UPDATE is EOR (RFC 4724 §2).
 	if len(routes) == 0 {
+		afi, safi, eor := endOfRIBFamily(update)
+		if op != AddPrefix || !eor || afi != 1 || safi != 1 {
+			return prfxs, nil
+		}
 		if glog.V(6) {
 			glog.Infof("EoR message for Unicast IPv4")
 		}
@@ -54,6 +56,8 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 			Timestamp:     ph.GetPeerTimestamp(),
 			PeerType:      uint8(ph.PeerType),
 			IsEOR:         true,
+			AFI:           1,
+			SAFI:          1,
 			IsIPv4:        true,
 			IsNexthopIPv4: true,
 		}
@@ -73,7 +77,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		return []*UnicastPrefix{prfx}, nil
 	}
@@ -126,7 +130,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 
 		prfxs = append(prfxs, prfx)

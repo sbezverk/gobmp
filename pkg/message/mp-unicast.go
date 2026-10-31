@@ -38,6 +38,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 	}
 	// Check if Update carries any routes, if update comes with 0 routes, it is EoR message
 	if len(u.NLRI) == 0 {
+		afi, safi := mpFamily(nlri)
 		prfx := &UnicastPrefix{
 			Action:      operation,
 			RouterHash:  ph.Identity.RouterHash,
@@ -49,6 +50,8 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			Timestamp:   ph.GetPeerTimestamp(),
 			PeerType:    uint8(ph.PeerType),
 			IsEOR:       true,
+			AFI:         afi,
+			SAFI:        safi,
 			IsIPv4:      !nlri.IsIPv6NLRI(),
 		}
 		prfx.IsNexthopIPv4 = prfx.IsIPv4
@@ -68,7 +71,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		return []*UnicastPrefix{prfx}, nil
 	}
@@ -102,7 +105,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 			// Last element in AS_PATH would be the AS of the origin

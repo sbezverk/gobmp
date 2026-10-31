@@ -69,13 +69,24 @@ type BaseAttributes struct {
 	// TraficEng
 	IPv6ExtCommunityList []string `json:"ipv6_ext_community_list,omitempty"` // RFC 5701
 	AIGP                 *AIGP    `json:"aigp,omitempty"`                    // RFC 7311 AIGP Attribute (Type 26)
-	// PEDistinguisherLable
-	LgCommunityList []string `json:"large_community_list,omitempty"`
+	// PEDistinguisherLabels holds the RFC 6514 §8 PE Distinguisher Labels attribute (Type 27).
+	// Left nil when the attribute is malformed.
+	PEDistinguisherLabels []PEDistinguisherLabel `json:"pe_distinguisher_labels,omitempty"`
+	// PEDistinguisherLabelsMalformed requests treat-as-withdraw for a malformed
+	// PE Distinguisher Labels attribute whose Partial bit is set (RFC 6514 §8).
+	PEDistinguisherLabelsMalformed bool     `json:"pe_distinguisher_labels_malformed,omitempty"`
+	LgCommunityList                []string `json:"large_community_list,omitempty"`
 	// PrefixSID represents the Prefix Segment Identifier (SID) attribute as defined in RFC 8669.
 	PrefixSID *prefixsid.PSid `json:"prefix_sid,omitempty"`
 	// BGPPrefixSID will be deprecated in favor of PrefixSID on Septermber 16, 2027
 	BGPPrefixSID *BGPPrefixSID `json:"bgp_prefix_sid,omitempty"`
 	OTC          uint32        `json:"otc,omitempty"` // RFC 9234 Only to Customer (OTC) Attribute (Type 35)
+	// DPath holds the decoded RFC 10039 Section 4 D-PATH attribute (type 36).
+	DPath *DPath `json:"d_path,omitempty"`
+	// DPathAttr retains an independent copy of the first D-PATH attribute value.
+	DPathAttr []byte `json:"d_path_attr,omitempty"`
+	// DPathMalformed requests treat-as-withdraw for a malformed D-PATH attribute.
+	DPathMalformed bool `json:"d_path_malformed,omitempty"`
 	// NHCAttr retains the raw NHC attribute value for forensic use.
 	NHCAttr []byte `json:"nhc_attr,omitempty"`
 	// NHC contains the decoded NHC when its characteristics are usable.
@@ -228,6 +239,14 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "ipv6_ext_community_list mismatch")
 	}
+	if !slices.Equal(ba.PEDistinguisherLabels, oba.PEDistinguisherLabels) {
+		equal = false
+		diffs = append(diffs, "pe_distinguisher_labels mismatch")
+	}
+	if ba.PEDistinguisherLabelsMalformed != oba.PEDistinguisherLabelsMalformed {
+		equal = false
+		diffs = append(diffs, "pe_distinguisher_labels_malformed mismatch")
+	}
 	if ba.OTC != oba.OTC {
 		equal = false
 		diffs = append(diffs, "otc mismatch: "+strconv.FormatUint(uint64(ba.OTC), 10)+" and "+strconv.FormatUint(uint64(oba.OTC), 10))
@@ -235,6 +254,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 	if !bytes.Equal(ba.NHCAttr, oba.NHCAttr) || !reflect.DeepEqual(ba.NHC, oba.NHC) || ba.NHCMalformed != oba.NHCMalformed || ba.NHCEmpty != oba.NHCEmpty || ba.NHCDiscarded != oba.NHCDiscarded || ba.NHCUnverified != oba.NHCUnverified {
 		equal = false
 		diffs = append(diffs, "nhc mismatch")
+	}
+	if !bytes.Equal(ba.DPathAttr, oba.DPathAttr) || !reflect.DeepEqual(ba.DPath, oba.DPath) || ba.DPathMalformed != oba.DPathMalformed {
+		equal = false
+		diffs = append(diffs, "d_path mismatch")
 	}
 	if asEqual, asDiffs := ba.AttrSet.Equal(oba.AttrSet); !asEqual {
 		equal = false
@@ -302,6 +325,8 @@ func UnmarshalBGPBaseAttributesWithAS4Hint(b []byte, as4 bool) (*BaseAttributes,
 // RFC 7854 §4.2): true = 4-byte, false = 2-byte. Overrides the AS_PATH width heuristic.
 func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAttributes, error) {
 	baseAttr := BaseAttributes{}
+	dPathSeen := false
+	peDistSeen := false
 	for _, attr := range attrs {
 		b := attr.Attribute
 		switch attr.AttributeType {
@@ -399,7 +424,24 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 				baseAttr.AIGP = aigp
 			}
 		case 27:
-			// PE Distinguisher Labels - RFC 6514
+			// PE Distinguisher Labels - RFC 6514 §8
+			// RFC 7606 §3(g): discard every instance other than the first,
+			// even when that first instance is empty or malformed.
+			if peDistSeen {
+				continue
+			}
+			peDistSeen = true
+			labels, err := unmarshalPEDistinguisherLabels(b, func() int { return lookupOriginatorLen(attrs) })
+			if err != nil {
+				glog.Errorf("failed to parse PE Distinguisher Labels attribute: %v", err)
+				// RFC 6514 §8: with the Partial bit set, the UPDATE is treated as
+				// withdrawn; the producer applies it. Otherwise only the attribute is dropped.
+				// An undecidable family is not malformed, so it is only dropped.
+				baseAttr.PEDistinguisherLabelsMalformed = attr.AttributeTypeFlags&0x20 != 0 &&
+					!errors.Is(err, errPEDistLabelsFamilyUnknown)
+			} else {
+				baseAttr.PEDistinguisherLabels = labels
+			}
 		case 28:
 			// BGP Entropy Label Capability Attribute (deprecated) - RFC 6790, RFC 7447
 		case 29:
@@ -431,7 +473,21 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			// Only to Customer (OTC) - RFC 9234
 			baseAttr.OTC = unmarshalAttrOTC(b)
 		case 36:
-			// BGP Domain Path (D-PATH, TEMPORARY) - draft-ietf-bess-evpn-ipvpn-interworking
+			// RFC 10039 Section 4: discard every instance other than the first,
+			// even when that first instance is empty or malformed.
+			if dPathSeen {
+				continue
+			}
+			dPathSeen = true
+			baseAttr.DPathAttr = append([]byte(nil), b...)
+			dpath, err := UnmarshalDPath(b)
+			if err != nil {
+				// Preserve other attributes and explicit withdrawals. The producer
+				// applies RFC 10039 Section 4 treat-as-withdraw to reachable NLRIs.
+				baseAttr.DPathMalformed = true
+			} else {
+				baseAttr.DPath = dpath
+			}
 		case 37:
 			// SFP attribute - RFC 9015
 		case 38:

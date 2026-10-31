@@ -27,6 +27,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 	nlril3vpn, err := nlri.GetNLRIL3VPN()
 	if errors.Is(err, l3vpn.ErrEmptyNLRI) {
 		// Empty NLRI signals End-of-RIB per RFC 4724 §2 and is encoded as a withdrawal.
+		afi, safi := mpFamily(nlri)
 		prfx := L3VPNPrefix{
 			Action:      "del",
 			RouterHash:  ph.Identity.RouterHash,
@@ -37,6 +38,8 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			Timestamp:   ph.GetPeerTimestamp(),
 			PeerType:    uint8(ph.PeerType),
 			IsEOR:       true,
+			AFI:         afi,
+			SAFI:        safi,
 			IsIPv4:      !nlri.IsIPv6NLRI(),
 		}
 		prfx.IsNexthopIPv4 = prfx.IsIPv4
@@ -57,7 +60,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		return []L3VPNPrefix{prfx}, nil
 	}
@@ -128,7 +131,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		prfx.Labels = make([]uint32, 0)
 		for _, l := range e.Label {
