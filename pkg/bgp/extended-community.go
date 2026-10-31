@@ -278,6 +278,28 @@ var flowspecSubTypes = map[uint8]string{
 	0x9: CPFlowspecTrafficRemarking,
 }
 
+// extPair returns prefix followed by a and b in decimal, separated by a
+// colon.
+func extPair(prefix string, a, b uint64) string {
+	var buf [64]byte
+	s := append(buf[:0], prefix...)
+	s = strconv.AppendUint(s, a, 10)
+	s = append(s, ':')
+	s = strconv.AppendUint(s, b, 10)
+	return string(s)
+}
+
+// extIPv4Pair returns prefix followed by the IPv4 address ip and n in
+// decimal, separated by a colon.
+func extIPv4Pair(prefix string, ip []byte, n uint16) string {
+	var buf [64]byte
+	s := append(buf[:0], prefix...)
+	s = append(s, net.IP(ip).To4().String()...)
+	s = append(s, ':')
+	s = strconv.AppendUint(s, uint64(n), 10)
+	return string(s)
+}
+
 func getSubType(m map[uint8]string, subType uint8) string {
 	if s, ok := m[subType]; ok {
 		return s
@@ -289,7 +311,7 @@ func getSubType(m map[uint8]string, subType uint8) string {
 // Transitive Two-Octet AS-Specific Extended Community
 func type0(subType uint8, value []byte) string {
 	if len(value) < 6 {
-		return fmt.Sprintf("invalid-type0-length=%d", len(value))
+		return "invalid-type0-length=" + strconv.Itoa(len(value))
 	}
 	switch subType {
 	case 0x04:
@@ -297,44 +319,44 @@ func type0(subType uint8, value []byte) string {
 		f := binary.BigEndian.Uint32(value[2:6])
 		return getSubType(transAS2SubTypes, subType) + fmt.Sprintf("%03f", math.Float32frombits(f))
 	default:
-		return getSubType(transAS2SubTypes, subType) + fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:]))
+		return extPair(getSubType(transAS2SubTypes, subType), uint64(binary.BigEndian.Uint16(value[0:2])), uint64(binary.BigEndian.Uint32(value[2:])))
 	}
 }
 
 // Transitive IPv4 Specific Extended Community
 func type1(subType uint8, value []byte) string {
 	if len(value) < 6 {
-		return fmt.Sprintf("invalid-type1-length=%d", len(value))
+		return "invalid-type1-length=" + strconv.Itoa(len(value))
 	}
-	return getSubType(transIPv4SubTypes, subType) + fmt.Sprintf("%s:%d", net.IP(value[0:4]).To4().String(), binary.BigEndian.Uint16(value[4:]))
+	return extIPv4Pair(getSubType(transIPv4SubTypes, subType), value[0:4], binary.BigEndian.Uint16(value[4:]))
 }
 
 // Transitive Four-Octet AS-Specific Extended Community
 func type2(subType uint8, value []byte) string {
 	if len(value) < 6 {
-		return fmt.Sprintf("invalid-type2-length=%d", len(value))
+		return "invalid-type2-length=" + strconv.Itoa(len(value))
 	}
-	return getSubType(transAS4SubTypes, subType) + fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(value[0:4]), binary.BigEndian.Uint16(value[4:]))
+	return extPair(getSubType(transAS4SubTypes, subType), uint64(binary.BigEndian.Uint32(value[0:4])), uint64(binary.BigEndian.Uint16(value[4:])))
 }
 
 // Transitive Opaque Extended Community
 func type3(subType uint8, value []byte) string {
 	if len(value) < 4 {
-		return fmt.Sprintf("invalid-type3-length=%d", len(value))
+		return "invalid-type3-length=" + strconv.Itoa(len(value))
 	}
 	var s string
 	switch subType {
 	case 0xb:
-		s = fmt.Sprintf("%d", binary.BigEndian.Uint32(value[0:4]))
+		s = strconv.FormatUint(uint64(binary.BigEndian.Uint32(value[0:4])), 10)
 	case 0xc:
 		if len(value) < 6 {
-			return fmt.Sprintf("invalid-type3-length=%d", len(value))
+			return "invalid-type3-length=" + strconv.Itoa(len(value))
 		}
 		// RFC 9012 4.1: Value = Reserved(2)+Reserved(2)+Tunnel Type(2);
 		// the tunnel type is the last two octets, not value[2:4].
-		s = fmt.Sprintf("%d", binary.BigEndian.Uint16(value[4:6]))
+		s = strconv.FormatUint(uint64(binary.BigEndian.Uint16(value[4:6])), 10)
 	default:
-		s = fmt.Sprintf("%d", binary.BigEndian.Uint32(value[0:4]))
+		s = strconv.FormatUint(uint64(binary.BigEndian.Uint32(value[0:4])), 10)
 	}
 	return getSubType(transOpaqueSubTypes, subType) + s
 }
@@ -344,29 +366,27 @@ func type3(subType uint8, value []byte) string {
 // format of the Global and Local Administrator fields.
 func type12(subType uint8, value []byte) string {
 	if len(value) < 6 {
-		return fmt.Sprintf("invalid-type12-length=%d", len(value))
+		return "invalid-type12-length=" + strconv.Itoa(len(value))
 	}
-	var s string
 	switch subType {
 	case 0x0, 0x3:
 		// 2-octet AS Global Administrator, 4-octet Local Administrator
-		s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:6]))
+		return extPair(getSubType(mupSubTypes, subType), uint64(binary.BigEndian.Uint16(value[0:2])), uint64(binary.BigEndian.Uint32(value[2:6])))
 	case 0x1, 0x4:
 		// IPv4 address Global Administrator, 2-octet Local Administrator
-		s = fmt.Sprintf("%s:%d", net.IP(value[0:4]).To4().String(), binary.BigEndian.Uint16(value[4:6]))
+		return extIPv4Pair(getSubType(mupSubTypes, subType), value[0:4], binary.BigEndian.Uint16(value[4:6]))
 	case 0x2, 0x5:
 		// 4-octet AS Global Administrator, 2-octet Local Administrator
-		s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(value[0:4]), binary.BigEndian.Uint16(value[4:6]))
+		return extPair(getSubType(mupSubTypes, subType), uint64(binary.BigEndian.Uint32(value[0:4])), uint64(binary.BigEndian.Uint16(value[4:6])))
 	default:
-		s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(value[0:4]), binary.BigEndian.Uint16(value[4:6]))
+		return extPair(getSubType(mupSubTypes, subType), uint64(binary.BigEndian.Uint32(value[0:4])), uint64(binary.BigEndian.Uint16(value[4:6])))
 	}
-	return getSubType(mupSubTypes, subType) + s
 }
 
 // EVPN Extended Community
 func type6(subType uint8, value []byte) string {
 	if len(value) < 6 {
-		return fmt.Sprintf("invalid-type6-length=%d", len(value))
+		return "invalid-type6-length=" + strconv.Itoa(len(value))
 	}
 	var s string
 	switch subType {
@@ -375,7 +395,7 @@ func type6(subType uint8, value []byte) string {
 		// octets, label in the high-order 20 bits) like base.MakeLabel.
 		esiLabel := uint32(value[3])<<16 | uint32(value[4])<<8 | uint32(value[5]&0xf0)
 		esiLabel >>= 4
-		s = fmt.Sprintf("%d:%d", value[0], esiLabel)
+		return extPair(getSubType(evpnSubTypes, subType), uint64(value[0]), uint64(esiLabel))
 	case 0x02:
 		fallthrough
 	case 0x03:
@@ -386,7 +406,7 @@ func type6(subType uint8, value []byte) string {
 			}
 		}
 	case 0x00:
-		s = fmt.Sprintf("%d:%d", value[0], binary.BigEndian.Uint32(value[2:]))
+		return extPair(getSubType(evpnSubTypes, subType), uint64(value[0]), uint64(binary.BigEndian.Uint32(value[2:])))
 	case 0x06:
 		s = fmt.Sprintf("%d:0x%04x", value[0], binary.BigEndian.Uint16(value[1:]))
 	case 0x10:
@@ -397,14 +417,14 @@ func type6(subType uint8, value []byte) string {
 		weight := uint64(value[1])<<32 | uint64(binary.BigEndian.Uint32(value[2:6]))
 		switch units {
 		case 0:
-			s = fmt.Sprintf("%d Mbps", weight)
+			s = strconv.FormatUint(weight, 10) + " Mbps"
 		case 1:
-			s = fmt.Sprintf("weight %d", weight)
+			s = "weight " + strconv.FormatUint(weight, 10)
 		default:
 			s = fmt.Sprintf("units=%d weight=%d", units, weight)
 		}
 	default:
-		s = fmt.Sprintf("%d", binary.BigEndian.Uint32(value[0:4]))
+		s = strconv.FormatUint(uint64(binary.BigEndian.Uint32(value[0:4])), 10)
 	}
 
 	return getSubType(evpnSubTypes, subType) + s
@@ -444,7 +464,7 @@ func type8(subType uint8, value []byte) string {
 // Non-Transitive Two-Octet AS-Specific Extended Community
 func type40(subType uint8, value []byte) string {
 	if len(value) < 6 {
-		return fmt.Sprintf("invalid-type40-length=%d", len(value))
+		return "invalid-type40-length=" + strconv.Itoa(len(value))
 	}
 	var s string
 	switch subType {
@@ -453,8 +473,7 @@ func type40(subType uint8, value []byte) string {
 		f := binary.BigEndian.Uint32(value[2:6])
 		s = fmt.Sprintf("%03f", math.Float32frombits(f))
 	default:
-		s = fmt.Sprintf("%d", binary.BigEndian.Uint32(value[0:4]))
-
+		s = strconv.FormatUint(uint64(binary.BigEndian.Uint32(value[0:4])), 10)
 	}
 
 	return getSubType(nonTransAS2SubTypes, subType) + s
@@ -479,13 +498,13 @@ func type43(subType uint8, value []byte) string {
 				s = "invalid"
 			default:
 				// RFC 8097: Values > 2 should trigger discard
-				s = fmt.Sprintf("unknown=%d", state)
+				s = "unknown=" + strconv.Itoa(int(state))
 			}
 		} else {
 			s = "invalid-length"
 		}
 	default:
-		s = fmt.Sprintf("unknown-subtype=%d", subType)
+		s = "unknown-subtype=" + strconv.Itoa(int(subType))
 	}
 	return getSubType(nonTransOpaqueSubTypes, subType) + s
 }
@@ -497,25 +516,26 @@ func type80(subType uint8, value []byte) string {
 	if len(value) == 6 {
 		switch subType {
 		case 0x06:
-			s = fmt.Sprintf("AS: %d Rate: %d bps", binary.BigEndian.Uint16(value[:2]), uint32(math.Float32frombits(binary.BigEndian.Uint32(value[2:])))*8)
+			rate := uint32(math.Float32frombits(binary.BigEndian.Uint32(value[2:]))) * 8
+			s = "AS: " + strconv.Itoa(int(binary.BigEndian.Uint16(value[:2]))) + " Rate: " + strconv.FormatUint(uint64(rate), 10) + " bps"
 		case 0x08:
-			s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:]))
+			s = extPair("", uint64(binary.BigEndian.Uint16(value[0:2])), uint64(binary.BigEndian.Uint32(value[2:])))
 		case 0x07:
 			// Traffic-Action Extended Community (RFC 8955 Section 7.3)
 			// Bit 47 (T): Terminal Action, Bit 46 (S): Sample
 			terminalAction := value[5]&0x01 != 0
 			sampleBit := value[5]&0x02 != 0
-			s = fmt.Sprintf("T=%t S=%t", terminalAction, sampleBit)
+			s = "T=" + strconv.FormatBool(terminalAction) + " S=" + strconv.FormatBool(sampleBit)
 		case 0x09:
 			// Traffic Marking Extended Community (RFC 8955 Section 7.5)
 			// Lower 6 bits of last byte contain DSCP value
 			dscp := value[5] & 0x3F
-			s = fmt.Sprintf("DSCP=%d", dscp)
+			s = "DSCP=" + strconv.Itoa(int(dscp))
 		default:
 			s = tools.MessageHex(value)
 		}
 	} else {
-		s = fmt.Sprintf("invalid value length of %d", len(value))
+		s = "invalid value length of " + strconv.Itoa(len(value))
 	}
 	return getSubType(flowspecSubTypes, subType) + s
 }
@@ -526,12 +546,12 @@ func type81(subType uint8, value []byte) string {
 	if len(value) == 6 {
 		switch subType {
 		case 0x08:
-			s = fmt.Sprintf("%s:%d", net.IP(value[0:4]).To4().String(), binary.BigEndian.Uint16(value[4:]))
+			s = extIPv4Pair("", value[0:4], binary.BigEndian.Uint16(value[4:]))
 		default:
 			s = tools.MessageHex(value)
 		}
 	} else {
-		s = fmt.Sprintf("invalid value length of %d", len(value))
+		s = "invalid value length of " + strconv.Itoa(len(value))
 	}
 	return getSubType(flowspecSubTypes, subType) + s
 }
@@ -542,12 +562,12 @@ func type82(subType uint8, value []byte) string {
 	if len(value) == 6 {
 		switch subType {
 		case 0x08:
-			s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint32(value[0:4]), binary.BigEndian.Uint16(value[4:]))
+			s = extPair("", uint64(binary.BigEndian.Uint32(value[0:4])), uint64(binary.BigEndian.Uint16(value[4:])))
 		default:
 			s = tools.MessageHex(value)
 		}
 	} else {
-		s = fmt.Sprintf("invalid value length of %d", len(value))
+		s = "invalid value length of " + strconv.Itoa(len(value))
 	}
 	return getSubType(flowspecSubTypes, subType) + s
 }
@@ -590,8 +610,6 @@ func unmarshalAttrIPv6ExtCommunity(b []byte) []string {
 }
 
 func (ext *ExtCommunity) String() string {
-	var s string
-	// var prefix string
 	var subType uint8
 	if ext.SubType == nil {
 		subType = 0xff
@@ -600,9 +618,7 @@ func (ext *ExtCommunity) String() string {
 	}
 	f := extComm[ext.Type]
 	if f == nil {
-		s = "unknown="
-		s += fmt.Sprintf("Type: %d Subtype: %d Value: %s", ext.Type, subType, tools.MessageHex(ext.Value))
-		return s
+		return "unknown=Type: " + strconv.Itoa(int(ext.Type)) + " Subtype: " + strconv.Itoa(int(subType)) + " Value: " + tools.MessageHex(ext.Value)
 	}
 	return f(subType, ext.Value)
 }

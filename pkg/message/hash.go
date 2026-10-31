@@ -139,11 +139,16 @@ func labelsHashPart(labels []uint32) string {
 	return string(buf)
 }
 
+// hashParts returns the hex MD5 digest of parts, each followed by a zero
+// octet. The input is built in a stack buffer, which fits typical route keys,
+// and hashed at once, so only the result is allocated.
 func hashParts(parts ...string) string {
-	h := md5.New()
+	var buf [256]byte
+	b := buf[:0]
 	for _, part := range parts {
-		_, _ = h.Write([]byte(part))
-		_, _ = h.Write([]byte{0})
+		b = append(b, part...)
+		b = append(b, 0)
 	}
-	return hex.EncodeToString(h.Sum(nil))
+	sum := md5.Sum(b)
+	return hex.EncodeToString(sum[:])
 }

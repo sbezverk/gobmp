@@ -68,6 +68,9 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		return nil, err
 	}
 	prfxs := make([]L3VPNPrefix, 0)
+	// The Prefix-SID attribute is the same for all routes of the UPDATE.
+	psid, psidErr := update.GetAttrPrefixSID()
+	nextHop := nlri.GetNextHop()
 	for _, e := range nlril3vpn.NLRI {
 		prfx := L3VPNPrefix{
 			Action:         operation,
@@ -78,7 +81,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			RemoteBGPID:    ph.GetPeerBGPIDString(),
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),
-			Nexthop:        nlri.GetNextHop(),
+			Nexthop:        nextHop,
 			PrefixLen:      int32(e.Length),
 			PathID:         int32(e.PathID),
 			BaseAttributes: update.BaseAttributes,
@@ -139,7 +142,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		}
 		prfx.VPNRD = e.RD.String()
 		prfx.VPNRDType = e.RD.Type
-		if psid, err := update.GetAttrPrefixSID(); err == nil {
+		if psidErr == nil {
 			prfx.PrefixSID = psid
 		}
 		prfxs = append(prfxs, prfx)

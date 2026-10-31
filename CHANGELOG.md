@@ -4,6 +4,13 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-10-31
+
+#### Changed
+
+- Producer hot paths allocate less, with unchanged JSON output: the Prefix-SID attribute and next hop are read once per UPDATE, route keys are hashed in one MD5 call, and EVPN ESI/MAC, extended and large communities are formatted without `fmt`
+- SR Policy sub-TLVs are logged only at verbosity 5
+
 ### 2026-03-01
 
 #### Added

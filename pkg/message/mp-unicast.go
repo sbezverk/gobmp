@@ -8,6 +8,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/prefixsid"
 )
 
 // unicast process nlri 14 afi 1/2 safi 1 messages and generates UnicastPrefix messages
@@ -75,6 +76,14 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 		}
 		return []*UnicastPrefix{prfx}, nil
 	}
+	// Some Label Unicast may carry BGP Attribute 40 (Prefix SID), the same
+	// for all routes of the UPDATE.
+	var psid *prefixsid.PSid
+	var psidErr error
+	if label {
+		psid, psidErr = update.GetAttrPrefixSID()
+	}
+	nextHop := nlri.GetNextHop()
 	for _, e := range u.NLRI {
 		prfx := &UnicastPrefix{
 			Action:         operation,
@@ -112,7 +121,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			prfx.OriginAS = ases[len(ases)-1]
 		}
 		prfx.PeerIP = ph.GetPeerAddrString()
-		prfx.Nexthop = nlri.GetNextHop()
+		prfx.Nexthop = nextHop
 		if nlri.IsIPv6NLRI() {
 			// IPv6 specific conversions
 			prfx.IsIPv4 = false
@@ -148,8 +157,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			for _, l := range e.Label {
 				prfx.Labels = append(prfx.Labels, l.Value)
 			}
-			// Some Label Unicast may carry BGP Attribute 40 (Prefix SID)
-			if psid, err := update.GetAttrPrefixSID(); err == nil {
+			if psidErr == nil {
 				prfx.PrefixSID = psid
 			}
 		}
