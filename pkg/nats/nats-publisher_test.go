@@ -58,6 +58,7 @@ func TestTopicForMessage(t *testing.T) {
 		{bmp.MUPMsg, mupMessageTopic, true},
 		{bmp.MUPV4Msg, mupMessageV4Topic, true},
 		{bmp.MUPV6Msg, mupMessageV6Topic, true},
+		{bmp.EndOfRIBMsg, endOfRIBMessageTopic, true},
 		{bmp.StatsReportMsg, statsMessageTopic, true},
 		{bmp.BMPRawMsg, rawMessageTopic, true},
 		{9999, "", false},
@@ -254,5 +255,50 @@ func TestRawTopicNotUnderParsedWildcard(t *testing.T) {
 	topic, ok := topicForMessage(bmp.BMPRawMsg)
 	if !ok || topic != wantRawTopic {
 		t.Errorf("BMPRawMsg must map to %q, got %q ok=%v", wantRawTopic, topic, ok)
+	}
+}
+
+type eorJetStream struct {
+	fakeJetStream
+	message *natsgo.Msg
+	err     error
+}
+
+func (f *eorJetStream) PublishMsg(m *natsgo.Msg, _ ...natsgo.PubOpt) (*natsgo.PubAck, error) {
+	f.message = m
+	return nil, f.err
+}
+
+func TestEndOfRIBPublicationAndStream(t *testing.T) {
+	for _, fail := range []bool{false, true} {
+		fake := &eorJetStream{}
+		if fail {
+			fake.err = errors.New("broker failure")
+		}
+		p := &publisher{js: fake}
+		err := p.PublishMessage(bmp.EndOfRIBMsg, []byte("router-key"), []byte("marker"))
+		if !errors.Is(err, fake.err) {
+			t.Fatalf("publish error=%v want %v", err, fake.err)
+		}
+		if fake.message == nil || fake.message.Subject != "gobmp.parsed.end_of_rib" || fake.message.Header.Get("Hash") != "router-key" || string(fake.message.Data) != "marker" {
+			t.Fatalf("published=%+v", fake.message)
+		}
+	}
+	called := false
+	fake := &fakeJetStream{addStreamFn: func(cfg *natsgo.StreamConfig, _ ...natsgo.JSOpt) (*natsgo.StreamInfo, error) {
+		called = true
+		for _, subject := range cfg.Subjects {
+			if subject == "gobmp.parsed.*" {
+				return &natsgo.StreamInfo{}, nil
+			}
+		}
+		t.Fatal("End-of-RIB topic is not covered by stream subjects")
+		return nil, nil
+	}}
+	if err := (&publisher{js: fake}).createStreams(); err != nil {
+		t.Fatal(err)
+	}
+	if !called {
+		t.Fatal("stream initialization skipped")
 	}
 }

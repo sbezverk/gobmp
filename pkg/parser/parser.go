@@ -43,7 +43,10 @@ func NewParser(queue chan []byte, producerQueue chan bmp.Message, stop chan stru
 func (p *parser) Start() {
 	for {
 		select {
-		case msg := <-p.queue:
+		case msg, ok := <-p.queue:
+			if !ok {
+				return
+			}
 			// Calling parsingWorker synchronously to avoid Peer State change messages being processed out of order.
 			p.parsingWorker(msg)
 		case <-p.stop:

@@ -214,10 +214,13 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 		return
 	}
 
-	prodStop := make(chan struct{})
 	producerQueue := make(chan bmp.Message)
+	producerDone := make(chan struct{})
 	// Starting messages producer per client with dedicated work queue
-	go prod.Producer(producerQueue, prodStop)
+	go func() {
+		defer close(producerDone)
+		prod.Producer(producerQueue, nil)
+	}()
 
 	// Extract speaker IP from the TCP connection. Set on all BMP messages
 	// to provide a consistent router identity regardless of message type.
@@ -250,18 +253,25 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 	}
 
 	parserQueue := make(chan []byte)
-	parsStop := make(chan struct{})
+	parserDone := make(chan struct{})
 	// Starting parser per client with dedicated work queue
 	parserConfig := &parser.Config{
 		EnableRawMode: srv.bmpRaw,
 		SpeakerIP:     speakerIP,
 	}
-	p := parser.NewParser(parserQueue, producerQueue, parsStop, parserConfig)
-	go p.Start()
+	p := parser.NewParser(parserQueue, producerQueue, nil, parserConfig)
+	go func() {
+		defer close(parserDone)
+		p.Start()
+	}()
 	defer func() {
+		// Drain accepted frames before the worker releases its server wait-group
+		// slot, so publisher.Stop cannot race with this connection's publication.
+		close(parserQueue)
+		<-parserDone
+		close(producerQueue)
+		<-producerDone
 		glog.V(5).Infof("all done with client %+v", client.RemoteAddr())
-		close(parsStop)
-		close(prodStop)
 	}()
 	var headerBuf [bmp.CommonHeaderLength]byte
 	for {

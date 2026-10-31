@@ -469,29 +469,29 @@ func TestMPUnReachNLRI_GetFlowspecNLRI(t *testing.T) {
 		wantNotFound bool
 	}{
 		{
-			name:         "AFI=1 SAFI=133 empty withdrawn (withdraw-all)",
+			name:         "AFI=1 SAFI=133 empty withdrawn (empty routes)",
 			afi:          1,
 			safi:         133,
 			wantNotFound: false,
 			wantErrMsg:   "",
 		},
 		{
-			name:       "AFI=2 SAFI=133 IPv6 flowspec empty withdraw-all",
+			name:       "AFI=2 SAFI=133 IPv6 flowspec empty routes",
 			afi:        2,
 			safi:       133,
-			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (withdraw-all)
+			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (empty routes)
 		},
 		{
-			name:       "SAFI=134 AFI=1 VPN empty withdraw-all",
+			name:       "SAFI=134 AFI=1 VPN empty routes",
 			afi:        1,
 			safi:       134,
-			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (withdraw-all)
+			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (empty routes)
 		},
 		{
-			name:       "SAFI=134 AFI=2 VPN empty withdraw-all",
+			name:       "SAFI=134 AFI=2 VPN empty routes",
 			afi:        2,
 			safi:       134,
-			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (withdraw-all)
+			wantErrMsg: "", // empty WithdrawnRoutes returns nil NLRI, nil error (empty routes)
 		},
 		{
 			name:         "other SAFI returns NLRINotFoundError",
@@ -607,23 +607,23 @@ func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 			wantCount: 1,
 		},
 		{
-			// RFC 8955 §4: empty MP_UNREACH_NLRI is a withdraw-all signal.
-			name:         "AFI=1 SAFI=133 withdraw-all (empty routes)",
+			// RFC 4724 §2: only a standalone empty MP_UNREACH UPDATE is EOR.
+			name:         "AFI=1 SAFI=133 empty routes",
 			afi:          1,
 			safi:         133,
 			routes:       []byte{},
 			wantNilSlice: true,
 		},
 		{
-			// RFC 8956 §3: empty MP_UNREACH_NLRI is a withdraw-all signal.
-			name:         "AFI=2 SAFI=133 withdraw-all (empty routes)",
+			// RFC 4724 §2: only a standalone empty MP_UNREACH UPDATE is EOR.
+			name:         "AFI=2 SAFI=133 empty routes",
 			afi:          2,
 			safi:         133,
 			routes:       []byte{},
 			wantNilSlice: true,
 		},
 		{
-			name:         "SAFI=134 VPN empty withdraw-all",
+			name:         "SAFI=134 VPN empty routes",
 			afi:          1,
 			safi:         134,
 			routes:       []byte{},
@@ -680,7 +680,7 @@ func TestMPUnReachNLRI_GetAllFlowspecNLRI(t *testing.T) {
 			}
 			if tt.wantNilSlice {
 				if nlris != nil {
-					t.Errorf("expected nil slice for withdraw-all, got %v", nlris)
+					t.Errorf("expected nil slice for empty routes, got %v", nlris)
 				}
 				return
 			}

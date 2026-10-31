@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	github.com/IBM/sarama v1.60.2
-	github.com/go-test/deep v1.1.1
+	github.com/go-test/deep v1.1.2
 	github.com/golang/glog v1.2.5
 	github.com/nats-io/nats.go v1.53.1
 	github.com/sbezverk/tools v0.0.0-20260617035518-331d0102e1c8

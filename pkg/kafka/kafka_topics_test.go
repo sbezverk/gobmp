@@ -47,6 +47,7 @@ func TestPublishMessageTopics(t *testing.T) {
 		{name: "combined", msgType: bmp.MUPMsg, topic: MUPMessageTopic},
 		{name: "IPv4", msgType: bmp.MUPV4Msg, topic: MUPMessageV4Topic},
 		{name: "IPv6", msgType: bmp.MUPV6Msg, topic: MUPMessageV6Topic},
+		{name: "end of rib", msgType: bmp.EndOfRIBMsg, topic: EndOfRIBMessageTopic},
 		{name: "statistics", msgType: bmp.StatsReportMsg, topic: StatsMessageTopic},
 		{name: "raw", msgType: bmp.BMPRawMsg, topic: RawMessageTopic},
 	}
@@ -87,5 +88,17 @@ func TestPublishMessageUnsupported(t *testing.T) {
 func TestTopicForMessageUnknown(t *testing.T) {
 	if topic, ok := topicForMessage(9999); ok || topic != "" {
 		t.Fatalf("topicForMessage() = %q, %t; want empty topic and false", topic, ok)
+	}
+}
+
+func TestEndOfRIBTopicInitialized(t *testing.T) {
+	count := 0
+	for _, name := range topicNames {
+		if name == EndOfRIBMessageTopic {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("End-of-RIB initialization count=%d", count)
 	}
 }
