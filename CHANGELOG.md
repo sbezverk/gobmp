@@ -4,6 +4,27 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-10-30
+
+#### Added
+
+- Tunnel Encapsulation sub-TLV `type_name` names every code in the IANA BGP Tunnel Encapsulation Attribute Sub-TLVs registry; e.g. 14 `ENLP`, 15 `Priority`, 20 `SRv6 Binding SID`, 128 `Segment List`, 129 `SR Policy Candidate Path Name`, 130 `SR Policy Name`, 131 `Reverse Segment List (TEMPORARY)`, 7 `DS Field`, 10 `MPLS Label Stack`, 11 `Prefix-SID` (all were `Unknown`); unassigned codes still read `Unknown`
+- Tunnel Encapsulation `type_name` names every code in the IANA BGP Tunnel Encapsulation Attribute Tunnel Types registry; e.g. 7 `IP in IP`, 10 `MPLS`, 12 `VXLAN GPE`, 19 `Geneve` (RFC 8926), 17 `SR Tunnel (DEPRECATED)` (all were `Unknown`); unassigned codes still read `Unknown`
+
+#### Changed
+
+- **Breaking:** `tunnel.TypeSRPolicy` value changes from 13 to 15 (RFC 9830 §6.2); new `tunnel.TypeMPLSinUDP` is 13 (RFC 7510); published `tunnel_encap` `type_name` for 13 and 15 changes (see Fixed)
+- **Breaking:** `tunnel.SubTLVColor` changes from 3 to 4, `tunnel.SubTLVEgressEndpoint` from 4 to 6 and `tunnel.SubTLVUDPDestPort` from 6 to 8 (RFC 9012 §3.1, §3.3.2, §3.4.2); new `tunnel.SubTLVIPsecTunnelAuth` is 3; published sub-TLV `type_name` for 3, 4, 6 and 8 changes (see Fixed)
+
+#### Deprecated
+
+- `tunnel.TypeSRv6`: IANA has no SRv6 tunnel type; it is now an alias of `tunnel.TypeSRPolicy` (15)
+
+#### Fixed
+
+- Tunnel Encapsulation (attribute 23) `type_name` follows the IANA BGP Tunnel Encapsulation Attribute Tunnel Types registry: type 13 reads `MPLS-in-UDP` (was `SR Policy`), type 15 reads `SR Policy` (was `SRv6`)
+- Tunnel Encapsulation sub-TLV `type_name` follows the IANA BGP Tunnel Encapsulation Attribute Sub-TLVs registry (RFC 9012 §14.6): sub-TLV 4 reads `Color` (was `Tunnel Egress Endpoint`), 6 reads `Tunnel Egress Endpoint` (was `UDP Destination Port`), 8 reads `UDP Destination Port` (was `Unknown`), 3 reads `IPsec Tunnel Authenticator (DEPRECATED)` (was `Color`)
+
 ### 2026-03-01
 
 #### Added

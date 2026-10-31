@@ -37,10 +37,10 @@ func buildPathAttr23(value []byte) []byte {
 // decoded TLV view, retains the raw bytes in TunnelEncapAttr (still consumed
 // by pkg/message/srpolicy.go), and emits the new tunnel_encap JSON field.
 func TestBaseAttrs_TunnelEncap_WellFormed(t *testing.T) {
-	// Single SR Policy tunnel (type 13, length 6) with Preference sub-TLV
-	// (type 12, length 4, value 0x00000064 = 100). Mirrors the existing
-	// pkg/tunnel/tunnel_test.go fixture.
-	tlv := []byte{0x00, 0x0d, 0x00, 0x06, 0x0c, 0x04, 0x00, 0x00, 0x00, 0x64}
+	// Single SR Policy tunnel (type 15 per RFC 9830 §6.2, length 6) with
+	// Preference sub-TLV (type 12, length 4, value 0x00000064 = 100). Mirrors
+	// the existing pkg/tunnel/tunnel_test.go fixture.
+	tlv := []byte{0x00, 0x0f, 0x00, 0x06, 0x0c, 0x04, 0x00, 0x00, 0x00, 0x64}
 	raw := buildPathAttr23(tlv)
 
 	ba, err := UnmarshalBGPBaseAttributes(raw)
