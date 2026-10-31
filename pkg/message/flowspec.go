@@ -88,49 +88,27 @@ func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *b
 }
 
 func (fs *Flowspec) UnmarshalJSON(b []byte) error {
+	// Decode the schema fields normally, while keeping interface-valued Spec
+	// separate so that each component can be instantiated by its type.
+	type flowspecFields Flowspec
 	o := Flowspec{}
+	obj := struct {
+		*flowspecFields
+		Spec json.RawMessage `json:"spec"`
+	}{flowspecFields: (*flowspecFields)(&o)}
+	if err := json.Unmarshal(b, &obj); err != nil {
+		return err
+	}
 	var objmap map[string]json.RawMessage
 	if err := json.Unmarshal(b, &objmap); err != nil {
 		return err
 	}
-	// action is mandatory
+	// Retain the required-field contract, including existing null/empty values.
 	if err := json.Unmarshal(objmap["action"], &o.Action); err != nil {
 		return err
 	}
-	// spec_has is mandatory because it serves as a key
 	if err := json.Unmarshal(objmap["spec_hash"], &o.SpecHash); err != nil {
 		return err
-	}
-	if err := json.Unmarshal(objmap["base_attrs"], &o.BaseAttributes); err != nil {
-		return err
-	}
-	if err := json.Unmarshal(objmap["is_ipv4"], &o.IsIPv4); err != nil {
-		return err
-	}
-	if err := json.Unmarshal(objmap["is_nexthop_ipv4"], &o.IsNexthopIPv4); err != nil {
-		return err
-	}
-	if err := json.Unmarshal(objmap["nexthop"], &o.Nexthop); err != nil {
-		return err
-	}
-	if err := json.Unmarshal(objmap["peer_asn"], &o.PeerASN); err != nil {
-		return err
-	}
-	if err := json.Unmarshal(objmap["router_ip"], &o.RouterIP); err != nil {
-		return err
-	}
-	if rh, ok := objmap["router_hash"]; ok {
-		if err := json.Unmarshal(rh, &o.RouterHash); err != nil {
-			return err
-		}
-	}
-	if err := json.Unmarshal(objmap["timestamp"], &o.Timestamp); err != nil {
-		return err
-	}
-	if r, ok := objmap["rd"]; ok {
-		if err := json.Unmarshal(r, &o.RD); err != nil {
-			return err
-		}
 	}
 	if s, ok := objmap["spec"]; ok {
 		var specs []map[string]interface{}
