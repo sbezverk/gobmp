@@ -436,25 +436,26 @@ type MVPNPrefix = MCASTVPNPrefix
 
 // RTCPrefix defines the structure of Route Target Constraint message (AFI 1/2, SAFI 132)
 type RTCPrefix struct {
-	Key            string              `json:"_key,omitempty"`
-	ID             string              `json:"_id,omitempty"`
-	Rev            string              `json:"_rev,omitempty"`
-	Action         string              `json:"action,omitempty"`
-	Sequence       int                 `json:"sequence,omitempty"`
-	Hash           string              `json:"hash,omitempty"`
-	RouterHash     string              `json:"router_hash,omitempty"`
-	RouterIP       string              `json:"router_ip,omitempty"`
-	BaseAttributes *bgp.BaseAttributes `json:"base_attrs,omitempty"`
-	PeerHash       string              `json:"peer_hash,omitempty"`
-	PeerIP         string              `json:"peer_ip,omitempty"`
-	PeerType       uint8               `json:"peer_type"`
-	PeerASN        uint32              `json:"peer_asn,omitempty"`
-	Timestamp      string              `json:"timestamp,omitempty"`
-	Length         uint8               `json:"length,omitempty"`
-	OriginAS       uint32              `json:"origin_as,omitempty"`
-	RouteTarget    string              `json:"route_target,omitempty"`
-	IsIPv4         bool                `json:"is_ipv4"`
-	IsEOR          bool                `json:"is_eor,omitempty"`
+	Key               string              `json:"_key,omitempty"`
+	ID                string              `json:"_id,omitempty"`
+	Rev               string              `json:"_rev,omitempty"`
+	Action            string              `json:"action,omitempty"`
+	Sequence          int                 `json:"sequence,omitempty"`
+	Hash              string              `json:"hash,omitempty"`
+	RouterHash        string              `json:"router_hash,omitempty"`
+	RouterIP          string              `json:"router_ip,omitempty"`
+	BaseAttributes    *bgp.BaseAttributes `json:"base_attrs,omitempty"`
+	PeerHash          string              `json:"peer_hash,omitempty"`
+	PeerIP            string              `json:"peer_ip,omitempty"`
+	PeerType          uint8               `json:"peer_type"`
+	PeerASN           uint32              `json:"peer_asn,omitempty"`
+	Timestamp         string              `json:"timestamp,omitempty"`
+	Length            uint8               `json:"length,omitempty"` // Total prefix bits, including the 32-bit Origin AS (RFC 4684 §4).
+	OriginAS          uint32              `json:"origin_as,omitempty"`
+	RouteTarget       string              `json:"route_target,omitempty"`
+	RouteTargetPrefix string              `json:"route_target_prefix,omitempty"` // Canonical hex RT bytes; RT prefix bits are Length - 32.
+	IsIPv4            bool                `json:"is_ipv4"`
+	IsEOR             bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
