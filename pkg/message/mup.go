@@ -32,6 +32,7 @@ func (p *producer) mup(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 		if op != DelPrefix {
 			return nil, fmt.Errorf("empty MUP NLRI in MP_REACH_NLRI")
 		}
+		afi, safi := mpFamily(nlri)
 		prfx := MUPPrefix{
 			Action:      "del",
 			RouterHash:  ph.Identity.RouterHash,
@@ -42,6 +43,8 @@ func (p *producer) mup(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 			Timestamp:   ph.GetPeerTimestamp(),
 			PeerType:    uint8(ph.PeerType),
 			IsEOR:       true,
+			AFI:         afi,
+			SAFI:        safi,
 			IsIPv4:      !nlri.IsIPv6NLRI(),
 		}
 		prfx.IsNexthopIPv4 = prfx.IsIPv4
@@ -167,6 +170,6 @@ func setMUPRIBFlags(p *producer, prfx *MUPPrefix, ph *bmp.PerPeerHeader) {
 	}
 	// RFC 9069: Set TableName for LocRIB peers
 	if prfx.IsLocRIB {
-		prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		prfx.TableName = p.getTableName(ph)
 	}
 }

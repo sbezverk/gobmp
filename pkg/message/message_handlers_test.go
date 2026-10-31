@@ -1,7 +1,9 @@
 package message
 
 import (
+	"bytes"
 	"encoding/json"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -207,10 +209,9 @@ func TestL3VPN_TableName(t *testing.T) {
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
-	tableKey := phLocRIB.GetPeerBGPIDString() + phLocRIB.GetPeerDistinguisherString()
+	tableKey := phLocRIB.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("VRF-L3VPN")},
 		},
@@ -259,10 +260,9 @@ func TestUnicast_TableName(t *testing.T) {
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
-	tableKey := phLocRIB.GetPeerBGPIDString() + phLocRIB.GetPeerDistinguisherString()
+	tableKey := phLocRIB.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("default")},
 		},
@@ -305,10 +305,9 @@ func TestBaseNLRI_TableName(t *testing.T) {
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
-	tableKey := phLocRIB.GetPeerBGPIDString() + phLocRIB.GetPeerDistinguisherString()
+	tableKey := phLocRIB.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("global")},
 		},
@@ -369,10 +368,9 @@ func TestMVPN_LocRIB_TableName(t *testing.T) {
 
 	phLocRIB := makePeerHeader(t, bmp.PeerType3, 0x00)
 
-	tableKey := phLocRIB.GetPeerBGPIDString() + phLocRIB.GetPeerDistinguisherString()
+	tableKey := phLocRIB.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("VRF-MVPN")},
 		},
@@ -476,10 +474,9 @@ func TestUnicast_EoR_LocRIB(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
 
 	ph := makePeerHeader(t, bmp.PeerType3, 0x00)
-	tableKey := ph.GetPeerBGPIDString() + ph.GetPeerDistinguisherString()
+	tableKey := ph.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("VRF-Test")},
 		},
@@ -725,4 +722,390 @@ func TestProcessMPUpdate_UnknownAFISAFI(t *testing.T) {
 
 	// Should not panic — exercises the default case
 	p.processMPUpdate(nlri, 1, ph, update)
+}
+
+func dPathAttribute(kind byte, value []byte) []byte {
+	flags := byte(0x80)
+	if kind == 36 {
+		flags = 0xc0
+	}
+	return append([]byte{flags, kind, byte(len(value))}, value...)
+}
+
+func dPathReach(afi uint16, safi byte, nextHop, nlri []byte) []byte {
+	value := []byte{byte(afi >> 8), byte(afi), safi, byte(len(nextHop))}
+	value = append(value, nextHop...)
+	value = append(value, 0)
+	value = append(value, nlri...)
+	return dPathAttribute(14, value)
+}
+
+func dPathUnreach(afi uint16, safi byte, nlri []byte) []byte {
+	value := append([]byte{byte(afi >> 8), byte(afi), safi}, nlri...)
+	return dPathAttribute(15, value)
+}
+
+func dPathPublish(t *testing.T, attributes, legacy []byte) []recordedMsg {
+	t.Helper()
+	return dPathPublishWithWithdraw(t, attributes, legacy, nil)
+}
+
+func dPathPublishWithWithdraw(t *testing.T, attributes, legacy, withdrawn []byte) []recordedMsg {
+	t.Helper()
+	// Include ORIGIN, an empty AS_PATH, and NEXT_HOP for legacy IPv4 NLRI.
+	attrs := []byte{0x40, 1, 1, 0, 0x40, 2, 0, 0x40, 3, 4, 192, 0, 2, 1}
+	attrs = append(attrs, attributes...)
+	wire := append([]byte{byte(len(withdrawn) >> 8), byte(len(withdrawn))}, withdrawn...)
+	wire = append(wire, byte(len(attrs)>>8), byte(len(attrs)))
+	wire = append(wire, attrs...)
+	wire = append(wire, legacy...)
+	update, err := bgp.UnmarshalBGPUpdate(wire)
+	if err != nil {
+		t.Fatalf("UnmarshalBGPUpdate: %v", err)
+	}
+	recorder := &recordingPublisher{}
+	p := NewProducer(recorder, true).(*producer)
+	p.produceRouteMonitorMessage(bmp.Message{
+		PeerHeader: makePeerHeader(t, bmp.PeerType0, 0),
+		Payload:    &bmp.RouteMonitor{Update: update},
+	})
+	return recorder.msgs
+}
+
+func TestDPathPublication(t *testing.T) {
+	// RFC 10039 Section 4: a one-octet count precedes each seven-octet domain.
+	// An unknown ISF SAFI is retained alongside ordered known domains.
+	value := []byte{2, 0, 0, 0xfd, 0xe8, 0, 1, 128, 0, 0, 0xfd, 0xe9, 0, 2, 255,
+		1, 0, 0, 0xfd, 0xea, 0, 3, 70}
+	wantPath := &bgp.DPath{Segments: []bgp.DPathSegment{
+		{Domains: []bgp.DPathDomain{{GlobalAdmin: 65000, LocalAdmin: 1, ISFSAFIType: 128}, {GlobalAdmin: 65001, LocalAdmin: 2, ISFSAFIType: 255}}},
+		{Domains: []bgp.DPathDomain{{GlobalAdmin: 65002, LocalAdmin: 3, ISFSAFIType: 70}}},
+	}}
+	vpn4 := []byte{120, 0, 0, 0x31, 0, 0, 0xfd, 0xe8, 0, 0, 0, 1, 192, 0, 2, 0}
+	vpn6 := []byte{120, 0, 0, 0x31, 0, 0, 0xfd, 0xe8, 0, 0, 0, 1, 0x20, 1, 0x0d, 0xb8}
+	evpn := buildEVPNType5IPv6Wire()
+	nh4 := []byte{192, 0, 2, 1}
+	vpnNH4 := append(make([]byte, 8), nh4...)
+	vpnNH6 := append(make([]byte, 8), []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}...)
+	families := []struct {
+		name    string
+		afi     uint16
+		safi    byte
+		nh      []byte
+		nlri    []byte
+		msgType int
+	}{
+		{"VPNv4", 1, 128, vpnNH4, vpn4, bmp.L3VPNV4Msg},
+		{"VPNv6 short prefix", 2, 128, vpnNH6, vpn6, bmp.L3VPNV6Msg},
+		{"EVPN", 25, 70, nh4, evpn, bmp.EVPNMsg},
+	}
+	for _, family := range families {
+		for _, withdraw := range []bool{false, true} {
+			action := "add"
+			if withdraw {
+				action = "del"
+			}
+			t.Run(family.name+"/"+action, func(t *testing.T) {
+				mp := dPathReach(family.afi, family.safi, family.nh, family.nlri)
+				if withdraw {
+					mp = dPathUnreach(family.afi, family.safi, family.nlri)
+				}
+				attributes := append(dPathAttribute(36, value), mp...)
+				published := dPathPublish(t, attributes, nil)
+				if len(published) != 1 {
+					t.Fatalf("published %d messages, want 1", len(published))
+				}
+				if published[0].msgType != family.msgType {
+					t.Errorf("message type = %d, want %d", published[0].msgType, family.msgType)
+				}
+				var got struct {
+					Action string              `json:"action"`
+					Attrs  *bgp.BaseAttributes `json:"base_attrs"`
+				}
+				if err := json.Unmarshal(published[0].payload, &got); err != nil {
+					t.Fatalf("Unmarshal publication: %v", err)
+				}
+				if got.Action != action {
+					t.Errorf("action = %q, want %q", got.Action, action)
+				}
+				if got.Attrs == nil {
+					t.Fatal("base_attrs missing")
+				}
+				if !reflect.DeepEqual(got.Attrs.DPath, wantPath) || !bytes.Equal(got.Attrs.DPathAttr, value) || got.Attrs.DPathMalformed {
+					t.Errorf("D-PATH not preserved in publication: %+v", got.Attrs)
+				}
+			})
+		}
+	}
+}
+
+func TestDPathPublicationRecovery(t *testing.T) {
+	valid := []byte{1, 0, 0, 0xfd, 0xe8, 0, 1, 128}
+	malformed := []byte{1, 0}
+	vpn := []byte{120, 0, 0, 0x31, 0, 0, 0xfd, 0xe8, 0, 0, 0, 1, 192, 0, 2, 0}
+	vpnReach := dPathReach(1, 128, []byte{0, 0, 0, 0, 0, 0, 0, 0, 192, 0, 2, 1}, vpn)
+	vpn6 := []byte{120, 0, 0, 0x31, 0, 0, 0xfd, 0xe8, 0, 0, 0, 1, 0x20, 1, 0x0d, 0xb8}
+	vpn6NH := append(make([]byte, 8), []byte{0x20, 1, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}...)
+	vpn6Reach := dPathReach(2, 128, vpn6NH, vpn6)
+	evpnReach := dPathReach(25, 70, []byte{192, 0, 2, 1}, buildEVPNType5IPv6Wire())
+	unicastReach := dPathReach(1, 1, []byte{192, 0, 2, 1}, []byte{24, 192, 0, 2})
+	tests := []struct {
+		name      string
+		dpath     []byte
+		mp        []byte
+		legacy    []byte
+		action    string
+		malformed bool
+		raw       []byte
+		msgType   int
+	}{
+		{"malformed VPN", dPathAttribute(36, malformed), vpnReach, nil, "del", true, malformed, bmp.L3VPNV4Msg},
+		{"malformed VPNv6", dPathAttribute(36, malformed), vpn6Reach, nil, "del", true, malformed, bmp.L3VPNV6Msg},
+		{"malformed EVPN", dPathAttribute(36, malformed), evpnReach, nil, "del", true, malformed, bmp.EVPNMsg},
+		{"first malformed duplicate retained", append(dPathAttribute(36, malformed), dPathAttribute(36, valid)...), vpnReach, nil, "del", true, malformed, bmp.L3VPNV4Msg},
+		{"first valid duplicate retained", append(dPathAttribute(36, valid), dPathAttribute(36, malformed)...), vpnReach, nil, "add", false, valid, bmp.L3VPNV4Msg},
+		{"unsupported MP family", dPathAttribute(36, valid), unicastReach, nil, "del", false, valid, bmp.UnicastPrefixV4Msg},
+		{"unsupported legacy family", dPathAttribute(36, valid), nil, []byte{24, 192, 0, 2}, "del", false, valid, bmp.UnicastPrefixV4Msg},
+		{"absent unchanged", nil, unicastReach, nil, "add", false, nil, bmp.UnicastPrefixV4Msg},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			published := dPathPublish(t, append(tt.dpath, tt.mp...), tt.legacy)
+			if len(published) != 1 {
+				t.Fatalf("published %d messages, want 1", len(published))
+			}
+			if published[0].msgType != tt.msgType {
+				t.Errorf("message type = %d, want %d", published[0].msgType, tt.msgType)
+			}
+			var got struct {
+				Action string              `json:"action"`
+				Attrs  *bgp.BaseAttributes `json:"base_attrs"`
+			}
+			if err := json.Unmarshal(published[0].payload, &got); err != nil {
+				t.Fatalf("Unmarshal publication: %v", err)
+			}
+			if got.Action != tt.action || got.Attrs == nil {
+				t.Fatalf("publication action = %q, attrs = %+v; want action %q and attributes", got.Action, got.Attrs, tt.action)
+			}
+			if got.Attrs.DPathMalformed != tt.malformed || !bytes.Equal(got.Attrs.DPathAttr, tt.raw) {
+				t.Errorf("malformed = %v, raw = %x; want %v, %x", got.Attrs.DPathMalformed, got.Attrs.DPathAttr, tt.malformed, tt.raw)
+			}
+			wantDecoded := len(tt.raw) != 0 && !tt.malformed
+			if (got.Attrs.DPath != nil) != wantDecoded {
+				t.Errorf("decoded D-PATH present = %v, want %v", got.Attrs.DPath != nil, wantDecoded)
+			}
+		})
+	}
+}
+
+func TestDPathPublicationMixedReachUnreach(t *testing.T) {
+	value := []byte{1, 0, 0, 0xfd, 0xe8, 0, 1, 128}
+	vpn := []byte{120, 0, 0, 0x31, 0, 0, 0xfd, 0xe8, 0, 0, 0, 1, 192, 0, 2, 0}
+	attrs := dPathAttribute(36, value)
+	// The unsupported-family withdrawal precedes the supported-family announcement.
+	attrs = append(attrs, dPathUnreach(1, 1, []byte{24, 198, 51, 100})...)
+	attrs = append(attrs, dPathReach(1, 128, []byte{0, 0, 0, 0, 0, 0, 0, 0, 192, 0, 2, 1}, vpn)...)
+	published := dPathPublish(t, attrs, nil)
+	if len(published) != 2 {
+		t.Fatalf("published %d messages, want 2", len(published))
+	}
+	wantActions := map[int]string{bmp.L3VPNV4Msg: "add", bmp.UnicastPrefixV4Msg: "del"}
+	for _, publication := range published {
+		wantAction, ok := wantActions[publication.msgType]
+		if !ok {
+			t.Fatalf("unexpected or duplicate message type %d", publication.msgType)
+		}
+		delete(wantActions, publication.msgType)
+		var got struct {
+			Action string              `json:"action"`
+			Prefix string              `json:"prefix"`
+			Attrs  *bgp.BaseAttributes `json:"base_attrs"`
+		}
+		if err := json.Unmarshal(publication.payload, &got); err != nil {
+			t.Fatalf("Unmarshal publication: %v", err)
+		}
+		if got.Action != wantAction {
+			t.Errorf("action = %q for message type %d, want %q", got.Action, publication.msgType, wantAction)
+		}
+		if got.Attrs == nil || got.Attrs.DPath == nil || !bytes.Equal(got.Attrs.DPathAttr, value) || got.Attrs.DPathMalformed {
+			t.Errorf("D-PATH not retained on %q publication: %+v", got.Action, got.Attrs)
+		}
+		wantPrefix := "192.0.2.0"
+		if publication.msgType == bmp.UnicastPrefixV4Msg {
+			wantPrefix = "198.51.100.0"
+		}
+		if got.Prefix != wantPrefix {
+			t.Errorf("prefix = %q, want %q", got.Prefix, wantPrefix)
+		}
+	}
+}
+
+func TestDPathOperation(t *testing.T) {
+	valid := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{DPath: &bgp.DPath{}}}
+	tests := []struct {
+		name   string
+		update *bgp.Update
+		afi    uint16
+		safi   uint8
+		want   int
+	}{
+		{"nil update", nil, 1, 1, AddPrefix},
+		{"nil attributes", &bgp.Update{}, 1, 1, AddPrefix},
+		{"absent", &bgp.Update{BaseAttributes: &bgp.BaseAttributes{}}, 1, 1, AddPrefix},
+		{"malformed without decoded path", &bgp.Update{BaseAttributes: &bgp.BaseAttributes{DPathMalformed: true}}, 1, 128, DelPrefix},
+		{"VPNv4", valid, 1, 128, AddPrefix},
+		{"VPNv6", valid, 2, 128, AddPrefix},
+		{"EVPN", valid, 25, 70, AddPrefix},
+		{"unicast", valid, 1, 1, DelPrefix},
+		{"EVPN SAFI with IPv4 AFI", valid, 1, 70, DelPrefix},
+		{"VPN SAFI with L2VPN AFI", valid, 25, 128, DelPrefix},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := attributeErrorOperation(tt.update, tt.afi, tt.safi); got != tt.want {
+				t.Errorf("attributeErrorOperation = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDPathUpdateIsNotEndOfRIB(t *testing.T) {
+	malformed := dPathAttribute(36, []byte{1, 0})
+	reach := dPathReach(25, 70, []byte{192, 0, 2, 1}, nil)
+	if published := dPathPublish(t, append(malformed, reach...), nil); len(published) != 0 {
+		t.Fatalf("empty MP_REACH published %d messages, want 0", len(published))
+	}
+	// RFC 4724 Section 2: an UPDATE carrying D-PATH besides the empty
+	// MP_UNREACH is not an End-of-RIB marker.
+	if published := dPathPublish(t, append(malformed, dPathUnreach(25, 70, nil)...), nil); len(published) != 0 {
+		t.Fatalf("D-PATH with empty MP_UNREACH published %d messages, want 0", len(published))
+	}
+}
+
+func TestEndOfRIBRequiresBareUpdate(t *testing.T) {
+	publish := func(t *testing.T, attrs []byte) []recordedMsg {
+		t.Helper()
+		wire := append([]byte{0, 0, byte(len(attrs) >> 8), byte(len(attrs))}, attrs...)
+		update, err := bgp.UnmarshalBGPUpdate(wire)
+		if err != nil {
+			t.Fatalf("UnmarshalBGPUpdate: %v", err)
+		}
+		recorder := &recordingPublisher{}
+		p := NewProducer(recorder, true).(*producer)
+		p.produceRouteMonitorMessage(bmp.Message{
+			PeerHeader: makePeerHeader(t, bmp.PeerType0, 0),
+			Payload:    &bmp.RouteMonitor{Update: update},
+		})
+		return recorder.msgs
+	}
+	t.Run("empty MP_UNREACH only", func(t *testing.T) {
+		published := publish(t, dPathUnreach(25, 70, nil))
+		findLegacy := false
+		findEoR := false
+		var got EndOfRIB
+		var gotLegacy EVPNPrefix
+		eorCount := 0
+		eorLegacyCount := 0
+		for _, msg := range published {
+			if msg.msgType == bmp.EndOfRIBMsg {
+				findEoR = true
+				eorCount++
+				if err := json.Unmarshal(msg.payload, &got); err != nil {
+					t.Fatalf("Unmarshal publication: %v", err)
+				}
+				if got.AFI != 25 || got.SAFI != 70 {
+					t.Errorf("AFI = %v, SAFI = %v; want 25, 70", got.AFI, got.SAFI)
+				}
+			}
+			if msg.msgType == bmp.EVPNMsg && msg.payload != nil {
+				findLegacy = true
+				eorLegacyCount++
+				if err := json.Unmarshal(msg.payload, &gotLegacy); err != nil {
+					t.Fatalf("Unmarshal publication: %v", err)
+				}
+				if !gotLegacy.IsEOR || gotLegacy.Action != "del" {
+					t.Errorf("IsEOR = %v, action = %q; want true, del", gotLegacy.IsEOR, gotLegacy.Action)
+				}
+			}
+		}
+		if !findEoR || !findLegacy || eorCount != 1 || eorLegacyCount != 1 {
+			t.Fatalf("publications = %+v, want one EVPN End-of-RIB and one legacy EVPN EoR", published)
+		}
+	})
+	t.Run("empty IPv4 UPDATE", func(t *testing.T) {
+		published := publish(t, nil)
+		findLegacy := false
+		findEoR := false
+		var got EndOfRIB
+		var gotLegacy UnicastPrefix
+		eorCount := 0
+		eorLegacyCount := 0
+		for _, msg := range published {
+			if msg.msgType == bmp.EndOfRIBMsg {
+				findEoR = true
+				eorCount++
+				if err := json.Unmarshal(msg.payload, &got); err != nil {
+					t.Fatalf("Unmarshal publication: %v", err)
+				}
+				if got.AFI != 1 || got.SAFI != 1 {
+					t.Errorf("AFI = %v, SAFI = %v; want 1, 1", got.AFI, got.SAFI)
+				}
+			}
+			if msg.msgType == bmp.UnicastPrefixV4Msg && msg.payload != nil {
+				findLegacy = true
+				eorLegacyCount++
+				if err := json.Unmarshal(msg.payload, &gotLegacy); err != nil {
+					t.Fatalf("Unmarshal publication: %v", err)
+				}
+				if !gotLegacy.IsEOR {
+					t.Errorf("IsEOR = %v want true", gotLegacy.IsEOR)
+				}
+			}
+		}
+		if !findEoR || !findLegacy || eorCount != 1 || eorLegacyCount != 1 {
+			t.Fatalf("publications = %+v, want one IPv4 End-of-RIB and one legacy IPv4 EoR", published)
+		}
+	})
+}
+
+func TestDPathLegacyExplicitWithdrawals(t *testing.T) {
+	malformed := dPathAttribute(36, []byte{1, 0})
+	withdrawn := []byte{24, 198, 51, 100}
+	decode := func(t *testing.T, records []recordedMsg) []UnicastPrefix {
+		t.Helper()
+		messages := make([]UnicastPrefix, len(records))
+		for i, record := range records {
+			if record.msgType != bmp.UnicastPrefixV4Msg {
+				t.Fatalf("message type = %d, want IPv4 unicast", record.msgType)
+			}
+			if err := json.Unmarshal(record.payload, &messages[i]); err != nil {
+				t.Fatalf("Unmarshal publication: %v", err)
+			}
+		}
+		return messages
+	}
+	t.Run("withdrawal-only publishes no EOR", func(t *testing.T) {
+		for _, attrs := range [][]byte{nil, malformed} {
+			got := decode(t, dPathPublishWithWithdraw(t, attrs, nil, withdrawn))
+			if len(got) != 1 || got[0].Action != "del" || got[0].Prefix != "198.51.100.0" || got[0].IsEOR {
+				t.Errorf("publications = %+v, want one withdrawal of 198.51.100.0 without EOR", got)
+			}
+		}
+	})
+	t.Run("mixed announcement and withdrawal", func(t *testing.T) {
+		got := decode(t, dPathPublishWithWithdraw(t, malformed, []byte{24, 192, 0, 2}, withdrawn))
+		if len(got) != 2 {
+			t.Fatalf("published %d messages, want 2", len(got))
+		}
+		wantPrefixes := map[string]bool{"198.51.100.0": true, "192.0.2.0": true}
+		for _, message := range got {
+			if !wantPrefixes[message.Prefix] || message.Action != "del" || message.IsEOR {
+				t.Errorf("unexpected publication: %+v", message)
+			}
+			delete(wantPrefixes, message.Prefix)
+		}
+		if len(wantPrefixes) != 0 {
+			t.Errorf("missing prefixes: %v", wantPrefixes)
+		}
+	})
 }

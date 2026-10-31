@@ -281,34 +281,13 @@ func TestFlowspecProducer_AddMultiNLRI(t *testing.T) {
 	}
 }
 
-func TestFlowspecProducer_WithdrawAll(t *testing.T) {
-	tests := []struct {
-		name         string
-		isIPv6       bool
-		wantSpecHash string
-	}{
-		{"ipv4 withdraw-all", false, "withdraw-all:10.0.0.1:0:0"},
-		{"ipv6 withdraw-all", true, "ipv6:withdraw-all:10.0.0.1:0:0"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mock := &flowspecMockNLRI{allNLRI: nil, isIPv6: tt.isIPv6}
-			p := &producer{}
-
-			msgs, err := p.flowspec(mock, 1, minimalPeerHeader(), minimalUpdate())
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if len(msgs) != 1 {
-				t.Fatalf("expected 1 withdraw-all message, got %d", len(msgs))
-			}
-			if msgs[0].SpecHash != tt.wantSpecHash {
-				t.Errorf("SpecHash = %q, want %q", msgs[0].SpecHash, tt.wantSpecHash)
-			}
-			if msgs[0].Action != "del" {
-				t.Errorf("action = %q, want %q", msgs[0].Action, "del")
-			}
-		})
+func TestFlowspecProducer_EmptyWithdrawDoesNotDelete(t *testing.T) {
+	for _, ipv6 := range []bool{false, true} {
+		p := &producer{}
+		msgs, err := p.flowspec(&flowspecMockNLRI{isIPv6: ipv6}, DelPrefix, minimalPeerHeader(), minimalUpdate())
+		if err != nil || len(msgs) != 0 {
+			t.Fatalf("empty withdrawal: messages=%v error=%v", msgs, err)
+		}
 	}
 }
 
