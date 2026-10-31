@@ -34,6 +34,10 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 	if routeMonitorMsg.Update == nil {
 		return
 	}
+	if afi, safi, eor := endOfRIBFamily(routeMonitorMsg.Update); eor {
+		p.produceEndOfRIB(msg.PeerHeader, routeMonitorMsg.Update, afi, safi)
+		return
+	}
 	reachIndexes := make([]int, 0, 1)
 	unreachIndexes := make([]int, 0, 1)
 	for i, attr := range routeMonitorMsg.Update.PathAttributes {
@@ -61,17 +65,70 @@ func (p *producer) processMPReach(attribute []byte, ph *bmp.PerPeerHeader, updat
 		glog.Errorf("failed to process MP_REACH_NLRI with error: %+v", err)
 		return
 	}
+	if reach, ok := nlri.(*bgp.MPReachNLRI); ok && len(reach.NLRI) == 0 {
+		return
+	}
 	reachableUpdate := copyUpdate(update)
+	operation := AddPrefix
 	if reach, ok := nlri.(*bgp.MPReachNLRI); ok {
 		validateNHC(reachableUpdate, reach.AddressFamilyID, reach.SubAddressFamilyID, reach.NextHopAddress, ph)
+		// RFC 7606 Section 2 treats advertised routes as withdrawn. An empty
+		// MP_REACH advertises none and must not become an End-of-RIB marker.
+		if len(reach.NLRI) != 0 {
+			operation = dPathOperation(reachableUpdate, reach.AddressFamilyID, reach.SubAddressFamilyID)
+		}
 	}
-	p.processMPUpdate(nlri, AddPrefix, ph, reachableUpdate)
+	p.processMPUpdate(nlri, operation, ph, reachableUpdate)
+}
+
+// dPathOperation applies RFC 10039 Section 4 error handling to announcements.
+func dPathOperation(update *bgp.Update, afi uint16, safi uint8) int {
+	if update == nil || update.BaseAttributes == nil {
+		return AddPrefix
+	}
+	attributes := update.BaseAttributes
+	if attributes.DPath == nil && attributes.DPathAttr == nil && !attributes.DPathMalformed {
+		return AddPrefix
+	}
+	// RFC 10039 Section 4 item 7 permits D-PATH only on AFI 1/2 SAFI 128
+	// and AFI 25 SAFI 70; other enclosing families require treat-as-withdraw.
+	allowedFamily := ((afi == 1 || afi == 2) && safi == 128) || (afi == 25 && safi == 70)
+	if attributes.DPathMalformed || !allowedFamily {
+		return DelPrefix
+	}
+	return AddPrefix
+}
+
+// isEndOfRIB reports whether update has the RFC 4724 Section 2 End-of-RIB
+// shape: no withdrawn routes, no NLRI, and either no path attributes (IPv4
+// unicast) or only an MP_UNREACH_NLRI carrying just AFI and SAFI.
+func isEndOfRIB(update *bgp.Update) bool {
+	if update.WithdrawnRoutesLength != 0 || len(update.NLRI) != 0 {
+		return false
+	}
+	switch len(update.PathAttributes) {
+	case 0:
+		return true
+	case 1:
+		attr := update.PathAttributes[0]
+		return attr.AttributeType == bgp.MP_UNREACH_NLRI && len(attr.Attribute) == 3
+	}
+	return false
 }
 
 func (p *producer) processMPUnreach(attribute []byte, ph *bmp.PerPeerHeader, update *bgp.Update) {
+	// An empty MP_UNREACH withdraws nothing; it is End-of-RIB only when it is
+	// the sole content of the UPDATE.
+	if len(attribute) == 3 && !isEndOfRIB(update) {
+		return
+	}
 	nlri, err := bgp.UnmarshalMPUnReachNLRI(attribute, p.GetAddPathCapability(ph.GetTableKey()), update.HasPrefixSID())
 	if err != nil {
 		glog.Errorf("failed to process MP_UNREACH_NLRI with error: %+v", err)
+		return
+	}
+	// Empty MP_UNREACH in a larger UPDATE is not an EOR (RFC 4724 §2).
+	if unreach, ok := nlri.(*bgp.MPUnReachNLRI); ok && len(unreach.WithdrawnRoutes) == 0 {
 		return
 	}
 	p.processMPUpdate(nlri, DelPrefix, ph, withoutNHC(update))
@@ -138,12 +195,25 @@ func (p *producer) processBGP4Update(ph *bmp.PerPeerHeader, update *bgp.Update) 
 		}
 		msgs = append(msgs, msg...)
 	}
-	msg, err := p.nlri(AddPrefix, ph, reachableUpdate)
-	if err != nil {
-		glog.Errorf("failed to produce original NLRI message with error: %+v", err)
-		return
+	// Without announcements, p.nlri publishes End-of-RIB; emit it only for an
+	// UPDATE with the RFC 4724 Section 2 shape.
+	if len(reachableUpdate.NLRI) != 0 || isEndOfRIB(update) {
+		operation := AddPrefix
+		if len(reachableUpdate.NLRI) != 0 {
+			operation = dPathOperation(reachableUpdate, 1, 1)
+			if operation == DelPrefix {
+				// Preserve explicit withdrawals while applying RFC 10039 Section 4
+				// treat-as-withdraw to the legacy IPv4 announcements separately.
+				reachableUpdate.WithdrawnRoutes = reachableUpdate.NLRI
+			}
+		}
+		msg, err := p.nlri(operation, ph, reachableUpdate)
+		if err != nil {
+			glog.Errorf("failed to produce original NLRI message with error: %+v", err)
+			return
+		}
+		msgs = append(msgs, msg...)
 	}
-	msgs = append(msgs, msg...)
 	for _, m := range msgs {
 		if err := p.marshalAndPublish(&m, t, []byte(m.RouterHash)); err != nil {
 			glog.Errorf("failed to process Unicast Prefix message with error: %+v", err)

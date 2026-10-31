@@ -43,6 +43,7 @@ const (
 	MUPMessageTopic        = "gobmp.parsed.mup"
 	MUPMessageV4Topic      = "gobmp.parsed.mup_v4"
 	MUPMessageV6Topic      = "gobmp.parsed.mup_v6"
+	EndOfRIBMessageTopic   = "gobmp.parsed.end_of_rib"
 	StatsMessageTopic      = "gobmp.parsed.statistics"
 	RawMessageTopic        = "gobmp.raw"
 )
@@ -88,6 +89,7 @@ var (
 		MUPMessageTopic,
 		MUPMessageV4Topic,
 		MUPMessageV6Topic,
+		EndOfRIBMessageTopic,
 		StatsMessageTopic,
 		RawMessageTopic,
 	}
@@ -151,6 +153,8 @@ func topicForMessage(t int) (string, bool) {
 		return MUPMessageV4Topic, true
 	case bmp.MUPV6Msg:
 		return MUPMessageV6Topic, true
+	case bmp.EndOfRIBMsg:
+		return EndOfRIBMessageTopic, true
 	case bmp.StatsReportMsg:
 		return StatsMessageTopic, true
 	case bmp.BMPRawMsg:

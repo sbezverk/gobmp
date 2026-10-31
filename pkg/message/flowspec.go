@@ -30,12 +30,6 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		return nil, err
 	}
 
-	// RFC 8955/8956: empty MP_UNREACH means withdraw all flowspec routes
-	if len(allNLRI) == 0 && operation == "del" {
-		fs := p.buildFlowspecMessage(operation, nlri, ph, update, nil)
-		return []*Flowspec{fs}, nil
-	}
-
 	msgs := make([]*Flowspec, 0, len(allNLRI))
 	for _, fsnlri := range allNLRI {
 		fs := p.buildFlowspecMessage(operation, nlri, ph, update, fsnlri)
@@ -44,7 +38,7 @@ func (p *producer) flowspec(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	return msgs, nil
 }
 
-// buildFlowspecMessage constructs a single Flowspec message. Pass nil fsnlri for withdraw-all.
+// buildFlowspecMessage constructs a single Flowspec message. An empty NLRI produces no route records.
 func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *bmp.PerPeerHeader, update *bgp.Update, fsnlri *flowspec.NLRI) *Flowspec {
 	fs := &Flowspec{
 		Action:         operation,
@@ -60,14 +54,6 @@ func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *b
 		fs.SpecHash = fsnlri.GetSpecHash()
 		fs.Spec = fsnlri.Spec
 		fs.RD = fsnlri.RD
-	} else {
-		// Withdraw-all: AFI-aware peer-scoped key to avoid IPv4/IPv6 collisions
-		// and cross-peer collisions when splitAF is disabled.
-		if nlri.IsIPv6NLRI() {
-			fs.SpecHash = fmt.Sprintf("ipv6:withdraw-all:%s:%s", ph.GetPeerAddrString(), ph.GetPeerDistinguisherString())
-		} else {
-			fs.SpecHash = fmt.Sprintf("withdraw-all:%s:%s", ph.GetPeerAddrString(), ph.GetPeerDistinguisherString())
-		}
 	}
 
 	if ases := update.BaseAttributes.ASPath; len(ases) != 0 {

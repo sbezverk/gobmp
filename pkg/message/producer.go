@@ -41,15 +41,10 @@ type producer struct {
 	publisher pub.Publisher
 
 	// speakerReady is closed once the first valid PeerUp has established the
-	// initial identity cache. RouteMonitor and StatsReport workers wait on it so
-	// active-mode initial routes do not race ahead of their PeerUp identity.
+	// initial identity cache. Earlier RouteMonitor and StatsReport messages are
+	// ignored rather than blocking the ordered dispatch of their PeerUp.
 	speakerReady     chan struct{}
 	speakerReadyOnce sync.Once
-	// stopCh is set to the stop channel passed to Producer() before the dispatch
-	// loop starts.  producingWorker goroutines select on it alongside speakerReady
-	// so they can exit cleanly if the producer is shut down before any PeerUp
-	// arrives (e.g. the connection drops before BGP session establishment).
-	stopCh chan struct{}
 	// Per-VRF table properties tracking (replaces global addPathCapable)
 	// Key format: BGP-ID + Peer Distinguisher (e.g., "10.0.0.10:0")
 	// Per RFC 9069 Section 4: uniquely identifies each Loc-RIB instance
@@ -66,23 +61,15 @@ type producer struct {
 	speakerID    bmp.PeerIdentity
 }
 
-// Producer dispatches kafka workers upon request received from the channel
+// Producer publishes one BMP connection's messages in input order.
 func (p *producer) Producer(queue chan bmp.Message, stop chan struct{}) {
-	// Store stop before spawning any goroutine.  The Go memory model guarantees
-	// that all goroutines created inside the loop below observe this write.
-	p.stopCh = stop
 	for {
 		select {
-		case msg := <-queue:
-			switch msg.Payload.(type) {
-			case *bmp.PeerUpMessage, *bmp.PeerDownMessage:
-				// State changes update identity cache and publish in input order.
-				p.producingWorker(msg)
-			default:
-				// Other message types carry an identity snapshot and can fan out.
-				p.attachIdentitySnapshot(&msg)
-				go p.producingWorker(msg)
+		case msg, ok := <-queue:
+			if !ok {
+				return
 			}
+			p.producingWorker(msg)
 		case <-stop:
 			glog.Infof("received interrupt, stopping.")
 			return
@@ -200,19 +187,20 @@ func (p *producer) producingWorker(msg bmp.Message) {
 			glog.Errorf("failed to process peer message with error: %+v", err)
 		}
 	case *bmp.RouteMonitor:
-		// Wait for the first identity before processing initial route messages.
 		select {
 		case <-p.speakerReady:
-		case <-p.stopCh:
+		default:
+			// RFC 7854 section 3.3 sends PeerUp before the initial routes.
+			glog.Warningf("received Route Monitoring before Peer Up, ignoring it")
 			return
 		}
 		p.attachIdentitySnapshot(&msg)
 		p.produceRouteMonitorMessage(msg)
 	case *bmp.StatsReport:
-		// Same cancellable wait as RouteMonitor above.
 		select {
 		case <-p.speakerReady:
-		case <-p.stopCh:
+		default:
+			glog.Warningf("received Stats Report before Peer Up, ignoring it")
 			return
 		}
 		p.attachIdentitySnapshot(&msg)
