@@ -911,4 +911,52 @@ type Stats struct {
 	PerAFIPrePolicyAdjRIBOut []AFISAFIStat `json:"per_afi_pre_policy_adj_rib_out,omitempty"`
 	// Type 17: Per-AFI/SAFI Post-policy Adj-RIB-Out (RFC 8671)
 	PerAFIPostPolicyAdjRIBOut []AFISAFIStat `json:"per_afi_post_policy_adj_rib_out,omitempty"`
+	// Type 18: Routes in the pre-policy Adj-RIB-In (RFC 9972)
+	PrePolicyAdjRIBIn uint64 `json:"pre_policy_adj_rib_in,omitempty"`
+	// Type 19: Routes in the per-AFI/SAFI pre-policy Adj-RIB-In (RFC 9972)
+	PerAFIPrePolicyAdjRIBIn []AFISAFIStat `json:"per_afi_pre_policy_adj_rib_in,omitempty"`
+	// Type 20: Routes in the post-policy Adj-RIB-In (RFC 9972)
+	PostPolicyAdjRIBIn uint64 `json:"post_policy_adj_rib_in,omitempty"`
+	// Type 21: Routes in the per-AFI/SAFI post-policy Adj-RIB-In (RFC 9972)
+	PerAFIPostPolicyAdjRIBIn []AFISAFIStat `json:"per_afi_post_policy_adj_rib_in,omitempty"`
+	// Type 22: Routes in the per-AFI/SAFI pre-policy Adj-RIB-In rejected by an inbound policy (RFC 9972)
+	PerAFIPrePolicyAdjRIBInRejected []AFISAFIStat `json:"per_afi_pre_policy_adj_rib_in_rejected,omitempty"`
+	// Type 23: Routes in the per-AFI/SAFI post-policy Adj-RIB-In accepted by an inbound policy (RFC 9972)
+	PerAFIPostPolicyAdjRIBInAccepted []AFISAFIStat `json:"per_afi_post_policy_adj_rib_in_accepted,omitempty"`
+	// Type 26: Per-AFI/SAFI post-policy Adj-RIB-In or Loc-RIB routes suppressed by route-damping (RFC 9972)
+	PerAFIRouteDampingSuppressed []AFISAFIStat `json:"per_afi_route_damping_suppressed,omitempty"`
+	// Type 27: Per-AFI/SAFI post-policy Adj-RIB-In or Loc-RIB routes marked stale by GR (RFC 9972)
+	PerAFIGRStale []AFISAFIStat `json:"per_afi_gr_stale,omitempty"`
+	// Type 28: Per-AFI/SAFI post-policy Adj-RIB-In or Loc-RIB routes marked stale by LLGR (RFC 9972)
+	PerAFILLGRStale []AFISAFIStat `json:"per_afi_llgr_stale,omitempty"`
+	// Type 29: Post-policy Adj-RIB-In routes left before exceeding the received-route threshold (RFC 9972)
+	PostPolicyAdjRIBInThresholdLeft uint64 `json:"post_policy_adj_rib_in_threshold_left,omitempty"`
+	// Type 30: Per-AFI/SAFI post-policy Adj-RIB-In routes left before exceeding the received-route threshold (RFC 9972)
+	PerAFIPostPolicyAdjRIBInThresholdLeft []AFISAFIStat `json:"per_afi_post_policy_adj_rib_in_threshold_left,omitempty"`
+	// Type 31: Post-policy Adj-RIB-In or Loc-RIB routes left before exceeding a license-customized route threshold (RFC 9972)
+	LicenseThresholdLeft uint64 `json:"license_threshold_left,omitempty"`
+	// Type 32: Per-AFI/SAFI post-policy Adj-RIB-In or Loc-RIB routes left before exceeding a license-customized route threshold (RFC 9972)
+	PerAFILicenseThresholdLeft []AFISAFIStat `json:"per_afi_license_threshold_left,omitempty"`
+	// Type 33: Pre-policy Adj-RIB-In routes rejected for exceeding the maximum AS_PATH length (RFC 9972)
+	PrePolicyAdjRIBInASPathTooLong uint64 `json:"pre_policy_adj_rib_in_aspath_too_long,omitempty"`
+	// Type 34: Per-AFI/SAFI pre-policy Adj-RIB-In routes rejected for exceeding the maximum AS_PATH length (RFC 9972)
+	PerAFIPrePolicyAdjRIBInASPathTooLong []AFISAFIStat `json:"per_afi_pre_policy_adj_rib_in_aspath_too_long,omitempty"`
+	// Type 35: Per-AFI/SAFI post-policy Adj-RIB-In routes invalidated by RPKI ROA (RFC 9972)
+	PerAFIPostPolicyAdjRIBInRPKIInvalid []AFISAFIStat `json:"per_afi_post_policy_adj_rib_in_rpki_invalid,omitempty"`
+	// Type 36: Per-AFI/SAFI post-policy Adj-RIB-In routes validated by RPKI ROA (RFC 9972)
+	PerAFIPostPolicyAdjRIBInRPKIValid []AFISAFIStat `json:"per_afi_post_policy_adj_rib_in_rpki_valid,omitempty"`
+	// Type 37: Per-AFI/SAFI post-policy Adj-RIB-In routes with RPKI state NotFound (RFC 9972)
+	PerAFIPostPolicyAdjRIBInRPKINotFound []AFISAFIStat `json:"per_afi_post_policy_adj_rib_in_rpki_not_found,omitempty"`
+	// Type 38: Per-AFI/SAFI pre-policy Adj-RIB-Out routes rejected by an outbound policy (RFC 9972)
+	PerAFIPrePolicyAdjRIBOutRejected []AFISAFIStat `json:"per_afi_pre_policy_adj_rib_out_rejected,omitempty"`
+	// Type 39: Pre-policy Adj-RIB-Out routes filtered for exceeding the maximum AS_PATH length (RFC 9972)
+	PrePolicyAdjRIBOutASPathTooLong uint64 `json:"pre_policy_adj_rib_out_aspath_too_long,omitempty"`
+	// Type 40: Per-AFI/SAFI pre-policy Adj-RIB-Out routes filtered for exceeding the maximum AS_PATH length (RFC 9972)
+	PerAFIPrePolicyAdjRIBOutASPathTooLong []AFISAFIStat `json:"per_afi_pre_policy_adj_rib_out_aspath_too_long,omitempty"`
+	// Type 41: Per-AFI/SAFI post-policy Adj-RIB-Out routes invalidated by RPKI ROA (RFC 9972)
+	PerAFIPostPolicyAdjRIBOutRPKIInvalid []AFISAFIStat `json:"per_afi_post_policy_adj_rib_out_rpki_invalid,omitempty"`
+	// Type 42: Per-AFI/SAFI post-policy Adj-RIB-Out routes validated by RPKI ROA (RFC 9972)
+	PerAFIPostPolicyAdjRIBOutRPKIValid []AFISAFIStat `json:"per_afi_post_policy_adj_rib_out_rpki_valid,omitempty"`
+	// Type 43: Per-AFI/SAFI post-policy Adj-RIB-Out routes with RPKI state NotFound (RFC 9972)
+	PerAFIPostPolicyAdjRIBOutRPKINotFound []AFISAFIStat `json:"per_afi_post_policy_adj_rib_out_rpki_not_found,omitempty"`
 }
