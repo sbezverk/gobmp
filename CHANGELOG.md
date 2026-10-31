@@ -4,6 +4,13 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-10-31
+
+#### Changed
+
+- Producer hot paths allocate less, with byte-identical JSON output: per-UPDATE attributes (Prefix-SID, BGP-LS) are decoded once, `base_attrs` is encoded once per UPDATE, peer strings are computed once per message, route keys are hashed in one MD5 call, and EVPN ESI/MAC, extended and large communities are formatted without `fmt`
+- SR Policy sub-TLVs are logged only at verbosity 5
+
 ### 2026-03-01
 
 #### Added

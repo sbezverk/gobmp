@@ -86,7 +86,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 		p++
 		switch st {
 		case SEGMENTLISTSTLV:
-			glog.Infof("Segment List Sub TLV")
+			glog.V(5).Infof("Segment List Sub TLV")
 			if p+2 > len(b) {
 				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 2 bytes for length, have %d", st, p, len(b)-p)
 			}
@@ -107,7 +107,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			}
 			tlv.SegmentList = append(tlv.SegmentList, l)
 		case BSIDSTLV:
-			glog.Infof("Binding SID Sub TLV")
+			glog.V(5).Infof("Binding SID Sub TLV")
 			if p >= len(b) {
 				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
 			}
@@ -122,7 +122,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			}
 			tlv.BindingSID.Type = tlv.BindingSID.BSID.GetType()
 		case PREFERENCESTLV:
-			glog.Infof("Preference Sub TLV")
+			glog.V(5).Infof("Preference Sub TLV")
 			if p >= len(b) {
 				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
 			}
@@ -138,7 +138,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			if tlv.ENLP != nil {
 				return nil, fmt.Errorf("only 1 instance of ENLP allowed in SR Policy attributes")
 			}
-			glog.Infof("ENLP Sub TLV")
+			glog.V(5).Infof("ENLP Sub TLV")
 			if p >= len(b) {
 				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
 			}
@@ -155,7 +155,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 				ENLP:  b[p+2],
 			}
 		case PRIORITYSTLV:
-			glog.Infof("Priority Sub TLV")
+			glog.V(5).Infof("Priority Sub TLV")
 			if p >= len(b) {
 				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 1 byte for length, have %d", st, p, len(b)-p)
 			}
@@ -169,7 +169,7 @@ func UnmarshalSRPolicyTLV(b []byte) (*TLV, error) {
 			}
 			tlv.Priority = b[p]
 		case PATHNAMESTLV:
-			glog.Infof("Policy Candidate Path Name Sub TLV")
+			glog.V(5).Infof("Policy Candidate Path Name Sub TLV")
 			// Per RFC 9256 Section 2.4.1, sub-TLV types 128-255 use 2-byte length.
 			if p+2 > len(b) {
 				return nil, fmt.Errorf("SR Policy sub-TLV %d truncated at offset %d: need 2 bytes for length, have %d", st, p, len(b)-p)

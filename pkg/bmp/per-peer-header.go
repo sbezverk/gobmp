@@ -60,6 +60,55 @@ type PerPeerHeader struct {
 	// Identity is attached by the message producer and is not part of the BMP
 	// Per-Peer Header wire format.
 	Identity PeerIdentity
+	// strs holds the strings MemoizeStrings computed, for the getters to
+	// return.
+	strs *headerStrings
+}
+
+// headerStrings holds the strings of the per-peer header owner, which the
+// getters return for owner only, not for a copy of it.
+type headerStrings struct {
+	owner        *PerPeerHeader
+	peerHash     string
+	peerBGPID    string
+	peerAddr     string
+	timestamp    string
+	hasTimestamp bool
+}
+
+// memo returns the strings MemoizeStrings computed for p, nil if it has not.
+func (p *PerPeerHeader) memo() *headerStrings {
+	if s := p.strs; s != nil && s.owner == p {
+		return s
+	}
+	return nil
+}
+
+// MemoizeStrings computes the peer hash, BGP ID, address and timestamp
+// strings of p once, for GetPeerHash, GetPeerBGPIDString, GetPeerAddrString
+// and GetPeerTimestamp to return, as a message producer calls them for every
+// route of a message.
+//
+// p must not be modified after MemoizeStrings: the getters would go on
+// returning the strings of the fields as they were, whatever changed, the
+// type, flags, distinguisher, address, AS, BGP ID or timestamp, also in
+// place in their byte slices. A copy of p does not inherit the memo: its
+// getters compute the strings of its own fields, and it may be modified and
+// memoized on its own.
+func (p *PerPeerHeader) MemoizeStrings() {
+	p.strs = nil
+	s := &headerStrings{
+		owner:     p,
+		peerHash:  p.GetPeerHash(),
+		peerBGPID: p.GetPeerBGPIDString(),
+		peerAddr:  p.GetPeerAddrString(),
+	}
+	// GetPeerTimestamp panics on a short timestamp; leave that to a call of
+	// it.
+	if len(p.PeerTimestamp) >= 8 {
+		s.timestamp, s.hasTimestamp = p.GetPeerTimestamp(), true
+	}
+	p.strs = s
 }
 
 // Len returns the length of PerPeerHeader structure
@@ -92,6 +141,9 @@ func peerType(b byte) (PeerType, error) {
 }
 
 func (p *PerPeerHeader) GetPeerTimestamp() string {
+	if s := p.memo(); s != nil && s.hasTimestamp {
+		return s.timestamp
+	}
 	t := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
 	ts := time.Second * time.Duration(binary.BigEndian.Uint32(p.PeerTimestamp[0:4]))
 	// RFC 7854 Section 4.2: Second 4 bytes are microseconds, not nanoseconds
@@ -103,6 +155,9 @@ func (p *PerPeerHeader) GetPeerTimestamp() string {
 
 // GetPeerHash calculates Peer Hash and returns as a hex string
 func (p *PerPeerHeader) GetPeerHash() string {
+	if s := p.memo(); s != nil {
+		return s.peerHash
+	}
 	h := md5.New()
 	h.Write(p.PeerDistinguisher)
 	h.Write(p.PeerAddress)
@@ -115,6 +170,9 @@ func (p *PerPeerHeader) GetPeerHash() string {
 
 // GetPeerBGPIDString returns a string representation of Peer BGP ID
 func (p *PerPeerHeader) GetPeerBGPIDString() string {
+	if s := p.memo(); s != nil {
+		return s.peerBGPID
+	}
 	ip := net.IP(p.PeerBGPID)
 	if v4 := ip.To4(); v4 != nil {
 		return v4.String()
@@ -124,6 +182,9 @@ func (p *PerPeerHeader) GetPeerBGPIDString() string {
 
 // GetPeerAddrString returns a string representation of Peer address
 func (p *PerPeerHeader) GetPeerAddrString() string {
+	if s := p.memo(); s != nil {
+		return s.peerAddr
+	}
 	if len(p.PeerAddress) < 16 {
 		return ""
 	}

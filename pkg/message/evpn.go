@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strings"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -76,6 +75,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 		return nil, fmt.Errorf("unknown operation %d", op)
 	}
 
+	nextHop := nlri.GetNextHop()
 	for _, e := range evpn.Route {
 		prfx := EVPNPrefix{
 			Action:         operation,
@@ -85,7 +85,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			PeerHash:       ph.GetPeerHash(),
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),
-			Nexthop:        nlri.GetNextHop(),
+			Nexthop:        nextHop,
 			BaseAttributes: update.BaseAttributes,
 		}
 		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
@@ -104,14 +104,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			prfx.RouteType = e.GetEVPNRouteType()
 			esi := e.GetEVPNESI()
 			if esi != nil {
-				var b strings.Builder
-				for i := 0; i < ESILength; i++ {
-					if i > 0 {
-						b.WriteByte(':')
-					}
-					fmt.Fprintf(&b, "%02x", esi[i])
-				}
-				prfx.ESI = b.String()
+				prfx.ESI = hexColon(esi[:], ESILength)
 			}
 			prfx.EthTag = e.GetEVPNTAG()
 			if ip := e.GetEVPNIPLength(); ip != nil {
@@ -139,15 +132,9 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			}
 			if mac := e.GetEVPNMACLength(); mac != nil {
 				prfx.MACLength = *mac
-				v := e.GetEVPNMAC()
-				var b strings.Builder
-				for i := 0; i < int(prfx.MACLength/8); i++ {
-					if i > 0 {
-						b.WriteByte(':')
-					}
-					fmt.Fprintf(&b, "%02x", v[i])
+				if n := int(prfx.MACLength / 8); n > 0 {
+					prfx.MAC = hexColon(e.GetEVPNMAC()[:], n)
 				}
-				prfx.MAC = b.String()
 			}
 
 			for _, l := range e.GetEVPNLabel() {
@@ -182,4 +169,21 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 	}
 
 	return prfxs, nil
+}
+
+// hexColon returns the first n octets of b as two lowercase hex digits each,
+// separated by colons, as an ESI or a MAC address is written.
+func hexColon(b []byte, n int) string {
+	if n <= 0 {
+		return ""
+	}
+	const digits = "0123456789abcdef"
+	s := make([]byte, 0, 3*n-1)
+	for i := 0; i < n; i++ {
+		if i > 0 {
+			s = append(s, ':')
+		}
+		s = append(s, digits[b[i]>>4], digits[b[i]&0x0f])
+	}
+	return string(s)
 }
