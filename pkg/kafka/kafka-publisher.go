@@ -51,8 +51,6 @@ const (
 var (
 	brockerConnectTimeout = 120 * time.Second
 	topicCreateTimeout    = 1 * time.Second
-	// goBMP topic's retention timer is 15 minutes.
-	topicRetention = "900000"
 	// adminRetryMax controls sarama ClusterAdmin retry attempts. Exposed as a
 	// var so tests can set it to 0 for fast failure without network retries.
 	adminRetryMax = 120
@@ -252,7 +250,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 		_ = cb.Close()
 		for _, t := range topicNames {
 			topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
-			if err := ensureTopic(ca, topicCreateTimeout, topicName); err != nil {
+			if err := ensureTopic(ca, topicCreateTimeout, topicName, kConfig.TopicRetentionTimeMs); err != nil {
 				glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 				return nil, err
 			}
@@ -326,7 +324,7 @@ func validator(kConfig *Config) error {
 	return nil
 }
 
-func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string) error {
+func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName, retention string) error {
 	if ca == nil {
 		return errors.New("nil ClusterAdmin provided")
 	}
@@ -334,7 +332,7 @@ func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string
 		NumPartitions:     1,
 		ReplicationFactor: 1,
 		ConfigEntries: map[string]*string{
-			"retention.ms": &topicRetention,
+			"retention.ms": &retention,
 		},
 	}
 
