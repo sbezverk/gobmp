@@ -72,7 +72,10 @@ type BaseAttributes struct {
 	// PEDistinguisherLabels holds the RFC 6514 §8 PE Distinguisher Labels attribute (Type 27).
 	// Left nil when the attribute is malformed.
 	PEDistinguisherLabels []PEDistinguisherLabel `json:"pe_distinguisher_labels,omitempty"`
-	LgCommunityList       []string               `json:"large_community_list,omitempty"`
+	// PEDistinguisherLabelsMalformed requests treat-as-withdraw for a malformed
+	// PE Distinguisher Labels attribute whose Partial bit is set (RFC 6514 §8).
+	PEDistinguisherLabelsMalformed bool     `json:"pe_distinguisher_labels_malformed,omitempty"`
+	LgCommunityList                []string `json:"large_community_list,omitempty"`
 	// PrefixSID represents the Prefix Segment Identifier (SID) attribute as defined in RFC 8669.
 	PrefixSID *prefixsid.PSid `json:"prefix_sid,omitempty"`
 	// BGPPrefixSID will be deprecated in favor of PrefixSID on Septermber 16, 2027
@@ -240,6 +243,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "pe_distinguisher_labels mismatch")
 	}
+	if ba.PEDistinguisherLabelsMalformed != oba.PEDistinguisherLabelsMalformed {
+		equal = false
+		diffs = append(diffs, "pe_distinguisher_labels_malformed mismatch")
+	}
 	if ba.OTC != oba.OTC {
 		equal = false
 		diffs = append(diffs, "otc mismatch: "+strconv.FormatUint(uint64(ba.OTC), 10)+" and "+strconv.FormatUint(uint64(oba.OTC), 10))
@@ -319,7 +326,7 @@ func UnmarshalBGPBaseAttributesWithAS4Hint(b []byte, as4 bool) (*BaseAttributes,
 func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAttributes, error) {
 	baseAttr := BaseAttributes{}
 	dPathSeen := false
-	origLen := -1
+	peDistSeen := false
 	for _, attr := range attrs {
 		b := attr.Attribute
 		switch attr.AttributeType {
@@ -418,15 +425,20 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			}
 		case 27:
 			// PE Distinguisher Labels - RFC 6514 §8
-			// A malformed attribute is logged and dropped; treat-as-withdraw is not applied in a collector.
-			labels, err := unmarshalPEDistinguisherLabels(b, func() int {
-				if origLen < 0 { // computed lazily, at most once per call
-					origLen = lookupOriginatorLen(attrs)
-				}
-				return origLen
-			})
+			// RFC 7606 §3(g): discard every instance other than the first,
+			// even when that first instance is empty or malformed.
+			if peDistSeen {
+				continue
+			}
+			peDistSeen = true
+			labels, err := unmarshalPEDistinguisherLabels(b, func() int { return lookupOriginatorLen(attrs) })
 			if err != nil {
 				glog.Errorf("failed to parse PE Distinguisher Labels attribute: %v", err)
+				// RFC 6514 §8: with the Partial bit set, the UPDATE is treated as
+				// withdrawn; the producer applies it. Otherwise only the attribute is dropped.
+				// An undecidable family is not malformed, so it is only dropped.
+				baseAttr.PEDistinguisherLabelsMalformed = attr.AttributeTypeFlags&0x20 != 0 &&
+					!errors.Is(err, errPEDistLabelsFamilyUnknown)
 			} else {
 				baseAttr.PEDistinguisherLabels = labels
 			}

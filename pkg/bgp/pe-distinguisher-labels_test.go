@@ -2,6 +2,7 @@ package bgp
 
 import (
 	"encoding/json"
+	"errors"
 	"net/netip"
 	"reflect"
 	"strings"
@@ -173,9 +174,12 @@ func TestUnmarshalPEDistinguisherLabelsDirect(t *testing.T) {
 		{"ipv6", v6, none, []PEDistinguisherLabel{{PEAddress: "2001:db8::1", Label: 0x10}}, 1, false},
 		{"originator forces ipv6 on ambiguous length", peEntries(7, true), func() int { return 16 }, nil, 7, false},
 		{"originator ipv6, ipv4 sized data", v4, func() int { return 16 }, nil, 0, true},
-		{"empty", nil, none, nil, 0, true},
+		{"originator conflict", v4, func() int { return peDistLabelsOriginatorConflict }, nil, 0, true},
+		{"empty is a valid empty list", nil, none, nil, 0, false},
+		{"empty with originator conflict", nil, func() int { return peDistLabelsOriginatorConflict }, nil, 0, false},
 		{"neither multiple", make([]byte, 8), none, nil, 0, true},
 		{"ambiguous", peEntries(19, false), none, nil, 0, true},
+		{"ambiguous, not unicast either way", make([]byte, 133), none, nil, 0, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -193,6 +197,18 @@ func TestUnmarshalPEDistinguisherLabelsDirect(t *testing.T) {
 				t.Fatalf("expected %d entries, got %d", tt.wantN, len(got))
 			}
 		})
+	}
+}
+
+func TestUnmarshalPEDistinguisherLabelsFamilyUnknownSentinel(t *testing.T) {
+	none := func() int { return 0 }
+	_, err := unmarshalPEDistinguisherLabels(peEntries(19, false), none)
+	if !errors.Is(err, errPEDistLabelsFamilyUnknown) {
+		t.Fatalf("valid under one reading: err = %v, want sentinel", err)
+	}
+	_, err = unmarshalPEDistinguisherLabels(make([]byte, 133), none)
+	if err == nil || errors.Is(err, errPEDistLabelsFamilyUnknown) {
+		t.Fatalf("malformed under both readings: err = %v, want non-sentinel error", err)
 	}
 }
 
@@ -227,7 +243,8 @@ func TestPEDistinguisherLabelsLookupAtMostOncePerUpdate(t *testing.T) {
 		{"repeated empty attr 27: no lookup", build(many(100, nil)...), 0},
 		{"repeated wrong-multiple attr 27: no lookup", build(many(100, make([]byte, 8))...), 0},
 		{"repeated valid attr 27: one lookup", build(many(100, v4)...), 1},
-		{"empty then valid: one lookup", build(append(many(50, nil), many(50, v4)...)...), 1},
+		{"empty then valid: first instance wins, no lookup", build(append(many(50, nil), many(50, v4)...)...), 0},
+		{"valid then empty: one lookup", build(append(many(50, v4), many(50, nil)...)...), 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -269,6 +286,112 @@ func TestPEDistinguisherLabelsJSONAndEqual(t *testing.T) {
 		t.Fatal("same should be equal")
 	}
 	if eq, diffs := ba.Equal(none); eq || !strings.Contains(strings.Join(diffs, ","), "pe_distinguisher_labels") {
+		t.Fatalf("expected mismatch, got %v %v", eq, diffs)
+	}
+}
+
+// peAttrPartial is attribute 27 with the optional transitive Partial bit set.
+func peAttrPartial(v []byte) PathAttribute {
+	a := peAttr(v)
+	a.AttributeTypeFlags |= 0x20
+	return a
+}
+
+func TestPEDistinguisherLabelsMalformedFlag(t *testing.T) {
+	v4 := peEntry("192.0.2.1", [3]byte{0, 1, 0})
+	v4b := peEntry("198.51.100.7", [3]byte{0, 2, 0})
+	v6 := peEntry("2001:db8::1", [3]byte{0, 1, 0})
+	reach4 := reachWith(cat(type1NLRI(originator(false)), type1NLRI([]byte{192, 0, 2, 9})))
+	reach6 := reachWith(type1NLRI(originator(true)))
+	mixedOneReach := reachWith(cat(type1NLRI(originator(false)), type1NLRI(originator(true))))
+	// Route type 2 has no originator and must not decide the family.
+	type2 := reachWith(cat([]byte{2, 12}, zeroRD, []byte{0, 0, 0xfd, 0xe8}))
+	want4 := []PEDistinguisherLabel{{PEAddress: "192.0.2.1", Label: 0x10}}
+	want6 := []PEDistinguisherLabel{{PEAddress: "2001:db8::1", Label: 0x10}}
+
+	tests := []struct {
+		name       string
+		attrs      []PathAttribute
+		wantLabels []PEDistinguisherLabel
+		wantFlag   bool
+	}{
+		// rejected value classes, Partial set
+		{"partial: not multiple of 7 or 19", []PathAttribute{peAttrPartial(make([]byte, 8))}, nil, true},
+		{"partial: ipv4 length not multiple of 7", []PathAttribute{peAttrPartial(v4[:6]), reach4}, nil, true},
+		{"partial: ipv6 length not multiple of 19", []PathAttribute{peAttrPartial(v6[:18]), reach6}, nil, true},
+		{"partial: 0.0.0.0", []PathAttribute{peAttrPartial(peEntry("0.0.0.0", [3]byte{}))}, nil, true},
+		{"partial: 224.0.0.1", []PathAttribute{peAttrPartial(peEntry("224.0.0.1", [3]byte{}))}, nil, true},
+		{"partial: 255.255.255.255", []PathAttribute{peAttrPartial(peEntry("255.255.255.255", [3]byte{}))}, nil, true},
+		{"partial: ff02::1", []PathAttribute{peAttrPartial(peEntry("ff02::1", [3]byte{}))}, nil, true},
+		{"partial: ::", []PathAttribute{peAttrPartial(peEntry("::", [3]byte{}))}, nil, true},
+		// zero length is a multiple of 7 and 19: valid, not malformed
+		{"partial: empty", []PathAttribute{peAttrPartial(nil)}, nil, false},
+		{"partial: empty with ipv4 route", []PathAttribute{reach4, peAttrPartial(nil)}, nil, false},
+		// no originator and a length valid for both families: dropped, not malformed
+		{"partial: ambiguous 133 without originator", []PathAttribute{peAttrPartial(peEntries(19, false))}, nil, false},
+		{"partial: ambiguous 133, not unicast either way", []PathAttribute{peAttrPartial(make([]byte, 133))}, nil, true},
+		{"ambiguous 133, not unicast either way, no partial", []PathAttribute{peAttr(make([]byte, 133))}, nil, false},
+		{"partial: type 2 only, ambiguous 133", []PathAttribute{type2, peAttrPartial(peEntries(19, false))}, nil, false},
+		{"partial: ipv4 data under ipv6 originator", []PathAttribute{peAttrPartial(v4), reach6}, nil, true},
+		// same classes without Partial: attribute dropped only
+		{"no partial: not multiple of 7 or 19", []PathAttribute{peAttr(make([]byte, 8))}, nil, false},
+		{"no partial: ipv4 length not multiple of 7", []PathAttribute{peAttr(v4[:6]), reach4}, nil, false},
+		{"no partial: ipv6 length not multiple of 19", []PathAttribute{peAttr(v6[:18]), reach6}, nil, false},
+		{"no partial: 0.0.0.0", []PathAttribute{peAttr(peEntry("0.0.0.0", [3]byte{}))}, nil, false},
+		{"no partial: 224.0.0.1", []PathAttribute{peAttr(peEntry("224.0.0.1", [3]byte{}))}, nil, false},
+		{"no partial: 255.255.255.255", []PathAttribute{peAttr(peEntry("255.255.255.255", [3]byte{}))}, nil, false},
+		{"no partial: ff02::1", []PathAttribute{peAttr(peEntry("ff02::1", [3]byte{}))}, nil, false},
+		{"no partial: ::", []PathAttribute{peAttr(peEntry("::", [3]byte{}))}, nil, false},
+		// valid, with and without Partial
+		{"partial: valid is not malformed", []PathAttribute{peAttrPartial(v4), reach4}, want4, false},
+		{"consistent ipv4 routes in one reach", []PathAttribute{reach4, peAttr(v4)}, want4, false},
+		{"consistent ipv6 routes in two reaches", []PathAttribute{reach6, reachWith(type1NLRI(originator(true))), peAttr(v6)}, want6, false},
+		{"type 2 route between ipv4 routes is ignored", []PathAttribute{reachWith(type1NLRI(originator(false))), type2, peAttr(v4)}, want4, false},
+		// mixed originator families: first route no longer decides
+		{"mixed ipv4 then ipv6 in one reach, ipv4 data, partial", []PathAttribute{mixedOneReach, peAttrPartial(v4)}, nil, true},
+		{"mixed ipv4 then ipv6 in one reach, ipv6 data, partial", []PathAttribute{mixedOneReach, peAttrPartial(v6)}, nil, true},
+		{"mixed across two reaches, attr first, partial", []PathAttribute{peAttrPartial(v4), reach4, reach6}, nil, true},
+		{"mixed across two reaches, no partial", []PathAttribute{reach4, reach6, peAttr(v4)}, nil, false},
+		{"mixed with ambiguous length, partial", []PathAttribute{mixedOneReach, peAttrPartial(peEntries(19, false))}, nil, true},
+		// repeated attribute: first instance only (RFC 7606 section 3(g))
+		{"repeat: valid first, other valid ignored", []PathAttribute{peAttr(v4), peAttr(v4b)}, want4, false},
+		{"repeat: valid first, malformed partial ignored", []PathAttribute{peAttr(v4), peAttrPartial(make([]byte, 8))}, want4, false},
+		{"repeat: malformed partial first, valid ignored", []PathAttribute{peAttrPartial(make([]byte, 8)), peAttr(v4)}, nil, true},
+		{"repeat: malformed no partial first, partial malformed ignored", []PathAttribute{peAttr(make([]byte, 8)), peAttrPartial(make([]byte, 8))}, nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ba, err := unmarshalBaseAttrsFromSlice(tt.attrs, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(ba.PEDistinguisherLabels, tt.wantLabels) {
+				t.Fatalf("labels = %+v, want %+v", ba.PEDistinguisherLabels, tt.wantLabels)
+			}
+			if ba.PEDistinguisherLabelsMalformed != tt.wantFlag {
+				t.Fatalf("malformed = %t, want %t", ba.PEDistinguisherLabelsMalformed, tt.wantFlag)
+			}
+		})
+	}
+}
+
+func TestPEDistinguisherLabelsMalformedJSONAndEqual(t *testing.T) {
+	bad, err := unmarshalBaseAttrsFromSlice([]PathAttribute{peAttrPartial(make([]byte, 8))}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	none, err := unmarshalBaseAttrsFromSlice(nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	j, err := json.Marshal(bad)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(j), `"pe_distinguisher_labels_malformed":true`) {
+		t.Fatalf("json: %s", j)
+	}
+	if eq, diffs := bad.Equal(none); eq || !strings.Contains(strings.Join(diffs, ","), "pe_distinguisher_labels_malformed") {
 		t.Fatalf("expected mismatch, got %v %v", eq, diffs)
 	}
 }
