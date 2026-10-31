@@ -111,12 +111,17 @@ func (a *shutdownAdmin) Close() error {
 
 func TestStopWaitsForProduceACK(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		outcome sarama.KError
-	}{{"success", sarama.ErrNoError}, {"terminal delivery error", sarama.ErrMessageSizeTooLarge}} {
+		name       string
+		outcome    sarama.KError
+		adminError error
+	}{
+		{"success", sarama.ErrNoError, nil},
+		{"terminal delivery error", sarama.ErrMessageSizeTooLarge, nil},
+		{"admin close error", sarama.ErrNoError, errors.New("test admin close failure")},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p, gate, stop := newShutdownPublisher(t, tc.outcome)
-			admin := &shutdownAdmin{closed: make(chan struct{})}
+			admin := &shutdownAdmin{closed: make(chan struct{}), err: tc.adminError}
 			p.clusterAdmin = admin
 			if err := p.PublishMessage(bmp.PeerStateChangeMsg, []byte("peer"), []byte("tail")); err != nil {
 				t.Fatal(err)
