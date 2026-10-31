@@ -100,6 +100,7 @@ type publisher struct {
 	config       *sarama.Config
 	producer     sarama.AsyncProducer
 	stopCh       chan struct{}
+	doneCh       chan struct{}
 	topicPrefix  string
 }
 
@@ -185,10 +186,16 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 	return nil
 }
 
+// Stop waits for queued messages to finish delivery or fail before releasing
+// the admin client. Call it once, after all PublishMessage calls have finished.
+// Completion follows Sarama's retry policy; no separate shutdown deadline applies.
 func (p *publisher) Stop() {
 	close(p.stopCh)
+	<-p.doneCh
 	if p.clusterAdmin != nil {
-		_ = p.clusterAdmin.Close()
+		if err := p.clusterAdmin.Close(); err != nil {
+			glog.Errorf("failed to close Kafka cluster admin: %v", err)
+		}
 	}
 }
 
@@ -267,14 +274,18 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	}
 	glog.V(5).Infof("Initialized Kafka Async producer")
 	stopCh := make(chan struct{})
+	doneCh := make(chan struct{})
 	go func(producer sarama.AsyncProducer, stopCh <-chan struct{}) {
+		defer close(doneCh)
 		for {
 			select {
 			case <-producer.Successes():
 			case err := <-producer.Errors():
 				glog.Errorf("failed to produce message with error: %+v", *err)
 			case <-stopCh:
-				_ = producer.Close()
+				if err := producer.Close(); err != nil {
+					glog.Errorf("failed to close Kafka producer: %v", err)
+				}
 				return
 			}
 		}
@@ -283,6 +294,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	adminOwnedByPublisher = true
 	return &publisher{
 		stopCh:       stopCh,
+		doneCh:       doneCh,
 		clusterAdmin: ca,
 		config:       config,
 		producer:     producer,
