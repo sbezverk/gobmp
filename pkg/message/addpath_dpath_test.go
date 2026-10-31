@@ -65,12 +65,14 @@ func TestNegotiatedAddPathDPathPublication(t *testing.T) {
 				queue <- bmp.Message{PeerHeader: makePeerHeader(t, bmp.PeerType0, view.flags), Payload: &bmp.RouteMonitor{Update: update}}
 				close(queue)
 				p.Producer(queue, nil)
-				want := 2 // PeerUp followed by one route or genuine EOR.
+				want := 2 // PeerUp followed by one route.
 				if tt.action == "" {
 					want = 1
+				} else if tt.eor {
+					want = 3 // Compatibility EOR followed by the control event.
 				}
 				if len(pub.msgs) != want || pub.msgs[0].msgType != bmp.PeerStateChangeMsg {
-					t.Fatalf("publications = %+v, want PeerUp and %d route messages", pub.msgs, want-1)
+					t.Fatalf("publications = %+v, want PeerUp and %d subsequent messages", pub.msgs, want-1)
 				}
 				if want == 1 {
 					return
@@ -90,6 +92,23 @@ func TestNegotiatedAddPathDPathPublication(t *testing.T) {
 					t.Fatalf("unexpected route action, EOR or direction: %+v", route)
 				}
 				if tt.eor {
+					if pub.msgs[2].msgType != bmp.EndOfRIBMsg {
+						t.Fatalf("control message type = %d, want %d", pub.msgs[2].msgType, bmp.EndOfRIBMsg)
+					}
+					var marker EndOfRIB
+					if err := json.Unmarshal(pub.msgs[2].payload, &marker); err != nil {
+						t.Fatal(err)
+					}
+					wantMarker := EndOfRIB{
+						RouterHash: route.RouterHash, RouterIP: route.RouterIP,
+						PeerHash: route.PeerHash, PeerRD: "0:0", PeerIP: route.PeerIP,
+						RemoteBGPID: route.RemoteBGPID, PeerASN: route.PeerASN,
+						PeerType: route.PeerType, Timestamp: route.Timestamp,
+						AFI: tt.family.AFI, SAFI: tt.family.SAFI, IsAdjRIBOut: view.flags == 0x10,
+					}
+					if marker != wantMarker {
+						t.Errorf("control marker = %+v, want %+v", marker, wantMarker)
+					}
 					return
 				}
 				if route.PathID != 256 || route.Prefix != "192.0.2.0" || route.PrefixLen != wantLength {

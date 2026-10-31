@@ -1000,28 +1000,70 @@ func TestEndOfRIBRequiresBareUpdate(t *testing.T) {
 	}
 	t.Run("empty MP_UNREACH only", func(t *testing.T) {
 		published := publish(t, dPathUnreach(25, 70, nil))
-		if len(published) != 1 || published[0].msgType != bmp.EVPNMsg {
-			t.Fatalf("publications = %+v, want one EVPN End-of-RIB", published)
+		findLegacy := false
+		findEoR := false
+		var got EndOfRIB
+		var gotLegacy EVPNPrefix
+		eorCount := 0
+		eorLegacyCount := 0
+		for _, msg := range published {
+			if msg.msgType == bmp.EndOfRIBMsg {
+				findEoR = true
+				eorCount++
+				if err := json.Unmarshal(msg.payload, &got); err != nil {
+					t.Fatalf("Unmarshal publication: %v", err)
+				}
+				if got.AFI != 25 || got.SAFI != 70 {
+					t.Errorf("AFI = %v, SAFI = %v; want 25, 70", got.AFI, got.SAFI)
+				}
+			}
+			if msg.msgType == bmp.EVPNMsg && msg.payload != nil {
+				findLegacy = true
+				eorLegacyCount++
+				if err := json.Unmarshal(msg.payload, &gotLegacy); err != nil {
+					t.Fatalf("Unmarshal publication: %v", err)
+				}
+				if !gotLegacy.IsEOR || gotLegacy.Action != "del" {
+					t.Errorf("IsEOR = %v, action = %q; want true, del", gotLegacy.IsEOR, gotLegacy.Action)
+				}
+			}
 		}
-		var got EVPNPrefix
-		if err := json.Unmarshal(published[0].payload, &got); err != nil {
-			t.Fatalf("Unmarshal publication: %v", err)
-		}
-		if !got.IsEOR || got.Action != "del" {
-			t.Errorf("IsEOR = %v, action = %q; want true, del", got.IsEOR, got.Action)
+		if !findEoR || !findLegacy || eorCount != 1 || eorLegacyCount != 1 {
+			t.Fatalf("publications = %+v, want one EVPN End-of-RIB and one legacy EVPN EoR", published)
 		}
 	})
 	t.Run("empty IPv4 UPDATE", func(t *testing.T) {
 		published := publish(t, nil)
-		if len(published) != 1 || published[0].msgType != bmp.UnicastPrefixV4Msg {
-			t.Fatalf("publications = %+v, want one IPv4 End-of-RIB", published)
+		findLegacy := false
+		findEoR := false
+		var got EndOfRIB
+		var gotLegacy UnicastPrefix
+		eorCount := 0
+		eorLegacyCount := 0
+		for _, msg := range published {
+			if msg.msgType == bmp.EndOfRIBMsg {
+				findEoR = true
+				eorCount++
+				if err := json.Unmarshal(msg.payload, &got); err != nil {
+					t.Fatalf("Unmarshal publication: %v", err)
+				}
+				if got.AFI != 1 || got.SAFI != 1 {
+					t.Errorf("AFI = %v, SAFI = %v; want 1, 1", got.AFI, got.SAFI)
+				}
+			}
+			if msg.msgType == bmp.UnicastPrefixV4Msg && msg.payload != nil {
+				findLegacy = true
+				eorLegacyCount++
+				if err := json.Unmarshal(msg.payload, &gotLegacy); err != nil {
+					t.Fatalf("Unmarshal publication: %v", err)
+				}
+				if !gotLegacy.IsEOR {
+					t.Errorf("IsEOR = %v want true", gotLegacy.IsEOR)
+				}
+			}
 		}
-		var got UnicastPrefix
-		if err := json.Unmarshal(published[0].payload, &got); err != nil {
-			t.Fatalf("Unmarshal publication: %v", err)
-		}
-		if !got.IsEOR {
-			t.Error("IsEOR = false, want true")
+		if !findEoR || !findLegacy || eorCount != 1 || eorLegacyCount != 1 {
+			t.Fatalf("publications = %+v, want one IPv4 End-of-RIB and one legacy IPv4 EoR", published)
 		}
 	})
 }
