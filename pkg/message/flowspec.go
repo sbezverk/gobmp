@@ -81,7 +81,7 @@ func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *b
 	}
 	// RFC 9069: Set TableName for LocRIB peers
 	if fs.IsLocRIB {
-		fs.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		fs.TableName = p.getTableName(ph)
 	}
 
 	return fs
