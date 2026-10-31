@@ -293,6 +293,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to produce ls_node message with error: %+v", err)
 				continue
 			}
+			msg.PathID = e.PathID
 			if err := p.marshalAndPublish(&msg, bmp.LSNodeMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSNode message with error: %+v", err)
 				continue
@@ -326,6 +327,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to produce ls_prefix message with error: %+v", err)
 				continue
 			}
+			msg.PathID = e.PathID
 			if err := p.marshalAndPublish(&msg, bmp.LSPrefixMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSPrefix message with error: %+v", err)
 				continue
@@ -341,6 +343,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to produce ls_srv6_sid message with error: %+v", err)
 				continue
 			}
+			msg.PathID = e.PathID
 			if err := p.marshalAndPublish(&msg, bmp.LSSRv6SIDMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
 				continue
@@ -375,6 +378,7 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				glog.Errorf("failed to produce ls_opaque message with error: %+v", err)
 				continue
 			}
+			msg.PathID = e.PathID
 			if err := p.marshalAndPublish(&msg, bmp.LSOpaqueMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSOpaque message with error: %+v", err)
 				continue
@@ -415,6 +419,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				continue
 			}
 			msg.RD = rd
+			msg.PathID = e.PathID
 			if err := p.marshalAndPublish(&msg, bmp.LSNodeMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSNode message with error: %+v", err)
 				continue
@@ -450,6 +455,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				continue
 			}
 			msg.RD = rd
+			msg.PathID = e.PathID
 			if err := p.marshalAndPublish(&msg, bmp.LSPrefixMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSPrefix message with error: %+v", err)
 				continue
@@ -466,6 +472,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				continue
 			}
 			msg.RD = rd
+			msg.PathID = e.PathID
 			if err := p.marshalAndPublish(&msg, bmp.LSSRv6SIDMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSSRv6SID message with error: %+v", err)
 				continue
@@ -479,6 +486,7 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				continue
 			}
 			msg.RD = rd
+			msg.PathID = e.PathID
 			if err := p.marshalAndPublish(&msg, bmp.LSOpaqueMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSOpaque message with error: %+v", err)
 				continue
