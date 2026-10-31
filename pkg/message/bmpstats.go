@@ -10,9 +10,11 @@ import (
 )
 
 // parseAFISAFIStat parses AFI/SAFI structured TLV (types 9, 10, 16, 17; RFC 9972 types 19, 21-23, 26-28, 30, 32, 34-38, 40-43)
-// Format: 2-byte AFI + 1-byte SAFI + 8-byte Gauge64
+// Format: 2-byte AFI + 1-byte SAFI + 8-byte Gauge64 (RFC 7854 Section 4.8, RFC 8671 Section 6.2, RFC 9972 Section 3.1)
+// RFC 9972 Section 3.1 requires Stat Len 11 for its per-AFI/SAFI types; types 9,
+// 10, 16 and 17 have the same 11-byte structure, so any other length is rejected.
 func parseAFISAFIStat(data []byte) (AFISAFIStat, error) {
-	if len(data) < 11 {
+	if len(data) != 11 {
 		return AFISAFIStat{}, fmt.Errorf("invalid AFI/SAFI stat length: %d, expected 11", len(data))
 	}
 
@@ -125,8 +127,9 @@ func (p *producer) produceStatsMessage(msg bmp.Message) {
 			}
 			m.PerAFIPostPolicyAdjRIBOut = append(m.PerAFIPostPolicyAdjRIBOut, stat)
 		case 18, 20, 29, 31, 33, 39:
-			if len(tlv.Information) < 8 {
-				glog.Warningf("RFC 9972 stats type %d from peer %s (router %s): need 8 bytes, got %d", tlv.InformationType, m.RemoteIP, m.RouterIP, len(tlv.Information))
+			// RFC 9972 Section 3.1: Stat Len MUST be 8 for global statistics.
+			if len(tlv.Information) != 8 {
+				glog.Warningf("RFC 9972 stats type %d from peer %s (router %s): need exactly 8 bytes, got %d", tlv.InformationType, m.RemoteIP, m.RouterIP, len(tlv.Information))
 				continue
 			}
 			v := binary.BigEndian.Uint64(tlv.Information)
