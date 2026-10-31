@@ -200,7 +200,7 @@ func (mp *MPReachNLRI) GetNLRIVPLS() (*vpls.Route, error) {
 func (mp *MPReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 1 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
-		nlri, err := unicast.UnmarshalUnicastNLRI(mp.NLRI, pathID)
+		nlri, err := unicast.UnmarshalUnicastNLRI(mp.NLRI, pathID, mp.AddressFamilyID == 2)
 		if err != nil {
 			return nil, err
 		}
@@ -214,7 +214,7 @@ func (mp *MPReachNLRI) GetNLRIUnicast() (*base.MPNLRI, error) {
 func (mp *MPReachNLRI) GetNLRIMulticast() (*base.MPNLRI, error) {
 	if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) && mp.SubAddressFamilyID == 2 {
 		pathID := mp.addPath[NLRIMessageType(mp.AddressFamilyID, mp.SubAddressFamilyID)]
-		nlri, err := multicast.UnmarshalMulticastNLRI(mp.NLRI, pathID)
+		nlri, err := multicast.UnmarshalMulticastNLRI(mp.NLRI, pathID, mp.AddressFamilyID == 2)
 		if err != nil {
 			return nil, err
 		}

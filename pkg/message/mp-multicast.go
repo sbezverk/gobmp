@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
@@ -88,13 +87,6 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 			a := make([]byte, 4)
 			copy(a, e.Prefix)
 			prfx.Prefix = net.IP(a).To4().String()
-			if prfx.PrefixLen > 32 {
-				if glog.V(6) {
-					glog.Warningf("Capping excessive IPv4 prefix length %d to 32 for prefix %s",
-						prfx.PrefixLen, prfx.Prefix)
-				}
-				prfx.PrefixLen = 32
-			}
 		}
 		// RFC 8950 §3 (updating RFC 4760 §3, SAFI 2 multicast): the next hop's
 		// address family is determined by the Length of Next Hop field, not the

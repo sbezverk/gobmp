@@ -12,7 +12,7 @@ func TestMulticastPrefixPadding(t *testing.T) {
 			wire = append([]byte{0, 0, 0, 7}, wire...)
 		}
 		original := bytes.Clone(wire)
-		routes, err := UnmarshalMulticastNLRI(wire, pathID)
+		routes, err := UnmarshalMulticastNLRI(wire, pathID, false)
 		if err != nil {
 			t.Fatal(err)
 		}

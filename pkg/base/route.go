@@ -2,6 +2,7 @@ package base
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -24,12 +25,20 @@ type Route struct {
 	Prefix []byte
 }
 
-// UnmarshalRoutes builds BGP Withdrawn routes object
-func UnmarshalRoutes(b []byte, pathID bool) ([]Route, error) {
-	return unmarshalRoutes(b, pathID, true)
+var errPrefixTooLong = errors.New("prefix length over address size")
+
+// UnmarshalRoutesAF builds BGP routes. A prefix longer than 32 bits, or 128 for
+// ipv6, makes the field malformed (RFC 4271 §4.3, RFC 4760 §5, RFC 7606 §5.3)
+// and is not retried with a flipped Path ID.
+func UnmarshalRoutesAF(b []byte, pathID bool, ipv6 bool) ([]Route, error) {
+	maxBits := uint8(32)
+	if ipv6 {
+		maxBits = 128
+	}
+	return unmarshalRoutes(b, pathID, true, maxBits)
 }
 
-func unmarshalRoutes(b []byte, pathID bool, canRetry bool) ([]Route, error) {
+func unmarshalRoutes(b []byte, pathID bool, canRetry bool, maxBits uint8) ([]Route, error) {
 	if glog.V(6) {
 		glog.Infof("Routes Raw: %s Path ID flag: %t", tools.MessageHex(b), pathID)
 	}
@@ -56,6 +65,10 @@ func unmarshalRoutes(b []byte, pathID bool, canRetry bool) ([]Route, error) {
 		}
 		// Updating length
 		route.Length = b[p]
+		if route.Length > maxBits {
+			err = fmt.Errorf("%w: %d bits over %d", errPrefixTooLong, route.Length, maxBits)
+			goto error_handle
+		}
 		l := route.Length / 8
 		if route.Length%8 != 0 {
 			l++
@@ -86,8 +99,8 @@ error_handle:
 		// might be advertised and received, but BGP Update would not have PathID set due to some other conditions,
 		// example when bgp speakers are in different AS. In error handle, attempting to Unmarshal again with reversed
 		// value of PathID flag.
-		if canRetry {
-			if r, e := unmarshalRoutes(b, !pathID, false); e == nil {
+		if canRetry && !errors.Is(err, errPrefixTooLong) {
+			if r, e := unmarshalRoutes(b, !pathID, false, maxBits); e == nil {
 				return r, nil
 			}
 		}

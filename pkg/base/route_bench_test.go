@@ -16,7 +16,7 @@ var routeData = []byte{
 func BenchmarkUnmarshalRoutes(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_, err := UnmarshalRoutes(routeData, false)
+		_, err := UnmarshalRoutesAF(routeData, false, false)
 		if err != nil {
 			b.Fatal(err)
 		}

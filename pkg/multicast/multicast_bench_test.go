@@ -31,7 +31,7 @@ func BenchmarkUnmarshalMulticastNLRI(b *testing.B) {
 		b.Run(tt.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
-				_, _ = UnmarshalMulticastNLRI(tt.input, tt.pathID)
+				_, _ = UnmarshalMulticastNLRI(tt.input, tt.pathID, true)
 			}
 		})
 	}

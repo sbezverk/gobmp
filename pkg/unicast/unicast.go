@@ -13,8 +13,9 @@ import (
 
 var compatMarker = []byte{0x80, 0x00, 0x00}
 
-// UnmarshalUnicastNLRI builds MP NLRI object from the slice of bytes
-func UnmarshalUnicastNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
+// UnmarshalUnicastNLRI builds MP NLRI object from the slice of bytes of a SAFI 1
+// NLRI field of AFI 2 (ipv6) or 1
+func UnmarshalUnicastNLRI(b []byte, pathID bool, ipv6 bool) (*base.MPNLRI, error) {
 	if glog.V(6) {
 		glog.Infof("MP Unicast NLRI Raw: %s", tools.MessageHex(b))
 	}
@@ -22,7 +23,7 @@ func UnmarshalUnicastNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 		return &base.MPNLRI{NLRI: make([]base.Route, 0)}, nil
 	}
 	mpnlri := base.MPNLRI{}
-	r, err := base.UnmarshalRoutes(b, pathID)
+	r, err := base.UnmarshalRoutesAF(b, pathID, ipv6)
 	if err != nil {
 		return nil, err
 	}
