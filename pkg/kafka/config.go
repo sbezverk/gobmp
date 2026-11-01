@@ -1,7 +1,9 @@
 package kafka
 
 type Config struct {
-	ServerAddress        string
+	ServerAddress string
+	// TopicRetentionTimeMs applies only when creating new topics. Existing topics
+	// keep their retention policy, and SkipTopicCreation bypasses this setting.
 	TopicRetentionTimeMs string
 	// TopicPrefix, when set, is prepended to all Kafka topic names.
 	// Example: TopicPrefix="prod" -> "prod.gobmp.parsed.peer"
