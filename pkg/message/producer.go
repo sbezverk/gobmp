@@ -2,10 +2,12 @@ package message
 
 import (
 	"crypto/md5"
+	"encoding/binary"
 	"encoding/hex"
 	"sync"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/pub"
 )
@@ -13,6 +15,12 @@ import (
 const (
 	peerUP = iota
 	peerDown
+
+	// Pre-PeerUp traffic is unusual but can be observed during a router/BMP
+	// reconnect. Keep the compatibility buffer bounded so a peer that never
+	// reaches Peer Up cannot retain an unbounded amount of parsed data.
+	maxPrePeerUpMessages = 256
+	maxPrePeerUpBytes    = 8 << 20
 )
 
 // PerTableProperties holds Loc-RIB table informational TLVs per RFC 9069.
@@ -38,9 +46,12 @@ type producer struct {
 
 	// speakerReady is closed once the first valid PeerUp has established the
 	// initial identity and negotiated properties. Earlier RouteMonitor and
-	// StatsReport messages are ignored rather than blocking their PeerUp.
+	// StatsReport messages are buffered; replay requires their own installed
+	// peer state and, for Loc-RIB routes, explicitly described families.
 	speakerReady     chan struct{}
 	speakerReadyOnce sync.Once
+	prePeerUp        []bmp.Message
+	prePeerUpBytes   int
 	// tableLock protects Loc-RIB table TLVs and per-peer ADD-PATH properties.
 	// Table names use BGP-ID + raw distinguisher; ADD-PATH uses PeerIdentity
 	// so distinct BGP sessions do not overwrite their negotiated wire format.
@@ -113,6 +124,101 @@ func (p *producer) identityFromHeaderFallback(msg bmp.Message) bmp.PeerIdentity 
 	return peer
 }
 
+func prePeerUpMessageBytes(msg bmp.Message) int {
+	size := 0
+	switch payload := msg.Payload.(type) {
+	case *bmp.RouteMonitor:
+		if payload != nil && payload.Update != nil {
+			size += len(payload.Update.WithdrawnRoutes) + len(payload.Update.NLRI)
+			for _, attr := range payload.Update.PathAttributes {
+				size += len(attr.Attribute)
+			}
+		}
+	case *bmp.StatsReport:
+		if payload != nil {
+			for _, tlv := range payload.StatsTLV {
+				size += len(tlv.Information)
+			}
+		}
+	}
+	// Include a small fixed allowance for the parsed structure itself. The
+	// limit is intentionally approximate; its purpose is to bound retained
+	// payload data, not to report an exact heap size.
+	return size + 256
+}
+
+func (p *producer) bufferPrePeerUp(msg bmp.Message) {
+	messageBytes := prePeerUpMessageBytes(msg)
+	if len(p.prePeerUp) >= maxPrePeerUpMessages || p.prePeerUpBytes+messageBytes > maxPrePeerUpBytes {
+		glog.Warningf("pre-Peer Up buffer full, dropping %T", msg.Payload)
+		return
+	}
+	p.prePeerUp = append(p.prePeerUp, msg)
+	p.prePeerUpBytes += messageBytes
+}
+
+func (p *producer) discardPrePeerUp() {
+	p.prePeerUp = nil
+	p.prePeerUpBytes = 0
+}
+
+func (p *producer) prePeerUpReady(msg bmp.Message) bool {
+	if msg.PeerHeader == nil || msg.PeerHeader.PeerIdentity() == "" {
+		return false
+	}
+	p.tableLock.RLock()
+	defer p.tableLock.RUnlock()
+	properties, known := p.peerAddPath[msg.PeerHeader.PeerIdentity()]
+	if !known {
+		return false
+	}
+	route, isRoute := msg.Payload.(*bmp.RouteMonitor)
+	if msg.PeerHeader.PeerType != bmp.PeerType3 || !isRoute {
+		return true
+	}
+	if route == nil || route.Update == nil {
+		return false
+	}
+	update := route.Update
+	// RFC 9069 Sections 5.2 and 6.1.1 allow separate family Peer Ups for
+	// one Loc-RIB identity. Membership, including false, describes a family;
+	// an absent family does not establish its NLRI wire format.
+	if afi, safi, eor := endOfRIBFamily(update); eor {
+		_, known := properties.in[bgp.AFISAFI{AFI: afi, SAFI: safi}]
+		return known
+	}
+	if len(update.NLRI) != 0 || len(update.WithdrawnRoutes) != 0 || update.WithdrawnRoutesLength != 0 {
+		if _, known := properties.in[bgp.AFISAFI{AFI: 1, SAFI: 1}]; !known {
+			return false
+		}
+	}
+	for _, attr := range update.PathAttributes {
+		if attr.AttributeType != bgp.MP_REACH_NLRI && attr.AttributeType != bgp.MP_UNREACH_NLRI {
+			continue
+		}
+		if len(attr.Attribute) < 3 {
+			return false
+		}
+		family := bgp.AFISAFI{AFI: binary.BigEndian.Uint16(attr.Attribute[:2]), SAFI: attr.Attribute[2]}
+		if _, known := properties.in[family]; !known {
+			return false
+		}
+	}
+	return true
+}
+
+func (p *producer) replayPrePeerUp() {
+	buffered := p.prePeerUp
+	p.discardPrePeerUp()
+	for _, msg := range buffered {
+		if !p.prePeerUpReady(msg) {
+			glog.Warningf("pre-Peer Up replay dropping %T: peer/family state is missing or indeterminate", msg.Payload)
+			continue
+		}
+		p.producingWorker(msg)
+	}
+}
+
 func (p *producer) producingWorker(msg bmp.Message) {
 	switch obj := msg.Payload.(type) {
 	case *bmp.PeerUpMessage:
@@ -149,8 +255,14 @@ func (p *producer) producingWorker(msg bmp.Message) {
 			if err := p.marshalAndPublish(m, bmp.PeerStateChangeMsg, []byte(m.RouterHash)); err != nil {
 				glog.Errorf("failed to process peer message with error: %+v", err)
 			}
+			p.replayPrePeerUp()
 		}
 	case *bmp.PeerDownMessage:
+		select {
+		case <-p.speakerReady:
+		default:
+			p.discardPrePeerUp()
+		}
 		var m *PeerStateChange
 		var err error
 		if msg.PeerHeader == nil {
@@ -187,8 +299,7 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		select {
 		case <-p.speakerReady:
 		default:
-			// RFC 7854 section 3.3 sends PeerUp before the initial routes.
-			glog.Warningf("received Route Monitoring before Peer Up, ignoring it")
+			p.bufferPrePeerUp(msg)
 			return
 		}
 		p.attachIdentitySnapshot(&msg)
@@ -197,7 +308,7 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		select {
 		case <-p.speakerReady:
 		default:
-			glog.Warningf("received Stats Report before Peer Up, ignoring it")
+			p.bufferPrePeerUp(msg)
 			return
 		}
 		p.attachIdentitySnapshot(&msg)

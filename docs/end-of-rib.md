@@ -71,8 +71,13 @@ calls before processing the next message. Earlier route calls therefore return
 before the compatibility EOR, control EOR, or subsequent PeerDown is processed.
 This standalone PR includes the ordered dispatcher; it requires no other PR to
 be merged first. Separate connection producers remain independent. Parsed route
-and statistics messages received before the first valid PeerUp are logged and
-ignored, so they cannot block processing of a later PeerUp.
+and statistics messages received before the first valid PeerUp use a
+[bounded compatibility buffer](message-ordering.md#traffic-before-peer-up).
+Replay requires their own installed peer state and, for Loc-RIB routes or
+concrete markers, explicitly described AFI/SAFI families. Missing or
+indeterminate state discards the whole buffered message with a diagnostic;
+a later PeerUp does not recover it. This replay policy does not change marker
+recognition, live traffic after the first valid PeerUp, or imply losslessness.
 
 Local call order is not a cross-topic delivery or acknowledgment guarantee:
 Kafka returns after enqueueing to its asynchronous producer, and Kafka/NATS

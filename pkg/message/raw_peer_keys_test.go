@@ -36,7 +36,7 @@ func TestRawDistinguisherSessionAndLocRIBIsolation(t *testing.T) {
 				}
 				up := &bmp.PeerUpMessage{
 					LocalAddress: make([]byte, 16), SentOpen: open, ReceivedOpen: open,
-					Information: []bmp.InformationalTLV{{InformationType: 3, Information: []byte(fmt.Sprintf("VRF-%d", i))}},
+					Information: []bmp.InformationalTLV{{InformationType: 3, Information: fmt.Appendf([]byte{}, "VRF-%d", i)}},
 				}
 				p.producingWorker(bmp.Message{PeerHeader: ph, Payload: up, SpeakerIP: "192.0.2.1"})
 			}
