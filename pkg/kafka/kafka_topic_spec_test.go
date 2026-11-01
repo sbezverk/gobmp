@@ -12,10 +12,11 @@ import (
 )
 
 // Use a real admin so the assertions cover the conversion and wire encoding.
-func topicSpecTestAdmin(t *testing.T, response sarama.MockResponse) (sarama.ClusterAdmin, *sarama.MockBroker, time.Duration) {
+func topicSpecTestAdmin(t *testing.T, response sarama.MockResponse, latency time.Duration) (sarama.ClusterAdmin, *sarama.MockBroker, time.Duration) {
 	t.Helper()
 	mb := sarama.NewMockBroker(t, 1)
 	t.Cleanup(mb.Close)
+	mb.SetLatency(latency)
 	mb.SetHandlerByMap(map[string]sarama.MockResponse{
 		"ApiVersionsRequest": sarama.NewMockApiVersionsResponse(t).SetApiKeys([]sarama.ApiVersionsResponseKey{
 			{ApiKey: 3, MinVersion: 0, MaxVersion: 9},
@@ -41,7 +42,7 @@ func topicSpecTestAdmin(t *testing.T, response sarama.MockResponse) (sarama.Clus
 }
 
 func TestEnsureTopicSpecs(t *testing.T) {
-	ca, mb, adminTimeout := topicSpecTestAdmin(t, sarama.NewMockCreateTopicsResponse(t))
+	ca, mb, adminTimeout := topicSpecTestAdmin(t, sarama.NewMockCreateTopicsResponse(t), 0)
 	specs := []*TopicSpec{
 		{Name: "spec.first", NumPartitions: 3, ReplicationFactor: 2, ConfigEntries: map[string]string{
 			"retention.ms": "123456", "cleanup.policy": "compact", "compression.type": "",
@@ -120,6 +121,7 @@ func TestEnsureTopicResponses(t *testing.T) {
 		name     string
 		response sarama.MockResponse
 		timeout  time.Duration
+		latency  time.Duration
 		wantErr  error
 		wantText string
 		requests int
@@ -129,11 +131,12 @@ func TestEnsureTopicResponses(t *testing.T) {
 		{name: "incomplete", response: sarama.NewMockWrapper(&sarama.CreateTopicsResponse{Version: 4}), wantErr: sarama.ErrIncompleteResponse, requests: 1},
 		{name: "authorization", response: sarama.NewMockWrapper(response(sarama.ErrTopicAuthorizationFailed)), wantErr: sarama.ErrTopicAuthorizationFailed, requests: 1},
 		{name: "retry then success", response: sarama.NewMockSequence(response(sarama.ErrRequestTimedOut), response(sarama.ErrNoError)), requests: 2},
-		{name: "retry timeout", response: sarama.NewMockWrapper(response(sarama.ErrRequestTimedOut)), timeout: time.Millisecond, wantText: "timeout waiting for topic " + topic, requests: 1},
+		{name: "retry timeout", response: sarama.NewMockWrapper(response(sarama.ErrRequestTimedOut)), timeout: time.Millisecond, wantText: "timeout waiting for topic " + topic},
+		{name: "retry timeout delayed reply", response: sarama.NewMockWrapper(response(sarama.ErrRequestTimedOut)), timeout: time.Millisecond, latency: 150 * time.Millisecond, wantText: "timeout waiting for topic " + topic},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ca, mb, adminTimeout := topicSpecTestAdmin(t, tt.response)
+			ca, mb, adminTimeout := topicSpecTestAdmin(t, tt.response, tt.latency)
 			timeout := tt.timeout
 			if timeout == 0 {
 				timeout = time.Second
@@ -155,7 +158,13 @@ func TestEnsureTopicResponses(t *testing.T) {
 					}
 				}
 			}
-			if requests != tt.requests {
+			if tt.wantText != "" {
+				// Both timer and ticker may be ready after a delayed response,
+				// so a timeout does not promise an exact number of attempts.
+				if requests < 1 {
+					t.Error("no CreateTopics request before timeout")
+				}
+			} else if requests != tt.requests {
 				t.Errorf("CreateTopics requests = %d, want %d", requests, tt.requests)
 			}
 		})
