@@ -171,6 +171,10 @@ func UnmarshalLUNLRI(b []byte, pathID bool) (*base.MPNLRI, error) {
 		// Copy the prefix bytes
 		up.Prefix = make([]byte, prefixBytes)
 		copy(up.Prefix, b[p:p+prefixBytes])
+		if prefixBitLen%8 != 0 {
+			// Mask prefix padding after excluding label bits (RFC 8277 Section 2.2).
+			up.Prefix[prefixBytes-1] &= 0xFF << (8 - prefixBitLen%8)
+		}
 
 		// Aggressive byte order fixing for IPv4 addresses:
 		// 1. If it's already identified as IPv4 (prefixBitLen <= 32)
