@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -51,8 +52,6 @@ const (
 var (
 	brockerConnectTimeout = 120 * time.Second
 	topicCreateTimeout    = 1 * time.Second
-	// goBMP topic's retention timer is 15 minutes.
-	topicRetention = "900000"
 	// adminRetryMax controls sarama ClusterAdmin retry attempts. Exposed as a
 	// var so tests can set it to 0 for fast failure without network retries.
 	adminRetryMax = 120
@@ -95,11 +94,22 @@ var (
 	}
 )
 
+// TopicSpec describes the options used to create a Kafka topic.
+// Nil or empty ConfigEntries leaves topic configuration at broker defaults.
+type TopicSpec struct {
+	Name              string
+	NumPartitions     int32
+	ReplicationFactor int16
+	ConfigEntries     map[string]string
+}
+
 type publisher struct {
 	clusterAdmin sarama.ClusterAdmin
 	config       *sarama.Config
 	producer     sarama.AsyncProducer
 	stopCh       chan struct{}
+	doneCh       chan struct{}
+	stopOnce     sync.Once
 	topicPrefix  string
 }
 
@@ -185,11 +195,20 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 	return nil
 }
 
+// Stop waits for queued messages to finish delivery or fail before releasing
+// the admin client. Call it after all PublishMessage calls have finished.
+// Repeated and concurrent calls wait for the same complete shutdown.
+// Completion follows Sarama's retry policy; no separate shutdown deadline applies.
 func (p *publisher) Stop() {
-	close(p.stopCh)
-	if p.clusterAdmin != nil {
-		_ = p.clusterAdmin.Close()
-	}
+	p.stopOnce.Do(func() {
+		close(p.stopCh)
+		<-p.doneCh
+		if p.clusterAdmin != nil {
+			if err := p.clusterAdmin.Close(); err != nil {
+				glog.Errorf("failed to close Kafka cluster admin: %v", err)
+			}
+		}
+	})
 }
 
 // NewKafkaPublisher instantiates a new Kafka publisher. When SkipTopicCreation
@@ -251,8 +270,13 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 		glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
 		_ = cb.Close()
 		for _, t := range topicNames {
-			topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
-			if err := ensureTopic(ca, topicCreateTimeout, topicName); err != nil {
+			spec := &TopicSpec{
+				Name:              WithTopicPrefix(kConfig.TopicPrefix, t),
+				NumPartitions:     1,
+				ReplicationFactor: 1,
+				ConfigEntries:     map[string]string{"retention.ms": kConfig.TopicRetentionTimeMs},
+			}
+			if err := ensureTopic(ca, topicCreateTimeout, spec); err != nil {
 				glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 				return nil, err
 			}
@@ -267,14 +291,18 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	}
 	glog.V(5).Infof("Initialized Kafka Async producer")
 	stopCh := make(chan struct{})
+	doneCh := make(chan struct{})
 	go func(producer sarama.AsyncProducer, stopCh <-chan struct{}) {
+		defer close(doneCh)
 		for {
 			select {
 			case <-producer.Successes():
 			case err := <-producer.Errors():
 				glog.Errorf("failed to produce message with error: %+v", *err)
 			case <-stopCh:
-				_ = producer.Close()
+				if err := producer.Close(); err != nil {
+					glog.Errorf("failed to close Kafka producer: %v", err)
+				}
 				return
 			}
 		}
@@ -283,6 +311,7 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 	adminOwnedByPublisher = true
 	return &publisher{
 		stopCh:       stopCh,
+		doneCh:       doneCh,
 		clusterAdmin: ca,
 		config:       config,
 		producer:     producer,
@@ -326,16 +355,20 @@ func validator(kConfig *Config) error {
 	return nil
 }
 
-func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string) error {
+func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, spec *TopicSpec) error {
 	if ca == nil {
 		return errors.New("nil ClusterAdmin provided")
 	}
+	if spec == nil {
+		return errors.New("nil TopicSpec provided")
+	}
 	topicDetail := &sarama.TopicDetail{
-		NumPartitions:     1,
-		ReplicationFactor: 1,
-		ConfigEntries: map[string]*string{
-			"retention.ms": &topicRetention,
-		},
+		NumPartitions:     spec.NumPartitions,
+		ReplicationFactor: spec.ReplicationFactor,
+		ConfigEntries:     make(map[string]*string, len(spec.ConfigEntries)),
+	}
+	for key, value := range spec.ConfigEntries {
+		topicDetail.ConfigEntries[key] = &value
 	}
 
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -343,7 +376,7 @@ func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string
 	tout := time.NewTimer(timeout)
 	defer tout.Stop()
 	for {
-		err := ca.CreateTopic(topicName, topicDetail, false)
+		err := ca.CreateTopic(spec.Name, topicDetail, false)
 		if errors.Is(err, sarama.ErrIncompleteResponse) {
 			return err
 		}
@@ -357,7 +390,7 @@ func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName string
 		case <-ticker.C:
 			continue
 		case <-tout.C:
-			return fmt.Errorf("timeout waiting for topic %s", topicName)
+			return fmt.Errorf("timeout waiting for topic %s", spec.Name)
 		}
 	}
 }
