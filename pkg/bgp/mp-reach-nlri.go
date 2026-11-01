@@ -67,6 +67,12 @@ func (mp *MPReachNLRI) IsNextHopIPv6() bool {
 // GetNextHop return a string representation of the next hop ip address.
 func (mp *MPReachNLRI) GetNextHop() string {
 	switch mp.NextHopAddressLength {
+	case 0:
+		// RFC 8955 §4, extended by RFC 8956 §§1–2, specifies no FlowSpec next-hop.
+		if (mp.AddressFamilyID == 1 || mp.AddressFamilyID == 2) &&
+			(mp.SubAddressFamilyID == 133 || mp.SubAddressFamilyID == 134) {
+			return ""
+		}
 	case 4:
 		// IPv4
 		return net.IP(mp.NextHopAddress).To4().String()
