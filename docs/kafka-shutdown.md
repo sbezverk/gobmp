@@ -3,11 +3,12 @@
 `PublishMessage` queues a message in Sarama. A successful return does not mean
 that Kafka has acknowledged it.
 
-Call `Stop` once, after all publishing calls have finished. The BMP server drains
+Call `Stop` after all publishing calls have finished. The BMP server drains
 its connection workers before stopping the publisher; the message player waits
 for its publishing workers. Concurrent `PublishMessage` calls are supported
-while the publisher is running. Publishing during or after `Stop`, and repeated
-`Stop` calls, are outside this lifecycle contract.
+while the publisher is running. Publishing during or after `Stop` remains
+outside this lifecycle contract. Repeated and concurrent `Stop` calls are safe:
+all callers wait for the same complete producer and admin shutdown.
 
 `Stop` now waits for the existing result-reader worker to finish
 `sarama.AsyncProducer.Close`. That worker remains the single owner of producer
@@ -36,4 +37,6 @@ for an acknowledgement or terminal delivery error. A subprocess test confirms
 that Stop cannot report completion while that response is withheld. The same
 regressions fail against the previous early-return implementation. Separate
 cases cover an unanswered Produce request and publishers finishing concurrently
-before Stop. These checks do not replace live-cluster or throughput acceptance.
+before Stop. Repeated and concurrent Stop tests also hold producer completion
+and admin closure separately, checking that every caller waits and the admin
+closes once. These checks do not replace live-cluster or throughput acceptance.

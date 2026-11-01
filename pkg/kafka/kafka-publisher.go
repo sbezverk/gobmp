@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -101,6 +102,7 @@ type publisher struct {
 	producer     sarama.AsyncProducer
 	stopCh       chan struct{}
 	doneCh       chan struct{}
+	stopOnce     sync.Once
 	topicPrefix  string
 }
 
@@ -187,16 +189,19 @@ func (p *publisher) produceMessage(topic string, key []byte, msg []byte) error {
 }
 
 // Stop waits for queued messages to finish delivery or fail before releasing
-// the admin client. Call it once, after all PublishMessage calls have finished.
+// the admin client. Call it after all PublishMessage calls have finished.
+// Repeated and concurrent calls wait for the same complete shutdown.
 // Completion follows Sarama's retry policy; no separate shutdown deadline applies.
 func (p *publisher) Stop() {
-	close(p.stopCh)
-	<-p.doneCh
-	if p.clusterAdmin != nil {
-		if err := p.clusterAdmin.Close(); err != nil {
-			glog.Errorf("failed to close Kafka cluster admin: %v", err)
+	p.stopOnce.Do(func() {
+		close(p.stopCh)
+		<-p.doneCh
+		if p.clusterAdmin != nil {
+			if err := p.clusterAdmin.Close(); err != nil {
+				glog.Errorf("failed to close Kafka cluster admin: %v", err)
+			}
 		}
-	}
+	})
 }
 
 // NewKafkaPublisher instantiates a new Kafka publisher. When SkipTopicCreation

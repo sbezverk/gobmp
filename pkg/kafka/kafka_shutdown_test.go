@@ -92,7 +92,7 @@ func newShutdownPublisher(t *testing.T, produceError sarama.KError) (*publisher,
 		t.Fatal(err)
 	}
 	p := pub.(*publisher)
-	stop := sync.OnceFunc(p.Stop) // Keep test cleanup from stopping an instance twice.
+	stop := p.Stop
 	t.Cleanup(func() { gate.unblock(); stop() })
 	gate.armed.Store(true)
 	return p, gate, stop
