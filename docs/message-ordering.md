@@ -16,9 +16,21 @@ It also does not change which UPDATEs are recognized as End-of-RIB.
 [RFC 7854 section 3.3](https://www.rfc-editor.org/rfc/rfc7854.html#section-3.3)
 places Peer Up before the initial Route Monitoring messages. Parsed Route
 Monitoring and Statistics received before the connection's first valid Peer Up
-are skipped with a diagnostic. They are not buffered or allowed to block a later
-Peer Up. Once that initial Peer Up has been processed, existing peer-identity and
-capability handling continues unchanged.
+are retained in a bounded per-connection buffer. Once that Peer Up has been
+processed, eligible buffered messages are replayed in input order before later
+messages. Replay requires each message's own peer OPEN state to be installed.
+For Loc-RIB Route Monitoring, every legacy or MP AFI/SAFI in the UPDATE must also
+be explicitly described by that Loc-RIB's Peer Up; a described family without
+ADD-PATH is eligible too. A concrete End-of-RIB marker requires its own family.
+Statistics require peer state but no NLRI family declaration.
+
+A buffered message with missing peer/family state or an indeterminate Loc-RIB
+MP family header is discarded with a diagnostic before any of its records are
+published. A later Peer Up does not recover it. If the connection ends or
+receives Peer Down before Peer Up, the buffered messages are discarded. A full
+buffer drops new pre-PeerUp messages with a diagnostic; it cannot grow without
+bound. This compatibility buffer does not guarantee lossless replay. Handling
+of messages arriving after the first valid Peer Up is unchanged.
 
 RAW mode does not require Peer Up. Each received frame is encapsulated in the
 OpenBMP envelope and published in input order with its BMP bytes preserved.
@@ -39,8 +51,9 @@ input and waits for it to drain, then closes producer input and waits for its
 publication calls to finish. A complete frame handed to the parser is accepted.
 All resulting valid messages finish their local publication calls before the
 worker returns; the server waits for every worker before calling publisher.Stop.
-Malformed/unsupported frames and parsed traffic before the first valid Peer Up
-retain the skip rules above. Incomplete trailing frames are never published.
+Malformed/unsupported frames and pre-PeerUp traffic discarded because of missing
+decoding state, connection termination or buffer limits are skipped.
+Incomplete trailing frames are never published.
 
 The standalone parser/producer APIs still support an explicit stop signal. The
 server uses input closure instead, so shutdown does not abort an accepted frame.
