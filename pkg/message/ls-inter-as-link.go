@@ -77,7 +77,7 @@ func (p *producer) lsInterASLink(link *base.InterASLinkNLRI, nextHop string, op 
 		msg.IsLocRIBFiltered = f
 	}
 	if msg.IsLocRIB {
-		msg.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		msg.TableName = p.getTableName(ph)
 	}
 	// Retain optional numeric link identifiers when the source IGP provides them.
 	if ids, err := link.Link.GetLinkID(); err == nil {
