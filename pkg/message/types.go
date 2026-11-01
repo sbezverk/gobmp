@@ -228,6 +228,7 @@ type LSNode struct {
 	ID                  string                          `json:"_id,omitempty"`
 	Rev                 string                          `json:"_rev,omitempty"`
 	Action              string                          `json:"action,omitempty"` // Action can be "add" or "del"
+	PathID              uint32                          `json:"path_id,omitempty"`
 	Sequence            int                             `json:"sequence,omitempty"`
 	Hash                string                          `json:"hash,omitempty"`
 	RouterHash          string                          `json:"router_hash,omitempty"`
@@ -567,6 +568,7 @@ type LSPrefix struct {
 	ID                    string                        `json:"_id,omitempty"`
 	Rev                   string                        `json:"_rev,omitempty"`
 	Action                string                        `json:"action,omitempty"`
+	PathID                uint32                        `json:"path_id,omitempty"`
 	Sequence              int                           `json:"sequence,omitempty"`
 	Hash                  string                        `json:"hash,omitempty"`
 	RouterHash            string                        `json:"router_hash,omitempty"`
@@ -616,6 +618,7 @@ type LSSRv6SID struct {
 	ID                   string                        `json:"_id,omitempty"`
 	Rev                  string                        `json:"_rev,omitempty"`
 	Action               string                        `json:"action,omitempty"`
+	PathID               uint32                        `json:"path_id,omitempty"`
 	Sequence             int                           `json:"sequence,omitempty"`
 	Hash                 string                        `json:"hash,omitempty"`
 	RouterHash           string                        `json:"router_hash,omitempty"`
@@ -665,6 +668,7 @@ type LSSRv6SID struct {
 // them", so the NLRI is published with its raw value instead of dropped.
 type LSOpaque struct {
 	Action     string `json:"action,omitempty"`
+	PathID     uint32 `json:"path_id,omitempty"`
 	RouterHash string `json:"router_hash,omitempty"`
 	RouterIP   string `json:"router_ip,omitempty"`
 	PeerHash   string `json:"peer_hash,omitempty"`
