@@ -20,7 +20,10 @@ type gatedShutdownAdmin struct {
 
 func (a *gatedShutdownAdmin) Close() error {
 	a.calls.Add(1)
-	a.entered <- struct{}{}
+	select {
+	case a.entered <- struct{}{}:
+	default:
+	}
 	<-a.release
 	return errors.New("controlled admin close failure")
 }
@@ -70,9 +73,9 @@ func TestStopConcurrentCallersWaitForFullShutdown(t *testing.T) {
 	}
 	select {
 	case <-returned:
-		t.Error("Stop returned before producer completion")
+		t.Fatal("Stop returned before producer completion")
 	case <-admin.entered:
-		t.Error("admin closed before producer completion")
+		t.Fatal("admin closed before producer completion")
 	case <-time.After(50 * time.Millisecond):
 	}
 	finishProducer()
@@ -84,11 +87,11 @@ func TestStopConcurrentCallersWaitForFullShutdown(t *testing.T) {
 	launch() // New callers must also wait while admin Close is in progress.
 	select {
 	case <-returned:
-		t.Error("Stop returned before admin Close completed")
+		t.Fatal("Stop returned before admin Close completed")
 	case <-time.After(50 * time.Millisecond):
 	}
 	if got := admin.calls.Load(); got != 1 {
-		t.Errorf("admin Close calls while blocked = %d, want 1", got)
+		t.Fatalf("admin Close calls while blocked = %d, want 1", got)
 	}
 	finishAdmin()
 	for range 2 * cohort {
@@ -148,9 +151,9 @@ func TestStopRepeatableWithRealProducer(t *testing.T) {
 	}
 	select {
 	case <-returned:
-		t.Error("Stop returned while the Produce response was held")
+		t.Fatal("Stop returned while the Produce response was held")
 	case <-admin.closed:
-		t.Error("admin closed while the Produce response was held")
+		t.Fatal("admin closed while the Produce response was held")
 	case <-time.After(50 * time.Millisecond):
 	}
 	gate.unblock()
@@ -173,10 +176,20 @@ func TestStopRepeatableWithRealProducer(t *testing.T) {
 	default:
 		t.Error("admin remains open after Stop")
 	}
-	if _, open := <-p.producer.Errors(); open {
-		t.Error("producer errors remain open after Stop")
+	select {
+	case _, open := <-p.producer.Errors():
+		if open {
+			t.Error("producer errors remain open after Stop")
+		}
+	case <-time.After(5 * time.Second):
+		t.Error("producer errors did not close after Stop")
 	}
-	if _, open := <-p.producer.Successes(); open {
-		t.Error("producer successes remain open after Stop")
+	select {
+	case _, open := <-p.producer.Successes():
+		if open {
+			t.Error("producer successes remain open after Stop")
+		}
+	case <-time.After(5 * time.Second):
+		t.Error("producer successes did not close after Stop")
 	}
 }
