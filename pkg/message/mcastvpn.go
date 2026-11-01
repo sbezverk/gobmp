@@ -75,7 +75,7 @@ func (p *producer) mcastvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		}
 		// RFC 9069: Set TableName for LocRIB peers
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 
 		prfx.PeerIP = ph.GetPeerAddrString()
