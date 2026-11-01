@@ -60,7 +60,7 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 }
 
 func (p *producer) processMPReach(attribute []byte, ph *bmp.PerPeerHeader, update *bgp.Update) {
-	nlri, err := bgp.UnmarshalMPReachNLRI(attribute, update.HasPrefixSID(), p.GetAddPathCapability(ph.GetTableKey()))
+	nlri, err := bgp.UnmarshalMPReachNLRI(attribute, update.HasPrefixSID(), p.mpAddPathCapability(ph, attribute))
 	if err != nil {
 		glog.Errorf("failed to process MP_REACH_NLRI with error: %+v", err)
 		return
@@ -75,18 +75,24 @@ func (p *producer) processMPReach(attribute []byte, ph *bmp.PerPeerHeader, updat
 		// RFC 7606 Section 2 treats advertised routes as withdrawn. An empty
 		// MP_REACH advertises none and must not become an End-of-RIB marker.
 		if len(reach.NLRI) != 0 {
-			operation = dPathOperation(reachableUpdate, reach.AddressFamilyID, reach.SubAddressFamilyID)
+			operation = attributeErrorOperation(reachableUpdate, reach.AddressFamilyID, reach.SubAddressFamilyID)
 		}
 	}
 	p.processMPUpdate(nlri, operation, ph, reachableUpdate)
 }
 
-// dPathOperation applies RFC 10039 Section 4 error handling to announcements.
-func dPathOperation(update *bgp.Update, afi uint16, safi uint8) int {
+// attributeErrorOperation applies treat-as-withdraw error handling to
+// announcements: RFC 10039 Section 4 for D-PATH and RFC 6514 Section 8 for a
+// malformed PE Distinguisher Labels attribute with the Partial bit set. It is
+// shared by the MP_REACH_NLRI and legacy IPv4 NLRI paths.
+func attributeErrorOperation(update *bgp.Update, afi uint16, safi uint8) int {
 	if update == nil || update.BaseAttributes == nil {
 		return AddPrefix
 	}
 	attributes := update.BaseAttributes
+	if attributes.PEDistinguisherLabelsMalformed {
+		return DelPrefix
+	}
 	if attributes.DPath == nil && attributes.DPathAttr == nil && !attributes.DPathMalformed {
 		return AddPrefix
 	}
@@ -122,7 +128,7 @@ func (p *producer) processMPUnreach(attribute []byte, ph *bmp.PerPeerHeader, upd
 	if len(attribute) == 3 && !isEndOfRIB(update) {
 		return
 	}
-	nlri, err := bgp.UnmarshalMPUnReachNLRI(attribute, p.GetAddPathCapability(ph.GetTableKey()), update.HasPrefixSID())
+	nlri, err := bgp.UnmarshalMPUnReachNLRI(attribute, p.mpAddPathCapability(ph, attribute), update.HasPrefixSID())
 	if err != nil {
 		glog.Errorf("failed to process MP_UNREACH_NLRI with error: %+v", err)
 		return
@@ -200,10 +206,11 @@ func (p *producer) processBGP4Update(ph *bmp.PerPeerHeader, update *bgp.Update) 
 	if len(reachableUpdate.NLRI) != 0 || isEndOfRIB(update) {
 		operation := AddPrefix
 		if len(reachableUpdate.NLRI) != 0 {
-			operation = dPathOperation(reachableUpdate, 1, 1)
+			operation = attributeErrorOperation(reachableUpdate, 1, 1)
 			if operation == DelPrefix {
-				// Preserve explicit withdrawals while applying RFC 10039 Section 4
-				// treat-as-withdraw to the legacy IPv4 announcements separately.
+				// Preserve explicit withdrawals while applying treat-as-withdraw
+				// (RFC 10039 Section 4, RFC 6514 Section 8) to the legacy IPv4
+				// announcements separately.
 				reachableUpdate.WithdrawnRoutes = reachableUpdate.NLRI
 			}
 		}
