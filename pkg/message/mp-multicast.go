@@ -71,7 +71,7 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 		}
 		// RFC 9069: Set TableName for LocRIB peers
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 			prfx.OriginAS = ases[len(ases)-1]

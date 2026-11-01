@@ -58,7 +58,7 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		return []*MVPNPrefix{prfx}, nil
 	}
@@ -93,7 +93,7 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 
 		prfx.PeerIP = ph.GetPeerAddrString()

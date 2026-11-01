@@ -52,7 +52,7 @@ func (p *producer) srpolicy(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 	}
 	// RFC 9069: Set TableName for LocRIB peers
 	if prfx.IsLocRIB {
-		prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		prfx.TableName = p.getTableName(ph)
 	}
 	if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 		// Last element in AS_PATH would be the AS of the origin

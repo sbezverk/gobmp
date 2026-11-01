@@ -58,7 +58,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		return []EVPNPrefix{prfx}, nil
 	}
@@ -175,7 +175,7 @@ func (p *producer) evpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 			}
 			// RFC 9069: Set TableName for LocRIB peers
 			if prfx.IsLocRIB {
-				prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+				prfx.TableName = p.getTableName(ph)
 			}
 		}
 		prfxs = append(prfxs, prfx)
