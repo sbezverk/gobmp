@@ -49,7 +49,8 @@ func TestPrefixPaddingPublication(t *testing.T) {
 						p := NewProducer(recorder, split).(*producer)
 						ph := makePeerHeader(t, bmp.PeerType0, 0)
 						if addPath {
-							p.tableProperties[ph.GetTableKey()] = PerTableProperties{addPathCapable: map[int]bool{bgp.NLRIMessageType(family.afi, family.safi): true}}
+							familyKey := bgp.AFISAFI{AFI: family.afi, SAFI: family.safi}
+							addPathPeerUp(t, p, ph, addPathOpen(t, nil, map[bgp.AFISAFI]uint8{familyKey: 1}), addPathOpen(t, nil, map[bgp.AFISAFI]uint8{familyKey: 2}))
 						}
 						publish := func(padded, withdraw bool, pathID uint32) UnicastPrefix {
 							t.Helper()
