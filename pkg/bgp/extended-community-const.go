@@ -119,6 +119,9 @@ const (
 	// ECPMUPInterworkSegment extended community prefix for the Interwork Segment sub-types
 	// of the BGP MUP Extended Community	[draft-ietf-bess-mup-safi]
 	ECPMUPInterworkSegment = "mup-is="
+	// ECPETreeInfo extended community prefix for E-Tree Info Extended Community
+	// (Generic Transitive sub-type 0x0b) [RFC 7796]
+	ECPETreeInfo = "e-tree-info="
 
 	// ECPFlowspec extended community prefix for Flowspec extended community
 	ECPFlowspec = "flowspec="
@@ -133,4 +136,6 @@ const (
 	CPFlowspecRedirect = "flowspec-redirect="
 	// CPFlowspecTrafficRemarking defines Flowspec Traffic Remarking Sub type
 	CPFlowspecTrafficRemarking = "flowspec-traffic-remarking="
+	// CPFlowspecTrafficRatePackets defines Flowspec traffic-rate-packets Sub type [RFC 8955]
+	CPFlowspecTrafficRatePackets = "flowspec-traffic-rate-packets="
 )
