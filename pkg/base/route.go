@@ -72,6 +72,10 @@ func unmarshalRoutes(b []byte, pathID bool, canRetry bool) ([]Route, error) {
 		}
 		route.Prefix = make([]byte, l)
 		copy(route.Prefix, b[p:p+int(l)])
+		if route.Length%8 != 0 {
+			// RFC 4271 Section 4.3: trailing bits are not part of the prefix.
+			route.Prefix[l-1] &= 0xFF << (8 - route.Length%8)
+		}
 		p += int(l)
 		routes = append(routes, route)
 	}
