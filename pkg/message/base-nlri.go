@@ -94,6 +94,8 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 			PrefixLen:      int32(pr.Length),
 			PathID:         int32(pr.PathID),
 			BaseAttributes: update.BaseAttributes,
+			AFI:            1,
+			SAFI:           1,
 		}
 		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 			// Last element in AS_PATH would be the AS of the origin
