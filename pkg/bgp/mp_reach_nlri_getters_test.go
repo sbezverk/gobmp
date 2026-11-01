@@ -755,22 +755,17 @@ func TestMPReachNLRI_GetNLRI71_WithAddPath(t *testing.T) {
 	}
 }
 
-// rdType0_8bytes builds an 8-byte RD of type 0 (2-byte AS + 4-byte assigned number).
-func rdType0_8bytes(as uint16, assigned uint32) []byte {
-	return []byte{
-		0x00, 0x00,
-		byte(as >> 8), byte(as),
-		byte(assigned >> 24), byte(assigned >> 16), byte(assigned >> 8), byte(assigned),
-	}
-}
+// RFC 9552 §5.2 Figure 6: Type + Length (RD and body) + RD + Node body.
+var nodeNLRI72Payload = append([]byte{
+	0x00, 0x01, 0x00, 0x2f,
+	0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01,
+}, nodeNLRI71Payload[4:]...)
 
 func TestMPReachNLRI_GetNLRI72_NoAddPath(t *testing.T) {
-	// SAFI 72 wire format: 8-byte RD + standard SAFI 71 NLRI Element.
-	payload := append(rdType0_8bytes(100, 1), nodeNLRI71Payload...)
 	mp := &MPReachNLRI{
 		AddressFamilyID:    16388,
 		SubAddressFamilyID: 72,
-		NLRI:               payload,
+		NLRI:               nodeNLRI72Payload,
 		addPath:            map[int]bool{72: false},
 	}
 	nlri, err := mp.GetNLRI72()
@@ -786,11 +781,13 @@ func TestMPReachNLRI_GetNLRI72_NoAddPath(t *testing.T) {
 	if nlri.NLRI[0].PathID != 0 {
 		t.Errorf("PathID = %d, want 0", nlri.NLRI[0].PathID)
 	}
+	if len(nlri.NLRI) != 1 || nlri.NLRI[0].Type != 1 || nlri.NLRI[0].Length != 47 {
+		t.Errorf("NLRI = %+v, want one Node with length 47 including RD", nlri.NLRI)
+	}
 }
 
 func TestMPReachNLRI_GetNLRI72_WithAddPath(t *testing.T) {
-	payload := append([]byte{0x00, 0x00, 0x00, 0x09}, rdType0_8bytes(100, 1)...)
-	payload = append(payload, nodeNLRI71Payload...)
+	payload := append([]byte{0x00, 0x00, 0x00, 0x09}, nodeNLRI72Payload...)
 	mp := &MPReachNLRI{
 		AddressFamilyID:    16388,
 		SubAddressFamilyID: 72,
