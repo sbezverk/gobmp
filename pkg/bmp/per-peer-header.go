@@ -278,24 +278,25 @@ func (p *PerPeerHeader) GetPeerDistinguisherString() string {
 	return pd
 }
 
-// GetTableKey returns unique table identifier combining BGP-ID and Peer Distinguisher
-// This key is used to track per-VRF properties (AddPath capability, table info)
-// Format: "<bgp-id><rd>" e.g., "10.0.0.10:0" or "192.168.1.165000:100"
-// Per RFC 9069 Section 4: Each Loc-RIB instance is uniquely identified by
-// the combination of Peer BGP ID and Peer Distinguisher fields
+// GetTableKey identifies a Loc-RIB by BGP-ID and all eight distinguisher bytes
+// (RFC 9069 Section 6.1.1). Other peer types retain the legacy key format.
 func (p *PerPeerHeader) GetTableKey() string {
+	if p.PeerType == PeerType3 {
+		return p.GetPeerBGPIDString() + ":" + hex.EncodeToString(p.PeerDistinguisher)
+	}
 	return p.GetPeerBGPIDString() + p.GetPeerDistinguisherString()
 }
 
 // PeerIdentity returns the cache key for a peer identity. Peer Types 0/1/2 use
 // the peer address, ASN, BGP ID, and distinguisher. Peer Type 3 represents a
-// Loc-RIB and intentionally omits peer address and ASN.
+// Loc-RIB and intentionally omits peer address and ASN. Distinguisher bytes
+// are used directly: formatted RDs can hide different types or opaque values.
 func (p *PerPeerHeader) PeerIdentity() string {
 	switch p.PeerType {
 	case PeerType0, PeerType1, PeerType2:
-		return fmt.Sprintf("%d-%s-%s-%d-%s", p.PeerType, p.GetPeerDistinguisherString(), p.GetPeerAddrString(), p.PeerAS, p.GetPeerBGPIDString())
+		return fmt.Sprintf("%d-%s-%s-%d-%s", p.PeerType, hex.EncodeToString(p.PeerDistinguisher), p.GetPeerAddrString(), p.PeerAS, p.GetPeerBGPIDString())
 	case PeerType3:
-		return fmt.Sprintf("%d-%s-%s", p.PeerType, p.GetPeerDistinguisherString(), p.GetPeerBGPIDString())
+		return fmt.Sprintf("%d-%s-%s", p.PeerType, hex.EncodeToString(p.PeerDistinguisher), p.GetPeerBGPIDString())
 	default:
 		return ""
 	}

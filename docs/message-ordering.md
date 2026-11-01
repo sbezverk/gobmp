@@ -16,9 +16,11 @@ It also does not change which UPDATEs are recognized as End-of-RIB.
 [RFC 7854 section 3.3](https://www.rfc-editor.org/rfc/rfc7854.html#section-3.3)
 places Peer Up before the initial Route Monitoring messages. Parsed Route
 Monitoring and Statistics received before the connection's first valid Peer Up
-are skipped with a diagnostic. They are not buffered or allowed to block a later
-Peer Up. Once that initial Peer Up has been processed, existing peer-identity and
-capability handling continues unchanged.
+are retained in a bounded per-connection buffer. Once that Peer Up has been
+processed, the buffer is replayed in input order before later messages. If the
+connection ends or receives Peer Down before Peer Up, the buffered messages are
+discarded. A full buffer drops new pre-PeerUp messages with a diagnostic; it
+cannot grow without bound.
 
 RAW mode does not require Peer Up. Each received frame is encapsulated in the
 OpenBMP envelope and published in input order with its BMP bytes preserved.
@@ -39,8 +41,9 @@ input and waits for it to drain, then closes producer input and waits for its
 publication calls to finish. A complete frame handed to the parser is accepted.
 All resulting valid messages finish their local publication calls before the
 worker returns; the server waits for every worker before calling publisher.Stop.
-Malformed/unsupported frames and parsed traffic before the first valid Peer Up
-retain the skip rules above. Incomplete trailing frames are never published.
+Malformed/unsupported frames and pre-PeerUp traffic discarded because of
+connection termination or buffer limits retain the existing skip behavior.
+Incomplete trailing frames are never published.
 
 The standalone parser/producer APIs still support an explicit stop signal. The
 server uses input closure instead, so shutdown does not abort an accepted frame.

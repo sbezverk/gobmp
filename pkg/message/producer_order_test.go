@@ -34,7 +34,7 @@ func awaitOrderedProducer(t *testing.T, done <-chan struct{}) {
 	}
 }
 
-func TestProducerIgnoresDataBeforePeerUp(t *testing.T) {
+func TestProducerBuffersDataBeforePeerUp(t *testing.T) {
 	pub := &orderedPublisher{messages: make(chan int, 8)}
 	p := NewProducer(pub, false)
 	queue, stop := make(chan bmp.Message), make(chan struct{})
@@ -49,14 +49,20 @@ func TestProducerIgnoresDataBeforePeerUp(t *testing.T) {
 	stats := bmp.Message{PeerHeader: ph, Payload: &bmp.StatsReport{StatsTLV: []bmp.InformationalTLV{{
 		InformationType: 0, InformationLength: 4, Information: []byte{0, 0, 0, 42},
 	}}}}
-	// Neither message can wait for a later PeerUp in an ordered dispatch loop.
+	// Both messages arrive before PeerUp and must be replayed after it.
 	sendOrderedMessage(t, queue, route)
 	sendOrderedMessage(t, queue, stats)
 	sendOrderedMessage(t, queue, bmp.Message{PeerHeader: ph, Payload: buildPeerUpMessage(t, "192.0.2.1")})
 	sendOrderedMessage(t, queue, route)
 	sendOrderedMessage(t, queue, stats)
 
-	for i, want := range []int{bmp.PeerStateChangeMsg, bmp.UnicastPrefixMsg, bmp.StatsReportMsg} {
+	for i, want := range []int{
+		bmp.PeerStateChangeMsg,
+		bmp.UnicastPrefixMsg,
+		bmp.StatsReportMsg,
+		bmp.UnicastPrefixMsg,
+		bmp.StatsReportMsg,
+	} {
 		select {
 		case got := <-pub.messages:
 			if got != want {
@@ -71,10 +77,43 @@ func TestProducerIgnoresDataBeforePeerUp(t *testing.T) {
 	if got := <-pub.messages; got != bmp.PeerStateChangeMsg {
 		t.Fatalf("unexpected message after valid data: type %d", got)
 	}
-	select {
-	case got := <-pub.messages:
-		t.Fatalf("data from before PeerUp was published: type %d", got)
-	default:
+}
+
+func TestProducerDiscardsPrePeerUpBufferOnPeerDown(t *testing.T) {
+	rec := &recordingPublisher{}
+	p := NewProducer(rec, false).(*producer)
+	ph := makePeerHeader(t, bmp.PeerType0, 0)
+
+	p.producingWorker(bmp.Message{
+		PeerHeader: ph,
+		Payload:    &bmp.RouteMonitor{Update: &bgp.Update{NLRI: []byte{24, 192, 0, 2}, BaseAttributes: &bgp.BaseAttributes{}}},
+	})
+	p.producingWorker(bmp.Message{PeerHeader: ph, Payload: &bmp.PeerDownMessage{Reason: 4}})
+	p.producingWorker(bmp.Message{PeerHeader: ph, Payload: buildPeerUpMessage(t, "192.0.2.1")})
+
+	if len(p.prePeerUp) != 0 {
+		t.Fatalf("pre-PeerUp buffer length = %d, want 0", len(p.prePeerUp))
+	}
+	if len(rec.msgs) != 2 {
+		t.Fatalf("published messages = %d, want PeerDown and PeerUp only", len(rec.msgs))
+	}
+}
+
+func TestProducerBoundsPrePeerUpBuffer(t *testing.T) {
+	p := NewProducer(&recordingPublisher{}, false).(*producer)
+	ph := makePeerHeader(t, bmp.PeerType0, 0)
+	for i := 0; i < maxPrePeerUpMessages+1; i++ {
+		p.producingWorker(bmp.Message{
+			PeerHeader: ph,
+			Payload:    &bmp.StatsReport{},
+		})
+	}
+
+	if len(p.prePeerUp) != maxPrePeerUpMessages {
+		t.Fatalf("pre-PeerUp buffer length = %d, want %d", len(p.prePeerUp), maxPrePeerUpMessages)
+	}
+	if p.prePeerUpBytes > maxPrePeerUpBytes {
+		t.Fatalf("pre-PeerUp buffer bytes = %d, exceeds %d", p.prePeerUpBytes, maxPrePeerUpBytes)
 	}
 }
 

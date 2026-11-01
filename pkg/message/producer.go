@@ -13,15 +13,17 @@ import (
 const (
 	peerUP = iota
 	peerDown
+
+	// Pre-PeerUp traffic is unusual but can be observed during a router/BMP
+	// reconnect. Keep the compatibility buffer bounded so a peer that never
+	// reaches Peer Up cannot retain an unbounded amount of parsed data.
+	maxPrePeerUpMessages = 256
+	maxPrePeerUpBytes    = 8 << 20
 )
 
-// PerTableProperties holds per-VRF/per-table properties
-// Each VRF (identified by BGP-ID + Peer Distinguisher) has its own:
-// - AddPath capability map (per AFI/SAFI)
-// - Table Informational TLVs (including Table Name per RFC 9069)
+// PerTableProperties holds Loc-RIB table informational TLVs per RFC 9069.
 type PerTableProperties struct {
-	addPathCapable map[int]bool
-	tableInfoTLVs  []bmp.InformationalTLV
+	tableInfoTLVs []bmp.InformationalTLV
 }
 
 // Config holds producer configuration options
@@ -41,15 +43,18 @@ type producer struct {
 	publisher pub.Publisher
 
 	// speakerReady is closed once the first valid PeerUp has established the
-	// initial identity cache. Earlier RouteMonitor and StatsReport messages are
-	// ignored rather than blocking the ordered dispatch of their PeerUp.
+	// initial identity and negotiated properties. Earlier RouteMonitor and
+	// StatsReport messages are buffered and replayed after that PeerUp.
 	speakerReady     chan struct{}
 	speakerReadyOnce sync.Once
-	// Per-VRF table properties tracking (replaces global addPathCapable)
-	// Key format: BGP-ID + Peer Distinguisher (e.g., "10.0.0.10:0")
-	// Per RFC 9069 Section 4: uniquely identifies each Loc-RIB instance
+	prePeerUp        []bmp.Message
+	prePeerUpBytes   int
+	// tableLock protects Loc-RIB table TLVs and per-peer ADD-PATH properties.
+	// Table names use BGP-ID + raw distinguisher; ADD-PATH uses PeerIdentity
+	// so distinct BGP sessions do not overwrite their negotiated wire format.
 	tableLock       sync.RWMutex
 	tableProperties map[string]PerTableProperties
+	peerAddPath     map[string]peerAddPathProperties
 	// If splitAF is set to true, ipv4 and ipv6 messages will go into separate topics
 	splitAF bool
 	// collectorAdminID is the collector identifier string for OpenBMP binary header
@@ -116,6 +121,52 @@ func (p *producer) identityFromHeaderFallback(msg bmp.Message) bmp.PeerIdentity 
 	return peer
 }
 
+func prePeerUpMessageBytes(msg bmp.Message) int {
+	size := 0
+	switch payload := msg.Payload.(type) {
+	case *bmp.RouteMonitor:
+		if payload != nil && payload.Update != nil {
+			size += len(payload.Update.WithdrawnRoutes) + len(payload.Update.NLRI)
+			for _, attr := range payload.Update.PathAttributes {
+				size += len(attr.Attribute)
+			}
+		}
+	case *bmp.StatsReport:
+		if payload != nil {
+			for _, tlv := range payload.StatsTLV {
+				size += len(tlv.Information)
+			}
+		}
+	}
+	// Include a small fixed allowance for the parsed structure itself. The
+	// limit is intentionally approximate; its purpose is to bound retained
+	// payload data, not to report an exact heap size.
+	return size + 256
+}
+
+func (p *producer) bufferPrePeerUp(msg bmp.Message) {
+	messageBytes := prePeerUpMessageBytes(msg)
+	if len(p.prePeerUp) >= maxPrePeerUpMessages || p.prePeerUpBytes+messageBytes > maxPrePeerUpBytes {
+		glog.Warningf("pre-Peer Up buffer full, dropping %T", msg.Payload)
+		return
+	}
+	p.prePeerUp = append(p.prePeerUp, msg)
+	p.prePeerUpBytes += messageBytes
+}
+
+func (p *producer) discardPrePeerUp() {
+	p.prePeerUp = nil
+	p.prePeerUpBytes = 0
+}
+
+func (p *producer) replayPrePeerUp() {
+	buffered := p.prePeerUp
+	p.discardPrePeerUp()
+	for _, msg := range buffered {
+		p.producingWorker(msg)
+	}
+}
+
 func (p *producer) producingWorker(msg bmp.Message) {
 	switch obj := msg.Payload.(type) {
 	case *bmp.PeerUpMessage:
@@ -152,8 +203,14 @@ func (p *producer) producingWorker(msg bmp.Message) {
 			if err := p.marshalAndPublish(m, bmp.PeerStateChangeMsg, []byte(m.RouterHash)); err != nil {
 				glog.Errorf("failed to process peer message with error: %+v", err)
 			}
+			p.replayPrePeerUp()
 		}
 	case *bmp.PeerDownMessage:
+		select {
+		case <-p.speakerReady:
+		default:
+			p.discardPrePeerUp()
+		}
 		var m *PeerStateChange
 		var err error
 		if msg.PeerHeader == nil {
@@ -190,8 +247,7 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		select {
 		case <-p.speakerReady:
 		default:
-			// RFC 7854 section 3.3 sends PeerUp before the initial routes.
-			glog.Warningf("received Route Monitoring before Peer Up, ignoring it")
+			p.bufferPrePeerUp(msg)
 			return
 		}
 		p.attachIdentitySnapshot(&msg)
@@ -200,7 +256,7 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		select {
 		case <-p.speakerReady:
 		default:
-			glog.Warningf("received Stats Report before Peer Up, ignoring it")
+			p.bufferPrePeerUp(msg)
 			return
 		}
 		p.attachIdentitySnapshot(&msg)
@@ -230,51 +286,13 @@ func (p *producer) SetConfig(config *Config) error {
 	return nil
 }
 
-// GetAddPathCapability returns AddPath capability map for a specific table
-// Returns nil if table doesn't exist (caller must handle gracefully)
-// Accessing nil map in Go returns zero value (false) for all keys, which is safe
-// Per RFC 7911 Section 3: AddPath capability is advertised per BGP session
-func (p *producer) GetAddPathCapability(tableKey string) map[int]bool {
-	p.tableLock.RLock()
-	defer p.tableLock.RUnlock()
-
-	if props, ok := p.tableProperties[tableKey]; ok {
-		return props.addPathCapable
-	}
-
-	// Return nil - parsers will treat nil map as "no AddPath capability"
-	// This is safe: accessing nil map returns zero value (false)
-	return nil
-}
-
-// GetTableName returns table name from Table Informational TLVs
-// Used for populating TableName field in LocRIB routes
-// Per RFC 9069 Section 5: TLV Type 3 contains the Table Name string
-func (p *producer) GetTableName(bgpID, rd string) string {
-	p.tableLock.RLock()
-	defer p.tableLock.RUnlock()
-
-	tableKey := bgpID + rd
-	tn := ""
-
-	if properties, ok := p.tableProperties[tableKey]; ok {
-		for _, tlv := range properties.tableInfoTLVs {
-			if tlv.InformationType == 3 {
-				// Information is []byte, convert to string
-				tn += string(tlv.Information)
-			}
-		}
-	}
-
-	return tn
-}
-
 // NewProducer instantiates a new instance of a producer with Publisher interface
 func NewProducer(publisher pub.Publisher, splitAF bool) Producer {
 	return &producer{
 		publisher:       publisher,
 		splitAF:         splitAF,
 		tableProperties: make(map[string]PerTableProperties),
+		peerAddPath:     make(map[string]peerAddPathProperties),
 		speakerReady:    make(chan struct{}),
 		identities:      make(map[string]bmp.PeerIdentity),
 	}
