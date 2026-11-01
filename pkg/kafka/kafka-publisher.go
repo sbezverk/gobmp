@@ -93,6 +93,15 @@ var (
 	}
 )
 
+// TopicSpec describes the options used to create a Kafka topic.
+// Nil or empty ConfigEntries leaves topic configuration at broker defaults.
+type TopicSpec struct {
+	Name              string
+	NumPartitions     int32
+	ReplicationFactor int16
+	ConfigEntries     map[string]string
+}
+
 type publisher struct {
 	clusterAdmin sarama.ClusterAdmin
 	config       *sarama.Config
@@ -249,8 +258,13 @@ func NewKafkaPublisher(kConfig *Config) (pub.Publisher, error) {
 		glog.V(5).Infof("Connected to controller broker: %s id: %d\n", cb.Addr(), cb.ID())
 		_ = cb.Close()
 		for _, t := range topicNames {
-			topicName := WithTopicPrefix(kConfig.TopicPrefix, t)
-			if err := ensureTopic(ca, topicCreateTimeout, topicName, kConfig.TopicRetentionTimeMs); err != nil {
+			spec := &TopicSpec{
+				Name:              WithTopicPrefix(kConfig.TopicPrefix, t),
+				NumPartitions:     1,
+				ReplicationFactor: 1,
+				ConfigEntries:     map[string]string{"retention.ms": kConfig.TopicRetentionTimeMs},
+			}
+			if err := ensureTopic(ca, topicCreateTimeout, spec); err != nil {
 				glog.Errorf("New Kafka publisher failed to ensure requested topics with error: %+v", err)
 				return nil, err
 			}
@@ -324,16 +338,20 @@ func validator(kConfig *Config) error {
 	return nil
 }
 
-func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName, retention string) error {
+func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, spec *TopicSpec) error {
 	if ca == nil {
 		return errors.New("nil ClusterAdmin provided")
 	}
+	if spec == nil {
+		return errors.New("nil TopicSpec provided")
+	}
 	topicDetail := &sarama.TopicDetail{
-		NumPartitions:     1,
-		ReplicationFactor: 1,
-		ConfigEntries: map[string]*string{
-			"retention.ms": &retention,
-		},
+		NumPartitions:     spec.NumPartitions,
+		ReplicationFactor: spec.ReplicationFactor,
+		ConfigEntries:     make(map[string]*string, len(spec.ConfigEntries)),
+	}
+	for key, value := range spec.ConfigEntries {
+		topicDetail.ConfigEntries[key] = &value
 	}
 
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -341,7 +359,7 @@ func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName, reten
 	tout := time.NewTimer(timeout)
 	defer tout.Stop()
 	for {
-		err := ca.CreateTopic(topicName, topicDetail, false)
+		err := ca.CreateTopic(spec.Name, topicDetail, false)
 		if errors.Is(err, sarama.ErrIncompleteResponse) {
 			return err
 		}
@@ -355,7 +373,7 @@ func ensureTopic(ca sarama.ClusterAdmin, timeout time.Duration, topicName, reten
 		case <-ticker.C:
 			continue
 		case <-tout.C:
-			return fmt.Errorf("timeout waiting for topic %s", topicName)
+			return fmt.Errorf("timeout waiting for topic %s", spec.Name)
 		}
 	}
 }

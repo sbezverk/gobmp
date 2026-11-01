@@ -210,7 +210,7 @@ func TestStop_NonNilClusterAdmin(t *testing.T) {
 }
 
 func TestEnsureTopic_NilClusterAdmin(t *testing.T) {
-	err := ensureTopic(nil, time.Millisecond, PeerTopic, "900000")
+	err := ensureTopic(nil, time.Millisecond, &TopicSpec{Name: PeerTopic})
 	if err == nil {
 		t.Fatal("ensureTopic(nil) error = nil, want error")
 	}

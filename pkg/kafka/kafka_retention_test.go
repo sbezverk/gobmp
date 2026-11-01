@@ -61,6 +61,9 @@ func TestNewKafkaPublisherTopicRetention(t *testing.T) {
 				switch request := exchange.Request.(type) {
 				case *sarama.CreateTopicsRequest:
 					for topic, detail := range request.TopicDetails {
+						if detail.NumPartitions != 1 || detail.ReplicationFactor != 1 {
+							t.Errorf("topic %s partitions/replicas = %d/%d, want 1/1", topic, detail.NumPartitions, detail.ReplicationFactor)
+						}
 						retention := detail.ConfigEntries["retention.ms"]
 						if retention == nil {
 							t.Errorf("topic %s is missing retention.ms", topic)
