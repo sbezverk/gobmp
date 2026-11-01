@@ -1,6 +1,8 @@
 package message
 
 import (
+	"encoding/binary"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -34,7 +36,7 @@ func awaitOrderedProducer(t *testing.T, done <-chan struct{}) {
 	}
 }
 
-func TestProducerIgnoresDataBeforePeerUp(t *testing.T) {
+func TestProducerBuffersDataBeforePeerUp(t *testing.T) {
 	pub := &orderedPublisher{messages: make(chan int, 8)}
 	p := NewProducer(pub, false)
 	queue, stop := make(chan bmp.Message), make(chan struct{})
@@ -49,14 +51,20 @@ func TestProducerIgnoresDataBeforePeerUp(t *testing.T) {
 	stats := bmp.Message{PeerHeader: ph, Payload: &bmp.StatsReport{StatsTLV: []bmp.InformationalTLV{{
 		InformationType: 0, InformationLength: 4, Information: []byte{0, 0, 0, 42},
 	}}}}
-	// Neither message can wait for a later PeerUp in an ordered dispatch loop.
+	// Both messages arrive before PeerUp and must be replayed after it.
 	sendOrderedMessage(t, queue, route)
 	sendOrderedMessage(t, queue, stats)
 	sendOrderedMessage(t, queue, bmp.Message{PeerHeader: ph, Payload: buildPeerUpMessage(t, "192.0.2.1")})
 	sendOrderedMessage(t, queue, route)
 	sendOrderedMessage(t, queue, stats)
 
-	for i, want := range []int{bmp.PeerStateChangeMsg, bmp.UnicastPrefixMsg, bmp.StatsReportMsg} {
+	for i, want := range []int{
+		bmp.PeerStateChangeMsg,
+		bmp.UnicastPrefixMsg,
+		bmp.StatsReportMsg,
+		bmp.UnicastPrefixMsg,
+		bmp.StatsReportMsg,
+	} {
 		select {
 		case got := <-pub.messages:
 			if got != want {
@@ -71,10 +79,82 @@ func TestProducerIgnoresDataBeforePeerUp(t *testing.T) {
 	if got := <-pub.messages; got != bmp.PeerStateChangeMsg {
 		t.Fatalf("unexpected message after valid data: type %d", got)
 	}
-	select {
-	case got := <-pub.messages:
-		t.Fatalf("data from before PeerUp was published: type %d", got)
-	default:
+}
+
+func TestProducerDiscardsPrePeerUpBufferOnPeerDown(t *testing.T) {
+	rec := &recordingPublisher{}
+	p := NewProducer(rec, false).(*producer)
+	ph := makePeerHeader(t, bmp.PeerType0, 0)
+
+	p.producingWorker(bmp.Message{
+		PeerHeader: ph,
+		Payload:    &bmp.RouteMonitor{Update: &bgp.Update{NLRI: []byte{24, 192, 0, 2}, BaseAttributes: &bgp.BaseAttributes{}}},
+	})
+	p.producingWorker(bmp.Message{PeerHeader: ph, Payload: &bmp.PeerDownMessage{Reason: 4}})
+	p.producingWorker(bmp.Message{PeerHeader: ph, Payload: buildPeerUpMessage(t, "192.0.2.1")})
+
+	if len(p.prePeerUp) != 0 {
+		t.Fatalf("pre-PeerUp buffer length = %d, want 0", len(p.prePeerUp))
+	}
+	if len(rec.msgs) != 2 {
+		t.Fatalf("published messages = %d, want PeerDown and PeerUp only", len(rec.msgs))
+	}
+}
+
+func TestProducerBoundsPrePeerUpBuffer(t *testing.T) {
+	p := NewProducer(&recordingPublisher{}, false).(*producer)
+	ph := makePeerHeader(t, bmp.PeerType0, 0)
+	for i := 0; i < maxPrePeerUpMessages+1; i++ {
+		p.producingWorker(bmp.Message{
+			PeerHeader: ph,
+			Payload:    &bmp.StatsReport{},
+		})
+	}
+
+	if len(p.prePeerUp) != maxPrePeerUpMessages {
+		t.Fatalf("pre-PeerUp buffer length = %d, want %d", len(p.prePeerUp), maxPrePeerUpMessages)
+	}
+	if p.prePeerUpBytes > maxPrePeerUpBytes {
+		t.Fatalf("pre-PeerUp buffer bytes = %d, exceeds %d", p.prePeerUpBytes, maxPrePeerUpBytes)
+	}
+}
+
+func TestProducerPrePeerUpByteLimitAndReplayReset(t *testing.T) {
+	// A large but valid Statistics Report contains 16,352 eight-byte gauges.
+	// Including the retained-structure allowance, exactly 64 reports fill the
+	// eight-MiB compatibility limit, well before the 256-message limit.
+	wire := binary.BigEndian.AppendUint32(nil, 16352)
+	for i := 0; i < 16352; i++ {
+		wire = append(wire, 0, 7, 0, 8, 0, 0, 0, 0, 0, 0, 0, 42)
+	}
+	stats, err := bmp.UnmarshalBMPStatsReportMessage(wire)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := &recordingPublisher{}
+	p := NewProducer(rec, false).(*producer)
+	ph := makePeerHeader(t, bmp.PeerType0, 0)
+	for i := 0; i < 65; i++ {
+		p.producingWorker(bmp.Message{PeerHeader: ph, Payload: stats})
+	}
+	if len(p.prePeerUp) != 64 || p.prePeerUpBytes != maxPrePeerUpBytes {
+		t.Fatalf("buffer has %d reports / %d bytes, want 64 / %d", len(p.prePeerUp), p.prePeerUpBytes, maxPrePeerUpBytes)
+	}
+	p.producingWorker(bmp.Message{PeerHeader: ph, Payload: buildPeerUpMessage(t, "192.0.2.1")})
+	if len(rec.msgs) != 65 || len(p.prePeerUp) != 0 || p.prePeerUpBytes != 0 {
+		t.Fatalf("replayed %d publications, retained %d messages / %d bytes", len(rec.msgs), len(p.prePeerUp), p.prePeerUpBytes)
+	}
+	for _, msg := range rec.msgs[1:] {
+		var stats Stats
+		if msg.msgType != bmp.StatsReportMsg {
+			t.Fatalf("publication type = %d, want statistics", msg.msgType)
+		}
+		if err := json.Unmarshal(msg.payload, &stats); err != nil {
+			t.Fatal(err)
+		}
+		if stats.AdjRIBsIn != 42 {
+			t.Fatalf("replayed gauge = %d, want 42", stats.AdjRIBsIn)
+		}
 	}
 }
 

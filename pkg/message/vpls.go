@@ -168,7 +168,7 @@ func (p *producer) vpls(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 		}
 		// RFC 9069: Set TableName for LocRIB peers
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 
 		prfxs = append(prfxs, prfx)

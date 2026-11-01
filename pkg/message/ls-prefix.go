@@ -46,7 +46,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 	}
 	// RFC 9069: Set TableName for LocRIB peers
 	if msg.IsLocRIB {
-		msg.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		msg.TableName = p.getTableName(ph)
 	}
 	msg.Nexthop = nextHop
 	msg.PeerIP = ph.GetPeerAddrString()
