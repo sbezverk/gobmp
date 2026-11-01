@@ -37,9 +37,16 @@ order. PeerUp installs negotiated ADD-PATH and table properties before marking
 the speaker ready. A route completes its local `PublishMessage` calls before a
 later PeerDown or replacement PeerUp can remove or replace those properties.
 This includes updates containing both MP_REACH and MP_UNREACH attributes.
-Parsed route/statistics messages received before the first valid PeerUp are
-logged and skipped, so they cannot block that later PeerUp. Separate connections
-retain separate producers and can progress independently.
+Parsed route/statistics messages received before the first valid PeerUp use a
+[bounded compatibility buffer](message-ordering.md#traffic-before-peer-up).
+Replay requires the message's own installed peer state. Loc-RIB routes also
+require every legacy or MP AFI/SAFI in the UPDATE to be explicitly described;
+membership includes families described without ADD-PATH. Missing or
+indeterminate state discards the entire buffered message with a diagnostic,
+even if a later PeerUp would describe it. Matching-peer replay keeps its
+negotiated direction and PathIDs. Separate connections retain separate
+producers and can progress independently. This policy does not guarantee
+lossless replay or alter live traffic after the first valid PeerUp.
 
 The ordering covers local publication calls; it does not establish delivery or
 commit order across broker topics. An active publisher call has no cancellation
