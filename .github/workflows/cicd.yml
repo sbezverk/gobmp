@@ -311,7 +311,7 @@ jobs:
           docker logs kafka > /tmp/logs/single-kafka-frr/kafka.log 2>&1 || true
       - name: Upload single-kafka-frr logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7  
         with:
           name: logs-single-kafka-frr
           path: /tmp/logs/single-kafka-frr/
@@ -385,7 +385,7 @@ jobs:
           done
       - name: Upload validator v2 integration logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: logs-validator-v2
           path: /tmp/logs/validator-v2/
@@ -481,7 +481,7 @@ jobs:
           done
       - name: Upload BGP-MUP integration logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: logs-validator-v2-mup
           path: /tmp/logs/validator-v2-mup/

@@ -36,8 +36,11 @@ func (o *OpenMessage) GetCapabilities() Capability {
 // Is4BytesASCapable returns true or false if Open message originated by 4 bytes AS capable speaker
 // in case of true, it also returns 4 bytes Autonomous System Number.
 func (o *OpenMessage) Is4BytesASCapable() (uint32, bool) {
-	v, ok := o.Capabilities[65]
-	if !ok {
+	if o == nil {
+		return 0, false
+	}
+	v := o.Capabilities[65]
+	if len(v) == 0 || v[0] == nil || len(v[0].Value) < 4 {
 		return 0, false
 	}
 
