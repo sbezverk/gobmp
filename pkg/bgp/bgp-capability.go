@@ -128,6 +128,10 @@ func UnmarshalBGPCapability(b []byte) (Capability, error) {
 		if p+int(length) > len(b) {
 			return nil, fmt.Errorf("truncated capability value at offset %d: need %d bytes, have %d", p, length, len(b)-p)
 		}
+		// RFC 6793 §3: the four-octet AS capability value is exactly four bytes.
+		if code == 65 && length != 4 {
+			return nil, fmt.Errorf("invalid AS4 capability (code 65) length at offset %d: need 4 bytes, have %d", capStart, length)
+		}
 		capData := &CapabilityData{}
 		capData.Value = make([]byte, length)
 		copy(capData.Value, b[p:p+int(length)])
