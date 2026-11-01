@@ -183,11 +183,10 @@ func (n *nilControllerAdmin) Controller() (*sarama.Broker, error) {
 
 // TestStop_NilClusterAdmin verifies Stop() does not panic when clusterAdmin is nil.
 func TestStop_NilClusterAdmin(t *testing.T) {
-	stopCh := make(chan struct{})
-	p := &publisher{clusterAdmin: nil, stopCh: stopCh}
-	p.Stop()
+	p, _, stop := newShutdownPublisher(t, sarama.ErrNoError)
+	stop()
 	select {
-	case <-stopCh:
+	case <-p.stopCh:
 	default:
 		t.Error("Stop() did not close stopCh")
 	}
@@ -195,12 +194,12 @@ func TestStop_NilClusterAdmin(t *testing.T) {
 
 // TestStop_NonNilClusterAdmin verifies Stop() calls Close on a non-nil clusterAdmin.
 func TestStop_NonNilClusterAdmin(t *testing.T) {
-	stopCh := make(chan struct{})
+	p, _, stop := newShutdownPublisher(t, sarama.ErrNoError)
 	sa := &stubAdmin{}
-	p := &publisher{clusterAdmin: sa, stopCh: stopCh}
-	p.Stop()
+	p.clusterAdmin = sa
+	stop()
 	select {
-	case <-stopCh:
+	case <-p.stopCh:
 	default:
 		t.Error("Stop() did not close stopCh")
 	}
@@ -210,7 +209,7 @@ func TestStop_NonNilClusterAdmin(t *testing.T) {
 }
 
 func TestEnsureTopic_NilClusterAdmin(t *testing.T) {
-	err := ensureTopic(nil, time.Millisecond, PeerTopic)
+	err := ensureTopic(nil, time.Millisecond, &TopicSpec{Name: PeerTopic})
 	if err == nil {
 		t.Fatal("ensureTopic(nil) error = nil, want error")
 	}
