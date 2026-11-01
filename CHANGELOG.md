@@ -4,6 +4,18 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-10-30
+
+#### Added
+
+- Generic Transitive extended community (type 0x80) sub-types 0x0b and 0x0c are decoded instead of printing `Subtype unknown=[ ... ]`: E-Tree Info (RFC 7796 §6.2) reads `e-tree-info=RootVLAN=100 LeafVLAN=200 P=true V=true`, traffic-rate-packets (RFC 8955 §7.2) reads `flowspec-traffic-rate-packets=AS: 65000 Rate: 1000 pps` (fractional rates kept, negative reads 0)
+
+#### Fixed
+
+- Extended communities of type 0x81 and 0x82 with sub-types other than 0x08 no longer borrow type 0x80 flowspec names (e.g. `81 06 ...` printed `flowspec-traffic-rate=[ ... ]`); per the IANA Generic Transitive Part 2/Part 3 registries they print `Subtype unknown=[ ... ]`
+- Flowspec traffic-rate-bytes (type 0x80, sub-type 0x06) with a negative rate is treated as zero (RFC 8955 §7.1): `80 06 00 00 c4 7a 00 00` (-1000) reads `flowspec-traffic-rate=AS: 0 Rate: 0 bps` instead of `Rate: 4294959296 bps`
+- Flowspec traffic-rate-bytes (type 0x80, sub-type 0x06) is no longer truncated to an integer or wrapped above 536,870,880 B/s: a 10G policer (1.25e9 B/s) reads `Rate: 10000000000 bps` instead of `Rate: 1410065408 bps`, and 0.5 B/s reads `Rate: 4 bps` instead of `0`; NaN and +Inf read `NaN` / `+Inf` instead of `0 bps`
+
 ### 2026-03-01
 
 #### Added
