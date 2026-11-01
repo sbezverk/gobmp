@@ -54,7 +54,7 @@ func (p *producer) lsOpaque(nlriType uint16, nlri interface{}, safi uint8, nextH
 	}
 	// RFC 9069: Set TableName for LocRIB peers
 	if msg.IsLocRIB {
-		msg.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+		msg.TableName = p.getTableName(ph)
 	}
 	return &msg, nil
 }

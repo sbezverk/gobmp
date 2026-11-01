@@ -71,7 +71,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		return []*UnicastPrefix{prfx}, nil
 	}
@@ -105,7 +105,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			prfx.IsLocRIBFiltered = f
 		}
 		if prfx.IsLocRIB {
-			prfx.TableName = p.GetTableName(ph.GetPeerBGPIDString(), ph.GetPeerDistinguisherString())
+			prfx.TableName = p.getTableName(ph)
 		}
 		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
 			// Last element in AS_PATH would be the AS of the origin

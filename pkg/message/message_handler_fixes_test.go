@@ -113,10 +113,9 @@ func TestL3VPN_EoR_LocRIB(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
 
 	ph := makePeerHeader(t, bmp.PeerType3, 0x00)
-	tableKey := ph.GetPeerBGPIDString() + ph.GetPeerDistinguisherString()
+	tableKey := ph.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("VRF-L3VPN-EoR")},
 		},
@@ -412,10 +411,9 @@ func TestEVPN_EoR_LocRIB(t *testing.T) {
 	p := NewProducer(&mockPublisher{}, false).(*producer)
 
 	ph := makePeerHeader(t, bmp.PeerType3, 0x00)
-	tableKey := ph.GetPeerBGPIDString() + ph.GetPeerDistinguisherString()
+	tableKey := ph.GetTableKey()
 	p.tableLock.Lock()
 	p.tableProperties[tableKey] = PerTableProperties{
-		addPathCapable: make(map[int]bool),
 		tableInfoTLVs: []bmp.InformationalTLV{
 			{InformationType: 3, Information: []byte("VRF-EVPN-EoR")},
 		},
