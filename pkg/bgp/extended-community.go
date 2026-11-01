@@ -266,16 +266,26 @@ var nonTransAS2SubTypes = map[uint8]string{
 	0x80: ECPVNIID,
 }
 
-// Generic Transitive Experimental Use Extended Community Sub-Types
-// 0x06               Flow spec traffic-rate
+// Generic Transitive Extended Community Sub-Types
+// 0x06               Flow spec traffic-rate-bytes
 // 0x07               Flow spec traffic-action (Use of the "Value" field is defined in the "Traffic Action Fields" registry)
-// 0x08               Flow spec redirect
+// 0x08               Flow spec rt-redirect AS-2octet format
 // 0x09               Flow spec traffic-remarking
+// 0x0c               Flow spec traffic-rate-packets [RFC 8955]
 var flowspecSubTypes = map[uint8]string{
 	0x6: CPFlowspecTrafficRate,
 	0x7: CPFlowspecTrafficAction,
 	0x8: CPFlowspecRedirect,
 	0x9: CPFlowspecTrafficRemarking,
+	0xc: CPFlowspecTrafficRatePackets,
+}
+
+// Generic Transitive Extended Community Part 2 (0x81) Sub-Types assign only
+// 0x08 (Flow spec rt-redirect IPv4 format). Part 3 (0x82) assigns 0x04, 0x08,
+// 0x84 and 0x85, of which only 0x08 (Flow spec rt-redirect AS-4octet format)
+// is flowspec (RFC 8955 Section 7.4); the others are not named here.
+var flowspecRedirectSubTypes = map[uint8]string{
+	0x8: CPFlowspecRedirect,
 }
 
 func getSubType(m map[uint8]string, subType uint8) string {
@@ -490,14 +500,49 @@ func type43(subType uint8, value []byte) string {
 	return getSubType(nonTransOpaqueSubTypes, subType) + s
 }
 
-// Flowspec Extended Community
+// formatRate renders the IEEE float32 rate of traffic-rate-bytes and
+// traffic-rate-packets (RFC 8955 Sections 7.1, 7.2) times mult: exact for
+// integral rates, shortest float32 decimal otherwise.
+func formatRate(rate float32, mult float64) string {
+	if f := float64(rate); f == math.Trunc(f) {
+		return strconv.FormatFloat(f*mult, 'f', 0, 64)
+	}
+	r, _ := strconv.ParseFloat(strconv.FormatFloat(float64(rate), 'g', -1, 32), 64)
+	return strconv.FormatFloat(r*mult, 'f', -1, 64)
+}
+
+// type80 decodes Generic Transitive Extended Community sub-types: E-Tree Info,
+// Flow spec actions and traffic rates.
 func type80(subType uint8, value []byte) string {
 	var s string
 
 	if len(value) == 6 {
 		switch subType {
+		case 0x0b:
+			// E-Tree Info Extended Community (RFC 7796 Section 6.2):
+			// MBZ(4)+Root VLAN(12), MBZ(4)+Leaf VLAN(12), Reserved(14)+P+V.
+			return ECPETreeInfo + "RootVLAN=" + strconv.Itoa(int(binary.BigEndian.Uint16(value[0:2])&0x0fff)) +
+				" LeafVLAN=" + strconv.Itoa(int(binary.BigEndian.Uint16(value[2:4])&0x0fff)) +
+				" P=" + strconv.FormatBool(value[5]&0x02 != 0) +
+				" V=" + strconv.FormatBool(value[5]&0x01 != 0)
+		case 0x0c:
+			// traffic-rate-packets (RFC 8955 Section 7.2): same encoding as
+			// traffic-rate-bytes, 2-octet id + IEEE float packets per second;
+			// negative values MUST be treated as zero.
+			rate := math.Float32frombits(binary.BigEndian.Uint32(value[2:]))
+			if rate <= 0 {
+				rate = 0
+			}
+			s = "AS: " + strconv.Itoa(int(binary.BigEndian.Uint16(value[:2]))) + " Rate: " + formatRate(rate, 1) + " pps"
 		case 0x06:
-			s = fmt.Sprintf("AS: %d Rate: %d bps", binary.BigEndian.Uint16(value[:2]), uint32(math.Float32frombits(binary.BigEndian.Uint32(value[2:])))*8)
+			// traffic-rate-bytes (RFC 8955 Section 7.1): IEEE float bytes per
+			// second, printed as bits per second; negative values MUST be
+			// treated as zero.
+			rate := math.Float32frombits(binary.BigEndian.Uint32(value[2:]))
+			if rate <= 0 {
+				rate = 0
+			}
+			s = fmt.Sprintf("AS: %d Rate: %s bps", binary.BigEndian.Uint16(value[:2]), formatRate(rate, 8))
 		case 0x08:
 			s = fmt.Sprintf("%d:%d", binary.BigEndian.Uint16(value[0:2]), binary.BigEndian.Uint32(value[2:]))
 		case 0x07:
@@ -533,7 +578,7 @@ func type81(subType uint8, value []byte) string {
 	} else {
 		s = fmt.Sprintf("invalid value length of %d", len(value))
 	}
-	return getSubType(flowspecSubTypes, subType) + s
+	return getSubType(flowspecRedirectSubTypes, subType) + s
 }
 
 func type82(subType uint8, value []byte) string {
@@ -549,7 +594,7 @@ func type82(subType uint8, value []byte) string {
 	} else {
 		s = fmt.Sprintf("invalid value length of %d", len(value))
 	}
-	return getSubType(flowspecSubTypes, subType) + s
+	return getSubType(flowspecRedirectSubTypes, subType) + s
 }
 
 // extComm defines a map with Extended Community as a key, it return a function to process a type specific sub type.
