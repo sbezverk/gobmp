@@ -133,7 +133,7 @@ func TestLSPathIDNegotiatedWire(t *testing.T) {
 				ph := makePeerHeader(t, bmp.PeerType0, 0)
 				ph.PeerAS, ph.PeerBGPID = 65001, []byte{192, 0, 2, 2}
 				p.producingWorker(bmp.Message{PeerHeader: ph, Payload: lsPathPeerUp(t, safi)})
-				if !p.GetAddPathCapability(ph.GetTableKey())[bgp.NLRIMessageType(16388, safi)] {
+				if !p.addPathEnabled(ph, bgp.AFISAFI{AFI: 16388, SAFI: safi}) {
 					t.Fatal("ADD-PATH was not negotiated through PeerUp")
 				}
 				rec.msgs = nil
