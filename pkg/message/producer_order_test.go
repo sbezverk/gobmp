@@ -1,6 +1,8 @@
 package message
 
 import (
+	"encoding/binary"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -114,6 +116,45 @@ func TestProducerBoundsPrePeerUpBuffer(t *testing.T) {
 	}
 	if p.prePeerUpBytes > maxPrePeerUpBytes {
 		t.Fatalf("pre-PeerUp buffer bytes = %d, exceeds %d", p.prePeerUpBytes, maxPrePeerUpBytes)
+	}
+}
+
+func TestProducerPrePeerUpByteLimitAndReplayReset(t *testing.T) {
+	// A large but valid Statistics Report contains 16,352 eight-byte gauges.
+	// Including the retained-structure allowance, exactly 64 reports fill the
+	// eight-MiB compatibility limit, well before the 256-message limit.
+	wire := binary.BigEndian.AppendUint32(nil, 16352)
+	for i := 0; i < 16352; i++ {
+		wire = append(wire, 0, 7, 0, 8, 0, 0, 0, 0, 0, 0, 0, 42)
+	}
+	stats, err := bmp.UnmarshalBMPStatsReportMessage(wire)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := &recordingPublisher{}
+	p := NewProducer(rec, false).(*producer)
+	ph := makePeerHeader(t, bmp.PeerType0, 0)
+	for i := 0; i < 65; i++ {
+		p.producingWorker(bmp.Message{PeerHeader: ph, Payload: stats})
+	}
+	if len(p.prePeerUp) != 64 || p.prePeerUpBytes != maxPrePeerUpBytes {
+		t.Fatalf("buffer has %d reports / %d bytes, want 64 / %d", len(p.prePeerUp), p.prePeerUpBytes, maxPrePeerUpBytes)
+	}
+	p.producingWorker(bmp.Message{PeerHeader: ph, Payload: buildPeerUpMessage(t, "192.0.2.1")})
+	if len(rec.msgs) != 65 || len(p.prePeerUp) != 0 || p.prePeerUpBytes != 0 {
+		t.Fatalf("replayed %d publications, retained %d messages / %d bytes", len(rec.msgs), len(p.prePeerUp), p.prePeerUpBytes)
+	}
+	for _, msg := range rec.msgs[1:] {
+		var stats Stats
+		if msg.msgType != bmp.StatsReportMsg {
+			t.Fatalf("publication type = %d, want statistics", msg.msgType)
+		}
+		if err := json.Unmarshal(msg.payload, &stats); err != nil {
+			t.Fatal(err)
+		}
+		if stats.AdjRIBsIn != 42 {
+			t.Fatalf("replayed gauge = %d, want 42", stats.AdjRIBsIn)
+		}
 	}
 }
 

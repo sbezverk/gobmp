@@ -17,10 +17,20 @@ It also does not change which UPDATEs are recognized as End-of-RIB.
 places Peer Up before the initial Route Monitoring messages. Parsed Route
 Monitoring and Statistics received before the connection's first valid Peer Up
 are retained in a bounded per-connection buffer. Once that Peer Up has been
-processed, the buffer is replayed in input order before later messages. If the
-connection ends or receives Peer Down before Peer Up, the buffered messages are
-discarded. A full buffer drops new pre-PeerUp messages with a diagnostic; it
-cannot grow without bound.
+processed, eligible buffered messages are replayed in input order before later
+messages. Replay requires each message's own peer OPEN state to be installed.
+For Loc-RIB Route Monitoring, every legacy or MP AFI/SAFI in the UPDATE must also
+be explicitly described by that Loc-RIB's Peer Up; a described family without
+ADD-PATH is eligible too. A concrete End-of-RIB marker requires its own family.
+Statistics require peer state but no NLRI family declaration.
+
+A buffered message with missing peer/family state or an indeterminate Loc-RIB
+MP family header is discarded with a diagnostic before any of its records are
+published. A later Peer Up does not recover it. If the connection ends or
+receives Peer Down before Peer Up, the buffered messages are discarded. A full
+buffer drops new pre-PeerUp messages with a diagnostic; it cannot grow without
+bound. This compatibility buffer does not guarantee lossless replay. Handling
+of messages arriving after the first valid Peer Up is unchanged.
 
 RAW mode does not require Peer Up. Each received frame is encapsulated in the
 OpenBMP envelope and published in input order with its BMP bytes preserved.
@@ -41,8 +51,8 @@ input and waits for it to drain, then closes producer input and waits for its
 publication calls to finish. A complete frame handed to the parser is accepted.
 All resulting valid messages finish their local publication calls before the
 worker returns; the server waits for every worker before calling publisher.Stop.
-Malformed/unsupported frames and pre-PeerUp traffic discarded because of
-connection termination or buffer limits retain the existing skip behavior.
+Malformed/unsupported frames and pre-PeerUp traffic discarded because of missing
+decoding state, connection termination or buffer limits are skipped.
 Incomplete trailing frames are never published.
 
 The standalone parser/producer APIs still support an explicit stop signal. The

@@ -2,10 +2,12 @@ package message
 
 import (
 	"crypto/md5"
+	"encoding/binary"
 	"encoding/hex"
 	"sync"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/pub"
 )
@@ -44,7 +46,8 @@ type producer struct {
 
 	// speakerReady is closed once the first valid PeerUp has established the
 	// initial identity and negotiated properties. Earlier RouteMonitor and
-	// StatsReport messages are buffered and replayed after that PeerUp.
+	// StatsReport messages are buffered; replay requires their own installed
+	// peer state and, for Loc-RIB routes, explicitly described families.
 	speakerReady     chan struct{}
 	speakerReadyOnce sync.Once
 	prePeerUp        []bmp.Message
@@ -159,10 +162,59 @@ func (p *producer) discardPrePeerUp() {
 	p.prePeerUpBytes = 0
 }
 
+func (p *producer) prePeerUpReady(msg bmp.Message) bool {
+	if msg.PeerHeader == nil || msg.PeerHeader.PeerIdentity() == "" {
+		return false
+	}
+	p.tableLock.RLock()
+	defer p.tableLock.RUnlock()
+	properties, known := p.peerAddPath[msg.PeerHeader.PeerIdentity()]
+	if !known {
+		return false
+	}
+	route, isRoute := msg.Payload.(*bmp.RouteMonitor)
+	if msg.PeerHeader.PeerType != bmp.PeerType3 || !isRoute {
+		return true
+	}
+	if route == nil || route.Update == nil {
+		return false
+	}
+	update := route.Update
+	// RFC 9069 Sections 5.2 and 6.1.1 allow separate family Peer Ups for
+	// one Loc-RIB identity. Membership, including false, describes a family;
+	// an absent family does not establish its NLRI wire format.
+	if afi, safi, eor := endOfRIBFamily(update); eor {
+		_, known := properties.in[bgp.AFISAFI{AFI: afi, SAFI: safi}]
+		return known
+	}
+	if len(update.NLRI) != 0 || len(update.WithdrawnRoutes) != 0 || update.WithdrawnRoutesLength != 0 {
+		if _, known := properties.in[bgp.AFISAFI{AFI: 1, SAFI: 1}]; !known {
+			return false
+		}
+	}
+	for _, attr := range update.PathAttributes {
+		if attr.AttributeType != bgp.MP_REACH_NLRI && attr.AttributeType != bgp.MP_UNREACH_NLRI {
+			continue
+		}
+		if len(attr.Attribute) < 3 {
+			return false
+		}
+		family := bgp.AFISAFI{AFI: binary.BigEndian.Uint16(attr.Attribute[:2]), SAFI: attr.Attribute[2]}
+		if _, known := properties.in[family]; !known {
+			return false
+		}
+	}
+	return true
+}
+
 func (p *producer) replayPrePeerUp() {
 	buffered := p.prePeerUp
 	p.discardPrePeerUp()
 	for _, msg := range buffered {
+		if !p.prePeerUpReady(msg) {
+			glog.Warningf("pre-Peer Up replay dropping %T: peer/family state is missing or indeterminate", msg.Payload)
+			continue
+		}
 		p.producingWorker(msg)
 	}
 }
