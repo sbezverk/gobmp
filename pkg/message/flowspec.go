@@ -63,7 +63,7 @@ func (p *producer) buildFlowspecMessage(operation string, nlri bgp.MPNLRI, ph *b
 	fs.Nexthop = nlri.GetNextHop()
 	fs.PeerIP = ph.GetPeerAddrString()
 	fs.IsIPv4 = !nlri.IsIPv6NLRI()
-	fs.IsNexthopIPv4 = !nlri.IsNextHopIPv6()
+	fs.IsNexthopIPv4 = fs.Nexthop != "" && !nlri.IsNextHopIPv6()
 	if f, err := ph.IsAdjRIBInPost(); err == nil {
 		fs.IsAdjRIBInPost = f
 	}

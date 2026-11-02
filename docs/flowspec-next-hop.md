@@ -8,7 +8,10 @@ AFI 1/2, SAFI 133/134 (IPv4, IPv6, VPNv4 and VPNv6 FlowSpec).
 
 Previously the producer published `invalid next hop address length: 0` as a
 next-hop address for those valid advertisements. The existing `omitempty` schema
-now omits `nexthop`. Route hashes, specs and public method signatures are unchanged.
+now omits `nexthop` and publishes `is_nexthop_ipv4: false`: an absent
+next-hop has no address family. The producer also keeps this flag false for
+withdrawals without a next-hop. Route hashes, specs and public method signatures
+are unchanged.
 Nonempty next-hop formatting and diagnostics for other invalid lengths/families
 retain their existing behavior. This getter correction does not add stricter
 wire validation for nonempty FlowSpec next-hops.
@@ -27,8 +30,10 @@ FlowSpec metadata or optional-field handling.
 
 Tests decode actual MP_REACH headers for all four families, normal IPv4/IPv6,
 nonempty FlowSpec controls, invalid length 99 and unrelated empty families. Real
-producer tests verify empty next-hops are omitted and typed JSON decoding succeeds
-for all four FlowSpec families. Optional-field tests also preserve present-value
+producer tests verify empty next-hops are omitted, the IPv4 next-hop flag is
+explicitly false in the object and JSON, and typed JSON decoding preserves false
+for all four FlowSpec families. Nonempty IPv4/IPv6 producer controls cover all
+four families as well. Optional-field tests also preserve present-value
 and type-error behavior. Replaying historical records or removing an already
 stored diagnostic address is outside this change; consumers receive the corrected
 representation for newly processed advertisements.
