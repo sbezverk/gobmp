@@ -75,6 +75,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 		}
 		return []*UnicastPrefix{prfx}, nil
 	}
+	afi, safi := mpFamily(nlri)
 	for _, e := range u.NLRI {
 		prfx := &UnicastPrefix{
 			Action:         operation,
@@ -88,6 +89,8 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			PrefixLen:      int32(e.Length),
 			PathID:         int32(e.PathID),
 			BaseAttributes: update.BaseAttributes,
+			AFI:            afi,
+			SAFI:           safi,
 		}
 		if f, err := ph.IsAdjRIBInPost(); err == nil {
 			prfx.IsAdjRIBInPost = f
