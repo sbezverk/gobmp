@@ -304,12 +304,9 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 				client.RemoteAddr(), totalLen, msgLen, maxBMPMessagePayload)
 			return
 		}
-		// A zero-length payload is valid only for Initiation and Termination,
-		// which may carry an empty TLV section (RFC 7854 §4.3 / §4.5).
-		// All other message types require at least a Per-Peer Header; a
-		// zero-payload frame for them is structurally malformed and closing
-		// the connection prevents cheap log/CPU spam without useful data.
-		if msgLen == 0 && header.MessageType != bmp.InitiationMsg && header.MessageType != bmp.TerminationMsg {
+		// Known peer-bearing types require a Per-Peer Header. Unknown types
+		// must remain skippable even with no payload (RFC 7854 §4.1).
+		if msgLen == 0 && header.MessageType <= bmp.RouteMirrorMsg && header.MessageType != bmp.InitiationMsg && header.MessageType != bmp.TerminationMsg {
 			glog.Errorf("zero-length payload not valid for BMP message type %d from client %+v, closing connection", header.MessageType, client.RemoteAddr())
 			return
 		}
@@ -326,6 +323,13 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 			} else {
 				glog.Errorf("fail to read from client %+v with error: %+v", client.RemoteAddr(), err)
 			}
+			return
+		}
+		if header.MessageType == bmp.TerminationMsg {
+			// RFC 7854 §4.5 requires closing TCP on Termination. Close before
+			// enqueueing: accepted publications may still be blocking the parser.
+			_ = client.Close()
+			parserQueue <- fullMsg
 			return
 		}
 		parserQueue <- fullMsg
