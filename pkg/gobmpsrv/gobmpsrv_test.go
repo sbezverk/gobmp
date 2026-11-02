@@ -224,9 +224,7 @@ func TestBMPWorker_ZeroPayload_GracefulExit(t *testing.T) {
 	serverConn, clientConn := net.Pipe()
 
 	// MessageLength == CommonHeaderLength means zero-byte payload.
-	// Valid for Initiation/Termination (RFC 7854 §4.3/§4.5 allow an empty TLV section).
-	// After writing the header we close the connection so the worker exits on
-	// the subsequent ReadFull.
+	// The reader tolerates an empty Termination; the worker must still exit cleanly.
 	hdr := make([]byte, bmp.CommonHeaderLength)
 	hdr[0] = 3
 	binary.BigEndian.PutUint32(hdr[1:5], uint32(bmp.CommonHeaderLength))
@@ -236,7 +234,7 @@ func TestBMPWorker_ZeroPayload_GracefulExit(t *testing.T) {
 	if _, err := clientConn.Write(hdr); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
-	_ = clientConn.Close() // triggers EOF on the next header read
+	_ = clientConn.Close()
 	assertWorkerExits(t, done)
 }
 
