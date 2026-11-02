@@ -16,17 +16,13 @@ Nonempty next-hop formatting and diagnostics for other invalid lengths/families
 retain their existing behavior. This getter correction does not add stricter
 wire validation for nonempty FlowSpec next-hops.
 
-The typed FlowSpec JSON reader previously required `nexthop` even though its
-schema marks it optional. A minimal guard accepts an absent field, preserving
-errors for a present incompatible type. This prevents the corrected announcement
-JSON from newly failing its existing reader without depending on another branch.
-
-The separate complete FlowSpec JSON fix overlaps this reader block. When combining
-changes, retain the complete schema-alias decoder from that fix and the getter
-change here; do not restore the old manual field mapping. The two changes are
-independently buildable from upstream and both regression suites must pass after
-the overlap is resolved. This minimal reader guard alone does not fix other lost
-FlowSpec metadata or optional-field handling.
+The typed FlowSpec JSON reader uses the complete schema-based decoder described
+in [FlowSpec JSON decoding](flowspec-json.md). It accepts omitted optional fields,
+including `nexthop`, and rejects present values with incompatible types. Common
+metadata, peer identity, RIB policy flags, table name, storage identifiers and
+component validation are preserved. The decoder assigns the receiver only after
+successful decoding. Both the next-hop and full metadata/withdrawal regression
+suites cover the integrated behavior.
 
 Tests decode actual MP_REACH headers for all four families, normal IPv4/IPv6,
 nonempty FlowSpec controls, invalid length 99 and unrelated empty families. Real
