@@ -2,6 +2,7 @@ package message
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -79,6 +80,15 @@ func (p *producer) rtc(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 
 		prfx.PeerIP = ph.GetPeerAddrString()
 		prfx.IsIPv4 = !nlri.IsIPv6NLRI()
+
+		// RFC 4684 §4: retain the RT encoding octets, including partial prefixes.
+		if e.Length > 32 && len(e.RouteTarget) > 0 {
+			rt := append([]byte(nil), e.RouteTarget...)
+			if bits := (e.Length - 32) % 8; bits != 0 {
+				rt[len(rt)-1] &= byte(0xff << (8 - bits))
+			}
+			prfx.RouteTargetPrefix = hex.EncodeToString(rt)
+		}
 
 		// Format Route Target if present (length == 96 bits)
 		if e.Length == 96 && len(e.RouteTarget) == 8 {
