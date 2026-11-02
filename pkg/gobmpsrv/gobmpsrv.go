@@ -328,6 +328,13 @@ func (srv *bmpServer) bmpWorker(client net.Conn) {
 			}
 			return
 		}
+		if header.MessageType == bmp.TerminationMsg {
+			// RFC 7854 §4.5 requires closing TCP on Termination. Close before
+			// enqueueing: accepted publications may still be blocking the parser.
+			_ = client.Close()
+			parserQueue <- fullMsg
+			return
+		}
 		parserQueue <- fullMsg
 	}
 }
