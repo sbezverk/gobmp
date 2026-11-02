@@ -227,8 +227,8 @@ func TestLSPathIDJSONBounds(t *testing.T) {
 }
 
 func TestLSPathIDSAFI72Mapping(t *testing.T) {
-	// SAFI72's separate framing defect is outside this change. These are
-	// decoded-object mapping checks, not claims about its wire compliance.
+	// Isolate Path Identifier publication from already decoded SAFI 72 objects.
+	// TestProcessMPUpdateSAFI72Wire covers wire decoding and RD publication.
 	rd, err := base.MakeRD([]byte{0, 0, 0, 100, 0, 0, 0, 1})
 	if err != nil {
 		t.Fatal(err)
