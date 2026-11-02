@@ -68,6 +68,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		return nil, err
 	}
 	prfxs := make([]L3VPNPrefix, 0)
+	afi, safi := mpFamily(nlri)
 	for _, e := range nlril3vpn.NLRI {
 		prfx := L3VPNPrefix{
 			Action:         operation,
@@ -82,6 +83,8 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			PrefixLen:      int32(e.Length),
 			PathID:         int32(e.PathID),
 			BaseAttributes: update.BaseAttributes,
+			AFI:            afi,
+			SAFI:           safi,
 		}
 
 		if ases := update.BaseAttributes.ASPath; len(ases) != 0 {
