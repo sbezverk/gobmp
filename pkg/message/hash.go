@@ -56,6 +56,13 @@ func setUnicastPrefixHash(m *UnicastPrefix) {
 	if m == nil || m.Hash != "" || m.IsEOR {
 		return
 	}
+	// RFC 8277 Sections 2.4 and 2.5: labels are forwarding attributes,
+	// not route identity. Keep the legacy empty component for ordinary
+	// unicast, and distinguish SAFI 4 even when a withdrawal has no labels.
+	family := ""
+	if m.SAFI == 4 {
+		family = "safi=4"
+	}
 	m.Hash = hashParts(
 		"unicast",
 		m.RouterHash,
@@ -64,7 +71,7 @@ func setUnicastPrefixHash(m *UnicastPrefix) {
 		strconv.FormatInt(int64(m.PrefixLen), 10),
 		strconv.FormatBool(m.IsIPv4),
 		strconv.FormatInt(int64(m.PathID), 10),
-		labelsHashPart(m.Labels),
+		family,
 	)
 }
 
@@ -72,6 +79,9 @@ func setL3VPNPrefixHash(m *L3VPNPrefix) {
 	if m == nil || m.Hash != "" || m.IsEOR {
 		return
 	}
+	// RFC 8277 Sections 2.4 and 2.5: a withdrawal identifies the prefix
+	// without its previous labels. Retain the final empty component so
+	// existing empty-label VPN route hashes do not change.
 	m.Hash = hashParts(
 		"l3vpn",
 		m.RouterHash,
@@ -82,7 +92,7 @@ func setL3VPNPrefixHash(m *L3VPNPrefix) {
 		strconv.FormatInt(int64(m.PrefixLen), 10),
 		strconv.FormatBool(m.IsIPv4),
 		strconv.FormatInt(int64(m.PathID), 10),
-		labelsHashPart(m.Labels),
+		"",
 	)
 }
 
@@ -123,20 +133,6 @@ func setMUPPrefixHash(m *MUPPrefix) {
 		parts = append(parts, m.EndpointAddress, strconv.FormatUint(uint64(m.EndpointLen), 10), teid)
 	}
 	m.Hash = hashParts(parts...)
-}
-
-func labelsHashPart(labels []uint32) string {
-	if len(labels) == 0 {
-		return ""
-	}
-	buf := make([]byte, 0, len(labels)*12)
-	for i, label := range labels {
-		if i != 0 {
-			buf = append(buf, ',')
-		}
-		buf = strconv.AppendUint(buf, uint64(label), 10)
-	}
-	return string(buf)
 }
 
 func hashParts(parts ...string) string {
