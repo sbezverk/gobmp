@@ -20,12 +20,11 @@ This is the JSON consumer contract, not a change to the FlowSpec encoding in
 [VPN FlowSpec §8](https://www.rfc-editor.org/rfc/rfc8955.html#section-8), or
 [RFC 8956 §§2–3](https://www.rfc-editor.org/rfc/rfc8956.html#section-2).
 
-The separate empty-next-hop correction includes a minimal optional `nexthop`
-reader guard so it is independently usable. Both changes start from the same
-upstream baseline and overlap in `Flowspec.UnmarshalJSON`. When combining them,
-retain this complete schema decoder instead of restoring the old manual mapping
-or adding a second next-hop decoder. Both regression suites must pass together.
-This change alone leaves the producer's current next-hop representation intact.
+The integrated [empty-next-hop correction](flowspec-next-hop.md) returns an empty
+next-hop for zero-length FlowSpec advertisements and keeps `is_nexthop_ipv4`
+false when no next-hop exists, including withdrawals. The complete schema decoder
+accepts the omitted field without a separate manual next-hop mapping. The
+next-hop and full metadata/withdrawal regression suites cover both behaviors.
 
 `TestFlowspecJSONProducerRoundTrip` decodes real MP_REACH/MP_UNREACH bytes for
 IPv4, IPv6, VPNv4 and VPNv6, invokes the actual producer and round-trips its JSON
