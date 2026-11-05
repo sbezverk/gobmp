@@ -92,8 +92,8 @@ func (k *kafka) topicReader(topic *TopicDescriptor) {
 		}
 		// Loop until either a topic becomes available at the broker or stop signal is received
 		partitions, err := k.master.Partitions(topic.TopicName)
-		if nil != err {
-			glog.Errorf("fail to get partitions for the topic %s with error: %+v", topic.TopicName, err)
+		if err != nil || len(partitions) == 0 {
+			glog.Errorf("no partitions available for topic %s: %v", topic.TopicName, err)
 			select {
 			case <-ticker.C:
 			case <-k.stopCh:
@@ -101,8 +101,30 @@ func (k *kafka) topicReader(topic *TopicDescriptor) {
 			}
 			continue
 		}
+		var readers sync.WaitGroup
+		for _, partition := range partitions {
+			readers.Add(1)
+			go func() {
+				defer readers.Done()
+				k.partitionReader(topic, partition)
+			}()
+		}
+		readers.Wait()
+		return
+	}
+}
+
+func (k *kafka) partitionReader(topic *TopicDescriptor, partition int32) {
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-k.stopCh:
+			return
+		default:
+		}
 		// Loop until either a topic's partition becomes consumable or stop signal is received
-		consumer, err := k.master.ConsumePartition(topic.TopicName, partitions[0], sarama.OffsetOldest)
+		consumer, err := k.master.ConsumePartition(topic.TopicName, partition, sarama.OffsetOldest)
 		if nil != err {
 			glog.Errorf("fail to consume partition for the topic %s with error: %+v", topic.TopicName, err)
 			select {
@@ -114,7 +136,7 @@ func (k *kafka) topicReader(topic *TopicDescriptor) {
 		}
 		defer func() {
 			if err := consumer.Close(); err != nil {
-				glog.Errorf("failed to close Kafka partition %s/%d: %v", topic.TopicName, partitions[0], err)
+				glog.Errorf("failed to close Kafka partition %s/%d: %v", topic.TopicName, partition, err)
 			}
 		}()
 		glog.Infof("Starting Kafka reader for topic: %s", topic.TopicName)

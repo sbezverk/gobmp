@@ -37,9 +37,7 @@ This change applies only to the legacy consumer in
 `pkg/kafka/kafka-consumer.go`. It does not change the collector publisher or
 `cmd/validator_v2`.
 
-The separate partition-coverage fix changes the same file and shares its
-shutdown ownership correction. This independently based change still selects
-the first partition; it does not address empty metadata or discovery of all
-partitions. When combining the fixes, use this synchronous, stop-aware
-forwarding loop in each partition reader. The combined implementation retains
-partition-local ordering and independent cancellation.
+The synchronous forwarding loop runs in each
+[partition reader](kafka-validator-partitions.md). Readers start after the
+first successful, nonempty metadata lookup and retry partition consumer
+creation independently.

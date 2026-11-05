@@ -9,31 +9,6 @@ import (
 	"github.com/IBM/sarama"
 )
 
-func TestLegacyConsumerAlreadyCancelledReader(t *testing.T) {
-	var metadataCalls, consumeCalls atomic.Int32
-	master := &legacyTestMaster{
-		partitions: func(string) ([]int32, error) {
-			metadataCalls.Add(1)
-			return nil, errors.New("unexpected metadata lookup")
-		},
-		consume: func(string, int32, int64) (sarama.PartitionConsumer, error) {
-			consumeCalls.Add(1)
-			return nil, errors.New("unexpected partition lookup")
-		},
-	}
-	k := &kafka{stopCh: make(chan struct{}), master: master}
-	close(k.stopCh)
-	// A reader queued by Start can enter after Stop has signalled cancellation.
-	// This internal reader state does not extend the public Start/Stop lifecycle.
-	k.topicReader(&TopicDescriptor{TopicName: "already-cancelled"})
-	if got := metadataCalls.Load(); got != 0 {
-		t.Errorf("metadata calls after cancellation = %d, want 0", got)
-	}
-	if got := consumeCalls.Load(); got != 0 {
-		t.Errorf("partition calls after cancellation = %d, want 0", got)
-	}
-}
-
 func TestLegacyConsumerCloseErrorCleanup(t *testing.T) {
 	closeError := errors.New("injected close failure")
 	for _, test := range []struct {

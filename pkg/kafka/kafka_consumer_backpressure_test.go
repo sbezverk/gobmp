@@ -11,19 +11,40 @@ import (
 )
 
 func TestLegacyConsumerOrderedDelivery(t *testing.T) {
-	for _, count := range []int{1, 64} {
-		t.Run(fmt.Sprintf("%d records", count), func(t *testing.T) {
-			values := make([]string, count)
-			for index := range values {
-				values[index] = fmt.Sprintf("record-%03d", index)
+	for _, test := range []struct {
+		name       string
+		partitions []int32
+		count      int
+	}{
+		{"one record", []int32{0}, 1},
+		{"single partition", []int32{0}, 64},
+		{"multiple partitions", []int32{3, 7}, 64},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			records := make(map[int32][]string)
+			owners := make(map[string]int32)
+			for _, partition := range test.partitions {
+				for index := range test.count {
+					value := fmt.Sprintf("partition-%d-record-%03d", partition, index)
+					records[partition] = append(records[partition], value)
+					owners[value] = partition
+				}
 			}
-			output, stop := startLegacyBrokerConsumer(t, map[int32][]string{0: values})
-			for index, want := range values {
+			output, stop := startLegacyBrokerConsumer(t, records)
+			next := make(map[int32]int)
+			for range len(owners) {
 				// Yield between reads to exercise a slower unbuffered downstream.
 				runtime.Gosched()
-				if got := receiveLegacyMessage(t, output); got != want {
-					t.Fatalf("record %d = %q, want %q", index, got, want)
+				got := receiveLegacyMessage(t, output)
+				partition, ok := owners[got]
+				if !ok {
+					t.Fatalf("unexpected record %q", got)
 				}
+				index := next[partition]
+				if index == len(records[partition]) || got != records[partition][index] {
+					t.Fatalf("out-of-order or duplicate record %q at index %d in partition %d", got, index, partition)
+				}
+				next[partition]++
 			}
 			stop()
 		})
