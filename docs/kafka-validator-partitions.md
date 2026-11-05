@@ -34,9 +34,6 @@ This change applies only to the legacy validator consumer in
 `pkg/kafka/kafka-consumer.go`. It does not change the collector publisher,
 `cmd/validator_v2`, Kafka topic configuration or the public consumer interface.
 
-The separate backpressure fix changes the same file and shares the shutdown
-ownership correction. Until that fix is also applied, the legacy per-message
-send goroutines remain: this partition-coverage change alone does not promise
-ordered delivery, bounded pending sends or cancellation of a stalled downstream.
-When combining the fixes, retain the stop-aware synchronous forwarding loop in
-each partition reader. Only partition-local ordering is supported.
+Each partition reader [forwards records synchronously](kafka-validator-backpressure.md)
+to the topic channel and can cancel a blocked send when stopped. Ordering is
+preserved within each partition.

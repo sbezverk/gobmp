@@ -140,20 +140,30 @@ func (k *kafka) partitionReader(topic *TopicDescriptor, partition int32) {
 			}
 		}()
 		glog.Infof("Starting Kafka reader for topic: %s", topic.TopicName)
+		messages, consumerErrors := consumer.Messages(), consumer.Errors()
 		for {
 			select {
-			case msg := <-consumer.Messages():
+			case msg, ok := <-messages:
+				if !ok {
+					return
+				}
 				if msg == nil {
 					continue
 				}
-				go func() {
-					topic.TopicChan <- msg.Value
-				}()
-			case consumerError := <-consumer.Errors():
-				if consumerError == nil {
-					break
+				select {
+				case topic.TopicChan <- msg.Value:
+				case <-k.stopCh:
+					return
 				}
-				glog.Errorf("error %+v for topic: %s, partition: %s ", consumerError.Err, string(consumerError.Topic), string(consumerError.Partition))
+			case consumerError, ok := <-consumerErrors:
+				if !ok {
+					consumerErrors = nil
+					continue
+				}
+				if consumerError == nil {
+					continue
+				}
+				glog.Errorf("error %+v for topic: %s, partition: %d", consumerError.Err, consumerError.Topic, consumerError.Partition)
 			case <-k.stopCh:
 				return
 			}
