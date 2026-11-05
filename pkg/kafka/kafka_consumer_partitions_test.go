@@ -186,3 +186,40 @@ func TestLegacyConsumerStopDuringRetry(t *testing.T) {
 		})
 	}
 }
+
+func TestLegacyConsumerPartitionReadersObservePriorStop(t *testing.T) {
+	tests := []struct {
+		name string
+		read func(*kafka, *TopicDescriptor)
+	}{
+		{name: "topic", read: (*kafka).topicReader},
+		{name: "partition", read: func(k *kafka, topic *TopicDescriptor) {
+			k.partitionReader(topic, 4)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var metadataCalls, partitionCalls, closeCalls int
+			master := &legacyTestMaster{
+				partitions: func(string) ([]int32, error) {
+					metadataCalls++
+					return nil, errors.New("unexpected metadata request after stop")
+				},
+				consume: func(string, int32, int64) (sarama.PartitionConsumer, error) {
+					partitionCalls++
+					return nil, errors.New("unexpected partition request after stop")
+				},
+				close: func() error { closeCalls++; return nil },
+			}
+			k := &kafka{stopCh: make(chan struct{}), master: master}
+			// Model a queued reader first running after Stop has signalled it.
+			// Error responses also let an omitted entry guard return safely.
+			close(k.stopCh)
+			test.read(k, &TopicDescriptor{TopicName: "already-stopped"})
+			if metadataCalls != 0 || partitionCalls != 0 || closeCalls != 0 {
+				t.Fatalf("metadata/partition/master-close calls = %d/%d/%d, want 0/0/0",
+					metadataCalls, partitionCalls, closeCalls)
+			}
+		})
+	}
+}
