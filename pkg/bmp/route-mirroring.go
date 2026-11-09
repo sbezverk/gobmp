@@ -61,9 +61,9 @@ func (rm *RouteMirror) GetBGPUpdate() (*bgp.Update, error) {
 			code := binary.BigEndian.Uint16(tlv.Value[:2])
 			switch RouteMirrorTLVInfoCode(code) {
 			case RouteMirrorInfoCodeErrored:
-				return nil, fmt.Errorf("Info TLV indicates errored")
+				return nil, fmt.Errorf("indicates Info TLV \"errored\"")
 			case RouteMirrorInfoCodeLost:
-				return nil, fmt.Errorf("Info TLV indicates lost")
+				return nil, fmt.Errorf("indicates Info TLV \"lost\"")
 			default:
 				return nil, fmt.Errorf("unknown Info TLV code: %d", code)
 			}
@@ -97,7 +97,7 @@ func unmarshalRouteMirror(b []byte, isAS4 *bool) (*RouteMirror, error) {
 		l := binary.BigEndian.Uint16(b[p+2 : p+4])
 		p += 4
 		if len(b[p:]) < int(l) {
-			return nil, fmt.Errorf("BGP message length mismatch: header says %d bytes, have %d", l, len(b[p:]))
+			return nil, fmt.Errorf("message length mismatch: header says %d bytes, have %d", l, len(b[p:]))
 		}
 		rm.TLVs = append(rm.TLVs, TLV{
 			Type:   t,
@@ -109,7 +109,7 @@ func unmarshalRouteMirror(b []byte, isAS4 *bool) (*RouteMirror, error) {
 	}
 
 	if len(rm.TLVs) == 0 {
-		return nil, fmt.Errorf("Route Mirror must carry at least 1 TLV")
+		return nil, fmt.Errorf("message Route Mirror must carry at least 1 TLV")
 	}
 	for i, tlv := range rm.TLVs {
 		if tlv.Type == RouteMirrorBGPMsgTLV && i != len(rm.TLVs)-1 {
