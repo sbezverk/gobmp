@@ -149,6 +149,15 @@ func TestNewPublisherWithConfig_Invalid(t *testing.T) {
 	}
 }
 
+// TestNewPublisher_Unreachable checks that a server that refuses the
+// connection fails NewPublisher instead of retrying forever: unlimited
+// reconnects apply only after the first connection.
+func TestNewPublisher_Unreachable(t *testing.T) {
+	if _, err := NewPublisher("nats://127.0.0.1:1"); err == nil {
+		t.Error("NewPublisher to a closed port: error = nil, want an error")
+	}
+}
+
 // TestErrorLog_RateLimited checks that failures within a second of a logged
 // one are counted, not logged.
 func TestErrorLog_RateLimited(t *testing.T) {

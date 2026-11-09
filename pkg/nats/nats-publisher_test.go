@@ -319,6 +319,12 @@ func TestConnectOptions(t *testing.T) {
 		t.Errorf("MaxReconnect = %d, want -1 (no limit)", o.MaxReconnect)
 	}
 	if o.DisconnectedErrCB == nil || o.ReconnectedCB == nil || o.ClosedCB == nil {
-		t.Error("connection transitions are not all logged")
+		t.Fatal("connection transitions are not all logged")
 	}
+	// The handlers only log; they must not panic, including a disconnect
+	// without an error (a deliberate close).
+	o.DisconnectedErrCB(nil, errors.New("EOF"))
+	o.DisconnectedErrCB(nil, nil)
+	o.ReconnectedCB(nil)
+	o.ClosedCB(nil)
 }
