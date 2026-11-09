@@ -1,9 +1,7 @@
 package bmp
 
 import (
-	"encoding/binary"
 	"errors"
-	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -41,42 +39,11 @@ func unmarshalBMPRouteMonitorMessage(b []byte, as4hint *bool) (*RouteMonitor, er
 		glog.Infof("BMP Route Monitor Message Raw: %s length: %d", tools.MessageHex(b), len(b))
 	}
 	rm := RouteMonitor{}
-	// 16 bytes marker + 2 bytes length + 1 byte type
-	if len(b) < 19 {
-		return nil, fmt.Errorf("route monitor message too short: need 19 bytes, have %d", len(b))
+	u, err := getBGPUpdateFromBMPMessage(b, as4hint)
+	if err != nil {
+		return nil, err
 	}
-	p := 0
-	// Skip 16 bytes of a marker
-	p += 16
-	// Validate BGP message length field
-	bgpLen := binary.BigEndian.Uint16(b[p : p+2])
-	if int(bgpLen) < 19 {
-		return nil, fmt.Errorf("invalid BGP message length %d: must be >= 19", bgpLen)
-	}
-	if int(bgpLen) != len(b) {
-		return nil, fmt.Errorf("BGP message length mismatch: header says %d bytes, have %d", bgpLen, len(b))
-	}
-	p += 2
-	t := b[p]
-	p++
-	switch t {
-	case 2:
-		var (
-			u   *bgp.Update
-			err error
-		)
-		if as4hint != nil {
-			u, err = bgp.UnmarshalBGPUpdateWithAS4Hint(b[p:], *as4hint)
-		} else {
-			u, err = bgp.UnmarshalBGPUpdate(b[p:])
-		}
-		if err != nil {
-			return nil, err
-		}
-		rm.Update = u
-	default:
-		return nil, fmt.Errorf("%w: got type %d", ErrNotAnUpdate, t)
-	}
+	rm.Update = u
 
 	return &rm, nil
 }

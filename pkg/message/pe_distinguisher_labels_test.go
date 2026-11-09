@@ -65,7 +65,7 @@ func TestPEDistinguisherLabelsTreatAsWithdraw(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := &recordingPublisher{}
 			p := NewProducer(rec, true).(*producer)
-			p.produceRouteMonitorMessage(bmp.Message{
+			p.produceRouteMessage(bmp.Message{
 				PeerHeader: makePeerHeader(t, bmp.PeerType0, 0),
 				Payload:    eorWire(t, tt.withdrawn, tt.attrs, tt.nlri),
 			})
