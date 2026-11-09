@@ -44,6 +44,7 @@ func (p *producer) mcastvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		}, nil
 	}
 
+	nextHop := nlri.GetNextHop()
 	for _, route := range mcastvpnRoute.Route {
 		prfx := &MCASTVPNPrefix{
 			Action:         operation,
@@ -82,7 +83,7 @@ func (p *producer) mcastvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upda
 		prfx.IsIPv4 = !nlri.IsIPv6NLRI()
 
 		// Extract nexthop
-		nh := nlri.GetNextHop()
+		nh := nextHop
 		prfx.Nexthop = nh
 		prfx.IsNexthopIPv4 = len(nh) > 0 && net.ParseIP(nh).To4() != nil
 
