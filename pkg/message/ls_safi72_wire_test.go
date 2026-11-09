@@ -6,9 +6,25 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
+
+// RFC 9552 §5.5: the VPN next hop is an all-zero RD followed by the address.
+var testLSVPNMPReachHeader = [...]byte{
+	0x40, 0x04, 72, 12,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	192, 0, 2, 2, 0,
+}
+
+// RFC 9552 §5.2.1.4: Direct Node NLRIs carry the IGP Router-ID sub-TLV.
+var testLSVPNDirectNodeBody = [...]byte{
+	byte(base.Direct), 0, 0, 0, 0, 0, 0, 0, 0,
+	0x01, 0x00, 0, 16,
+	0x02, 0x00, 0, 4, 0, 0, 0xfd, 0xe8,
+	0x02, 0x03, 0, 4, 192, 0, 2, 1,
+}
 
 // testLSVPNEntry encodes one VPN NLRI per RFC 9552 §5.2 Figure 6.
 func testLSVPNEntry(typ uint16, rd, body []byte) []byte {
@@ -33,7 +49,7 @@ func TestProcessMPUpdateSAFI72Wire(t *testing.T) {
 		for _, withdraw := range []bool{false, true} {
 			for _, addPath := range []bool{false, true} {
 				t.Run(fmt.Sprintf("RD%d withdraw=%t AddPath=%t", i, withdraw, addPath), func(t *testing.T) {
-					node := testLSVPNEntry(1, nodeRD.wire, testLSNodeNLRI80()[4:])
+					node := testLSVPNEntry(1, nodeRD.wire, testLSVPNDirectNodeBody[:])
 					// SAFI 72 type 7 stays opaque; its payload is never decoded.
 					opaque := testLSVPNEntry(7, opaqueRD.wire, []byte{0xde, 0xad, 0xbe})
 					if addPath {
@@ -48,10 +64,13 @@ func TestProcessMPUpdateSAFI72Wire(t *testing.T) {
 						nlri, err = bgp.UnmarshalMPUnReachNLRI(append([]byte{0x40, 0x04, 72}, payload...), map[int]bool{72: addPath})
 						operation, action = DelPrefix, "del"
 					} else {
-						nlri, err = bgp.UnmarshalMPReachNLRI(append([]byte{0x40, 0x04, 72, 4, 192, 0, 2, 2, 0}, payload...), false, map[int]bool{72: addPath})
+						nlri, err = bgp.UnmarshalMPReachNLRI(append(testLSVPNMPReachHeader[:], payload...), false, map[int]bool{72: addPath})
 					}
 					if err != nil {
 						t.Fatal(err)
+					}
+					if !withdraw && nlri.GetNextHop() != "192.0.2.2" {
+						t.Errorf("GetNextHop() = %q, want 192.0.2.2", nlri.GetNextHop())
 					}
 					decoded, err := nlri.GetNLRI72()
 					if err != nil || len(decoded.NLRI) != 2 {
@@ -76,7 +95,10 @@ func TestProcessMPUpdateSAFI72Wire(t *testing.T) {
 					if err := json.Unmarshal(rec.msgs[0].payload, &gotNode); err != nil {
 						t.Fatal(err)
 					}
-					if gotNode.RD != nodeRD.want || gotNode.Action != action || gotNode.ASN != 65000 || gotNode.ProtocolID != 4 {
+					if gotNode.IGPRouterID != "192.0.2.1" {
+						t.Errorf("Node IGP Router-ID = %q, want 192.0.2.1", gotNode.IGPRouterID)
+					}
+					if gotNode.RD != nodeRD.want || gotNode.Action != action || gotNode.ASN != 65000 || gotNode.ProtocolID != base.Direct {
 						t.Errorf("Node = %+v, want RD %s action %s ASN 65000 Direct protocol", gotNode, nodeRD.want, action)
 					}
 					var gotOpaque LSOpaque
@@ -96,7 +118,7 @@ func TestProcessMPUpdateSAFI72MalformedWire(t *testing.T) {
 	for _, withdraw := range []bool{false, true} {
 		t.Run(fmt.Sprintf("withdraw=%t", withdraw), func(t *testing.T) {
 			// A malformed tail invalidates the NLRI batch before any publication.
-			payload := testLSVPNEntry(1, testRD, testLSNodeNLRI80()[4:])
+			payload := testLSVPNEntry(1, testRD, testLSVPNDirectNodeBody[:])
 			payload = append(payload, 0)
 			var nlri bgp.MPNLRI
 			var err error
@@ -105,7 +127,7 @@ func TestProcessMPUpdateSAFI72MalformedWire(t *testing.T) {
 				nlri, err = bgp.UnmarshalMPUnReachNLRI(append([]byte{0x40, 0x04, 72}, payload...), nil)
 				operation = DelPrefix
 			} else {
-				nlri, err = bgp.UnmarshalMPReachNLRI(append([]byte{0x40, 0x04, 72, 4, 192, 0, 2, 2, 0}, payload...), false, nil)
+				nlri, err = bgp.UnmarshalMPReachNLRI(append(testLSVPNMPReachHeader[:], payload...), false, nil)
 			}
 			if err != nil {
 				t.Fatal(err)
