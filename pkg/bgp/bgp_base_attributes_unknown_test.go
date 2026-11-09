@@ -217,17 +217,61 @@ func TestUnknownPathAttribute_FlagBitsPreserved(t *testing.T) {
 // disappearing together with everything inside it.
 func TestUnknownPathAttribute_MalformedAttrSet(t *testing.T) {
 	cases := []struct {
-		name  string
-		value []byte
+		name      string
+		value     []byte
+		malformed bool
 	}{
 		{
 			// CLUSTER_LIST length 3 is not a multiple of 4.
-			name:  "malformed inner CLUSTER_LIST",
-			value: buildAttrSetValue(65001, buildAttr(0x80, 10, []byte{1, 2, 3}), buildAttr(0xC0, 33, []byte{9})),
+			name:      "malformed inner CLUSTER_LIST",
+			value:     buildAttrSetValue(65001, buildAttr(0x80, 10, []byte{1, 2, 3}), buildAttr(0xC0, 33, []byte{9})),
+			malformed: true,
 		},
 		{
+			// RFC 6368 §5: nested ATTR_SET is unsupported, not malformed.
 			name:  "nested ATTR_SET",
 			value: buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002))),
+		},
+		{
+			name:      "nested then MP_REACH",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002)), buildAttr(0x90, 14, []byte{0, 1, 1, 4, 10, 0, 0, 1, 0})),
+			malformed: true,
+		},
+		{
+			name:      "nested then MP_UNREACH",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002)), buildAttr(0x90, 15, []byte{0, 1, 1, 24, 10, 0, 1})),
+			malformed: true,
+		},
+		{
+			name:      "nested then malformed D-PATH",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002)), buildAttr(0xC0, 36, []byte{1, 0})),
+			malformed: true,
+		},
+		{name: "short origin AS", value: []byte{0, 0, 1}, malformed: true},
+		{
+			name:      "truncated embedded attribute",
+			value:     append(buildAttrSetValue(65001), 0x40),
+			malformed: true,
+		},
+		{
+			name:      "embedded MP_REACH_NLRI",
+			value:     buildAttrSetValue(65001, buildAttr(0x90, 14, []byte{0, 1, 1, 4, 10, 0, 0, 1, 0})),
+			malformed: true,
+		},
+		{
+			name:      "embedded MP_UNREACH_NLRI",
+			value:     buildAttrSetValue(65001, buildAttr(0x90, 15, []byte{0, 1, 1, 24, 10, 0, 1})),
+			malformed: true,
+		},
+		{
+			name:      "embedded malformed D-PATH",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 36, []byte{1, 0})),
+			malformed: true,
+		},
+		{
+			name:      "embedded malformed Tunnel Encapsulation",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 23, []byte{0xff})),
+			malformed: true,
 		},
 	}
 	for _, tc := range cases {
@@ -239,11 +283,34 @@ func TestUnknownPathAttribute_MalformedAttrSet(t *testing.T) {
 			if ba.AttrSet != nil {
 				t.Errorf("AttrSet = %+v, want nil", ba.AttrSet)
 			}
+			if ba.AttrSetMalformed != tc.malformed {
+				t.Errorf("AttrSetMalformed = %v, want %v", ba.AttrSetMalformed, tc.malformed)
+			}
 			want := []UnknownPathAttribute{{Type: 128, Flags: 0xC0, Value: tc.value}}
 			if !reflect.DeepEqual(ba.UnknownAttributes, want) {
 				t.Errorf("UnknownAttributes = %+v, want %+v", ba.UnknownAttributes, want)
 			}
 		})
+	}
+}
+
+// TestAttrSetFirstInstanceWins checks RFC 7606 §3(g): a second ATTR_SET is
+// discarded, so it cannot clear the malformed flag set by the first.
+func TestAttrSetFirstInstanceWins(t *testing.T) {
+	malformed := []byte{0, 0, 1}
+	nested := buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002)))
+	raw := append(buildAttr(0xC0, 128, malformed), buildAttr(0xC0, 128, nested)...)
+
+	ba, err := UnmarshalBGPBaseAttributes(raw)
+	if err != nil {
+		t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+	}
+	if !ba.AttrSetMalformed {
+		t.Error("AttrSetMalformed = false, want true from the first ATTR_SET")
+	}
+	want := []UnknownPathAttribute{{Type: 128, Flags: 0xC0, Value: malformed}}
+	if !reflect.DeepEqual(ba.UnknownAttributes, want) {
+		t.Errorf("UnknownAttributes = %+v, want only the first ATTR_SET %+v", ba.UnknownAttributes, want)
 	}
 }
 

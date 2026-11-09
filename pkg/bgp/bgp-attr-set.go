@@ -2,8 +2,12 @@ package bgp
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 )
+
+// errAttrSetNested marks a nested ATTR_SET: unsupported, not malformed (RFC 6368 §5).
+var errAttrSetNested = errors.New("nested ATTR_SET (type 128) is not supported")
 
 // AttrSet defines the ATTR_SET attribute structure per RFC 6368.
 //
@@ -90,6 +94,10 @@ func UnmarshalAttrSet(b []byte) (*AttrSet, error) {
 	// RFC 6368 §5: an ATTR_SET containing MP_REACH_NLRI (14) or
 	// MP_UNREACH_NLRI (15) is malformed. The RFC does not forbid a nested
 	// ATTR_SET (128); it is rejected here only as recursion protection.
+	// Malformed conditions win over nested, so scan everything first and
+	// drop nested sets from the slice before semantic mapping.
+	nested := false
+	inner := make([]PathAttribute, 0, len(attrs))
 	for _, a := range attrs {
 		switch a.AttributeType {
 		case 14:
@@ -97,13 +105,23 @@ func UnmarshalAttrSet(b []byte) (*AttrSet, error) {
 		case 15:
 			return nil, fmt.Errorf("ATTR_SET must not contain MP_UNREACH_NLRI (type 15)")
 		case 128:
-			return nil, fmt.Errorf("nested ATTR_SET (type 128) is not supported")
+			nested = true
+			continue
 		}
+		inner = append(inner, a)
 	}
 
-	baseAttrs, err := unmarshalBaseAttrsFromSlice(attrs, nil)
+	baseAttrs, err := unmarshalBaseAttrsFromSlice(inner, nil)
 	if err != nil {
 		return nil, fmt.Errorf("ATTR_SET: failed to build BaseAttributes from embedded attributes: %w", err)
+	}
+	// RFC 6368 §5: malformed embedded attributes make the ATTR_SET malformed.
+	if baseAttrs.DPathMalformed || baseAttrs.PEDistinguisherLabelsMalformed ||
+		baseAttrs.TunnelEncapMalformed || baseAttrs.NHCMalformed {
+		return nil, fmt.Errorf("ATTR_SET: embedded attribute is malformed")
+	}
+	if nested {
+		return nil, errAttrSetNested
 	}
 	attrSet.PathAttributes = baseAttrs
 

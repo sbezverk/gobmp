@@ -87,6 +87,9 @@ type BaseAttributes struct {
 	DPathAttr []byte `json:"d_path_attr,omitempty"`
 	// DPathMalformed requests treat-as-withdraw for a malformed D-PATH attribute.
 	DPathMalformed bool `json:"d_path_malformed,omitempty"`
+	// AttrSetMalformed requests treat-as-withdraw for a malformed ATTR_SET
+	// (RFC 7606 Section 7.16, RFC 6368 Section 5).
+	AttrSetMalformed bool `json:"attr_set_malformed,omitempty"`
 	// NHCAttr retains the raw NHC attribute value for forensic use.
 	NHCAttr []byte `json:"nhc_attr,omitempty"`
 	// NHC contains the decoded NHC when its characteristics are usable.
@@ -260,6 +263,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "d_path mismatch")
 	}
+	if ba.AttrSetMalformed != oba.AttrSetMalformed {
+		equal = false
+		diffs = append(diffs, "attr_set_malformed mismatch")
+	}
 	if asEqual, asDiffs := ba.AttrSet.Equal(oba.AttrSet); !asEqual {
 		equal = false
 		diffs = append(diffs, asDiffs...)
@@ -328,6 +335,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 	baseAttr := BaseAttributes{}
 	dPathSeen := false
 	peDistSeen := false
+	attrSetSeen := false
 	for _, attr := range attrs {
 		b := attr.Attribute
 		switch attr.AttributeType {
@@ -493,11 +501,19 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			}
 		case 128:
 			// ATTR_SET - RFC 6368
+			// RFC 7606 §3(g): discard every instance other than the first.
+			if attrSetSeen {
+				continue
+			}
+			attrSetSeen = true
 			attrSet, err := UnmarshalAttrSet(b)
 			if err != nil {
 				// Publish the undecodable set raw instead of dropping it.
 				glog.Errorf("failed to unmarshal ATTR_SET attribute; publishing raw bytes as unknown attribute 128: %v", err)
 				baseAttr.UnknownAttributes = append(baseAttr.UnknownAttributes, newUnknownPathAttribute(attr))
+				// RFC 7606 §7.16: malformed set is treat-as-withdraw;
+				// a nested set is only unsupported.
+				baseAttr.AttrSetMalformed = !errors.Is(err, errAttrSetNested)
 			} else {
 				baseAttr.AttrSet = attrSet
 			}

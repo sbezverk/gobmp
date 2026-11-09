@@ -969,6 +969,32 @@ func TestDPathOperation(t *testing.T) {
 	}
 }
 
+func TestAttrSetMalformedOperation(t *testing.T) {
+	update := &bgp.Update{BaseAttributes: &bgp.BaseAttributes{AttrSetMalformed: true}}
+	if got := attributeErrorOperation(update, 1, 1); got != DelPrefix {
+		t.Errorf("attributeErrorOperation = %d, want %d", got, DelPrefix)
+	}
+}
+
+// RFC 7606 Section 7.16: a malformed ATTR_SET withdraws the announced routes.
+func TestAttrSetMalformedPublishesWithdraw(t *testing.T) {
+	// ATTR_SET with a truncated Origin AS.
+	published := dPathPublish(t, []byte{0xc0, 128, 3, 0, 0, 1}, []byte{24, 198, 51, 100})
+	if len(published) != 1 || published[0].msgType != bmp.UnicastPrefixV4Msg {
+		t.Fatalf("published = %+v, want one unicast message", published)
+	}
+	var got struct {
+		Action string              `json:"action"`
+		Attrs  *bgp.BaseAttributes `json:"base_attrs"`
+	}
+	if err := json.Unmarshal(published[0].payload, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Action != "del" || got.Attrs == nil || !got.Attrs.AttrSetMalformed || len(got.Attrs.UnknownAttributes) != 1 {
+		t.Errorf("got action %q attrs %+v, want del with raw ATTR_SET", got.Action, got.Attrs)
+	}
+}
+
 func TestDPathUpdateIsNotEndOfRIB(t *testing.T) {
 	malformed := dPathAttribute(36, []byte{1, 0})
 	reach := dPathReach(25, 70, []byte{192, 0, 2, 1}, nil)
