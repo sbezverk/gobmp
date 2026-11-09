@@ -77,11 +77,16 @@ func TestPublishAfterStop_ReturnsError(t *testing.T) {
 func TestPublish_WaitsWhileStalled(t *testing.T) {
 	var mu sync.Mutex
 	stalls, subjects := 3, []string{}
+	stalled := make(chan struct{}, 1)
 	p := newPublisher(nil, &fakeJetStream{publishFn: func(m *natsgo.Msg) error {
 		mu.Lock()
 		defer mu.Unlock()
 		if stalls > 0 {
 			stalls--
+			select {
+			case stalled <- struct{}{}:
+			default:
+			}
 			return natsgo.ErrTooManyStalledMsgs
 		}
 		subjects = append(subjects, m.Subject)
@@ -96,9 +101,17 @@ func TestPublish_WaitsWhileStalled(t *testing.T) {
 	}
 	stalls = 1 << 30
 	mu.Unlock()
+	select {
+	case <-stalled: // drain the signals from the first publish
+	default:
+	}
 	done := make(chan error)
 	go func() { done <- p.PublishMessage(bmp.PeerStateChangeMsg, nil, []byte("{}")) }()
-	time.Sleep(10 * time.Millisecond)
+	select {
+	case <-stalled:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the second publish never reached JetStream")
+	}
 	stopped := make(chan struct{})
 	go func() {
 		p.Stop()
