@@ -181,6 +181,11 @@ already in the host trust store:
   --nats-server=nats://nats.example.com:4222
 ```
 
+Read the messages with a JetStream consumer on the `goBMP` stream. A core NATS
+subscription on `gobmp.>` receives them as fast as goBMP publishes; if it falls
+behind, for example during a router's initial table dump, it is a slow consumer
+and loses messages, dropped by its client or by the server disconnecting it.
+
 ### Using a YAML Config File
 ```bash
 ./bin/gobmp --config=/etc/gobmp/config.yaml --v=3
@@ -443,7 +448,10 @@ a JetStream outage. YAML: `nats_config.nats_max_pending_acks`.
 How long a publish waits for its JetStream acknowledgement. A failed or
 timed-out publish is logged (at most once a second) and its message may be lost
 (it can still be stored from the reconnect buffer after the server returns); the
-error does not reach the BMP pipeline. YAML: `nats_config.nats_ack_timeout_ms`.
+error does not reach the BMP pipeline. It also bounds shutdown during a
+JetStream outage: a stalled publish waits for acknowledgements to time out, so
+goBMP can take up to this timeout plus 10 s to stop. YAML:
+`nats_config.nats_ack_timeout_ms`.
 
 ### BMP Processing Modes
 
