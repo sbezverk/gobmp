@@ -263,7 +263,7 @@ func (p *producer) marshalAndPublish(msg interface{}, msgType int, hash []byte) 
 		return fmt.Errorf("failed to marshal a message of type %d with error: %w", msgType, err)
 	}
 	if err := p.publisher.PublishMessage(msgType, hash, j); err != nil {
-		return fmt.Errorf("failed to push a message of type %d to kafka with error: %w", msgType, err)
+		return fmt.Errorf("failed to publish a message of type %d with error: %w", msgType, err)
 	}
 	return nil
 }

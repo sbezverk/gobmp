@@ -11,6 +11,10 @@ Message updates and major project changes should be documented here.
 - Producer hot paths allocate less, with unchanged JSON output: the Prefix-SID attribute and next hop are read once per UPDATE, route keys are hashed in one MD5 call, and EVPN ESI/MAC, extended and large communities are formatted without `fmt`
 - SR Policy sub-TLVs are logged only at verbosity 5
 
+#### Fixed
+
+- Publish failures no longer report `to kafka` when the publisher is NATS: they read `failed to publish a message of type N with error: ...`
+
 ### 2026-10-30
 
 #### Added
