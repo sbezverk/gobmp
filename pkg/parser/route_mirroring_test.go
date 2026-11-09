@@ -102,3 +102,61 @@ func TestParsingWorkerRawRouteMirrorIncludesPeerHeader(t *testing.T) {
 		t.Fatalf("PeerHeader = %+v, want extracted peer header", got.PeerHeader)
 	}
 }
+
+func TestParsingWorkerRouteMirrorRejectsShortPeerHeader(t *testing.T) {
+	// Common header plus a single byte, too short to contain the 42-byte
+	// per-peer header required by Route Mirroring.
+	message := make([]byte, bmp.CommonHeaderLength+1)
+	message[0] = 3
+	binary.BigEndian.PutUint32(message[1:5], uint32(len(message)))
+	message[5] = bmp.RouteMirrorMsg
+	queue := make(chan bmp.Message, 1)
+	p := &parser{producerQueue: queue, config: &Config{}}
+	p.parsingWorker(message)
+	if len(queue) != 0 {
+		t.Fatalf("queued %d messages for a short RouteMirror header, want 0", len(queue))
+	}
+}
+
+func TestParsingWorkerUnknownRouteMirrorPeerTypeContinues(t *testing.T) {
+	unknownPeer := routeMirrorParserBMPMessage(routeMirrorParserBGPMessage(2, []byte{0, 0, 0, 0}))
+	unknownPeer[bmp.CommonHeaderLength] = 0xff
+	validPeerDown := buildPeerDownMsg(routeMirrorParserPeerHeader(), 5, nil)
+	queue := make(chan bmp.Message, 2)
+	p := &parser{producerQueue: queue, config: &Config{}}
+	p.parsingWorker(append(unknownPeer, validPeerDown...))
+	if len(queue) != 1 {
+		t.Fatalf("queued %d messages, want the PeerDown after unknown peer type", len(queue))
+	}
+	got := <-queue
+	if down, ok := got.Payload.(*bmp.PeerDownMessage); !ok || down.Reason != 5 {
+		t.Fatalf("payload = %#v, want PeerDown reason 5", got.Payload)
+	}
+}
+
+func TestParsingWorkerMalformedRouteMirrorDoesNotQueue(t *testing.T) {
+	// UPDATE PDU with a truncated body: it passes BMP/TLV framing but fails BGP
+	// UPDATE decoding. The invalid frame must not reach the producer queue.
+	message := routeMirrorParserBMPMessage(routeMirrorParserBGPMessage(2, []byte{0}))
+	queue := make(chan bmp.Message, 1)
+	p := &parser{producerQueue: queue, config: &Config{}}
+	p.parsingWorker(message)
+	if len(queue) != 0 {
+		t.Fatalf("queued %d messages for malformed RouteMirror UPDATE, want 0", len(queue))
+	}
+}
+
+func TestParsingWorkerRouteMirrorWithNilProducerQueue(t *testing.T) {
+	message := routeMirrorParserBMPMessage(routeMirrorParserBGPMessage(2, []byte{0, 0, 0, 0}))
+	p := &parser{config: &Config{}}
+	p.parsingWorker(message)
+}
+
+func TestParsingWorkerRouteMirrorStopInterruptsQueueSend(t *testing.T) {
+	message := routeMirrorParserBMPMessage(routeMirrorParserBGPMessage(2, []byte{0, 0, 0, 0}))
+	queue := make(chan bmp.Message) // no receiver: parser blocks unless stop wins
+	stop := make(chan struct{})
+	close(stop)
+	p := &parser{producerQueue: queue, stop: stop, config: &Config{}}
+	p.parsingWorker(message)
+}

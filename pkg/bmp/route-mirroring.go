@@ -108,9 +108,6 @@ func unmarshalRouteMirror(b []byte, isAS4 *bool) (*RouteMirror, error) {
 		p += int(l)
 	}
 
-	if len(rm.TLVs) == 0 {
-		return nil, fmt.Errorf("message Route Mirror must carry at least 1 TLV")
-	}
 	for i, tlv := range rm.TLVs {
 		if tlv.Type == RouteMirrorBGPMsgTLV && i != len(rm.TLVs)-1 {
 			return nil, fmt.Errorf("BGP Message TLV must be last in Route Mirror message")

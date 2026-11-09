@@ -96,3 +96,30 @@ func TestPrePeerUpRouteMirrorByteAccounting(t *testing.T) {
 		t.Fatalf("oversized mirror retained: messages=%d bytes=%d", len(p.prePeerUp), p.prePeerUpBytes)
 	}
 }
+
+func TestProduceRouteMessageRejectsInvalidPayloads(t *testing.T) {
+	peer := makePeerHeader(t, bmp.PeerType0, 0)
+	var nilRouteMonitor *bmp.RouteMonitor
+	var nilRouteMirror *bmp.RouteMirror
+	tests := []struct {
+		name string
+		msg  bmp.Message
+	}{
+		{name: "missing peer header", msg: bmp.Message{Payload: &bmp.RouteMonitor{}}},
+		{name: "nil route monitor", msg: bmp.Message{PeerHeader: peer, Payload: nilRouteMonitor}},
+		{name: "route monitor without update", msg: bmp.Message{PeerHeader: peer, Payload: &bmp.RouteMonitor{}}},
+		{name: "nil route mirror", msg: bmp.Message{PeerHeader: peer, Payload: nilRouteMirror}},
+		{name: "route mirror without BGP update", msg: bmp.Message{PeerHeader: peer, Payload: &bmp.RouteMirror{}}},
+		{name: "unsupported payload", msg: bmp.Message{PeerHeader: peer, Payload: &bmp.StatsReport{}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			publisher := &recordingPublisher{}
+			p := NewProducer(publisher, false).(*producer)
+			p.produceRouteMessage(tt.msg)
+			if len(publisher.msgs) != 0 {
+				t.Fatalf("published %d messages for invalid route input, want 0", len(publisher.msgs))
+			}
+		})
+	}
+}
