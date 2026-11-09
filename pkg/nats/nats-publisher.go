@@ -139,7 +139,11 @@ func (l *errorLog) log(m *nats.Msg, err error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if now := time.Now(); now.Sub(l.last) >= time.Second {
-		glog.Errorf("NATS JetStream publish to %s failed: %v (%d more failures not logged)", m.Subject, err, l.suppressed)
+		if l.suppressed > 0 {
+			glog.Errorf("NATS JetStream publish to %s failed: %v (%d earlier failures not logged)", m.Subject, err, l.suppressed)
+		} else {
+			glog.Errorf("NATS JetStream publish to %s failed: %v", m.Subject, err)
+		}
 		l.last, l.suppressed = now, 0
 		return
 	}
