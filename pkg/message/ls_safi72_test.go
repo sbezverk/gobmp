@@ -411,31 +411,54 @@ func TestProcessNLRI72SubTypes_DeleteOperation(t *testing.T) {
 	}
 }
 
-// TestProcessNLRI72SubTypes_UnknownSubType logs but does not crash.
+// TestProcessNLRI72SubTypes_UnknownSubType checks publication from decoded NLRIs
+// independently of the SAFI 72 wire decoder.
 func TestProcessNLRI72SubTypes_UnknownSubType(t *testing.T) {
-	rd, err := base.MakeRD([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01})
-	if err != nil {
-		t.Fatalf("MakeRD: %v", err)
+	// RFC 4364 §4.2: the type 0 and type 2 RDs both display as 65000:1.
+	rds := []struct {
+		wire []byte
+		want string
+	}{
+		{[]byte{0, 0, 0xfd, 0xe8, 0, 0, 0, 1}, "0000fde800000001"},
+		{[]byte{0, 2, 0, 0, 0xfd, 0xe8, 0, 1}, "00020000fde80001"},
 	}
-	mock := &safi72MockNLRI{
-		nlri72: &ls.NLRI72{
-			NLRI: []ls.VPNElement{{RD: rd, Type: 99, LS: []byte{0xab}}},
-		},
+	decoded := &ls.NLRI72{}
+	for _, entry := range rds {
+		rd, err := base.MakeRD(entry.wire)
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded.NLRI = append(decoded.NLRI, ls.VPNElement{RD: rd, Type: 7, LS: []byte{0xab}})
 	}
-	rec := &recordingPublisher{}
-	p := &producer{publisher: rec}
-	ph := makePeerHeader(t, bmp.PeerType0, 0x00)
-	p.processNLRI72SubTypes(mock, 0, ph, &bgp.Update{})
-	// RFC 9552 §5.2: unknown Link-State NLRI types MUST be preserved and propagated.
-	if len(rec.msgs) != 1 || rec.msgs[0].msgType != bmp.LSOpaqueMsg {
-		t.Fatalf("unknown sub type: got %d messages, want 1 on LSOpaque topic", len(rec.msgs))
-	}
-	var got LSOpaque
-	if err := json.Unmarshal(rec.msgs[0].payload, &got); err != nil {
-		t.Fatalf("published LSOpaque JSON: %v", err)
-	}
-	if got.NLRIType != 99 || got.NLRI != "ab" || got.RD != rd.String() || got.SAFI != 72 {
-		t.Errorf("published LSOpaque = type %d NLRI %q RD %q SAFI %d, want 99/ab/%q/72", got.NLRIType, got.NLRI, got.RD, got.SAFI, rd.String())
+	for _, test := range []struct {
+		action    string
+		operation int
+	}{{"add", AddPrefix}, {"del", DelPrefix}} {
+		t.Run(test.action, func(t *testing.T) {
+			rec := &recordingPublisher{}
+			p := &producer{publisher: rec}
+			ph := makePeerHeader(t, bmp.PeerType0, 0x00)
+			p.processNLRI72SubTypes(&safi72MockNLRI{nlri72: decoded}, test.operation, ph, &bgp.Update{})
+			if len(rec.msgs) != len(rds) {
+				t.Fatalf("published %d messages, want %d", len(rec.msgs), len(rds))
+			}
+			for i, entry := range rds {
+				msg := rec.msgs[i]
+				if msg.msgType != bmp.LSOpaqueMsg {
+					t.Fatalf("message %d type = %d, want LSOpaqueMsg", i, msg.msgType)
+				}
+				var got struct {
+					LSOpaque
+					RawRD string `json:"route_distinguisher_raw"`
+				}
+				if err := json.Unmarshal(msg.payload, &got); err != nil {
+					t.Fatal(err)
+				}
+				if got.RawRD != entry.want || got.RD != "65000:1" || got.NLRIType != 7 || got.NLRI != "ab" || got.SAFI != 72 || got.Action != test.action {
+					t.Errorf("message %d: %s, want raw RD %s and display RD 65000:1 for %s", i, msg.payload, entry.want, test.action)
+				}
+			}
+		})
 	}
 }
 

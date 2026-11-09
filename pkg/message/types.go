@@ -683,6 +683,8 @@ type LSOpaque struct {
 	NLRIType uint16 `json:"nlri_type"`
 	// NLRI is the hex-encoded NLRI value, excluding the 4-byte Type/Length header.
 	NLRI string `json:"nlri"`
+	// RDRaw is the eight wire bytes of the SAFI 72 RD in lowercase hex (RFC 9552 §5.2).
+	RDRaw string `json:"route_distinguisher_raw,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`

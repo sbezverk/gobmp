@@ -554,6 +554,11 @@ topics in this table are shown for `--split-af=true` (the default):
 | `gobmp.parsed.mup` | Combined MUP v4/v6 routes (when `--split-af=false`) |
 | `gobmp.raw` | RAW OpenBMP binary messages (when `--bmp-raw=true`) |
 
+Opaque SAFI 72 records carry the eight wire bytes of the Route Distinguisher
+as lowercase hex in `route_distinguisher_raw`. Compare that field byte for
+byte. The display value `route_distinguisher` can be identical for distinct
+RD encodings such as types 0 and 2 ([RFC 4364 §4.2](https://www.rfc-editor.org/rfc/rfc4364.html#section-4.2)).
+
 When `--split-af=false`, MUP IPv4 and IPv6 messages are published to
 `gobmp.parsed.mup` instead of the split `gobmp.parsed.mup_v4` and
 `gobmp.parsed.mup_v6` topics.
