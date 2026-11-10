@@ -51,6 +51,10 @@ var (
 	stopTimeout = 10 * time.Second
 )
 
+// maxReconnects bounds the reconnect attempts after a lost connection,
+// waitReconnect apart: about 5 minutes. The connection then closes for good.
+const maxReconnects = 300
+
 const (
 	// DefaultMaxPendingAcks is the default bound on publishes awaiting their
 	// JetStream acknowledgement.
@@ -72,6 +76,10 @@ type Config struct {
 	// it is logged as failed and its message dropped. 0 means
 	// DefaultAckTimeout.
 	AckTimeout time.Duration
+	// OnConnectionLost is called once if the connection closes other than
+	// by Stop, as when the reconnect attempts run out; every later publish
+	// fails. nil only logs it.
+	OnConnectionLost func()
 }
 
 // withDefaults returns c with zero fields set to their defaults, or an
@@ -121,6 +129,22 @@ type publisher struct {
 	mu       sync.RWMutex
 	stopped  bool
 	stopOnce sync.Once
+	// onLost is Config.OnConnectionLost.
+	onLost func()
+}
+
+// connectionClosed handles the connection closing: as part of Stop, or for
+// good after the reconnect attempts run out.
+func (p *publisher) connectionClosed() {
+	select {
+	case <-p.stopCh:
+		glog.Infof("NATS connection closed")
+	default:
+		glog.Errorf("NATS connection closed: no reconnect after %d attempts", maxReconnects)
+		if p.onLost != nil {
+			p.onLost()
+		}
+	}
 }
 
 func newPublisher(nc *nats.Conn, js jetStreamClient) *publisher {
@@ -334,9 +358,8 @@ func (p *publisher) createStreams() error {
 func connectOptions() []nats.Option {
 	return []nats.Option{
 		nats.Name("gobmp-producer"),
-		// Keep reconnecting however long the server is away: a closed
-		// connection would fail every publish while gobmp keeps running.
-		nats.MaxReconnects(-1),
+		// The connection closes once these run out; see connectionClosed.
+		nats.MaxReconnects(maxReconnects),
 		nats.ReconnectWait(waitReconnect),
 		nats.Timeout(natsTimeout),
 		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
@@ -346,9 +369,6 @@ func connectOptions() []nats.Option {
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
 			glog.Infof("NATS connection reestablished to %s", nc.ConnectedUrlRedacted())
-		}),
-		nats.ClosedHandler(func(*nats.Conn) {
-			glog.Infof("NATS connection closed")
 		}),
 	}
 }
@@ -396,6 +416,8 @@ func NewPublisherWithConfig(cfg *Config) (pub.Publisher, error) {
 		nc.Close()
 		return nil, err
 	}
+	p.onLost = c.OnConnectionLost
+	nc.SetClosedHandler(func(*nats.Conn) { p.connectionClosed() })
 
 	return p, nil
 }

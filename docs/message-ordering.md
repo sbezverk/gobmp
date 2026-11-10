@@ -59,9 +59,10 @@ The standalone parser/producer APIs still support an explicit stop signal. The
 server uses input closure instead, so shutdown does not abort an accepted frame.
 `PublishMessage` has no cancellation parameter: a blocked call must return before
 that connection worker and server Stop can finish. No hard shutdown deadline is
-added. The NATS publisher, which reconnects for as long as the server is away,
-publishes to JetStream asynchronously, in call order: a publish returns before
-its acknowledgement, so an acknowledgement failure or timeout
+added. If the NATS server stays away for about 5 minutes, goBMP exits with an
+error instead of dropping every later message. The NATS publisher publishes to
+JetStream asynchronously, in call order: a publish returns before its
+acknowledgement, so an acknowledgement failure or timeout
 (`nats_ack_timeout_ms`, default 30 s) does not reach the caller; it is logged,
 at most once a second, and the message may be lost (one buffered during a
 reconnect can still be stored). Once `nats_max_pending_acks` (default 4096)

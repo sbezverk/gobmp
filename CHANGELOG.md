@@ -23,7 +23,7 @@ Message updates and major project changes should be documented here.
 #### Fixed
 
 - Publish failures no longer report `to kafka` when the publisher is NATS: they read `failed to publish a message of type N with error: ...`
-- NATS publisher closing its connection for good after 10 failed reconnects, failing every later publish while gobmp kept running: it now reconnects for as long as the server is away and logs disconnects, reconnects and the close
+- NATS publisher closing its connection for good after 10 failed reconnects, failing every later publish while gobmp kept running: it now tries to reconnect for about 5 minutes, then gobmp exits with an error so that a supervisor restarts it and routers re-send their tables; disconnects and reconnects are logged
 
 ### 2026-10-30
 

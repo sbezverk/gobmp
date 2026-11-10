@@ -131,14 +131,11 @@ func main() {
 		}
 	case config.PublisherTypeNATS:
 		if cfg.NATSConfig != nil && cfg.NATSConfig.NatsSrv != "" {
-			if cfg.NATSConfig.NatsAckTimeoutMs > maxNATSAckTimeoutMs {
-				fatal("invalid nats_ack_timeout_ms %d: must be <= %d", cfg.NATSConfig.NatsAckTimeoutMs, maxNATSAckTimeoutMs)
+			natsCfg, err := natsPublisherConfig(cfg.NATSConfig)
+			if err != nil {
+				fatal("%v", err)
 			}
-			cfg.Publisher, err = nats.NewPublisherWithConfig(&nats.Config{
-				ServerAddress:  cfg.NATSConfig.NatsSrv,
-				MaxPendingAcks: cfg.NATSConfig.NatsMaxPendingAcks,
-				AckTimeout:     time.Duration(cfg.NATSConfig.NatsAckTimeoutMs) * time.Millisecond,
-			})
+			cfg.Publisher, err = nats.NewPublisherWithConfig(natsCfg)
 			if err != nil {
 				fatal("failed to initialize NATS publisher with error: %+v", err)
 			} else {
@@ -191,6 +188,24 @@ func defaultKafkaConfig() *config.KafkaConfig {
 
 // defaultNATSConfig returns a NATSConfig pre-populated with the
 // acknowledgement defaults, used when a NATS CLI flag creates it.
+// natsPublisherConfig returns the NATS publisher configuration for c, or an
+// error for an ack timeout over maxNATSAckTimeoutMs.
+func natsPublisherConfig(c *config.NATSConfig) (*nats.Config, error) {
+	if c.NatsAckTimeoutMs > maxNATSAckTimeoutMs {
+		return nil, fmt.Errorf("invalid nats_ack_timeout_ms %d: must be <= %d", c.NatsAckTimeoutMs, maxNATSAckTimeoutMs)
+	}
+	return &nats.Config{
+		ServerAddress:  c.NatsSrv,
+		MaxPendingAcks: c.NatsMaxPendingAcks,
+		AckTimeout:     time.Duration(c.NatsAckTimeoutMs) * time.Millisecond,
+		// Exit rather than drop every message: once restarted, goBMP gets
+		// each router's full table again.
+		OnConnectionLost: func() {
+			fatal("NATS server unreachable for about 5 minutes; exiting")
+		},
+	}, nil
+}
+
 func defaultNATSConfig() *config.NATSConfig {
 	return &config.NATSConfig{
 		NatsMaxPendingAcks: defaultNATSMaxPendingAcks,

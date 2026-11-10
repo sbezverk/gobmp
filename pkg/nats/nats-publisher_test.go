@@ -315,10 +315,10 @@ func TestConnectOptions(t *testing.T) {
 			t.Fatalf("option: %v", err)
 		}
 	}
-	if o.MaxReconnect != -1 {
-		t.Errorf("MaxReconnect = %d, want -1 (no limit)", o.MaxReconnect)
+	if o.MaxReconnect != maxReconnects {
+		t.Errorf("MaxReconnect = %d, want %d", o.MaxReconnect, maxReconnects)
 	}
-	if o.DisconnectedErrCB == nil || o.ReconnectedCB == nil || o.ClosedCB == nil {
+	if o.DisconnectedErrCB == nil || o.ReconnectedCB == nil {
 		t.Fatal("connection transitions are not all logged")
 	}
 	// The handlers only log; they must not panic, including a disconnect
@@ -326,5 +326,22 @@ func TestConnectOptions(t *testing.T) {
 	o.DisconnectedErrCB(nil, errors.New("EOF"))
 	o.DisconnectedErrCB(nil, nil)
 	o.ReconnectedCB(nil)
-	o.ClosedCB(nil)
+}
+
+// TestConnectionClosed checks that a connection closing for good calls
+// OnConnectionLost, and one closed by Stop does not.
+func TestConnectionClosed(t *testing.T) {
+	lost := 0
+	p := newPublisher(nil, &fakeJetStream{})
+	p.onLost = func() { lost++ }
+	p.connectionClosed()
+	if lost != 1 {
+		t.Fatalf("connection lost: OnConnectionLost called %d times, want 1", lost)
+	}
+	p.Stop()
+	p.connectionClosed()
+	if lost != 1 {
+		t.Errorf("connection closed by Stop: OnConnectionLost called %d times in all, want 1", lost)
+	}
+	newPublisher(nil, &fakeJetStream{}).connectionClosed() // nil OnConnectionLost only logs
 }

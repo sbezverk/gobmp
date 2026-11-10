@@ -186,6 +186,11 @@ subscription on `gobmp.>` receives them as fast as goBMP publishes; if it falls
 behind, for example during a router's initial table dump, it is a slow consumer
 and loses messages, dropped by its client or by the server disconnecting it.
 
+If the connection to NATS is lost, goBMP tries to reconnect for about 5 minutes
+and then exits with an error rather than drop every later message. Run it under
+a supervisor such as systemd or Kubernetes: once restarted, goBMP receives each
+router's full table again.
+
 ### Using a YAML Config File
 ```bash
 ./bin/gobmp --config=/etc/gobmp/config.yaml --v=3
