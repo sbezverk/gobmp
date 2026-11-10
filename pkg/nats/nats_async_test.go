@@ -146,7 +146,7 @@ func TestConfigWithDefaults(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("withDefaults() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if !tt.wantErr && got != tt.want {
+			if !tt.wantErr && (got.MaxPendingAcks != tt.want.MaxPendingAcks || got.AckTimeout != tt.want.AckTimeout) {
 				t.Errorf("withDefaults() = %+v, want %+v", got, tt.want)
 			}
 		})

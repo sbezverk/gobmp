@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/config"
@@ -847,6 +848,47 @@ func TestApplyConfigOverrides_NatsServer_LazyInit_AckDefaults(t *testing.T) {
 	}
 	if cfg.NATSConfig.NatsMaxPendingAcks != 4096 || cfg.NATSConfig.NatsAckTimeoutMs != 30000 {
 		t.Errorf("lazily created NATSConfig = %+v, want 4096 pending acks and 30000 ms", *cfg.NATSConfig)
+	}
+}
+
+// TestApplyConfigOverrides_NatsAckOptions_WithoutNats checks that each NATS
+// ack flag alone creates NATSConfig and is accepted, with a warning, for a
+// publisher other than NATS.
+func TestApplyConfigOverrides_NatsAckOptions_WithoutNats(t *testing.T) {
+	for _, tc := range []struct{ name, value string }{
+		{"nats-max-pending-acks", "128"},
+		{"nats-ack-timeout-ms", "5000"},
+	} {
+		fs := newTestFlagSet()
+		if err := fs.Set(tc.name, tc.value); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+		if err := fs.Set("dump", "console"); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+		cfg := &config.Config{}
+		if err := applyConfigOverrides(cfg, fs); err != nil {
+			t.Fatalf("--%s=%s: unexpected error: %v", tc.name, tc.value, err)
+		}
+		if cfg.NATSConfig == nil {
+			t.Fatalf("--%s=%s: NATSConfig is nil, want non-nil (lazy init)", tc.name, tc.value)
+		}
+	}
+}
+
+func TestNATSPublisherConfig(t *testing.T) {
+	got, err := natsPublisherConfig(&config.NATSConfig{NatsSrv: "nats://127.0.0.1:4222", NatsMaxPendingAcks: 16, NatsAckTimeoutMs: 1500})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.ServerAddress != "nats://127.0.0.1:4222" || got.MaxPendingAcks != 16 || got.AckTimeout != 1500*time.Millisecond {
+		t.Errorf("natsPublisherConfig = %+v, want the server, 16 pending acks and 1.5 s", *got)
+	}
+	if got.OnConnectionLost == nil {
+		t.Error("OnConnectionLost is nil: goBMP would keep running with every publish failing")
+	}
+	if _, err := natsPublisherConfig(&config.NATSConfig{NatsAckTimeoutMs: maxNATSAckTimeoutMs + 1}); err == nil {
+		t.Error("ack timeout over the cap: error = nil, want an error")
 	}
 }
 
