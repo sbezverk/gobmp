@@ -224,10 +224,35 @@ func (p *parser) parsingWorker(b []byte) {
 				}
 			}
 		case bmp.RouteMirrorMsg:
-			glog.V(5).Infof("Route Mirroring message")
-			if glog.V(6) {
-				glog.Infof("Content:%s", tools.MessageHex(b))
+			if ch.MessageLength < uint32(bmp.CommonHeaderLength+bmp.PerPeerHeaderLength) {
+				glog.Errorf("BMP RouteMonitor message too short for Per-Peer Header: length=%d, need at least %d",
+					ch.MessageLength, bmp.CommonHeaderLength+bmp.PerPeerHeaderLength)
+				return
 			}
+			if bmpMsg.PeerHeader, err = bmp.UnmarshalPerPeerHeader(b[pos : pos+bmp.PerPeerHeaderLength]); err != nil {
+				if errors.Is(err, bmp.ErrUnknownPeerType) {
+					break // skip message, continue processing stream
+				}
+				glog.Errorf("fail to recover BMP Per Peer Header with error: %+v", err)
+				return
+			}
+			perPerHeaderLen = bmp.PerPeerHeaderLength
+			rmBody := b[pos+perPerHeaderLen : pos+msgLen-bmp.CommonHeaderLength]
+			rm, err := bmp.UnmarshalBMPRouteMirrorMessage(rmBody)
+			if err != nil {
+				if errors.Is(err, bmp.ErrNotAnUpdate) {
+					glog.V(5).Infof("skipping non-Update BGP message in route mirror: %+v", err)
+					break
+				}
+				glog.Errorf("fail to recover BMP Route Mirroring with error: %+v", err)
+				if glog.V(5) {
+					glog.Infof("common header content: %+v", ch)
+					glog.Infof("per peer header content: %s", tools.MessageHex(b[pos:pos+bmp.PerPeerHeaderLength]))
+					glog.Infof("message content: %s", tools.MessageHex(b[pos+perPerHeaderLen:pos+msgLen-bmp.CommonHeaderLength]))
+				}
+				return
+			}
+			bmpMsg.Payload = rm
 		}
 		pos += msgLen - bmp.CommonHeaderLength
 		if p.producerQueue != nil && bmpMsg.Payload != nil {
@@ -260,7 +285,7 @@ func (p *parser) sendRawMessage(b []byte) {
 		if err == nil {
 			// Only extract peer header for message types that have it
 			switch ch.MessageType {
-			case bmp.RouteMonitorMsg, bmp.StatsReportMsg, bmp.PeerDownMsg, bmp.PeerUpMsg:
+			case bmp.RouteMonitorMsg, bmp.RouteMirrorMsg, bmp.StatsReportMsg, bmp.PeerDownMsg, bmp.PeerUpMsg:
 				peerHeader, _ = bmp.UnmarshalPerPeerHeader(b[bmp.CommonHeaderLength : bmp.CommonHeaderLength+bmp.PerPeerHeaderLength])
 			}
 		}

@@ -13,6 +13,10 @@ Message updates and major project changes should be documented here.
 - `base_attrs.unknown_attributes` now includes path attribute types 11–13, 19–21, 24, 28, 30, 31, 33, 34, 37, 38, 41 and 42, which were dropped
 - `base_attrs.unknown_attributes` now includes an ATTR_SET that is truncated, holds MP_REACH_NLRI/MP_UNREACH_NLRI, or holds an attribute the parser flags as malformed, published raw as type 128; its routes are treated as withdrawn (RFC 7606 §7.16)
 
+#### Fixed
+
+- Publish failures no longer report `to kafka` when the publisher is NATS: they read `failed to publish a message of type N with error: ...`
+
 ### 2026-10-30
 
 #### Added

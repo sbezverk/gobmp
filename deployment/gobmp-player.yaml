@@ -17,7 +17,7 @@ spec:
             - "60"
             - --iterations
             - "3"
-          image: docker.io/sbezverk/gobmp-player:0.0.0
+          image: ghcr.io/sbezverk/gobmp-player:0.0.0
           imagePullPolicy: Always
           name: gobmp-player
           volumeMounts:

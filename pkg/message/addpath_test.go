@@ -227,7 +227,7 @@ func checkAddPathRoute(t *testing.T, p *producer, ph *bmp.PerPeerHeader, family 
 		}
 		rec := p.publisher.(*recordingPublisher)
 		rec.msgs = nil
-		p.produceRouteMonitorMessage(bmp.Message{PeerHeader: ph, Payload: &bmp.RouteMonitor{Update: update}})
+		p.produceRouteMessage(bmp.Message{PeerHeader: ph, Payload: &bmp.RouteMonitor{Update: update}})
 		for _, msg := range rec.msgs {
 			var route UnicastPrefix
 			if err := json.Unmarshal(msg.payload, &route); err != nil {
