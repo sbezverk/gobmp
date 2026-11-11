@@ -84,7 +84,7 @@ func TestRawPeerKeysPreservePublishedRouteFields(t *testing.T) {
 		ph := makePeerHeader(t, bmp.PeerType1, 0)
 		ph.PeerDistinguisher = tc.pd
 		update := &bgp.Update{NLRI: []byte{24, 192, 0, 2}, BaseAttributes: &bgp.BaseAttributes{}}
-		p.produceRouteMonitorMessage(bmp.Message{PeerHeader: ph, Payload: &bmp.RouteMonitor{Update: update}})
+		p.produceRouteMessage(bmp.Message{PeerHeader: ph, Payload: &bmp.RouteMonitor{Update: update}})
 		if len(rec.msgs) != 1 {
 			t.Fatalf("published route count = %d, want 1", len(rec.msgs))
 		}
