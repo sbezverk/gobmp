@@ -28,13 +28,13 @@ func TestUnmarshalLSNLRI72(t *testing.T) {
 		0x02, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
 		0x02, 0x03, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 	}
-	// SAFI 71 Element header is Type(2) + Length(2) prepended to nodeBody.
-	// For SAFI 72 we additionally prepend the 8-byte RD.
+	// RFC 9552 §5.2 Figure 6: Type + Length (including RD) + RD + body.
 	makeEntry := func(rd []byte, elType uint16, body []byte) []byte {
 		out := make([]byte, 0, len(rd)+4+len(body))
-		out = append(out, rd...)
 		out = append(out, byte(elType>>8), byte(elType))
-		out = append(out, byte(len(body)>>8), byte(len(body)))
+		length := len(rd) + len(body)
+		out = append(out, byte(length>>8), byte(length))
+		out = append(out, rd...)
 		out = append(out, body...)
 		return out
 	}
@@ -61,6 +61,9 @@ func TestUnmarshalLSNLRI72(t *testing.T) {
 		}
 		if el.Type != 1 {
 			t.Errorf("Element.Type = %d, want 1", el.Type)
+		}
+		if el.Length != uint16(8+len(nodeBody)) {
+			t.Errorf("Element.Length = %d, want %d including RD", el.Length, 8+len(nodeBody))
 		}
 		if _, ok := el.LS.(*base.NodeNLRI); !ok {
 			t.Errorf("Element.LS type = %T, want *base.NodeNLRI", el.LS)
@@ -224,7 +227,7 @@ func TestUnmarshalLSNLRI72(t *testing.T) {
 		}
 	})
 
-	t.Run("Add Path Path-ID consumed before RD", func(t *testing.T) {
+	t.Run("Add Path Path-ID consumed before Type and Length", func(t *testing.T) {
 		entry := makeEntry(rdType0(100, 1), 1, nodeBody)
 		// Prepend 4-byte Path-ID = 0xDEADBEEF.
 		input := append([]byte{0xDE, 0xAD, 0xBE, 0xEF}, entry...)
@@ -251,9 +254,9 @@ func TestUnmarshalLSNLRI72(t *testing.T) {
 	})
 
 	t.Run("truncated RD rejected", func(t *testing.T) {
-		_, err := UnmarshalLSNLRI72([]byte{0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00}, false)
-		if err == nil || !strings.Contains(err.Error(), "Route Distinguisher") {
-			t.Fatalf("expected Route Distinguisher truncation error, got %v", err)
+		_, err := UnmarshalLSNLRI72([]byte{0x00, 0x63, 0x00, 0x08, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00}, false)
+		if err == nil || !strings.Contains(err.Error(), "need 8 bytes, have 7") {
+			t.Fatalf("expected NLRI value truncation error, got %v", err)
 		}
 	})
 
@@ -267,27 +270,25 @@ func TestUnmarshalLSNLRI72(t *testing.T) {
 		}
 	})
 
-	t.Run("truncated TLV header after RD rejected", func(t *testing.T) {
-		// RD only, no TLV header.
-		_, err := UnmarshalLSNLRI72(rdType0(100, 1), false)
+	t.Run("truncated TLV header before RD rejected", func(t *testing.T) {
+		_, err := UnmarshalLSNLRI72([]byte{0x00, 0x01, 0x00}, false)
 		if err == nil || !strings.Contains(err.Error(), "TLV header") {
 			t.Fatalf("expected TLV header truncation error, got %v", err)
 		}
 	})
 
-	t.Run("zero-length TLV rejected", func(t *testing.T) {
-		input := append(rdType0(100, 1), 0x00, 0x01, 0x00, 0x00) // type 1, length 0
+	t.Run("empty Node body rejected", func(t *testing.T) {
+		input := makeEntry(rdType0(100, 1), 1, nil)
 		_, err := UnmarshalLSNLRI72(input, false)
-		if err == nil || !strings.Contains(err.Error(), "zero length") {
-			t.Fatalf("expected zero-length TLV error, got %v", err)
+		if err == nil {
+			t.Fatal("expected error for empty Node body")
 		}
 	})
 
-	// RFC 9552 §5.1: "a TLV with no value portion would have a length of zero".
-	t.Run("zero-length unknown type kept", func(t *testing.T) {
-		input := append(rdType0(100, 1), 0x00, 0x64, 0x00, 0x00) // type 100, length 0
-		input = append(input, rdType0(100, 1)...)
-		input = append(input, 0x00, 0x63, 0x00, 0x01, 0xff) // type 99, length 1
+	// RFC 9552 §5.2: unknown types are opaque; an empty body still has an RD.
+	t.Run("empty unknown body kept", func(t *testing.T) {
+		input := makeEntry(rdType0(100, 1), 100, nil)
+		input = append(input, makeEntry(rdType0(100, 1), 99, []byte{0xff})...)
 		got, err := UnmarshalLSNLRI72(input, false)
 		if err != nil {
 			t.Fatalf("UnmarshalLSNLRI72() error = %v", err)
@@ -301,8 +302,8 @@ func TestUnmarshalLSNLRI72(t *testing.T) {
 	})
 
 	t.Run("truncated TLV value rejected", func(t *testing.T) {
-		// Claims length 26 but body is only 5 bytes.
-		input := append(rdType0(100, 1), 0x00, 0x01, 0x00, 0x1A, 0x01, 0x02, 0x03, 0x04, 0x05)
+		input := makeEntry(rdType0(100, 1), 1, nodeBody)
+		input = input[:len(input)-1]
 		_, err := UnmarshalLSNLRI72(input, false)
 		if err == nil || !strings.Contains(err.Error(), "truncated") {
 			t.Fatalf("expected truncation error, got %v", err)
