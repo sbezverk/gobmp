@@ -765,7 +765,7 @@ func dPathPublishWithWithdraw(t *testing.T, attributes, legacy, withdrawn []byte
 	}
 	recorder := &recordingPublisher{}
 	p := NewProducer(recorder, true).(*producer)
-	p.produceRouteMonitorMessage(bmp.Message{
+	p.produceRouteMessage(bmp.Message{
 		PeerHeader: makePeerHeader(t, bmp.PeerType0, 0),
 		Payload:    &bmp.RouteMonitor{Update: update},
 	})
@@ -992,7 +992,7 @@ func TestEndOfRIBRequiresBareUpdate(t *testing.T) {
 		}
 		recorder := &recordingPublisher{}
 		p := NewProducer(recorder, true).(*producer)
-		p.produceRouteMonitorMessage(bmp.Message{
+		p.produceRouteMessage(bmp.Message{
 			PeerHeader: makePeerHeader(t, bmp.PeerType0, 0),
 			Payload:    &bmp.RouteMonitor{Update: update},
 		})

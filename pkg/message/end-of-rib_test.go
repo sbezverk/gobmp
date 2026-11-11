@@ -50,7 +50,7 @@ func TestEndOfRIBWireFamilies(t *testing.T) {
 				if !legacy {
 					attrs = eorUnreach(afi, safi)
 				}
-				p.produceRouteMonitorMessage(bmp.Message{PeerHeader: ph, Payload: eorWire(t, nil, attrs, nil)})
+				p.produceRouteMessage(bmp.Message{PeerHeader: ph, Payload: eorWire(t, nil, attrs, nil)})
 				compat := legacy || (afi == 1 || afi == 2) && (safi == 1 || safi == 4 || safi == 128 || safi == 85) || afi == 25 && safi == 70
 				want := 1
 				if compat {
@@ -142,7 +142,7 @@ func TestEndOfRIBRejectsOrdinaryUpdates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := &recordingPublisher{}
 			p := NewProducer(rec, false).(*producer)
-			p.produceRouteMonitorMessage(bmp.Message{PeerHeader: makePeerHeader(t, bmp.PeerType0, 0), Payload: eorWire(t, tt.withdrawn, tt.attrs, tt.nlri)})
+			p.produceRouteMessage(bmp.Message{PeerHeader: makePeerHeader(t, bmp.PeerType0, 0), Payload: eorWire(t, tt.withdrawn, tt.attrs, tt.nlri)})
 			if len(rec.msgs) != tt.wantRoutes {
 				t.Fatalf("route records=%d want %d", len(rec.msgs), tt.wantRoutes)
 			}
@@ -182,7 +182,7 @@ func TestEndOfRIBPublisherFailure(t *testing.T) {
 			attrs = nil
 		}
 		rm := eorWire(t, nil, attrs, nil)
-		p.produceRouteMonitorMessage(bmp.Message{PeerHeader: ph, Payload: rm})
+		p.produceRouteMessage(bmp.Message{PeerHeader: ph, Payload: rm})
 		if len(rec.types) == 0 || rec.types[len(rec.types)-1] != bmp.EndOfRIBMsg {
 			t.Fatalf("missing control publish attempt: %v", rec.types)
 		}
@@ -193,7 +193,7 @@ func TestEndOfRIBPublisherFailure(t *testing.T) {
 		}
 		// Failure neither mutates the input nor suppresses the next received marker.
 		before := len(rec.types)
-		p.produceRouteMonitorMessage(bmp.Message{PeerHeader: ph, Payload: rm})
+		p.produceRouteMessage(bmp.Message{PeerHeader: ph, Payload: rm})
 		if len(rec.types) != 2*before {
 			t.Fatalf("next marker suppressed: %v", rec.types)
 		}
@@ -220,7 +220,7 @@ func TestEndOfRIBRIBMetadata(t *testing.T) {
 			p := NewProducer(rec, false).(*producer)
 			ph := makePeerHeader(t, tt.peerType, tt.flags)
 			p.tableProperties[ph.GetTableKey()] = PerTableProperties{tableInfoTLVs: []bmp.InformationalTLV{{InformationType: 3, Information: []byte("vrf-blue")}}}
-			p.produceRouteMonitorMessage(bmp.Message{PeerHeader: ph, Payload: eorWire(t, nil, eorUnreach(16388, 72), nil)})
+			p.produceRouteMessage(bmp.Message{PeerHeader: ph, Payload: eorWire(t, nil, eorUnreach(16388, 72), nil)})
 			if len(rec.msgs) != 1 {
 				t.Fatalf("records=%d", len(rec.msgs))
 			}
@@ -245,7 +245,7 @@ func TestEndOfRIBFlowSpecMixedAttributeIsNotDelete(t *testing.T) {
 			rec := &recordingPublisher{}
 			p := NewProducer(rec, false).(*producer)
 			attrs := append([]byte{0x40, 1, 1, 0}, eorUnreach(afi, safi)...)
-			p.produceRouteMonitorMessage(bmp.Message{PeerHeader: makePeerHeader(t, bmp.PeerType0, 0), Payload: eorWire(t, nil, attrs, nil)})
+			p.produceRouteMessage(bmp.Message{PeerHeader: makePeerHeader(t, bmp.PeerType0, 0), Payload: eorWire(t, nil, attrs, nil)})
 			if len(rec.msgs) != 0 {
 				t.Fatalf("AFI=%d SAFI=%d published false route/control: %+v", afi, safi, rec.msgs)
 			}
@@ -272,7 +272,7 @@ func TestEndOfRIBLocRIBDistinguisherLookup(t *testing.T) {
 			ph := makePeerHeader(t, bmp.PeerType3, 0)
 			ph.PeerDistinguisher = tt.pd
 			p.tableProperties[ph.GetTableKey()] = PerTableProperties{tableInfoTLVs: []bmp.InformationalTLV{{InformationType: 3, Information: []byte(tt.name)}}}
-			p.produceRouteMonitorMessage(bmp.Message{PeerHeader: ph, Payload: eorWire(t, nil, eorUnreach(1, 133), nil)})
+			p.produceRouteMessage(bmp.Message{PeerHeader: ph, Payload: eorWire(t, nil, eorUnreach(1, 133), nil)})
 			if len(rec.msgs) != 1 || rec.msgs[0].msgType != bmp.EndOfRIBMsg {
 				t.Fatalf("published=%+v", rec.msgs)
 			}
@@ -301,7 +301,7 @@ func TestEndOfRIBDistinctLocRIBTables(t *testing.T) {
 	}
 	for i, ph := range []*bmp.PerPeerHeader{first, second} {
 		rec.msgs = nil
-		p.produceRouteMonitorMessage(bmp.Message{PeerHeader: ph, Payload: eorWire(t, nil, eorUnreach(1, 133), nil)})
+		p.produceRouteMessage(bmp.Message{PeerHeader: ph, Payload: eorWire(t, nil, eorUnreach(1, 133), nil)})
 		if len(rec.msgs) != 1 {
 			t.Fatalf("published=%+v", rec.msgs)
 		}

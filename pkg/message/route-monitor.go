@@ -17,30 +17,47 @@ const (
 	DelPrefix
 )
 
-func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
+func (p *producer) produceRouteMessage(msg bmp.Message) {
 	if msg.PeerHeader == nil {
 		glog.Errorf("perPeerHeader is missing, cannot construct PeerStateChange message")
 		return
 	}
-	routeMonitorMsg, ok := msg.Payload.(*bmp.RouteMonitor)
-	if !ok {
-		glog.Errorf("got invalid Payload type in bmp.Message")
+	var update *bgp.Update
+	var err error
+	switch t := msg.Payload.(type) {
+	case *bmp.RouteMonitor:
+		routeMonitorMsg := msg.Payload.(*bmp.RouteMonitor)
+		if routeMonitorMsg == nil {
+			glog.Errorf("route monitor message is nil")
+			return
+		}
+		if routeMonitorMsg.Update == nil {
+			glog.Errorf("route monitor had nil BGP update")
+			return
+		}
+		update = routeMonitorMsg.Update
+	case *bmp.RouteMirror:
+		routeMirrorMsg := msg.Payload.(*bmp.RouteMirror)
+		if routeMirrorMsg == nil {
+			glog.Errorf("route mirror message is nil")
+			return
+		}
+		update, err = routeMirrorMsg.GetBGPUpdate()
+		if err != nil {
+			glog.Errorf("failed to get BGP update from route mirror message with error: %+v", err)
+			return
+		}
+	default:
+		glog.Errorf("got invalid Payload type %+v in bmp.Message", t)
 		return
 	}
-	if routeMonitorMsg == nil {
-		glog.Errorf("route monitor message is nil")
-		return
-	}
-	if routeMonitorMsg.Update == nil {
-		return
-	}
-	if afi, safi, eor := endOfRIBFamily(routeMonitorMsg.Update); eor {
-		p.produceEndOfRIB(msg.PeerHeader, routeMonitorMsg.Update, afi, safi)
+	if afi, safi, eor := endOfRIBFamily(update); eor {
+		p.produceEndOfRIB(msg.PeerHeader, update, afi, safi)
 		return
 	}
 	reachIndexes := make([]int, 0, 1)
 	unreachIndexes := make([]int, 0, 1)
-	for i, attr := range routeMonitorMsg.Update.PathAttributes {
+	for i, attr := range update.PathAttributes {
 		switch attr.AttributeType {
 		case bgp.MP_REACH_NLRI:
 			reachIndexes = append(reachIndexes, i)
@@ -49,13 +66,13 @@ func (p *producer) produceRouteMonitorMessage(msg bmp.Message) {
 		}
 	}
 	for _, index := range reachIndexes {
-		p.processMPReach(routeMonitorMsg.Update.PathAttributes[index].Attribute, msg.PeerHeader, routeMonitorMsg.Update)
+		p.processMPReach(update.PathAttributes[index].Attribute, msg.PeerHeader, update)
 	}
 	for _, index := range unreachIndexes {
-		p.processMPUnreach(routeMonitorMsg.Update.PathAttributes[index].Attribute, msg.PeerHeader, routeMonitorMsg.Update)
+		p.processMPUnreach(update.PathAttributes[index].Attribute, msg.PeerHeader, update)
 	}
-	if (len(reachIndexes) == 0 && len(unreachIndexes) == 0) || routeMonitorMsg.Update.WithdrawnRoutesLength != 0 || len(routeMonitorMsg.Update.NLRI) != 0 {
-		p.processBGP4Update(msg.PeerHeader, routeMonitorMsg.Update)
+	if (len(reachIndexes) == 0 && len(unreachIndexes) == 0) || update.WithdrawnRoutesLength != 0 || len(update.NLRI) != 0 {
+		p.processBGP4Update(msg.PeerHeader, update)
 	}
 }
 

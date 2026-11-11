@@ -40,8 +40,8 @@ func TestProcessMPUpdateLSOpaque(t *testing.T) {
 		{name: "SAFI 80 malformed attribute", safi: 80, nlri: testLSUnknownNLRI, update: testLSUpdate(malformedSequence), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "del"},
 		{name: "SAFI 80 withdraw", safi: 80, withdraw: true, nlri: testLSUnknownNLRI, update: testLSUpdate(testLSSequence()), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "del"},
 		{name: "SAFI 71 add", safi: 71, nlri: testLSUnknownNLRI, update: minimalUpdate(), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "add"},
-		{name: "SAFI 72 add", safi: 72, nlri: append(append([]byte{}, testRD...), testLSUnknownNLRI...), update: minimalUpdate(), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "add", wantRD: "65000:1"},
-		{name: "SAFI 72 withdraw", safi: 72, withdraw: true, nlri: append(append([]byte{}, testRD...), testLSUnknownNLRI...), update: minimalUpdate(), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "del", wantRD: "65000:1"},
+		{name: "SAFI 72 add", safi: 72, nlri: testLSVPNEntry(99, testRD, testLSUnknownNLRI[4:]), update: minimalUpdate(), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "add", wantRD: "65000:1"},
+		{name: "SAFI 72 withdraw", safi: 72, withdraw: true, nlri: testLSVPNEntry(99, testRD, testLSUnknownNLRI[4:]), update: minimalUpdate(), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "del", wantRD: "65000:1"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -87,8 +87,8 @@ func TestProcessMPUpdateLSOpaque(t *testing.T) {
 }
 
 // TestProcessMPUpdateLSOpaqueZeroLength checks that an unknown NLRI type with
-// no value portion is published and does not drop the NLRI after it. RFC 9552
-// Section 5.1: "a TLV with no value portion would have a length of zero".
+// no Link-State body is published and does not drop the NLRI after it.
+// For SAFI 72, Length still includes the RD (RFC 9552 §5.2).
 func TestProcessMPUpdateLSOpaqueZeroLength(t *testing.T) {
 	zeroLength := []byte{0x00, 0x64, 0x00, 0x00} // type 100, length 0
 	tests := []struct {
@@ -98,7 +98,7 @@ func TestProcessMPUpdateLSOpaqueZeroLength(t *testing.T) {
 		update *bgp.Update
 	}{
 		{name: "SAFI 71", safi: 71, nlri: append(append([]byte{}, zeroLength...), testLSUnknownNLRI...), update: minimalUpdate()},
-		{name: "SAFI 72", safi: 72, nlri: append(append(append(append([]byte{}, testRD...), zeroLength...), testRD...), testLSUnknownNLRI...), update: minimalUpdate()},
+		{name: "SAFI 72", safi: 72, nlri: append(testLSVPNEntry(100, testRD, nil), testLSVPNEntry(99, testRD, testLSUnknownNLRI[4:])...), update: minimalUpdate()},
 		{name: "SAFI 80", safi: 80, nlri: append(append([]byte{}, zeroLength...), testLSUnknownNLRI...), update: testLSUpdate(testLSSequence())},
 	}
 	for _, tt := range tests {

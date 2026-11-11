@@ -12,28 +12,28 @@ import (
 )
 
 // VPNElement defines a single BGP-LS-VPN NLRI entry (RFC 9552 §5.2 Figure 6).
-// Each entry is the standard Link-State NLRI Element preceded by an 8-byte
-// Route Distinguisher that scopes the link/node/prefix to a VPN.
+// Its value starts with an 8-byte Route Distinguisher that scopes the
+// link/node/prefix to a VPN, followed by the Link-State NLRI body.
 type VPNElement struct {
 	RD     *base.RD
 	Type   uint16
-	Length uint16 // not including Type and itself
+	Length uint16 // includes the RD, but not Type or Length itself
 	LS     interface{}
 	PathID uint32 // Add Path Path-ID (RFC 7911 §3); zero unless Add Path parsing is enabled
 }
 
 // NLRI72 defines Link State NLRI object for SAFI 72 (BGP-LS-VPN) per
-// RFC 9552 §5.2. The wire format is identical to SAFI 71 except each Element
-// is preceded by an 8-byte Route Distinguisher.
+// RFC 9552 §5.2. Each element has a Type/Length header followed by an 8-byte
+// Route Distinguisher and the Link-State NLRI body.
 type NLRI72 struct {
 	NLRI []VPNElement
 }
 
 // UnmarshalLSNLRI72 builds a Link State NLRI object for SAFI 72 per
 // RFC 9552 §5.2. When pathID is true the leading 4 bytes of each NLRI entry
-// are consumed as the Add Path Path-ID (RFC 7911 §3); the next 8 bytes are
-// the Route Distinguisher; the remaining bytes are the standard Link-State
-// NLRI (Type+Length+Value) decoded identically to SAFI 71.
+// are consumed as the Add Path Path-ID (RFC 7911 §3). The Type/Length header
+// precedes the Route Distinguisher and Link-State body, and Length includes
+// the Route Distinguisher (RFC 9552 §5.2 Figure 6).
 func UnmarshalLSNLRI72(b []byte, pathID bool) (*NLRI72, error) {
 	if glog.V(6) {
 		glog.Infof("LSNLRI72 Raw: %s", tools.MessageHex(b))
@@ -53,15 +53,6 @@ func UnmarshalLSNLRI72(b []byte, pathID bool) (*NLRI72, error) {
 			el.PathID = binary.BigEndian.Uint32(b[p : p+4])
 			p += 4
 		}
-		if p+8 > len(b) {
-			return nil, fmt.Errorf("NLRI72 truncated at offset %d: need 8 bytes for Route Distinguisher, have %d", p, len(b)-p)
-		}
-		rd, err := base.MakeRD(b[p : p+8])
-		if err != nil {
-			return nil, fmt.Errorf("NLRI72 invalid Route Distinguisher at offset %d: %w", p, err)
-		}
-		el.RD = rd
-		p += 8
 		if p+4 > len(b) {
 			return nil, fmt.Errorf("NLRI72 truncated at offset %d: need 4 bytes for TLV header, have %d", p, len(b)-p)
 		}
@@ -69,55 +60,63 @@ func UnmarshalLSNLRI72(b []byte, pathID bool) (*NLRI72, error) {
 		p += 2
 		el.Length = binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
-		if el.Length == 0 && isKnownNLRIType(el.Type) {
-			return nil, fmt.Errorf("NLRI72 TLV type %d has invalid zero length at offset %d", el.Type, p-4)
+		if el.Length < 8 {
+			return nil, fmt.Errorf("NLRI72 TLV type %d has invalid value length at offset %d: need 8 bytes for Route Distinguisher, have %d", el.Type, p-4, el.Length)
 		}
 		if p+int(el.Length) > len(b) {
 			return nil, fmt.Errorf("NLRI72 TLV type %d truncated at offset %d: need %d bytes, have %d", el.Type, p, el.Length, len(b)-p)
 		}
+		end := p + int(el.Length)
+		rd, err := base.MakeRD(b[p : p+8])
+		if err != nil {
+			return nil, fmt.Errorf("NLRI72 invalid Route Distinguisher at offset %d: %w", p, err)
+		}
+		el.RD = rd
+		p += 8
+		body := b[p:end]
 
 		switch el.Type {
 		case 1:
-			n, err := base.UnmarshalNodeNLRI(b[p : p+int(el.Length)])
+			n, err := base.UnmarshalNodeNLRI(body)
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
 		case 2:
-			n, err := base.UnmarshalLinkNLRI(b[p : p+int(el.Length)])
+			n, err := base.UnmarshalLinkNLRI(body)
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
 		case 3:
-			n, err := base.UnmarshalPrefixNLRI(b[p:p+int(el.Length)], true)
+			n, err := base.UnmarshalPrefixNLRI(body, true)
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
 		case 4:
-			n, err := base.UnmarshalPrefixNLRI(b[p:p+int(el.Length)], false)
+			n, err := base.UnmarshalPrefixNLRI(body, false)
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
 		case 5:
-			n, err := te.UnmarshalTEPolicyNLRI(b[p : p+int(el.Length)])
+			n, err := te.UnmarshalTEPolicyNLRI(body)
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
 		case 6:
-			n, err := srv6.UnmarshalSRv6SIDNLRI(b[p : p+int(el.Length)])
+			n, err := srv6.UnmarshalSRv6SIDNLRI(body)
 			if err != nil {
 				return nil, err
 			}
 			el.LS = n
 		default:
-			el.LS = make([]byte, el.Length)
-			copy(el.LS.([]byte), b[p:p+int(el.Length)])
+			el.LS = make([]byte, len(body))
+			copy(el.LS.([]byte), body)
 		}
-		p += int(el.Length)
+		p = end
 
 		ls.NLRI = append(ls.NLRI, el)
 	}
