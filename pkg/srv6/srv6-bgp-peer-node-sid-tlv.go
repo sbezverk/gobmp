@@ -26,8 +26,10 @@ func UnmarshalBGPPeerNodeFlags(b []byte) (*BGPPeerNodeFlags, error) {
 	}, nil
 }
 
-// BGPPeerNodeSID defines SRv6 BGP Peer Node SID TLV object
-// No RFC yet
+// bgpPeerNodeSIDLen is the fixed length of the SRv6 BGP PeerNode SID TLV value (RFC 9514 §7.2).
+const bgpPeerNodeSIDLen = 12
+
+// BGPPeerNodeSID defines SRv6 BGP PeerNode SID TLV object (RFC 9514 §7.2)
 type BGPPeerNodeSID struct {
 	Flags   *BGPPeerNodeFlags `json:"flags"`
 	Weight  uint8             `json:"weight"`
@@ -40,8 +42,8 @@ func UnmarshalSRv6BGPPeerNodeSIDTLV(b []byte) (*BGPPeerNodeSID, error) {
 	if glog.V(6) {
 		glog.Infof("SRv6 BGP Peer Node SID TLV Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) < 11 {
-		return nil, fmt.Errorf("srv6 BGP Peer Node SID TLV too short: need 11 bytes, have %d", len(b))
+	if len(b) != bgpPeerNodeSIDLen {
+		return nil, fmt.Errorf("srv6 BGP Peer Node SID TLV length must be %d bytes, have %d", bgpPeerNodeSIDLen, len(b))
 	}
 	bgp := BGPPeerNodeSID{}
 	p := 0
@@ -52,8 +54,8 @@ func UnmarshalSRv6BGPPeerNodeSIDTLV(b []byte) (*BGPPeerNodeSID, error) {
 	bgp.Flags = f
 	p++
 	bgp.Weight = b[p]
-	// Advance past weight byte and 1 reserved byte
-	p += 2
+	// Advance past weight byte and 2 reserved bytes
+	p += 3
 	bgp.PeerASN = binary.BigEndian.Uint32(b[p : p+4])
 	p += 4
 	bgp.PeerID = make([]byte, 4)

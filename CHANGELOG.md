@@ -4,6 +4,12 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-11
+
+#### Fixed
+
+- SRv6 BGP PeerNode SID TLV 1251 (RFC 9514 §7.2) skipped one of its two reserved octets, so `peer_asn` and `peer_id` were read one byte early and came out wrong: they are now read from offsets 4-7 and 8-11, and a TLV whose length is not 12 is rejected
+
 ### 2026-11-09
 
 #### Changed
