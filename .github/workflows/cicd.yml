@@ -331,7 +331,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       VALIDATOR_TESTBED_COMPOSE: ./cmd/validator_v2/testbed/test_bed_injector_multinode_kafka.yml
-      BGPINJECTOR_IMAGE: ghcr.io/sbezverk/bgpinjector:v0.0.3
+      BGPINJECTOR_IMAGE: ghcr.io/sbezverk/bgpinjector:latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v7
@@ -405,7 +405,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       VALIDATOR_MUP_TESTBED_COMPOSE: ./cmd/validator_v2/testbed/test_bed_gobgp_mup.yml
-      BGPINJECTOR_IMAGE: ghcr.io/sbezverk/bgpinjector:v0.0.3
+      BGPINJECTOR_IMAGE: ghcr.io/sbezverk/bgpinjector:latest
       GOBGP_VERSION: v4.8.0
       GOBGP_IMAGE: localhost/gobgp-mup:v4.8.0
     steps:
