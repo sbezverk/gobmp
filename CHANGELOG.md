@@ -4,6 +4,12 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-11
+
+#### Fixed
+
+- BGP-LS IGP Flags TLV 1152 (RFC 9552 §5.3.3.1) was read from the low four bits, so set flags came out false in `igp_flags`: D, N, L and P are now read from 0x80, 0x40, 0x20 and 0x10, e.g. IS-IS `0x80` reads `d_flag: true` and OSPFv2 `0x50` reads `n_flag` and `p_flag` true
+
 ### 2026-11-09
 
 #### Changed

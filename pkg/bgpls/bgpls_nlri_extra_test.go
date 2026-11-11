@@ -109,7 +109,7 @@ func TestGetPrefixIGPFlags(t *testing.T) {
 		t.Error("GetPrefixIGPFlags() absent: expected error, got nil")
 	}
 	// Present: D flag set
-	nlri := &NLRI{LS: []TLV{{Type: 1152, Length: 1, Value: []byte{0x01}}}}
+	nlri := &NLRI{LS: []TLV{{Type: 1152, Length: 1, Value: []byte{0x80}}}}
 	got, err := nlri.GetPrefixIGPFlags()
 	if err != nil {
 		t.Fatalf("GetPrefixIGPFlags() error = %v", err)
