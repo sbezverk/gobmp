@@ -134,6 +134,10 @@ func prePeerUpMessageBytes(msg bmp.Message) int {
 				size += len(attr.Attribute)
 			}
 		}
+	case *bmp.RouteMirror:
+		if payload != nil {
+			size += payload.Size()
+		}
 	case *bmp.StatsReport:
 		if payload != nil {
 			for _, tlv := range payload.StatsTLV {
@@ -303,7 +307,16 @@ func (p *producer) producingWorker(msg bmp.Message) {
 			return
 		}
 		p.attachIdentitySnapshot(&msg)
-		p.produceRouteMonitorMessage(msg)
+		p.produceRouteMessage(msg)
+	case *bmp.RouteMirror:
+		select {
+		case <-p.speakerReady:
+		default:
+			p.bufferPrePeerUp(msg)
+			return
+		}
+		p.attachIdentitySnapshot(&msg)
+		p.produceRouteMessage(msg)
 	case *bmp.StatsReport:
 		select {
 		case <-p.speakerReady:

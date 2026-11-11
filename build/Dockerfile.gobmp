@@ -1,4 +1,6 @@
 FROM scratch
 
+LABEL org.opencontainers.image.source="https://github.com/sbezverk/gobmp"
+
 COPY ./bin/gobmp /gobmp
 ENTRYPOINT ["/gobmp"]
