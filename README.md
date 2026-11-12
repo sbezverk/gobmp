@@ -28,9 +28,9 @@
   <a href="#deployment">Deployment</a>
 </p>
 
-> **⚠️ Upgrading from an older version?**
-> Publisher selection via `--dump=nats` and `--dump=kafka` has been removed.
-> See the [Migration Guide](#migration-guide) for required configuration changes.
+> **📦 Container registry update**
+> goBMP images are now published at `ghcr.io/sbezverk/gobmp`. Please use this
+> registry for the latest updates, fixes, and features.
 
 ---
 
@@ -112,7 +112,7 @@ Monitor live BGP data from RIPE RIS:
 
 ```bash
 # Start goBMP collector
-docker run --net=host sbezverk/gobmp --dump=console
+docker run --net=host ghcr.io/sbezverk/gobmp --dump=console
 
 # In another terminal, start RIPE RIS feed
 docker run --net=host sbezverk/ris2bmp:1
@@ -501,11 +501,11 @@ kubectl get svc gobmp
 
 ### Docker
 
-**Pre-built images:** Available on Docker Hub as `sbezverk/gobmp`
+**Pre-built images:** Available on GHCR as `ghcr.io/sbezverk/gobmp`
 
 **Run standalone:**
 ```bash
-docker run --net=host sbezverk/gobmp \
+docker run --net=host ghcr.io/sbezverk/gobmp \
   --source-port=5000 \
   --kafka-server=kafka:9092 \
   --v=3
@@ -516,7 +516,7 @@ docker run --net=host sbezverk/gobmp \
 version: '3'
 services:
   gobmp:
-    image: sbezverk/gobmp
+    image: ghcr.io/sbezverk/gobmp
     network_mode: host
     command:
       - "--source-port=5000"
@@ -623,6 +623,10 @@ This project follows the licensing terms of the original repository.
 ---
 
 ## Migration Guide
+
+> **⚠️ Upgrading from an older version?** Publisher selection via `--dump=nats`
+> and `--dump=kafka` has been removed. See [Publisher Selection](#publisher-selection-dumpnats-and-dumpkafka-removed)
+> for the required configuration changes.
 
 ### BGP Prefix-SID field migration
 

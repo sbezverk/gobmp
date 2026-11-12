@@ -73,7 +73,7 @@ func TestProcessNLRI72SubTypes_NodeRDStamped(t *testing.T) {
 	mock := &safi72MockNLRI{
 		nlri72: &ls.NLRI72{
 			NLRI: []ls.VPNElement{
-				{RD: rd, Type: 1, Length: uint16(len(nodeBytes)), LS: node},
+				{RD: rd, Type: 1, Length: uint16(8 + len(nodeBytes)), LS: node},
 			},
 		},
 	}
@@ -145,8 +145,8 @@ func TestProcessNLRI72SubTypes_LinkAndPrefixRDStamped(t *testing.T) {
 	mock := &safi72MockNLRI{
 		nlri72: &ls.NLRI72{
 			NLRI: []ls.VPNElement{
-				{RD: rd, Type: 2, Length: uint16(len(linkBytes)), LS: link},
-				{RD: rd, Type: 3, Length: uint16(len(prefixBytes)), LS: prfx},
+				{RD: rd, Type: 2, Length: uint16(8 + len(linkBytes)), LS: link},
+				{RD: rd, Type: 3, Length: uint16(8 + len(prefixBytes)), LS: prfx},
 			},
 		},
 	}
@@ -229,7 +229,7 @@ func TestProcessNLRI72SubTypes_SRv6SIDRDStamped(t *testing.T) {
 	}
 	mock := &safi72MockNLRI{
 		nlri72: &ls.NLRI72{
-			NLRI: []ls.VPNElement{{RD: rd, Type: 6, Length: uint16(len(sidBytes)), LS: sid}},
+			NLRI: []ls.VPNElement{{RD: rd, Type: 6, Length: uint16(8 + len(sidBytes)), LS: sid}},
 		},
 	}
 	rec := &recordingPublisher{}

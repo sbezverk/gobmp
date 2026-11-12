@@ -36,9 +36,10 @@ reconstruct that state.
 ## SAFI 72 limitation
 
 The VPN dispatcher preserves `VPNElement.PathID` and RD separately in the
-published message. This change does not repair the independent SAFI 72
-framing defect in the base parser: it still reads RD before Type/Length,
-contrary to [RFC 9552 section 5.2, Figure 6](https://www.rfc-editor.org/rfc/rfc9552.html#section-5.2).
-SAFI 72 regression tests here therefore check already decoded objects;
-they do not establish RFC-compliant VPN wire decoding. The separate framing
-correction and typed VPN Inter-AS support are outside this change.
+published message. The integrated [SAFI 72 framing correction](bgp-ls-vpn.md)
+reads Type/Length before RD, with RD included in Length, following
+[RFC 9552 section 5.2, Figure 6](https://www.rfc-editor.org/rfc/rfc9552.html#section-5.2).
+`TestLSPathIDSAFI72Mapping` isolates Path Identifier publication from already
+decoded objects. `TestProcessMPUpdateSAFI72Wire` separately checks real-wire
+decoding and RD publication for announcements and withdrawals with and without
+ADD-PATH. Typed VPN Inter-AS support remains outside this change.

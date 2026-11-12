@@ -1,4 +1,4 @@
-REGISTRY_NAME?=docker.io/sbezverk
+REGISTRY_NAME?=ghcr.io/sbezverk
 IMAGE_VERSION?=test-235
 
 .PHONY: \
