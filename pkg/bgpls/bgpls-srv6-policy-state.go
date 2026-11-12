@@ -223,17 +223,18 @@ type SRCandidatePathConstraintsSubTLV interface {
 
 // SRCandidatePathConstraints defines the object which carries the constraints associated with the candidate path.
 type SRCandidatePathConstraints struct {
-	FlagD  bool                                        `json:"d_flag"`
-	FlagP  bool                                        `json:"p_flag"`
-	FlagU  bool                                        `json:"u_flag"`
-	FlagA  bool                                        `json:"a_flag"`
-	FlagT  bool                                        `json:"t_flag"`
-	FlagS  bool                                        `json:"s_flag"`
-	FlagF  bool                                        `json:"f_flag"`
-	FlagH  bool                                        `json:"h_flag"`
-	MTID   uint16                                      `json:"mtid"`
-	Algo   uint8                                       `json:"algorithm"`
-	SubTLV map[uint16]SRCandidatePathConstraintsSubTLV `json:"subtlv,omitempty"`
+	FlagD             bool                                        `json:"d_flag"`
+	FlagP             bool                                        `json:"p_flag"`
+	FlagU             bool                                        `json:"u_flag"`
+	FlagA             bool                                        `json:"a_flag"`
+	FlagT             bool                                        `json:"t_flag"`
+	FlagS             bool                                        `json:"s_flag"`
+	FlagF             bool                                        `json:"f_flag"`
+	FlagH             bool                                        `json:"h_flag"`
+	MTID              uint16                                      `json:"mtid"`
+	Algo              uint8                                       `json:"algorithm"`
+	SubTLV            map[uint16]SRCandidatePathConstraintsSubTLV `json:"subtlv,omitempty"`
+	MetricConstraints []*SRMetricConstraint                       `json:"metric_constraints,omitempty"`
 }
 
 // UnmarshalSRCandidatePathConstraints instantiates SR Candidate Path Constraints object from a slice of bytes
@@ -264,7 +265,7 @@ func UnmarshalSRCandidatePathConstraints(b []byte) (*SRCandidatePathConstraints,
 	p += 3
 	if p < len(b) {
 		var err error
-		s.SubTLV, err = UnmarshalSRCandidatePathConstraintsSubTLV(b[p:])
+		s.SubTLV, s.MetricConstraints, err = unmarshalSRCandidatePathConstraintsSubTLV(b[p:])
 		if err != nil {
 			return nil, err
 		}
@@ -275,13 +276,19 @@ func UnmarshalSRCandidatePathConstraints(b []byte) (*SRCandidatePathConstraints,
 
 // UnmarshalSRCandidatePathConstraintsSubTLV unmarshals a map of SR Candidate Path Constraints Sub TLV from a slice of bytes
 func UnmarshalSRCandidatePathConstraintsSubTLV(b []byte) (map[uint16]SRCandidatePathConstraintsSubTLV, error) {
+	s, _, err := unmarshalSRCandidatePathConstraintsSubTLV(b)
+	return s, err
+}
+
+func unmarshalSRCandidatePathConstraintsSubTLV(b []byte) (map[uint16]SRCandidatePathConstraintsSubTLV, []*SRMetricConstraint, error) {
 	if glog.V(6) {
 		glog.Infof("SR Candidate Path Constraints Sub TLV Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 4 {
-		return nil, fmt.Errorf("not enough bytes to decode SR Candidate Path Constraints Sub TLV")
+		return nil, nil, fmt.Errorf("not enough bytes to decode SR Candidate Path Constraints Sub TLV")
 	}
 	s := make(map[uint16]SRCandidatePathConstraintsSubTLV)
+	var metrics []*SRMetricConstraint
 	p := 0
 	for p+4 <= len(b) {
 		t := binary.BigEndian.Uint16(b[p : p+2])
@@ -289,41 +296,54 @@ func UnmarshalSRCandidatePathConstraintsSubTLV(b []byte) (map[uint16]SRCandidate
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
 		if p+int(l) > len(b) {
-			return nil, fmt.Errorf("not enough bytes to decode SR Candidate Path Constraints Sub TLV")
+			return nil, nil, fmt.Errorf("not enough bytes to decode SR Candidate Path Constraints Sub TLV")
 		}
 		switch t {
 		case SRAffinityConstraintType:
 			stlv, err := UnmarshalSRAffinityConstraint(b[p : p+int(l)])
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			s[SRAffinityConstraintType] = stlv
 		case SRSRLGConstraintType:
 			stlv, err := UnmarshalSRSRLGConstraint(b[p : p+int(l)])
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			s[SRSRLGConstraintType] = stlv
 		case SRBandwidthConstraintType:
 			stlv, err := UnmarshalSRBandwidthConstraint(b[p : p+int(l)])
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			s[SRBandwidthConstraintType] = stlv
 		case SRDisjointGroupConstraintType:
 			stlv, err := UnmarshalSRDisjointGroupConstraint(b[p : p+int(l)])
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			s[SRDisjointGroupConstraintType] = stlv
+		case SRBidirectionalGroupConstraintType:
+			stlv, err := UnmarshalSRBidirGroupConstrant(b[p : p+int(l)])
+			if err != nil {
+				return nil, nil, err
+			}
+			s[SRBidirectionalGroupConstraintType] = stlv
+		case SRMetricConstraintType:
+			stlv, err := UnmarshalSRMetricConstraint(b[p : p+int(l)])
+			if err != nil {
+				return nil, nil, err
+			}
+			s[SRMetricConstraintType] = stlv
+			metrics = append(metrics, stlv)
 		}
 		p += int(l)
 	}
 	if p != len(b) {
-		return nil, fmt.Errorf("SR Candidate Path Constraints Sub TLV: %d trailing bytes", len(b)-p)
+		return nil, nil, fmt.Errorf("SR Candidate Path Constraints Sub TLV: %d trailing bytes", len(b)-p)
 	}
 
-	return s, nil
+	return s, metrics, nil
 }
 
 var _ SRCandidatePathConstraintsSubTLV = &SRAffinityConstraint{}
@@ -604,7 +624,6 @@ func UnmarshalSRDisjointGroupConstraint(b []byte) (*SRDisjointGroupConstraint, e
 	if p+4 == len(b) {
 		v := binary.BigEndian.Uint32(b[p : p+4])
 		s.DisJointGroupID = &v
-		p += 4
 	} else {
 		s.PCEPAssociationObj = b[p:]
 	}
@@ -780,6 +799,18 @@ func UnmarshalSRSegmentListSubTLV(b []byte) ([]SRSegmentListSubTLV, error) {
 				return nil, err
 			}
 			s = append(s, stlv)
+		case SRSegmentListBandwidthType:
+			stlv, err := UnmarshalSRSegmentListBandwidth(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			s = append(s, stlv)
+		case SRSegmentListIdentifierType:
+			stlv, err := UnmarshalSRSegmentListIdentifier(b[p : p+int(l)])
+			if err != nil {
+				return nil, err
+			}
+			s = append(s, stlv)
 		}
 		p += int(l)
 	}
@@ -899,7 +930,7 @@ type SRv6SID struct {
 }
 
 // UnmarshalSRv6SID instantiates SRv6 SID object from a slice of bytes
-func UnmarshalSRv6SID(b []byte) (SID, error) {
+func UnmarshalSRv6SID(b []byte) (*SRv6SID, error) {
 	if glog.V(6) {
 		glog.Infof("SRv6 SID Raw: %s", tools.MessageHex(b))
 	}
@@ -1421,52 +1452,56 @@ func UnmarshalSRSegment(b []byte) (SRSegmentListSubTLV, error) {
 		sidLen = s.SID.Len()
 	}
 	p += 4 + sidLen
-	// Check if the descriptor flag is set, if true then process descriptor
-	if s.FlagA {
-		if p >= len(b) {
-			return nil, fmt.Errorf("invalid condition, with Flag A set but no more bytes to decode")
-		}
-		switch t {
-		case SegmentType1, SegmentType2:
-			// Type 2 shares the same descriptor as Type 1.
-			if s.SegmentDescriptor, err = UnmarshalSRType1Descriptor(b[p:]); err != nil {
-				return nil, err
-			}
-		case SegmentType3:
-			if s.SegmentDescriptor, err = UnmarshalSRType3Descriptor(b[p:]); err != nil {
-				return nil, err
-			}
-		case SegmentType4, SegmentType9:
-			// Type 9 (SRv6 END SID) shares the same descriptor layout as Type 4.
-			if s.SegmentDescriptor, err = UnmarshalSRType4Descriptor(b[p:]); err != nil {
-				return nil, err
-			}
-		case SegmentType5:
-			if s.SegmentDescriptor, err = UnmarshalSRType5Descriptor(b[p:]); err != nil {
-				return nil, err
-			}
-		case SegmentType6:
-			if s.SegmentDescriptor, err = UnmarshalSRType6Descriptor(b[p:]); err != nil {
-				return nil, err
-			}
-		case SegmentType7, SegmentType10:
-			// Type 10 (SRv6 END.X SID) shares the same descriptor layout as Type 7.
-			if s.SegmentDescriptor, err = UnmarshalSRType7Descriptor(b[p:]); err != nil {
-				return nil, err
-			}
-		case SegmentType8, SegmentType11:
-			// Type 11 (SRv6 END.X SID) shares the same descriptor layout as Type 8.
-			if s.SegmentDescriptor, err = UnmarshalSRType8Descriptor(b[p:]); err != nil {
-				return nil, err
-			}
-		default:
-			return nil, fmt.Errorf("segment descriptor of type %d is not supported", t)
-		}
-		if s.SegmentDescriptor == nil {
-			return nil, fmt.Errorf("invalid condition, with Flag A set the descriptor cannot be nil")
-		}
-		p += s.SegmentDescriptor.Len()
+	// RFC 9857 defines a type-specific segment descriptor as part of every
+	// segment encoding. The A flag indicates whether the algorithm in that
+	// descriptor is valid; it does not indicate whether the descriptor bytes
+	// are present. In particular, Type 1 and Type 2 always carry the one-byte
+	// Algorithm descriptor even when A is clear. Decode and consume the
+	// descriptor independently of the A flag so following sub-sub-TLVs are
+	// framed at the correct offset.
+	if p >= len(b) {
+		return nil, fmt.Errorf("segment type %d has no segment descriptor", t)
 	}
+	switch t {
+	case SegmentType1, SegmentType2:
+		// Type 2 shares the one-byte Algorithm descriptor with Type 1.
+		if s.SegmentDescriptor, err = UnmarshalSRType1Descriptor(b[p:]); err != nil {
+			return nil, err
+		}
+	case SegmentType3:
+		if s.SegmentDescriptor, err = UnmarshalSRType3Descriptor(b[p:]); err != nil {
+			return nil, err
+		}
+	case SegmentType4, SegmentType9:
+		// Type 9 (SRv6 END SID) shares the descriptor layout with Type 4.
+		if s.SegmentDescriptor, err = UnmarshalSRType4Descriptor(b[p:]); err != nil {
+			return nil, err
+		}
+	case SegmentType5:
+		if s.SegmentDescriptor, err = UnmarshalSRType5Descriptor(b[p:]); err != nil {
+			return nil, err
+		}
+	case SegmentType6:
+		if s.SegmentDescriptor, err = UnmarshalSRType6Descriptor(b[p:]); err != nil {
+			return nil, err
+		}
+	case SegmentType7, SegmentType10:
+		// Type 10 (SRv6 END.X SID) shares the descriptor layout with Type 7.
+		if s.SegmentDescriptor, err = UnmarshalSRType7Descriptor(b[p:]); err != nil {
+			return nil, err
+		}
+	case SegmentType8, SegmentType11:
+		// Type 11 (SRv6 END.X SID) shares the descriptor layout with Type 8.
+		if s.SegmentDescriptor, err = UnmarshalSRType8Descriptor(b[p:]); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("segment descriptor of type %d is not supported", t)
+	}
+	if s.SegmentDescriptor == nil {
+		return nil, fmt.Errorf("segment descriptor of type %d is nil", t)
+	}
+	p += s.SegmentDescriptor.Len()
 	if p == len(b) {
 		// There is no optional Sub Sub TLVs
 		return s, nil
@@ -1688,13 +1723,94 @@ type SRv6BindingSID struct {
 	// TLV 1250
 	EndpointBehavior *srv6.EndpointBehavior `json:"endpoint_behavior,omitempty"`
 	// TLV 1252
-	SIDStructure *srv6.SIDStructure `json:"sid_structure,omitempty"`
+	SIDStructure   *srv6.SIDStructure `json:"sid_structure,omitempty"`
+	UnknownSubTLVs []TLV              `json:"unknown_tlvs,omitempty"`
+}
+
+func UnmarshalSRv6BindingSID(b []byte) (*SRv6BindingSID, error) {
+	if glog.V(6) {
+		glog.Infof("SRv6 Binding SID Raw: %s", tools.MessageHex(b))
+	}
+	s := &SRv6BindingSID{}
+	if len(b) < 36 {
+		return nil, fmt.Errorf("not enough bytes for SRv6 Binding SID, need at least 36, got %d", len(b))
+	}
+	p := 0
+	s.FlagB = b[p]&0x80 != 0
+	s.FlagU = b[p]&0x40 != 0
+	s.FlagF = b[p]&0x20 != 0
+	p += 2
+	// Ignore Reserved bytes
+	p += 2
+	bs, err := UnmarshalSRv6SID(b[p : p+16])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal SRv6 SID: %v", err)
+	}
+	s.BSID = bs
+	p += 16
+	sbs, err := UnmarshalSRv6SID(b[p : p+16])
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal specified SRv6 SID: %v", err)
+	}
+	s.SBSID = sbs
+	p += 16
+	for p < len(b) {
+		if len(b)-p < 4 {
+			return nil, fmt.Errorf("truncated sub-TLV header")
+		}
+		t := binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		l := binary.BigEndian.Uint16(b[p : p+2])
+		p += 2
+		if p+int(l) > len(b) {
+			return nil, fmt.Errorf("sub-TLV length exceeds available bytes")
+		}
+		switch t {
+		case 1250:
+			if l != 4 {
+				return nil, fmt.Errorf("invalid Endpoint Behavior sub-TLV length: %d", l)
+			}
+			eb, err := srv6.UnmarshalSRv6EndpointBehaviorTLV(b[p : p+int(l)])
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal Endpoint Behavior sub-TLV: %v", err)
+			}
+			s.EndpointBehavior = eb
+		case 1252:
+			if l != 4 {
+				return nil, fmt.Errorf("invalid SID Structure sub-TLV length: %d", l)
+			}
+			ss, err := srv6.UnmarshalSRv6SIDStructureTLV(b[p : p+int(l)])
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal SID Structure sub-TLV: %v", err)
+			}
+			s.SIDStructure = ss
+		default:
+			subTLV := TLV{
+				Type:   t,
+				Length: l,
+				Value:  b[p : p+int(l)],
+			}
+			s.UnknownSubTLVs = append(s.UnknownSubTLVs, subTLV)
+		}
+		p += int(l)
+	}
+
+	return s, nil
 }
 
 //   - Type 1213: SR Policy Name TLV (Section 5.4).
 
 type SRPolicyName struct {
 	Name string `json:"sr_policy_name,omitempty"`
+}
+
+func UnmarshalSRPolicyName(b []byte) (*SRPolicyName, error) {
+	if len(b) == 0 {
+		return nil, fmt.Errorf("empty SR Policy Name TLV")
+	}
+	return &SRPolicyName{
+		Name: string(b),
+	}, nil
 }
 
 //   - Type 1214: SR Bidirectional Group Constraint sub-TLV (Section 5.6.5).
@@ -1720,6 +1836,27 @@ type SRBidirectionalGroupConstraint struct {
 	FlagC                bool    `json:"c_flag"`
 	BidirectionalGroupID *uint32 `json:"bidirectional_group_id,omitempty"`
 	PCEPAssociationObj   []byte  `json:"pcep_association_obj,omitempty"`
+}
+
+func UnmarshalSRBidirGroupConstrant(b []byte) (*SRBidirectionalGroupConstraint, error) {
+	if len(b) < 8 {
+		return nil, fmt.Errorf("truncated SR Bidirectional Group Constraint sub-TLV")
+	}
+	p := 0
+	s := &SRBidirectionalGroupConstraint{
+		FlagR: b[0]&0x80 != 0,
+		FlagC: b[0]&0x40 != 0,
+	}
+	p += 2
+	// Ignore 2 reserved bytes
+	p += 2
+	if len(b) > 8 {
+		s.PCEPAssociationObj = b[p:]
+	} else {
+		id := binary.BigEndian.Uint32(b[p:])
+		s.BidirectionalGroupID = &id
+	}
+	return s, nil
 }
 
 //   - Type 1215: SR Metric Constraint sub-TLV (Section 5.6.6).
@@ -1751,14 +1888,111 @@ type SRMetricConstraint struct {
 	MetricBound  uint32       `json:"metric_bound"`
 }
 
-//   - Type 1216: SR Segment List Bandwidth sub-TLV (Section 5.7.3).
+func UnmarshalSRMetricConstraint(b []byte) (*SRMetricConstraint, error) {
+	if len(b) != 12 {
+		return nil, fmt.Errorf("invalid SR Metric Constraint sub-TLV length: %d", len(b))
+	}
+	p := 0
+	s := &SRMetricConstraint{
+		MetricType: SRMetricType(b[0]),
+		FlagO:      b[1]&0x80 != 0,
+		FlagM:      b[1]&0x40 != 0,
+		FlagA:      b[1]&0x20 != 0,
+		FlagB:      b[1]&0x10 != 0,
+	}
+	p += 2
+	// Ignore 2 reserved bytes
+	p += 2
+	s.MetricMargin = binary.BigEndian.Uint32(b[p : p+4])
+	s.MetricBound = binary.BigEndian.Uint32(b[p+4 : p+8])
 
+	return s, nil
+}
+
+// - Type 1216: SR Segment List Bandwidth sub-TLV (Section 5.7.3).
 type SRSegmentListBandwidth struct {
 	Bandwidth float32 `json:"bandwidth"`
 }
 
-//   - Type 1217: SR Segment List Identifier sub-TLV (Section 5.7.4).
+func UnmarshalSRSegmentListBandwidth(b []byte) (*SRSegmentListBandwidth, error) {
+	if len(b) != 4 {
+		return nil, fmt.Errorf("invalid SR Segment List Bandwidth sub-TLV length: %d", len(b))
+	}
+	s := &SRSegmentListBandwidth{
+		Bandwidth: math.Float32frombits(binary.BigEndian.Uint32(b[:4])),
+	}
+	return s, nil
+}
 
+// - Type 1217: SR Segment List Identifier sub-TLV (Section 5.7.4).
 type SRSegmentListIdentifier struct {
 	Identifier uint32 `json:"identifier"`
+}
+
+func UnmarshalSRSegmentListIdentifier(b []byte) (*SRSegmentListIdentifier, error) {
+	if len(b) != 4 {
+		return nil, fmt.Errorf("invalid SR Segment List Identifier sub-TLV length: %d", len(b))
+	}
+	s := &SRSegmentListIdentifier{
+		Identifier: binary.BigEndian.Uint32(b[:4]),
+	}
+	return s, nil
+}
+
+func (s *SRBidirectionalGroupConstraint) MarshalJSON() ([]byte, error) {
+	type wire SRBidirectionalGroupConstraint
+	return json.Marshal((*wire)(s))
+}
+
+func (s *SRBidirectionalGroupConstraint) UnmarshalJSON(b []byte) error {
+	type wire SRBidirectionalGroupConstraint
+	return json.Unmarshal(b, (*wire)(s))
+}
+
+func (s *SRMetricConstraint) MarshalJSON() ([]byte, error) {
+	type wire SRMetricConstraint
+	return json.Marshal((*wire)(s))
+}
+
+func (s *SRMetricConstraint) UnmarshalJSON(b []byte) error {
+	type wire SRMetricConstraint
+	return json.Unmarshal(b, (*wire)(s))
+}
+
+func (s *SRSegmentListBandwidth) MarshalJSON() ([]byte, error) {
+	type wire SRSegmentListBandwidth
+	return json.Marshal((*wire)(s))
+}
+
+func (s *SRSegmentListBandwidth) UnmarshalJSON(b []byte) error {
+	type wire SRSegmentListBandwidth
+	return json.Unmarshal(b, (*wire)(s))
+}
+
+func (s *SRSegmentListIdentifier) MarshalJSON() ([]byte, error) {
+	type wire SRSegmentListIdentifier
+	return json.Marshal((*wire)(s))
+}
+
+func (s *SRSegmentListIdentifier) UnmarshalJSON(b []byte) error {
+	type wire SRSegmentListIdentifier
+	return json.Unmarshal(b, (*wire)(s))
+}
+
+// SRPolicyState aggregates the SR Policy State TLVs carried in the BGP-LS
+// path attribute for one SR Policy Candidate Path NLRI.
+type SRPolicyState struct {
+	BindingSID         *SRBindingSID               `json:"binding_sid,omitempty"`
+	SRv6BindingSID     *SRv6BindingSID             `json:"srv6_binding_sid,omitempty"`
+	CandidatePathState *SRCandidatePathState       `json:"candidate_path_state,omitempty"`
+	CandidatePathName  *SRCandidatePathName        `json:"candidate_path_name,omitempty"`
+	PolicyName         *SRPolicyName               `json:"policy_name,omitempty"`
+	Constraints        *SRCandidatePathConstraints `json:"constraints,omitempty"`
+	SegmentLists       []*SRSegmentList            `json:"segment_lists,omitempty"`
+}
+
+func (s *SRPolicyState) HasData() bool {
+	return s != nil && (s.BindingSID != nil || s.SRv6BindingSID != nil ||
+		s.CandidatePathState != nil || s.CandidatePathName != nil ||
+		s.PolicyName != nil || s.Constraints != nil || len(s.SegmentLists) != 0)
 }

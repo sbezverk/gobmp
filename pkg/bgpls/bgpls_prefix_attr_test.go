@@ -303,7 +303,7 @@ func TestSRBandwidthConstraint_JSON(t *testing.T) {
 		t.Fatalf("UnmarshalJSON() error = %v", err)
 	}
 	if got.Bandwidth != orig.Bandwidth {
-		t.Errorf("Bandwidth = %d, want %d", got.Bandwidth, orig.Bandwidth)
+		t.Errorf("Bandwidth = %f, want %f", got.Bandwidth, orig.Bandwidth)
 	}
 }
 
@@ -341,8 +341,8 @@ func TestSRDisjointGroupConstraint_JSON(t *testing.T) {
 		got.StatusFlagI != orig.StatusFlagI || got.StatusFlagX != orig.StatusFlagX {
 		t.Errorf("status flags mismatch: got %+v, want %+v", got, orig)
 	}
-	if got.DisJointGroupID != orig.DisJointGroupID {
-		t.Errorf("DisjointGroupID = %d, want %d", got.DisJointGroupID, orig.DisJointGroupID)
+	if got.DisJointGroupID == nil || *got.DisJointGroupID != *orig.DisJointGroupID {
+		t.Errorf("DisjointGroupID = %v, want %v", got.DisJointGroupID, orig.DisJointGroupID)
 	}
 }
 

@@ -2,6 +2,7 @@ package bgpls
 
 import (
 	"encoding/binary"
+	"math"
 	"testing"
 )
 
@@ -593,14 +594,17 @@ func TestUnmarshalSRBindingSID(t *testing.T) {
 			},
 		},
 		{
-			name:  "MPLS, FlagU set — PSID field skipped",
+			name:  "MPLS, FlagU set — PSID remains present as zero",
 			input: makeMPLS(0x20, 100, 0),
 			checkFn: func(t *testing.T, b *SRBindingSID) {
 				if !b.FlagU {
 					t.Error("FlagU should be set")
 				}
-				if b.PSID != nil {
-					t.Error("PSID should be nil when FlagU is set")
+				if b.PSID == nil {
+					t.Error("PSID should be present when FlagU is set")
+				}
+				if psid, ok := b.PSID.(*MPLSLabelSID); !ok || psid.Label != 0 {
+					t.Errorf("PSID = %#v, want zero MPLS SID", b.PSID)
 				}
 			},
 		},
@@ -898,7 +902,11 @@ func TestUnmarshalSRBandwidthConstraint(t *testing.T) {
 	}{
 		{name: "too short", input: []byte{0x00, 0x00, 0x01}, wantErr: true},
 		{name: "too long", input: []byte{0x00, 0x00, 0x00, 0x64, 0xFF}, wantErr: true},
-		{name: "bandwidth = 100", input: []byte{0x00, 0x00, 0x00, 0x64}, wantBW: float32(100)},
+		{name: "bandwidth = 100", input: func() []byte {
+			b := make([]byte, 4)
+			binary.BigEndian.PutUint32(b, math.Float32bits(100))
+			return b
+		}(), wantBW: float32(100)},
 		{name: "bandwidth = 0", input: []byte{0x00, 0x00, 0x00, 0x00}, wantBW: float32(0)},
 	}
 
@@ -939,7 +947,18 @@ func TestUnmarshalSRDisjointGroupConstraint(t *testing.T) {
 		checkFn func(*testing.T, *SRDisjointGroupConstraint)
 	}{
 		{name: "too short (7 bytes)", input: make([]byte, 7), wantErr: true},
-		{name: "too long (9 bytes)", input: make([]byte, 9), wantErr: true},
+		{
+			name:  "PCEP association object",
+			input: make([]byte, 9),
+			checkFn: func(t *testing.T, d *SRDisjointGroupConstraint) {
+				if d.DisJointGroupID != nil {
+					t.Fatal("DisJointGroupID should be nil for a PCEP association object")
+				}
+				if len(d.PCEPAssociationObj) != 5 {
+					t.Errorf("PCEPAssociationObj length = %d, want 5", len(d.PCEPAssociationObj))
+				}
+			},
+		},
 		{
 			name:  "request flags S and N, group ID 99",
 			input: makeInput(0x80|0x40, 0x00, 99),

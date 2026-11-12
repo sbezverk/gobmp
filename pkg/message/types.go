@@ -677,6 +677,7 @@ type LSSrPolicyCandidatePath struct {
 	RouterHash        string                      `json:"router_hash,omitempty"`
 	RouterIP          string                      `json:"router_ip,omitempty"`
 	DomainID          int64                       `json:"domain_id"`
+	SAFI              uint8                       `json:"safi,omitempty"`
 	PeerHash          string                      `json:"peer_hash,omitempty"`
 	PeerIP            string                      `json:"peer_ip,omitempty"`
 	PeerType          uint8                       `json:"peer_type"`
@@ -700,6 +701,7 @@ type LSSrPolicyCandidatePath struct {
 	Prefix            string                      `json:"prefix,omitempty"`
 	PrefixLen         int32                       `json:"prefix_len,omitempty"`
 	Descriptor        *srpolicycp.SRPCPDescriptor `json:"descriptor,omitempty"`
+	PolicyState       *bgpls.SRPolicyState        `json:"policy_state,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`

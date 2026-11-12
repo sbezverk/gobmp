@@ -505,10 +505,11 @@ func TestUnmarshalSRSegmentListSubTLV(t *testing.T) {
 	})
 
 	t.Run("SRSegmentType type1 no flags", func(t *testing.T) {
-		// SRSegmentType = 1206 = 0x04B6; segment bytes: type=1, reserved, flags=0, reserved
+		// SRSegmentType = 1206 = 0x04B6; Type 1 always carries its
+		// one-byte Algorithm descriptor, even when the A flag is clear.
 		b := []byte{
-			0x04, 0xB6, 0x00, 0x04, // sub-TLV type=1206, length=4
-			0x01, 0x00, 0x00, 0x00, // SegmentType1, no flags
+			0x04, 0xB6, 0x00, 0x05, // sub-TLV type=1206, length=5
+			0x01, 0x00, 0x00, 0x00, 0x00, // SegmentType1, no flags, algorithm 0
 		}
 		got, err := UnmarshalSRSegmentListSubTLV(b)
 		if err != nil {
@@ -567,8 +568,8 @@ func TestUnmarshalSRSegmentListSubTLV(t *testing.T) {
 	// only the last segment survived.
 	t.Run("MultipleSegments_AllPreserved", func(t *testing.T) {
 		seg := []byte{
-			0x04, 0xB6, 0x00, 0x04, // sub-TLV type=1206, length=4
-			0x01, 0x00, 0x00, 0x00, // SegmentType1
+			0x04, 0xB6, 0x00, 0x05, // sub-TLV type=1206, length=5
+			0x01, 0x00, 0x00, 0x00, 0x00, // SegmentType1, algorithm 0
 		}
 		// Three identical segments back-to-back.
 		b := append(append(seg, seg...), seg...)

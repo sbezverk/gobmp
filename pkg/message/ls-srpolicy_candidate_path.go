@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/netip"
 
+	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
@@ -12,11 +13,21 @@ import (
 )
 
 func (p *producer) lsSSRPolicyCandidatePath(nlri *srpolicycp.SrPolicyCandidatePathNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update) (*LSSrPolicyCandidatePath, error) {
+	return p.lsSSRPolicyCandidatePathForSAFI(nlri, nextHop, op, ph, update, 71, "")
+}
+
+func (p *producer) lsSSRPolicyCandidatePathForSAFI(nlri *srpolicycp.SrPolicyCandidatePathNLRI, nextHop string, op int, ph *bmp.PerPeerHeader, update *bgp.Update, safi uint8, rd string) (*LSSrPolicyCandidatePath, error) {
 	if p == nil {
 		return nil, fmt.Errorf("producer is nil")
 	}
+	if ph == nil {
+		return nil, fmt.Errorf("peer header is nil")
+	}
 	if nlri == nil {
 		return nil, fmt.Errorf("sr policy candidate path nlri is nil")
+	}
+	if len(nlri.Identifier) != 8 {
+		return nil, fmt.Errorf("sr policy candidate path identifier has length %d, want 8", len(nlri.Identifier))
 	}
 	if nlri.LocalNode == nil {
 		return nil, fmt.Errorf("sr policy candidate path local node is nil")
@@ -35,6 +46,8 @@ func (p *producer) lsSSRPolicyCandidatePath(nlri *srpolicycp.SrPolicyCandidatePa
 	}
 	msg := LSSrPolicyCandidatePath{
 		Action:     operation,
+		SAFI:       safi,
+		RD:         rd,
 		RouterHash: ph.Identity.RouterHash,
 		RouterIP:   ph.Identity.RouterIP,
 		PeerType:   uint8(ph.PeerType),
@@ -81,12 +94,15 @@ func (p *producer) lsSSRPolicyCandidatePath(nlri *srpolicycp.SrPolicyCandidatePa
 			msg.LocalIPv6RouterID = lid.String()
 		}
 	}
-	// ls, err := update.GetBGPLSAttribute()
-	// if err == nil {
-	// 	msg.SRv6EndpointBehavior = ls.GetSRv6EndpointBehavior()
-	// 	msg.SRv6BGPPeerNodeSID = ls.GetSRv6BGPPeerNodeSID()
-	// 	msg.SRv6SIDStructure = ls.GetSRv6SIDStructure()
-	// }
+	if update != nil {
+		if ls, err := update.GetBGPLSAttribute(); err != nil {
+			glog.Warningf("failed to decode BGP-LS Attribute for SR Policy Candidate Path: %v", err)
+		} else if state, err := ls.GetSRPolicyState(); err != nil {
+			glog.Warningf("failed to decode SR Policy State: %v", err)
+		} else if state.HasData() {
+			msg.PolicyState = state
+		}
+	}
 
 	return &msg, nil
 }

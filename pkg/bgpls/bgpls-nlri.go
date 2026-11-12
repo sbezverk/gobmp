@@ -868,6 +868,66 @@ func (ls *NLRI) GetSRCandidatePathName() (*SRCandidatePathName, error) {
 	return nil, fmt.Errorf("not found")
 }
 
+// GetSRPolicyName returns the SR Policy Name TLV (type 1213).
+func (ls *NLRI) GetSRPolicyName() (*SRPolicyName, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != SRPolicyNameType {
+			continue
+		}
+		return UnmarshalSRPolicyName(tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+// GetSRv6BindingSID returns the SRv6 Binding SID TLV (type 1212).
+func (ls *NLRI) GetSRv6BindingSID() (*SRv6BindingSID, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != SRv6BindingSIDType {
+			continue
+		}
+		return UnmarshalSRv6BindingSID(tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+// GetSRPolicyState decodes all SR Policy State TLVs from the BGP-LS
+// attribute. A state object is returned even when no recognized TLV is
+// present, allowing callers to distinguish a valid empty attribute from a
+// missing/malformed attribute.
+func (ls *NLRI) GetSRPolicyState() (*SRPolicyState, error) {
+	if ls == nil {
+		return nil, fmt.Errorf("BGP-LS attribute is nil")
+	}
+	state := &SRPolicyState{}
+	for _, tlv := range ls.LS {
+		var err error
+		switch tlv.Type {
+		case BindingSIDType:
+			state.BindingSID, err = UnmarshalSRBindingSID(tlv.Value)
+		case SRv6BindingSIDType:
+			state.SRv6BindingSID, err = UnmarshalSRv6BindingSID(tlv.Value)
+		case SRCandidatePathStateType:
+			state.CandidatePathState, err = UnmarshalSRCandidatePathState(tlv.Value)
+		case SRCandidatePathNameType:
+			state.CandidatePathName, err = UnmarshalSRCandidatePathName(tlv.Value)
+		case SRPolicyNameType:
+			state.PolicyName, err = UnmarshalSRPolicyName(tlv.Value)
+		case SRCandidatePathConstraintsType:
+			state.Constraints, err = UnmarshalSRCandidatePathConstraints(tlv.Value)
+		case SRSegmentListType:
+			var segmentList *SRSegmentList
+			segmentList, err = UnmarshalSRSegmentList(tlv.Value)
+			if err == nil {
+				state.SegmentLists = append(state.SegmentLists, segmentList)
+			}
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode SR Policy State TLV %d: %w", tlv.Type, err)
+		}
+	}
+	return state, nil
+}
+
 // GetSRCandidatePathConstraints returns the SR Candidate Path Constraints TLV (type 1204)
 func (ls *NLRI) GetSRCandidatePathConstraints() (*SRCandidatePathConstraints, error) {
 	for _, tlv := range ls.LS {
