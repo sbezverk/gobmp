@@ -100,14 +100,15 @@ func (p *producer) processMPReach(attribute []byte, ph *bmp.PerPeerHeader, updat
 
 // attributeErrorOperation applies treat-as-withdraw error handling to
 // announcements: RFC 10039 Section 4 for D-PATH and RFC 6514 Section 8 for a
-// malformed PE Distinguisher Labels attribute with the Partial bit set. It is
+// malformed PE Distinguisher Labels attribute with the Partial bit set, and
+// RFC 7606 Section 7.16 for a malformed ATTR_SET. It is
 // shared by the MP_REACH_NLRI and legacy IPv4 NLRI paths.
 func attributeErrorOperation(update *bgp.Update, afi uint16, safi uint8) int {
 	if update == nil || update.BaseAttributes == nil {
 		return AddPrefix
 	}
 	attributes := update.BaseAttributes
-	if attributes.PEDistinguisherLabelsMalformed {
+	if attributes.PEDistinguisherLabelsMalformed || attributes.AttrSetMalformed {
 		return DelPrefix
 	}
 	if attributes.DPath == nil && attributes.DPathAttr == nil && !attributes.DPathMalformed {
