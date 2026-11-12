@@ -87,6 +87,9 @@ type BaseAttributes struct {
 	DPathAttr []byte `json:"d_path_attr,omitempty"`
 	// DPathMalformed requests treat-as-withdraw for a malformed D-PATH attribute.
 	DPathMalformed bool `json:"d_path_malformed,omitempty"`
+	// AttrSetMalformed requests treat-as-withdraw for a malformed ATTR_SET
+	// (RFC 7606 Section 7.16, RFC 6368 Section 5).
+	AttrSetMalformed bool `json:"attr_set_malformed,omitempty"`
 	// NHCAttr retains the raw NHC attribute value for forensic use.
 	NHCAttr []byte `json:"nhc_attr,omitempty"`
 	// NHC contains the decoded NHC when its characteristics are usable.
@@ -101,12 +104,13 @@ type BaseAttributes struct {
 	NHCUnverified bool `json:"nhc_unverified,omitempty"`
 	// SecPath
 	AttrSet *AttrSet `json:"attr_set,omitempty"` // RFC 6368 ATTR_SET Attribute (Type 128)
-	// UnknownAttributes preserves any path attribute whose Type code is not
-	// recognised by this parser. RFC 4271 §5 requires speakers to forward
-	// transitive unrecognised attributes with the Partial bit set; a passive
-	// BMP collector does not forward, but exposing the raw bytes lets
-	// downstream consumers see attributes the collector does not yet decode
-	// instead of silently dropping them.
+	// UnknownAttributes preserves any path attribute this parser does not
+	// decode, including registered but deprecated or unimplemented types.
+	// RFC 4271 §5 requires speakers to forward transitive unrecognised
+	// attributes with the Partial bit set; a passive BMP collector does not
+	// forward, but exposing the raw bytes lets downstream consumers see
+	// attributes the collector does not yet decode instead of silently
+	// dropping them.
 	UnknownAttributes []UnknownPathAttribute `json:"unknown_attributes,omitempty"`
 
 	// bgplsParsed memoizes the parsed BGP-LS Attribute (path attribute 29) so
@@ -116,8 +120,8 @@ type BaseAttributes struct {
 	bgplsParsed *bgpls.NLRI `json:"-"`
 }
 
-// UnknownPathAttribute is the raw form of a BGP path attribute whose Type
-// code is not recognised by unmarshalBaseAttrsFromSlice. Flags is the full
+// UnknownPathAttribute is the raw form of a BGP path attribute that
+// unmarshalBaseAttrsFromSlice does not decode. Flags is the full
 // flags byte (RFC 4271 §4.3 — Optional (0x80)/Transitive (0x40)/Partial (0x20)/Extended Length (0x10)
 // occupy the high nibble; low nibble bits 3-0 are reserved and MUST be zero).
 type UnknownPathAttribute struct {
@@ -259,6 +263,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "d_path mismatch")
 	}
+	if ba.AttrSetMalformed != oba.AttrSetMalformed {
+		equal = false
+		diffs = append(diffs, "attr_set_malformed mismatch")
+	}
 	if asEqual, asDiffs := ba.AttrSet.Equal(oba.AttrSet); !asEqual {
 		equal = false
 		diffs = append(diffs, asDiffs...)
@@ -327,6 +335,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 	baseAttr := BaseAttributes{}
 	dPathSeen := false
 	peDistSeen := false
+	attrSetSeen := false
 	for _, attr := range attrs {
 		b := attr.Attribute
 		switch attr.AttributeType {
@@ -363,12 +372,6 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			if err != nil {
 				return nil, fmt.Errorf("failed to unmarshal Cluster List attribute with error: %+v", err)
 			}
-		case 11:
-			// DPA (deprecated) - RFC 6938
-		case 12:
-			// ADVERTISER (deprecated) - RFC 1863, RFC 6938
-		case 13:
-			// RCID_PATH / CLUSTER_ID (deprecated) - RFC 1863, RFC 6938
 		case 14:
 			// MP_REACH_NLRI - RFC 4760 (parsed separately in path attribute parser)
 		case 15:
@@ -380,12 +383,6 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			baseAttr.AS4PathCount = int32(len(baseAttr.AS4Path))
 		case 18:
 			baseAttr.AS4Aggregator = unmarshalAttrAS4Aggregator(b)
-		case 19:
-			// SAFI Specific Attribute (SSA, deprecated)
-		case 20:
-			// Connector Attribute (deprecated) - RFC 6037
-		case 21:
-			// AS_PATHLIMIT (deprecated) - draft-ietf-idr-as-pathlimit
 		case 22:
 			// RFC 6514 PMSI Tunnel Attribute
 			tunnel, err := pmsi.ParsePMSITunnel(b)
@@ -410,8 +407,6 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			} else {
 				baseAttr.TunnelEncap = te
 			}
-		case 24:
-			// Traffic Engineering - RFC 5543
 		case 25:
 			// IPv6 Address Specific Extended Community - RFC 5701
 			baseAttr.IPv6ExtCommunityList = unmarshalAttrIPv6ExtCommunity(b)
@@ -442,8 +437,6 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			} else {
 				baseAttr.PEDistinguisherLabels = labels
 			}
-		case 28:
-			// BGP Entropy Label Capability Attribute (deprecated) - RFC 6790, RFC 7447
 		case 29:
 			// BGP-LS Attribute - RFC 9552 §5.3.
 			// Eagerly validate the TLV stream structure on receipt so a
@@ -459,16 +452,8 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			if err := bgpls.ValidateBGPLSTLV(b); err != nil {
 				glog.Errorf("malformed BGP-LS Attribute (path attribute type 29); content will be skipped in emitted messages per RFC 7606 §3 / RFC 9552 §5.3: %v", err)
 			}
-		case 30:
-			// Deprecated - RFC 8093
-		case 31:
-			// Deprecated - RFC 8093
 		case 32:
 			baseAttr.LgCommunityList = unmarshalAttrLgCommunity(b)
-		case 33:
-			// BGPsec_Path - RFC 8205
-		case 34:
-			// BGP Community Container Attribute (TEMPORARY) - draft-ietf-idr-wide-bgp-communities
 		case 35:
 			// Only to Customer (OTC) - RFC 9234
 			baseAttr.OTC = unmarshalAttrOTC(b)
@@ -488,10 +473,6 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			} else {
 				baseAttr.DPath = dpath
 			}
-		case 37:
-			// SFP attribute - RFC 9015
-		case 38:
-			// BFD Discriminator - RFC 9026
 		case 39:
 			baseAttr.NHCAttr = append([]byte(nil), b...)
 			nhc, err := UnmarshalNHC(b)
@@ -518,19 +499,38 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 				baseAttr.PrefixSID = nil
 				glog.Errorf("failed to unmarshal Prefix-SID attribute with error: %+v", err)
 			}
-		case 41:
-			// BIER - RFC 9793
-		case 42:
-			// Edge Metadata Path Attribute (TEMPORARY) - draft-ietf-idr-5g-edge-service-metadata
 		case 128:
 			// ATTR_SET - RFC 6368
+			// RFC 7606 §3(g): discard every instance other than the first.
+			if attrSetSeen {
+				continue
+			}
+			attrSetSeen = true
 			attrSet, err := UnmarshalAttrSet(b)
 			if err != nil {
-				glog.Errorf("failed to unmarshal ATTR_SET attribute: %v", err)
+				// Publish the undecodable set raw instead of dropping it.
+				glog.Errorf("failed to unmarshal ATTR_SET attribute; publishing raw bytes as unknown attribute 128: %v", err)
+				baseAttr.UnknownAttributes = append(baseAttr.UnknownAttributes, newUnknownPathAttribute(attr))
+				// RFC 7606 §7.16: malformed set is treat-as-withdraw;
+				// a nested set is only unsupported.
+				baseAttr.AttrSetMalformed = !errors.Is(err, errAttrSetNested)
 			} else {
 				baseAttr.AttrSet = attrSet
 			}
 		default:
+			// Known IANA types that are deliberately not decoded land here too,
+			// so their bytes are published raw rather than dropped:
+			//   11 DPA, 12 ADVERTISER, 13 RCID_PATH/CLUSTER_ID (deprecated, RFC 6938)
+			//   19 SSA, 20 Connector (RFC 6037), 21 AS_PATHLIMIT (all deprecated)
+			//   24 Traffic Engineering (RFC 5543)
+			//   28 Entropy Label Capability (RFC 6790, deprecated by RFC 7447)
+			//   30, 31 (deprecated, RFC 8093; it also deprecated 129, 241-243)
+			//   33 BGPsec_Path (RFC 8205)
+			//   34 Community Container (draft-ietf-idr-wide-bgp-communities)
+			//   37 SFP (RFC 9015), 38 BFD Discriminator (RFC 9026)
+			//   41 BIER (RFC 9793)
+			//   42 Edge Metadata (draft-ietf-idr-5g-edge-service-metadata)
+			//
 			// Capture every unrecognised path attribute (any flag combination)
 			// so downstream consumers see attributes the collector cannot
 			// decode instead of having them silently disappear from the JSON
@@ -538,16 +538,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			// Optional/Transitive forwarding distinction is not applied here;
 			// the full flags byte is preserved on UnknownPathAttribute so
 			// consumers can apply their own policy.
-			// b aliases the fresh per-attribute buffer allocated in
-			// unmarshalRawPathAttributes, so no extra copy is needed.
-			ua := UnknownPathAttribute{
-				Type:  attr.AttributeType,
-				Flags: attr.AttributeTypeFlags,
-			}
-			if len(b) > 0 {
-				ua.Value = b
-			}
-			baseAttr.UnknownAttributes = append(baseAttr.UnknownAttributes, ua)
+			baseAttr.UnknownAttributes = append(baseAttr.UnknownAttributes, newUnknownPathAttribute(attr))
 		}
 	}
 	// Hash the raw attribute bytes directly instead of marshaling to JSON
@@ -559,6 +550,20 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 	baseAttr.BaseAttrHash = hex.EncodeToString(h.Sum(digest[:0]))
 
 	return &baseAttr, nil
+}
+
+// newUnknownPathAttribute returns the raw form of attr for UnknownAttributes.
+// attr.Attribute aliases the fresh per-attribute buffer allocated in
+// unmarshalRawPathAttributes, so no extra copy is needed.
+func newUnknownPathAttribute(attr PathAttribute) UnknownPathAttribute {
+	ua := UnknownPathAttribute{
+		Type:  attr.AttributeType,
+		Flags: attr.AttributeTypeFlags,
+	}
+	if len(attr.Attribute) > 0 {
+		ua.Value = attr.Attribute
+	}
+	return ua
 }
 
 // unmarshalAttrOrigin returns the value of Origin attribute

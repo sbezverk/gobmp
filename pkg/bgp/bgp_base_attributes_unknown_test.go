@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -94,6 +95,222 @@ func TestUnknownPathAttribute_Preserved(t *testing.T) {
 				t.Errorf("Value (len %d) = %x, want (len %d) %x", len(ua.Value), ua.Value, len(tc.wantValue), tc.wantValue)
 			}
 		})
+	}
+}
+
+// TestUnknownPathAttribute_RegisteredUndecoded verifies that IANA-registered
+// attribute types gobmp does not decode (deprecated or unimplemented) are
+// published raw in UnknownAttributes, both at the top level and inside an
+// ATTR_SET, instead of being silently dropped.
+func TestUnknownPathAttribute_RegisteredUndecoded(t *testing.T) {
+	cases := []struct {
+		name  string
+		flags uint8
+		typ   uint8
+		value []byte
+	}{
+		{"DPA", 0xC0, 11, []byte{0, 1, 0, 0, 0, 2}},
+		{"ADVERTISER", 0x80, 12, []byte{192, 0, 2, 1}},
+		{"RCID_PATH", 0x80, 13, []byte{192, 0, 2, 2}},
+		{"SSA", 0xC0, 19, []byte{0x13}},
+		{"Connector", 0xC0, 20, []byte{0x14, 0x14}},
+		{"AS_PATHLIMIT", 0xC0, 21, []byte{5, 0, 0, 0xFD, 0xE9}},
+		{"Traffic Engineering", 0x80, 24, []byte{0x18}},
+		{"Entropy Label Capability empty", 0xC0, 28, nil},
+		{"RFC 8093 type 30", 0xC0, 30, []byte{0x1E}},
+		{"RFC 8093 type 31", 0xC0, 31, []byte{0x1F}},
+		{"BGPsec_Path extended length", 0x90, 33, []byte{0x21, 0x21, 0x21}},
+		{"Community Container", 0xC0, 34, []byte{0x22}},
+		{"SFP", 0xC0, 37, []byte{0x25}},
+		{"BFD Discriminator", 0x80, 38, []byte{0, 1, 0, 0, 0, 0x26}},
+		{"BIER", 0x80, 41, []byte{0x29}},
+		{"Edge Metadata", 0xC0, 42, []byte{0x2A}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := buildAttr(tc.flags, tc.typ, tc.value)
+			if tc.flags&0x10 != 0 {
+				raw = buildAttrExtLen(tc.flags, tc.typ, tc.value)
+			}
+			want := []UnknownPathAttribute{{Type: tc.typ, Flags: tc.flags, Value: tc.value}}
+
+			ba, err := UnmarshalBGPBaseAttributes(raw)
+			if err != nil {
+				t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+			}
+			if !reflect.DeepEqual(ba.UnknownAttributes, want) {
+				t.Errorf("top level UnknownAttributes = %+v, want %+v", ba.UnknownAttributes, want)
+			}
+
+			ba, err = UnmarshalBGPBaseAttributes(buildAttr(0xC0, 128, buildAttrSetValue(65001, raw)))
+			if err != nil {
+				t.Fatalf("UnmarshalBGPBaseAttributes(ATTR_SET): %v", err)
+			}
+			if len(ba.UnknownAttributes) != 0 {
+				t.Errorf("embedded attribute leaked to top level: %+v", ba.UnknownAttributes)
+			}
+			if ba.AttrSet == nil || ba.AttrSet.PathAttributes == nil {
+				t.Fatalf("ATTR_SET not decoded: %+v", ba.AttrSet)
+			}
+			if got := ba.AttrSet.PathAttributes.UnknownAttributes; !reflect.DeepEqual(got, want) {
+				t.Errorf("ATTR_SET UnknownAttributes = %+v, want %+v", got, want)
+			}
+		})
+	}
+}
+
+// TestUnknownPathAttribute_NotDuplicated verifies that MP_REACH_NLRI (14) and
+// MP_UNREACH_NLRI (15), which are decoded from the raw PathAttribute slice,
+// and types 27 and 36, which have dedicated cases, are not published as
+// unknown.
+func TestUnknownPathAttribute_NotDuplicated(t *testing.T) {
+	for _, typ := range []uint8{14, 15, 27, 36} {
+		ba, err := UnmarshalBGPBaseAttributes(buildAttr(0x80, typ, []byte{0x01, 0x02}))
+		if err != nil {
+			t.Fatalf("type %d: UnmarshalBGPBaseAttributes: %v", typ, err)
+		}
+		if len(ba.UnknownAttributes) != 0 {
+			t.Errorf("type %d: UnknownAttributes = %+v, want none", typ, ba.UnknownAttributes)
+		}
+	}
+}
+
+// TestUnknownPathAttribute_FlagBitsPreserved verifies the Partial and
+// Extended Length bits survive on surfaced attributes, including an inner
+// attribute of an ATTR_SET that is itself extended-length encoded.
+func TestUnknownPathAttribute_FlagBitsPreserved(t *testing.T) {
+	t.Run("partial bit", func(t *testing.T) {
+		ba, err := UnmarshalBGPBaseAttributes([]byte{0xE0, 33, 2, 0xAA, 0xBB})
+		if err != nil {
+			t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+		}
+		want := []UnknownPathAttribute{{Type: 33, Flags: 0xE0, Value: []byte{0xAA, 0xBB}}}
+		if !reflect.DeepEqual(ba.UnknownAttributes, want) {
+			t.Errorf("UnknownAttributes = %+v, want %+v", ba.UnknownAttributes, want)
+		}
+	})
+	t.Run("extended length ATTR_SET with extended length inner attribute", func(t *testing.T) {
+		inner := buildAttrExtLen(0xE0, 33, []byte{0xAA, 0xBB})
+		raw := buildAttrExtLen(0xC0, 128, buildAttrSetValue(65001, inner))
+		if raw[0] != 0xD0 || inner[0] != 0xF0 {
+			t.Fatalf("test setup: outer flags %#x, inner flags %#x", raw[0], inner[0])
+		}
+		ba, err := UnmarshalBGPBaseAttributes(raw)
+		if err != nil {
+			t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+		}
+		if len(ba.UnknownAttributes) != 0 {
+			t.Errorf("top level UnknownAttributes = %+v, want none", ba.UnknownAttributes)
+		}
+		if ba.AttrSet == nil || ba.AttrSet.PathAttributes == nil {
+			t.Fatalf("ATTR_SET not decoded: %+v", ba.AttrSet)
+		}
+		want := []UnknownPathAttribute{{Type: 33, Flags: 0xF0, Value: []byte{0xAA, 0xBB}}}
+		if got := ba.AttrSet.PathAttributes.UnknownAttributes; !reflect.DeepEqual(got, want) {
+			t.Errorf("ATTR_SET UnknownAttributes = %+v, want %+v", got, want)
+		}
+	})
+}
+
+// TestUnknownPathAttribute_MalformedAttrSet verifies that an ATTR_SET that
+// cannot be decoded is published raw as unknown type 128 instead of
+// disappearing together with everything inside it.
+func TestUnknownPathAttribute_MalformedAttrSet(t *testing.T) {
+	cases := []struct {
+		name      string
+		value     []byte
+		malformed bool
+	}{
+		{
+			// CLUSTER_LIST length 3 is not a multiple of 4.
+			name:      "malformed inner CLUSTER_LIST",
+			value:     buildAttrSetValue(65001, buildAttr(0x80, 10, []byte{1, 2, 3}), buildAttr(0xC0, 33, []byte{9})),
+			malformed: true,
+		},
+		{
+			// RFC 6368 §5: nested ATTR_SET is unsupported, not malformed.
+			name:  "nested ATTR_SET",
+			value: buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002))),
+		},
+		{
+			name:      "nested then MP_REACH",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002)), buildAttr(0x90, 14, []byte{0, 1, 1, 4, 10, 0, 0, 1, 0})),
+			malformed: true,
+		},
+		{
+			name:      "nested then MP_UNREACH",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002)), buildAttr(0x90, 15, []byte{0, 1, 1, 24, 10, 0, 1})),
+			malformed: true,
+		},
+		{
+			name:      "nested then malformed D-PATH",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002)), buildAttr(0xC0, 36, []byte{1, 0})),
+			malformed: true,
+		},
+		{name: "short origin AS", value: []byte{0, 0, 1}, malformed: true},
+		{
+			name:      "truncated embedded attribute",
+			value:     append(buildAttrSetValue(65001), 0x40),
+			malformed: true,
+		},
+		{
+			name:      "embedded MP_REACH_NLRI",
+			value:     buildAttrSetValue(65001, buildAttr(0x90, 14, []byte{0, 1, 1, 4, 10, 0, 0, 1, 0})),
+			malformed: true,
+		},
+		{
+			name:      "embedded MP_UNREACH_NLRI",
+			value:     buildAttrSetValue(65001, buildAttr(0x90, 15, []byte{0, 1, 1, 24, 10, 0, 1})),
+			malformed: true,
+		},
+		{
+			name:      "embedded malformed D-PATH",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 36, []byte{1, 0})),
+			malformed: true,
+		},
+		{
+			name:      "embedded malformed Tunnel Encapsulation",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 23, []byte{0xff})),
+			malformed: true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ba, err := UnmarshalBGPBaseAttributes(buildAttr(0xC0, 128, tc.value))
+			if err != nil {
+				t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+			}
+			if ba.AttrSet != nil {
+				t.Errorf("AttrSet = %+v, want nil", ba.AttrSet)
+			}
+			if ba.AttrSetMalformed != tc.malformed {
+				t.Errorf("AttrSetMalformed = %v, want %v", ba.AttrSetMalformed, tc.malformed)
+			}
+			want := []UnknownPathAttribute{{Type: 128, Flags: 0xC0, Value: tc.value}}
+			if !reflect.DeepEqual(ba.UnknownAttributes, want) {
+				t.Errorf("UnknownAttributes = %+v, want %+v", ba.UnknownAttributes, want)
+			}
+		})
+	}
+}
+
+// TestAttrSetFirstInstanceWins checks RFC 7606 §3(g): a second ATTR_SET is
+// discarded, so it cannot clear the malformed flag set by the first.
+func TestAttrSetFirstInstanceWins(t *testing.T) {
+	malformed := []byte{0, 0, 1}
+	nested := buildAttrSetValue(65001, buildAttr(0xC0, 128, buildAttrSetValue(65002)))
+	raw := append(buildAttr(0xC0, 128, malformed), buildAttr(0xC0, 128, nested)...)
+
+	ba, err := UnmarshalBGPBaseAttributes(raw)
+	if err != nil {
+		t.Fatalf("UnmarshalBGPBaseAttributes: %v", err)
+	}
+	if !ba.AttrSetMalformed {
+		t.Error("AttrSetMalformed = false, want true from the first ATTR_SET")
+	}
+	want := []UnknownPathAttribute{{Type: 128, Flags: 0xC0, Value: malformed}}
+	if !reflect.DeepEqual(ba.UnknownAttributes, want) {
+		t.Errorf("UnknownAttributes = %+v, want only the first ATTR_SET %+v", ba.UnknownAttributes, want)
 	}
 }
 

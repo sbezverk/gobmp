@@ -1,6 +1,8 @@
 package message
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"strconv"
 	"strings"
 
@@ -518,6 +520,12 @@ func (p *producer) processNLRI72SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 			}
 			msg.RD = rd
 			msg.PathID = e.PathID
+			if e.RD != nil {
+				var wireRD [8]byte
+				binary.BigEndian.PutUint16(wireRD[:2], e.RD.Type)
+				copy(wireRD[2:], e.RD.Value)
+				msg.RDRaw = hex.EncodeToString(wireRD[:])
+			}
 			if err := p.marshalAndPublish(&msg, bmp.LSOpaqueMsg, []byte(msg.RouterHash)); err != nil {
 				glog.Errorf("failed to process LSOpaque message with error: %+v", err)
 				continue
