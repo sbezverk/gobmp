@@ -851,7 +851,7 @@ func TestSRType8Descriptor_RoundTrip(t *testing.T) {
 // TestUnmarshalSRSegmentListMetric verifies parsing of a 16-byte Segment List Metric sub-TLV.
 func TestUnmarshalSRSegmentListMetric(t *testing.T) {
 	b := make([]byte, 16)
-	b[0] = 1                                  // SRMetricMinUnidirLinkDelay
+	b[0] = 2                                  // SRMetricAverageUnidirectionalDelay
 	b[1] = 0x80                               // FlagM set
 	binary.BigEndian.PutUint32(b[4:8], 100)   // Margin
 	binary.BigEndian.PutUint32(b[8:12], 200)  // Bound
@@ -862,8 +862,8 @@ func TestUnmarshalSRSegmentListMetric(t *testing.T) {
 		t.Fatalf("UnmarshalSRSegmentListMetric: %v", err)
 	}
 	m := stlv.(*SRSegmentListMetric)
-	if m.Metric != SRMetricMinUnidirLinkDelay {
-		t.Errorf("Metric = %d, want %d", m.Metric, SRMetricMinUnidirLinkDelay)
+	if m.Metric != SRMetricAverageUnidirectionalDelay {
+		t.Errorf("Metric = %d, want %d", m.Metric, SRMetricAverageUnidirectionalDelay)
 	}
 	if !m.FlagM {
 		t.Error("FlagM = false, want true")

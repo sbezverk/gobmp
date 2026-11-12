@@ -762,7 +762,7 @@ func TestUnmarshalSRAffinityConstraint(t *testing.T) {
 			name:  "all sizes zero — no EAG fields",
 			input: []byte{0x00, 0x00, 0x00, 0x00},
 			checkFn: func(t *testing.T, s *SRAffinityConstraint) {
-				if s.ExclAnyEAG != 0 || s.InclAnyEAG != 0 || s.InclAllEAG != 0 {
+				if s.ExclAnyEAG != nil || s.InclAnyEAG != nil || s.InclAllEAG != nil {
 					t.Error("all EAG values should be zero")
 				}
 			},
@@ -781,14 +781,14 @@ func TestUnmarshalSRAffinityConstraint(t *testing.T) {
 				return b
 			}(),
 			checkFn: func(t *testing.T, s *SRAffinityConstraint) {
-				if s.ExclAnyEAG != 0xDEAD0001 {
-					t.Errorf("ExclAnyEAG = 0x%X, want 0xDEAD0001", s.ExclAnyEAG)
+				if len(s.ExclAnyEAG) != 1 || s.ExclAnyEAG[0] != 0xDEAD0001 {
+					t.Errorf("ExclAnyEAG = %+v, want [0xDEAD0001]", s.ExclAnyEAG)
 				}
-				if s.InclAnyEAG != 0xBEEF0002 {
-					t.Errorf("InclAnyEAG = 0x%X, want 0xBEEF0002", s.InclAnyEAG)
+				if len(s.InclAnyEAG) != 1 || s.InclAnyEAG[0] != 0xBEEF0002 {
+					t.Errorf("InclAnyEAG = %+v, want [0xBEEF0002]", s.InclAnyEAG)
 				}
-				if s.InclAllEAG != 0xCAFE0003 {
-					t.Errorf("InclAllEAG = 0x%X, want 0xCAFE0003", s.InclAllEAG)
+				if len(s.InclAllEAG) != 1 || s.InclAllEAG[0] != 0xCAFE0003 {
+					t.Errorf("InclAllEAG = %+v, want [0xCAFE0003]", s.InclAllEAG)
 				}
 			},
 		},
@@ -894,12 +894,12 @@ func TestUnmarshalSRBandwidthConstraint(t *testing.T) {
 		name    string
 		input   []byte
 		wantErr bool
-		wantBW  uint32
+		wantBW  float32
 	}{
 		{name: "too short", input: []byte{0x00, 0x00, 0x01}, wantErr: true},
 		{name: "too long", input: []byte{0x00, 0x00, 0x00, 0x64, 0xFF}, wantErr: true},
-		{name: "bandwidth = 100", input: []byte{0x00, 0x00, 0x00, 0x64}, wantBW: 100},
-		{name: "bandwidth = 0", input: []byte{0x00, 0x00, 0x00, 0x00}, wantBW: 0},
+		{name: "bandwidth = 100", input: []byte{0x00, 0x00, 0x00, 0x64}, wantBW: float32(100)},
+		{name: "bandwidth = 0", input: []byte{0x00, 0x00, 0x00, 0x00}, wantBW: float32(0)},
 	}
 
 	for _, tt := range tests {
@@ -912,7 +912,7 @@ func TestUnmarshalSRBandwidthConstraint(t *testing.T) {
 				return
 			}
 			if got.Bandwidth != tt.wantBW {
-				t.Errorf("Bandwidth = %d, want %d", got.Bandwidth, tt.wantBW)
+				t.Errorf("Bandwidth = %f, want %f", got.Bandwidth, tt.wantBW)
 			}
 		})
 	}
@@ -950,8 +950,8 @@ func TestUnmarshalSRDisjointGroupConstraint(t *testing.T) {
 				if !d.RequestFlagN {
 					t.Error("RequestFlagN should be set")
 				}
-				if d.DisjointGroupID != 99 {
-					t.Errorf("DisjointGroupID = %d, want 99", d.DisjointGroupID)
+				if *d.DisJointGroupID != 99 {
+					t.Errorf("DisjointGroupID = %d, want 99", *d.DisJointGroupID)
 				}
 			},
 		},

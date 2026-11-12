@@ -4,8 +4,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/golang/glog"
+	"github.com/sbezverk/gobmp/pkg/srv6"
 	"github.com/sbezverk/tools"
 )
 
@@ -32,6 +34,18 @@ const (
 	SRBandwidthConstraintType = 1210
 	// SRDisjointGroupConstraintType defines SR DisjointGroup Constraint Sub TLV type
 	SRDisjointGroupConstraintType = 1211
+	// SRv6BindingSIDType defines SRv6 Binding SID TLV type
+	SRv6BindingSIDType = 1212
+	// Type 1213: SR Policy Name TLV (Section 5.4).
+	SRPolicyNameType = 1213
+	// Type 1214: SR Bidirectional Group Constraint sub-TLV (Section 5.6.5).
+	SRBidirectionalGroupConstraintType = 1214
+	// Type 1215: SR Metric Constraint sub-TLV (Section 5.6.6).
+	SRMetricConstraintType = 1215
+	// Type 1216: SR Segment List Bandwidth sub-TLV (Section 5.7.3).
+	SRSegmentListBandwidthType = 1216
+	// Type 1217: SR Segment List Identifier sub-TLV (Section 5.7.4).
+	SRSegmentListIdentifierType = 1217
 )
 
 // SRBindingSID defines the struct of SR Binding SID object
@@ -79,6 +93,9 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 	// The D-Flag determines field size: set = 16 octets (SRv6), clear = 4 octets (MPLS)
 	if bsid.FlagD {
 		// BSID is ipv6 address
+		if len(b) != 36 {
+			return nil, fmt.Errorf("invalid length %d to decode SR Binding SID TLV", len(b))
+		}
 		if p+16 > len(b) {
 			return nil, fmt.Errorf("not enough bytes to decode SR Binding SID TLV, need 16 bytes, have %d", len(b)-p)
 		}
@@ -89,6 +106,9 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 		l = 16
 	} else {
 		// BSID is MPLS label
+		if len(b) != 12 {
+			return nil, fmt.Errorf("invalid length %d to decode SR Binding SID TLV", len(b))
+		}
 		bsid.BSID, err = UnmarshalMPLSLabelSID(b[p : p+4])
 		if err != nil {
 			return nil, err
@@ -96,10 +116,6 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 		l = 4
 	}
 	p += l
-	if bsid.FlagU {
-		// Flag U indicates the Provisioned BSID value is unavailable when set.
-		return bsid, nil
-	}
 	if p+l > len(b) {
 		return nil, fmt.Errorf("not enough bytes to decode SR Binding SID TLV, need %d bytes, have %d", l, len(b)-p)
 	}
@@ -119,8 +135,15 @@ func UnmarshalSRBindingSID(b []byte) (*SRBindingSID, error) {
 	return bsid, nil
 }
 
+//  0                   1
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |S|A|B|E|V|O|D|C|I|T|U|         |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 // SRCandidatePathState defines the object which carries the operational status
 // and attributes of the SR Policy at the CP level.
+// https://www.rfc-editor.org/info/rfc9857/#section-5.3
 type SRCandidatePathState struct {
 	Priority   uint8  `json:"priority"`
 	FlagS      bool   `json:"s_flag"`
@@ -133,6 +156,7 @@ type SRCandidatePathState struct {
 	FlagC      bool   `json:"c_flag"`
 	FlagI      bool   `json:"i_flag"`
 	FlagT      bool   `json:"t_flag"`
+	FlagU      bool   `json:"u_flag"`
 	Preference uint32 `json:"preference"`
 }
 
@@ -161,6 +185,7 @@ func UnmarshalSRCandidatePathState(b []byte) (*SRCandidatePathState, error) {
 	p++
 	s.FlagI = b[p]&0x80 == 0x80
 	s.FlagT = b[p]&0x40 == 0x40
+	s.FlagU = b[p]&0x20 == 0x20
 	p++
 	s.Preference = binary.BigEndian.Uint32(b[p : p+4])
 
@@ -190,6 +215,12 @@ type SRCandidatePathConstraintsSubTLV interface {
 	UnmarshalJSON([]byte) error
 }
 
+//  0                   1
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |D|P|U|A|T|S|F|H|               |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 // SRCandidatePathConstraints defines the object which carries the constraints associated with the candidate path.
 type SRCandidatePathConstraints struct {
 	FlagD  bool                                        `json:"d_flag"`
@@ -197,6 +228,9 @@ type SRCandidatePathConstraints struct {
 	FlagU  bool                                        `json:"u_flag"`
 	FlagA  bool                                        `json:"a_flag"`
 	FlagT  bool                                        `json:"t_flag"`
+	FlagS  bool                                        `json:"s_flag"`
+	FlagF  bool                                        `json:"f_flag"`
+	FlagH  bool                                        `json:"h_flag"`
 	MTID   uint16                                      `json:"mtid"`
 	Algo   uint8                                       `json:"algorithm"`
 	SubTLV map[uint16]SRCandidatePathConstraintsSubTLV `json:"subtlv,omitempty"`
@@ -217,6 +251,9 @@ func UnmarshalSRCandidatePathConstraints(b []byte) (*SRCandidatePathConstraints,
 	s.FlagU = b[p]&0x20 == 0x20
 	s.FlagA = b[p]&0x10 == 0x10
 	s.FlagT = b[p]&0x08 == 0x08
+	s.FlagS = b[p]&0x04 == 0x04
+	s.FlagF = b[p]&0x02 == 0x02
+	s.FlagH = b[p]&0x01 == 0x01
 	p += 2
 	// Skip reserved 2 bytes
 	s.MTID = binary.BigEndian.Uint16(b[p : p+2])
@@ -295,12 +332,12 @@ var _ SRCandidatePathConstraintsSubTLV = &SRAffinityConstraint{}
 // candidate path.  The affinity is expressed in terms of Extended Admin
 // Group (EAG) as defined in [RFC7308].
 type SRAffinityConstraint struct {
-	ExclAnySize uint8  `json:"excl_any_size"`
-	InclAnySize uint8  `json:"incl_any_size"`
-	InclAllSize uint8  `json:"incl_all_size"`
-	ExclAnyEAG  uint32 `json:"excl_any_eag,omitempty"`
-	InclAnyEAG  uint32 `json:"incl_any_eag,omitempty"`
-	InclAllEAG  uint32 `json:"incl_all_eag,omitempty"`
+	ExclAnySize uint8    `json:"excl_any_size"`
+	InclAnySize uint8    `json:"incl_any_size"`
+	InclAllSize uint8    `json:"incl_all_size"`
+	ExclAnyEAG  []uint32 `json:"excl_any_eag,omitempty"`
+	InclAnyEAG  []uint32 `json:"incl_any_eag,omitempty"`
+	InclAllEAG  []uint32 `json:"incl_all_eag,omitempty"`
 }
 
 // UnmarshalSRAffinityConstraint instantiates SR Affinity Constraint object from a slice of bytes
@@ -321,39 +358,64 @@ func UnmarshalSRAffinityConstraint(b []byte) (*SRAffinityConstraint, error) {
 	p++
 	// Skip reserved byte
 	p++
+	s.ExclAnyEAG = make([]uint32, 0, s.ExclAnySize)
+	s.InclAnyEAG = make([]uint32, 0, s.InclAnySize)
+	s.InclAllEAG = make([]uint32, 0, s.InclAllSize)
+	expected := int(s.ExclAnySize)*4 +
+		int(s.InclAnySize)*4 +
+		int(s.InclAllSize)*4
+	if len(b[p:]) != expected {
+		return nil, fmt.Errorf("SR Affinity Constraint: expected %d bytes for ExclAnyEAG, InclAnyEAG and InclAllEAG, have %d", expected, len(b[p:]))
+	}
 	if s.ExclAnySize != 0 {
-		if p+4 > len(b) {
-			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint ExclAnySize, need 4 bytes, have %d", len(b)-p)
+		for i := 0; i < int(s.ExclAnySize); i++ {
+			if p+4 > len(b) {
+				return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint ExclAnySize, need 4 bytes, have %d", len(b)-p)
+			}
+			s.ExclAnyEAG = append(s.ExclAnyEAG, binary.BigEndian.Uint32(b[p:p+4]))
+			p += 4
 		}
-		s.ExclAnyEAG = binary.BigEndian.Uint32(b[p : p+4])
-		p += 4
 	}
 	if s.InclAnySize != 0 {
-		if p+4 > len(b) {
-			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint InclAnySize, need 4 bytes, have %d", len(b)-p)
+		for i := 0; i < int(s.InclAnySize); i++ {
+			if p+4 > len(b) {
+				return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint InclAnySize, need 4 bytes, have %d", len(b)-p)
+			}
+			s.InclAnyEAG = append(s.InclAnyEAG, binary.BigEndian.Uint32(b[p:p+4]))
+			p += 4
 		}
-		s.InclAnyEAG = binary.BigEndian.Uint32(b[p : p+4])
-		p += 4
 	}
 	if s.InclAllSize != 0 {
-		if p+4 > len(b) {
-			return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint InclAllSize, need 4 bytes, have %d", len(b)-p)
+		for i := 0; i < int(s.InclAllSize); i++ {
+			if p+4 > len(b) {
+				return nil, fmt.Errorf("not enough bytes to decode SR Affinity Constraint InclAllSize, need 4 bytes, have %d", len(b)-p)
+			}
+			s.InclAllEAG = append(s.InclAllEAG, binary.BigEndian.Uint32(b[p:p+4]))
+			p += 4
 		}
-		s.InclAllEAG = binary.BigEndian.Uint32(b[p : p+4])
 	}
 
+	if len(s.ExclAnyEAG) == 0 {
+		s.ExclAnyEAG = nil
+	}
+	if len(s.InclAnyEAG) == 0 {
+		s.InclAnyEAG = nil
+	}
+	if len(s.InclAllEAG) == 0 {
+		s.InclAllEAG = nil
+	}
 	return s, nil
 }
 
 // MarshalJSON serializes SRAffinityConstraint into a slice of bytes
 func (a *SRAffinityConstraint) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		ExclAnySize uint8  `json:"excl_any_size"`
-		InclAnySize uint8  `json:"incl_any_size"`
-		InclAllSize uint8  `json:"incl_all_size"`
-		ExclAnyEAG  uint32 `json:"excl_any_eag,omitempty"`
-		InclAnyEAG  uint32 `json:"incl_any_eag,omitempty"`
-		InclAllEAG  uint32 `json:"incl_all_eag,omitempty"`
+		ExclAnySize uint8    `json:"excl_any_size"`
+		InclAnySize uint8    `json:"incl_any_size"`
+		InclAllSize uint8    `json:"incl_all_size"`
+		ExclAnyEAG  []uint32 `json:"excl_any_eag,omitempty"`
+		InclAnyEAG  []uint32 `json:"incl_any_eag,omitempty"`
+		InclAllEAG  []uint32 `json:"incl_all_eag,omitempty"`
 	}{
 		ExclAnySize: a.ExclAnySize,
 		InclAnySize: a.InclAnySize,
@@ -367,12 +429,12 @@ func (a *SRAffinityConstraint) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON instantiates SRAffinityConstraint object from  a slice of bytes
 func (a *SRAffinityConstraint) UnmarshalJSON(b []byte) error {
 	t := struct {
-		ExclAnySize uint8  `json:"excl_any_size"`
-		InclAnySize uint8  `json:"incl_any_size"`
-		InclAllSize uint8  `json:"incl_all_size"`
-		ExclAnyEAG  uint32 `json:"excl_any_eag,omitempty"`
-		InclAnyEAG  uint32 `json:"incl_any_eag,omitempty"`
-		InclAllEAG  uint32 `json:"incl_all_eag,omitempty"`
+		ExclAnySize uint8    `json:"excl_any_size"`
+		InclAnySize uint8    `json:"incl_any_size"`
+		InclAllSize uint8    `json:"incl_all_size"`
+		ExclAnyEAG  []uint32 `json:"excl_any_eag,omitempty"`
+		InclAnyEAG  []uint32 `json:"incl_any_eag,omitempty"`
+		InclAllEAG  []uint32 `json:"incl_all_eag,omitempty"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
@@ -389,6 +451,8 @@ func (a *SRAffinityConstraint) UnmarshalJSON(b []byte) error {
 
 var _ SRCandidatePathConstraintsSubTLV = &SRSRLGConstraint{}
 
+// SRSRLGConstraint defines an object which carries the Shared Risk Link Group (SRLG) values [RFC4202] that are to
+// be excluded from the candidate path.
 // SRSRLGConstraint defines an object which carries the Shared Risk Link Group (SRLG) values [RFC4202] that are to
 // be excluded from the candidate path.
 type SRSRLGConstraint struct {
@@ -444,7 +508,7 @@ var _ SRCandidatePathConstraintsSubTLV = &SRBandwidthConstraint{}
 // SRBandwidthConstraint defines an object which indicates the desired bandwidth availability that needs to be
 // ensured for the candidate path.
 type SRBandwidthConstraint struct {
-	Bandwidth uint32 `json:"bandwidth"`
+	Bandwidth float32 `json:"bandwidth"`
 }
 
 // UnmarshalSRBandwidthConstraint instantiates SR Bandwidth Constraint object from a slice of bytes
@@ -457,48 +521,59 @@ func UnmarshalSRBandwidthConstraint(b []byte) (*SRBandwidthConstraint, error) {
 	}
 	p := 0
 	s := &SRBandwidthConstraint{}
-	s.Bandwidth = binary.BigEndian.Uint32(b[p : p+4])
+	s.Bandwidth = math.Float32frombits(binary.BigEndian.Uint32(b[p : p+4]))
 	return s, nil
 }
 
 // MarshalJSON serializes SRBandwidthConstraint into a slice of bytes
 func (w *SRBandwidthConstraint) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Bandwidth uint32 `json:"bandwidth"`
+		Bandwidth float32 `json:"bandwidth"`
 	}{
-		Bandwidth: w.Bandwidth,
+		Bandwidth: float32(w.Bandwidth),
 	})
 }
 
 // UnmarshalJSON instantiates SRBandwidthConstraint object from  a slice of bytes
 func (w *SRBandwidthConstraint) UnmarshalJSON(b []byte) error {
 	t := struct {
-		Bandwidth uint32 `json:"bandwidth"`
+		Bandwidth float32 `json:"bandwidth"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	w.Bandwidth = t.Bandwidth
+	w.Bandwidth = float32(t.Bandwidth)
 
 	return nil
 }
 
 var _ SRCandidatePathConstraintsSubTLV = &SRDisjointGroupConstraint{}
 
+// https://www.rfc-editor.org/info/rfc9857/#section-5.6.4
+
 // SRDisjointGroupConstraint defines an object which indicates DisjointGroup associated with the candidate path.
 type SRDisjointGroupConstraint struct {
-	RequestFlagS    bool   `json:"s_request_flag"`
-	RequestFlagN    bool   `json:"n_request_flag"`
-	RequestFlagL    bool   `json:"l_request_flag"`
-	RequestFlagF    bool   `json:"f_request_flag"`
-	RequestFlagI    bool   `json:"i_request_flag"`
-	StatusFlagS     bool   `json:"s_status_flag"`
-	StatusFlagN     bool   `json:"n_status_flag"`
-	StatusFlagL     bool   `json:"l_status_flag"`
-	StatusFlagF     bool   `json:"f_status_flag"`
-	StatusFlagI     bool   `json:"i_status_flag"`
-	StatusFlagX     bool   `json:"x_status_flag"`
-	DisjointGroupID uint32 `json:"disjoint_group_id"`
+	//  0 1 2 3 4 5 6 7
+	// +-+-+-+-+-+-+-+-+
+	// |S|N|L|F|I|     |
+	// +-+-+-+-+-+-+-+-+
+	RequestFlagS bool `json:"s_request_flag"`
+	RequestFlagN bool `json:"n_request_flag"`
+	RequestFlagL bool `json:"l_request_flag"`
+	RequestFlagF bool `json:"f_request_flag"`
+	RequestFlagI bool `json:"i_request_flag"`
+	// 	 0 1 2 3 4 5 6 7
+	// +-+-+-+-+-+-+-+-+
+	// |S|N|L|F|I|X|   |
+	// +-+-+-+-+-+-+-+-+
+	StatusFlagS        bool    `json:"s_status_flag"`
+	StatusFlagN        bool    `json:"n_status_flag"`
+	StatusFlagL        bool    `json:"l_status_flag"`
+	StatusFlagF        bool    `json:"f_status_flag"`
+	StatusFlagI        bool    `json:"i_status_flag"`
+	StatusFlagX        bool    `json:"x_status_flag"`
+	DisJointGroupID    *uint32 `json:"disjoint_group_id,omitempty"`
+	PCEPAssociationObj []byte  `json:"pcep_association_obj,omitempty"`
 }
 
 // UnmarshalSRDisjointGroupConstraint instantiates SR DisjointGroup Constraint object from a slice of bytes
@@ -506,7 +581,7 @@ func UnmarshalSRDisjointGroupConstraint(b []byte) (*SRDisjointGroupConstraint, e
 	if glog.V(6) {
 		glog.Infof("SR DisjointGroup Constraint Sub TLV Raw: %s", tools.MessageHex(b))
 	}
-	if len(b) != 8 {
+	if len(b) < 8 {
 		return nil, fmt.Errorf("not enough bytes to decode SR DisjointGroup Constraint Sub TLV")
 	}
 	p := 0
@@ -526,7 +601,13 @@ func UnmarshalSRDisjointGroupConstraint(b []byte) (*SRDisjointGroupConstraint, e
 	p++
 	// Skip 2 reserved bytes
 	p += 2
-	s.DisjointGroupID = binary.BigEndian.Uint32(b[p : p+4])
+	if p+4 == len(b) {
+		v := binary.BigEndian.Uint32(b[p : p+4])
+		s.DisJointGroupID = &v
+		p += 4
+	} else {
+		s.PCEPAssociationObj = b[p:]
+	}
 
 	return s, nil
 }
@@ -534,49 +615,52 @@ func UnmarshalSRDisjointGroupConstraint(b []byte) (*SRDisjointGroupConstraint, e
 // MarshalJSON serializes SRDisjointGroupConstraint into a slice of bytes
 func (d *SRDisjointGroupConstraint) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		RequestFlagS    bool   `json:"s_request_flag"`
-		RequestFlagN    bool   `json:"n_request_flag"`
-		RequestFlagL    bool   `json:"l_request_flag"`
-		RequestFlagF    bool   `json:"f_request_flag"`
-		RequestFlagI    bool   `json:"i_request_flag"`
-		StatusFlagS     bool   `json:"s_status_flag"`
-		StatusFlagN     bool   `json:"n_status_flag"`
-		StatusFlagL     bool   `json:"l_status_flag"`
-		StatusFlagF     bool   `json:"f_status_flag"`
-		StatusFlagI     bool   `json:"i_status_flag"`
-		StatusFlagX     bool   `json:"x_status_flag"`
-		DisjointGroupID uint32 `json:"disjoint_group_id"`
+		RequestFlagS       bool    `json:"s_request_flag"`
+		RequestFlagN       bool    `json:"n_request_flag"`
+		RequestFlagL       bool    `json:"l_request_flag"`
+		RequestFlagF       bool    `json:"f_request_flag"`
+		RequestFlagI       bool    `json:"i_request_flag"`
+		StatusFlagS        bool    `json:"s_status_flag"`
+		StatusFlagN        bool    `json:"n_status_flag"`
+		StatusFlagL        bool    `json:"l_status_flag"`
+		StatusFlagF        bool    `json:"f_status_flag"`
+		StatusFlagI        bool    `json:"i_status_flag"`
+		StatusFlagX        bool    `json:"x_status_flag"`
+		DisJointGroupID    *uint32 `json:"disjoint_group_id,omitempty"`
+		PCEPAssociationObj []byte  `json:"pcep_association_obj,omitempty"`
 	}{
-		RequestFlagS:    d.RequestFlagS,
-		RequestFlagN:    d.RequestFlagN,
-		RequestFlagL:    d.RequestFlagL,
-		RequestFlagF:    d.RequestFlagF,
-		RequestFlagI:    d.RequestFlagI,
-		StatusFlagS:     d.StatusFlagS,
-		StatusFlagN:     d.StatusFlagN,
-		StatusFlagL:     d.StatusFlagL,
-		StatusFlagF:     d.StatusFlagF,
-		StatusFlagI:     d.StatusFlagI,
-		StatusFlagX:     d.StatusFlagX,
-		DisjointGroupID: d.DisjointGroupID,
+		RequestFlagS:       d.RequestFlagS,
+		RequestFlagN:       d.RequestFlagN,
+		RequestFlagL:       d.RequestFlagL,
+		RequestFlagF:       d.RequestFlagF,
+		RequestFlagI:       d.RequestFlagI,
+		StatusFlagS:        d.StatusFlagS,
+		StatusFlagN:        d.StatusFlagN,
+		StatusFlagL:        d.StatusFlagL,
+		StatusFlagF:        d.StatusFlagF,
+		StatusFlagI:        d.StatusFlagI,
+		StatusFlagX:        d.StatusFlagX,
+		DisJointGroupID:    d.DisJointGroupID,
+		PCEPAssociationObj: d.PCEPAssociationObj,
 	})
 }
 
 // UnmarshalJSON instantiates SRDisjointGroupConstraint object from  a slice of bytes
 func (d *SRDisjointGroupConstraint) UnmarshalJSON(b []byte) error {
 	t := struct {
-		RequestFlagS    bool   `json:"s_request_flag"`
-		RequestFlagN    bool   `json:"n_request_flag"`
-		RequestFlagL    bool   `json:"l_request_flag"`
-		RequestFlagF    bool   `json:"f_request_flag"`
-		RequestFlagI    bool   `json:"i_request_flag"`
-		StatusFlagS     bool   `json:"s_status_flag"`
-		StatusFlagN     bool   `json:"n_status_flag"`
-		StatusFlagL     bool   `json:"l_status_flag"`
-		StatusFlagF     bool   `json:"f_status_flag"`
-		StatusFlagI     bool   `json:"i_status_flag"`
-		StatusFlagX     bool   `json:"x_status_flag"`
-		DisjointGroupID uint32 `json:"disjoint_group_id"`
+		RequestFlagS       bool    `json:"s_request_flag"`
+		RequestFlagN       bool    `json:"n_request_flag"`
+		RequestFlagL       bool    `json:"l_request_flag"`
+		RequestFlagF       bool    `json:"f_request_flag"`
+		RequestFlagI       bool    `json:"i_request_flag"`
+		StatusFlagS        bool    `json:"s_status_flag"`
+		StatusFlagN        bool    `json:"n_status_flag"`
+		StatusFlagL        bool    `json:"l_status_flag"`
+		StatusFlagF        bool    `json:"f_status_flag"`
+		StatusFlagI        bool    `json:"i_status_flag"`
+		StatusFlagX        bool    `json:"x_status_flag"`
+		DisJointGroupID    *uint32 `json:"disjoint_group_id,omitempty"`
+		PCEPAssociationObj []byte  `json:"pcep_association_obj,omitempty"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
@@ -592,7 +676,8 @@ func (d *SRDisjointGroupConstraint) UnmarshalJSON(b []byte) error {
 	d.StatusFlagF = t.StatusFlagF
 	d.StatusFlagI = t.StatusFlagI
 	d.StatusFlagX = t.StatusFlagX
-	d.DisjointGroupID = t.DisjointGroupID
+	d.DisJointGroupID = t.DisJointGroupID
+	d.PCEPAssociationObj = t.PCEPAssociationObj
 
 	return nil
 }
@@ -1469,12 +1554,15 @@ func (s *SRSegment) UnmarshalJSON(b []byte) error {
 type SRMetricType uint8
 
 const (
-	// SRMetricIGP defines IGP Metric type 0
-	SRMetricIGP SRMetricType = iota
-	// SRMetricMinUnidirLinkDelay defines Min Unidirection Link delay Metric type 1
-	SRMetricMinUnidirLinkDelay
-	// SRMetricTE defines TE Metric type 2
-	SRMetricTE
+	SRPMetricIGP                         SRMetricType = 0
+	SRMetricMinUnidirectionalDelay       SRMetricType = 1
+	SRMetricTE                           SRMetricType = 2
+	SRMetricHopCount                     SRMetricType = 3
+	SRMetricSIDListLength                SRMetricType = 4
+	SRMetricBandwidth                    SRMetricType = 5
+	SRMetricAverageUnidirectionalDelay   SRMetricType = 6
+	SRMetricUnidirectionalDelayVariation SRMetricType = 7
+	SRMetricLoss                         SRMetricType = 8
 )
 
 var _ SRSegmentListSubTLV = &SRSegmentListMetric{}
@@ -1567,4 +1655,110 @@ func (m *SRSegmentListMetric) UnmarshalJSON(b []byte) error {
 	m.Value = t.Value
 
 	return nil
+}
+
+//   - Type 1212: SRv6 Binding SID TLV (Section 5.2).
+
+//  0                   1                   2                   3
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |              Type             |             Length            |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |           BSID Flags          |            RESERVED           |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                    Binding SID (16 octets)                   //
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                Specified Binding SID (16 octets)             //
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// //   sub-TLVs (variable)                                       //
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+//  0                   1
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |B|U|F|                         |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+type SRv6BindingSID struct {
+	FlagB bool     `json:"b_flag"`
+	FlagU bool     `json:"u_flag"`
+	FlagF bool     `json:"f_flag"`
+	BSID  *SRv6SID `json:"binding_sid,omitempty"`
+	SBSID *SRv6SID `json:"specified_binding_sid,omitempty"`
+	// TLV 1250
+	EndpointBehavior *srv6.EndpointBehavior `json:"endpoint_behavior,omitempty"`
+	// TLV 1252
+	SIDStructure *srv6.SIDStructure `json:"sid_structure,omitempty"`
+}
+
+//   - Type 1213: SR Policy Name TLV (Section 5.4).
+
+type SRPolicyName struct {
+	Name string `json:"sr_policy_name,omitempty"`
+}
+
+//   - Type 1214: SR Bidirectional Group Constraint sub-TLV (Section 5.6.5).
+
+//  0                   1                   2                   3
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |               Type            |              Length           |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |              Flags            |            RESERVED           |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |            Bidirectional Group Identifier (variable)         //
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+//  0                   1
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |R|C|                           |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+type SRBidirectionalGroupConstraint struct {
+	FlagR                bool    `json:"r_flag"`
+	FlagC                bool    `json:"c_flag"`
+	BidirectionalGroupID *uint32 `json:"bidirectional_group_id,omitempty"`
+	PCEPAssociationObj   []byte  `json:"pcep_association_obj,omitempty"`
+}
+
+//   - Type 1215: SR Metric Constraint sub-TLV (Section 5.6.6).
+
+//  0                   1                   2                   3
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |              Type             |             Length            |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |  Metric Type  |      Flags    |          RESERVED             |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                         Metric Margin                         |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                         Metric Bound                          |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+//  0 1 2 3 4 5 6 7
+// +-+-+-+-+-+-+-+-+
+// |O|M|A|B|       |
+// +-+-+-+-+-+-+-+-+
+
+type SRMetricConstraint struct {
+	MetricType   SRMetricType `json:"metric_type"`
+	FlagO        bool         `json:"o_flag"`
+	FlagM        bool         `json:"m_flag"`
+	FlagA        bool         `json:"a_flag"`
+	FlagB        bool         `json:"b_flag"`
+	MetricMargin uint32       `json:"metric_margin"`
+	MetricBound  uint32       `json:"metric_bound"`
+}
+
+//   - Type 1216: SR Segment List Bandwidth sub-TLV (Section 5.7.3).
+
+type SRSegmentListBandwidth struct {
+	Bandwidth float32 `json:"bandwidth"`
+}
+
+//   - Type 1217: SR Segment List Identifier sub-TLV (Section 5.7.4).
+
+type SRSegmentListIdentifier struct {
+	Identifier uint32 `json:"identifier"`
 }

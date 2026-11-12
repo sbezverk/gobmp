@@ -2,6 +2,7 @@ package bgpls
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -251,9 +252,9 @@ func TestSRAffinityConstraint_JSON(t *testing.T) {
 		ExclAnySize: 1,
 		InclAnySize: 2,
 		InclAllSize: 3,
-		ExclAnyEAG:  0xDEAD0001,
-		InclAnyEAG:  0xBEEF0002,
-		InclAllEAG:  0xCAFE0003,
+		ExclAnyEAG:  []uint32{0xDEAD0001},
+		InclAnyEAG:  []uint32{0xBEEF0002},
+		InclAllEAG:  []uint32{0xCAFE0003},
 	}
 	b, err := orig.MarshalJSON()
 	if err != nil {
@@ -266,7 +267,7 @@ func TestSRAffinityConstraint_JSON(t *testing.T) {
 	if got.ExclAnySize != orig.ExclAnySize || got.InclAnySize != orig.InclAnySize || got.InclAllSize != orig.InclAllSize {
 		t.Errorf("size fields mismatch: got %+v, want %+v", got, orig)
 	}
-	if got.ExclAnyEAG != orig.ExclAnyEAG || got.InclAnyEAG != orig.InclAnyEAG || got.InclAllEAG != orig.InclAllEAG {
+	if slices.Compare(got.ExclAnyEAG, orig.ExclAnyEAG) != 0 || slices.Compare(got.InclAnyEAG, orig.InclAnyEAG) != 0 || slices.Compare(got.InclAllEAG, orig.InclAllEAG) != 0 {
 		t.Errorf("EAG fields mismatch: got %+v, want %+v", got, orig)
 	}
 }
@@ -307,6 +308,7 @@ func TestSRBandwidthConstraint_JSON(t *testing.T) {
 }
 
 func TestSRDisjointGroupConstraint_JSON(t *testing.T) {
+	id := uint32(42)
 	orig := &SRDisjointGroupConstraint{
 		RequestFlagS:    true,
 		RequestFlagN:    false,
@@ -319,7 +321,7 @@ func TestSRDisjointGroupConstraint_JSON(t *testing.T) {
 		StatusFlagF:     false,
 		StatusFlagI:     true,
 		StatusFlagX:     false,
-		DisjointGroupID: 42,
+		DisJointGroupID: &id,
 	}
 	b, err := orig.MarshalJSON()
 	if err != nil {
@@ -339,8 +341,8 @@ func TestSRDisjointGroupConstraint_JSON(t *testing.T) {
 		got.StatusFlagI != orig.StatusFlagI || got.StatusFlagX != orig.StatusFlagX {
 		t.Errorf("status flags mismatch: got %+v, want %+v", got, orig)
 	}
-	if got.DisjointGroupID != orig.DisjointGroupID {
-		t.Errorf("DisjointGroupID = %d, want %d", got.DisjointGroupID, orig.DisjointGroupID)
+	if got.DisJointGroupID != orig.DisJointGroupID {
+		t.Errorf("DisjointGroupID = %d, want %d", got.DisJointGroupID, orig.DisJointGroupID)
 	}
 }
 

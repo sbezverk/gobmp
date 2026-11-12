@@ -24,6 +24,26 @@ type NodeDescriptor struct {
 	SubTLV map[uint16]TLV
 }
 
+// GetLocalNodeIPv4RouterID returns TLV 1028 (IPv4 Router-ID of Local Node).
+// An auxiliary TE Router-ID TLV (defined in RFC 9552 and used extensively
+// in constructs like Segment Routing policies or Inter-AS links).
+func (nd *NodeDescriptor) GetLocalNodeIPv4RouterID() []byte {
+	if tlv, ok := nd.SubTLV[1028]; ok && len(tlv.Value) == 4 {
+		return tlv.Value[:4]
+	}
+	return nil
+}
+
+// GetLocalNodeIPv6RouterID returns TLV 1029 (IPv6 Router-ID of Local Node).
+// An auxiliary TE Router-ID TLV (defined in RFC 9552 and used extensively
+// in constructs like Segment Routing policies or Inter-AS links).
+func (nd *NodeDescriptor) GetLocalNodeIPv6RouterID() []byte {
+	if tlv, ok := nd.SubTLV[1029]; ok && len(tlv.Value) == 16 {
+		return tlv.Value[:16]
+	}
+	return nil
+}
+
 // GetASN returns Autonomous System Number used to uniquely identify BGP-LS domain
 func (nd *NodeDescriptor) GetASN() uint32 {
 	if tlv, ok := nd.SubTLV[512]; ok && len(tlv.Value) >= 4 {

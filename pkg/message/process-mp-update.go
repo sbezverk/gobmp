@@ -8,6 +8,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/base"
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/srpolicycp"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 )
 
@@ -368,7 +369,21 @@ func (p *producer) processNLRI71SubTypes(nlri bgp.MPNLRI, operation int, ph *bmp
 				continue
 			}
 		case 5:
-			glog.Warningf("NLRI 71 Sub type 5 (TE Policy) is decoded but not published")
+			cp, ok := e.LS.(*srpolicycp.SrPolicyCandidatePathNLRI)
+			if !ok {
+				glog.Errorf("NLRI 71 type 5: expected *srpolicycp.SrPolicyCandidatePathNLRI, got %T", e.LS)
+				continue
+			}
+			msg, err := p.lsSSRPolicyCandidatePath(cp, nextHop, operation, ph, update)
+			if err != nil {
+				glog.Errorf("failed to produce ls_sr_policy_candidate_path message with error: %+v", err)
+				continue
+			}
+			msg.PathID = e.PathID
+			if err := p.marshalAndPublish(&msg, bmp.SRPolicyCandidatePathMsg, []byte(msg.RouterHash)); err != nil {
+				glog.Errorf("failed to process SRPolicyCandidatePath message with error: %+v", err)
+				continue
+			}
 		default:
 			safi := uint8(71)
 			if spf {
