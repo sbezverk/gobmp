@@ -112,10 +112,10 @@ func UnmarshalFlexAlgoDefinition(b []byte) (*FlexAlgoDefinition, error) {
 
 // FlexAlgoPrefixMetric defines an optional BGP-LS Attribute TLV associated
 // with the Prefix NLRI called the Flexible Algorithm Prefix Metric
-// (FAPM) TLV
-// https://tools.ietf.org/html/draft-ietf-idr-bgp-ls-flex-algo-02#section-4
+// (FAPM) TLV (RFC 9351 §4).
 type FlexAlgoPrefixMetric struct {
 	FlexAlgorithm uint8  `json:"flex_algo,omitempty"`
+	Flags         uint8  `json:"flags,omitempty"`
 	Metric        uint32 `json:"metric,omitempty"`
 }
 
@@ -125,15 +125,12 @@ func UnmarshalFlexAlgoPrefixMetric(b []byte) (*FlexAlgoPrefixMetric, error) {
 		glog.Infof("FlexAlgo Prefix Metric Raw: %s", tools.MessageHex(b))
 	}
 	if len(b) < 8 {
-		return nil, fmt.Errorf("invalid length %d of FlexAlgo prefix metric tlv", len(b))
+		return nil, fmt.Errorf("not enough bytes to unmarshal FlexAlgo prefix metric TLV: need 8 bytes, have %d", len(b))
 	}
-	fap := FlexAlgoPrefixMetric{}
-	p := 0
-	fap.FlexAlgorithm = b[p]
-	p++
-	// Skip
-	p += 3
-	fap.Metric = binary.BigEndian.Uint32(b[p:])
-
-	return &fap, nil
+	// RFC 9351 §4 requires receivers to ignore the two reserved octets at b[2:4].
+	return &FlexAlgoPrefixMetric{
+		FlexAlgorithm: b[0],
+		Flags:         b[1],
+		Metric:        binary.BigEndian.Uint32(b[4:8]),
+	}, nil
 }
