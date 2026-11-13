@@ -14,10 +14,12 @@ import (
 // PrefixAttrTLVs defines a struvture for Prefix Attributes as defined in the following RFC proposal:
 // https://datatracker.ietf.org/doc/html/draft-ietf-idr-bgp-ls-segment-routing-ext-17#section-2.3
 type PrefixAttrTLVs struct {
-	LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
-	Range          *RangeTLV          `json:"range,omitempty"` // RFC 9085 Section 2.3.5
-	Flags          PrefixAttrFlags    `json:"flags,omitempty"`
-	SourceRouterID string             `json:"source_router_id,omitempty"` // RFC 9085 Section 2.3.4 - TLV 1174 (OSPF) or TLV 1171 (generic)
+	LSPrefixSID            []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
+	Range                  *RangeTLV          `json:"range,omitempty"` // RFC 9085 Section 2.3.5
+	Flags                  PrefixAttrFlags    `json:"flags,omitempty"`
+	SourceRouterID         string             `json:"source_router_id,omitempty"`         // Compatibility field with TLV 1174 precedence.
+	SourceRouterIdentifier string             `json:"source_router_identifier,omitempty"` // RFC 9085 §2.3.3, TLV 1171
+	SourceOSPFRouterID     string             `json:"source_ospf_router_id,omitempty"`    // RFC 9085 §2.3.4, TLV 1174
 }
 
 // PrefixAttrFlags defines Prefix Attribute Flags interface
@@ -28,8 +30,17 @@ type PrefixAttrFlags interface {
 func (p *PrefixAttrTLVs) MarshalJSON() ([]byte, error) {
 	// Do not want to return instantiated but empty object if non of attributes present
 	// returning instantiated object if there is at least 1 initialized attribute.
-	if len(p.LSPrefixSID) == 0 && p.Flags == nil && p.SourceRouterID == "" {
+	if len(p.LSPrefixSID) == 0 && p.Flags == nil && p.SourceRouterID == "" &&
+		p.SourceRouterIdentifier == "" && p.SourceOSPFRouterID == "" {
 		return nil, nil
+	}
+	type sourceRouterIDs struct {
+		SourceRouterIdentifier string `json:"source_router_identifier,omitempty"`
+		SourceOSPFRouterID     string `json:"source_ospf_router_id,omitempty"`
+	}
+	sourceIDs := sourceRouterIDs{
+		SourceRouterIdentifier: p.SourceRouterIdentifier,
+		SourceOSPFRouterID:     p.SourceOSPFRouterID,
 	}
 	switch p.Flags.(type) {
 	case *ISISFlags:
@@ -38,10 +49,12 @@ func (p *PrefixAttrTLVs) MarshalJSON() ([]byte, error) {
 			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
 			Flags          *ISISFlags         `json:"flags,omitempty"`
 			SourceRouterID string             `json:"source_router_id,omitempty"`
+			sourceRouterIDs
 		}{
-			Flags:          f,
-			LSPrefixSID:    p.LSPrefixSID,
-			SourceRouterID: p.SourceRouterID,
+			Flags:           f,
+			LSPrefixSID:     p.LSPrefixSID,
+			SourceRouterID:  p.SourceRouterID,
+			sourceRouterIDs: sourceIDs,
 		})
 	case *OSPFFlags:
 		f := p.Flags.(*OSPFFlags)
@@ -49,10 +62,12 @@ func (p *PrefixAttrTLVs) MarshalJSON() ([]byte, error) {
 			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
 			Flags          *OSPFFlags         `json:"flags,omitempty"`
 			SourceRouterID string             `json:"source_router_id,omitempty"`
+			sourceRouterIDs
 		}{
-			Flags:          f,
-			LSPrefixSID:    p.LSPrefixSID,
-			SourceRouterID: p.SourceRouterID,
+			Flags:           f,
+			LSPrefixSID:     p.LSPrefixSID,
+			SourceRouterID:  p.SourceRouterID,
+			sourceRouterIDs: sourceIDs,
 		})
 	case *UnknownProtoFlags:
 		f := p.Flags.(*UnknownProtoFlags)
@@ -60,18 +75,22 @@ func (p *PrefixAttrTLVs) MarshalJSON() ([]byte, error) {
 			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
 			Flags          *UnknownProtoFlags `json:"flags,omitempty"`
 			SourceRouterID string             `json:"source_router_id,omitempty"`
+			sourceRouterIDs
 		}{
-			Flags:          f,
-			LSPrefixSID:    p.LSPrefixSID,
-			SourceRouterID: p.SourceRouterID,
+			Flags:           f,
+			LSPrefixSID:     p.LSPrefixSID,
+			SourceRouterID:  p.SourceRouterID,
+			sourceRouterIDs: sourceIDs,
 		})
 	default:
 		return json.Marshal(struct {
 			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
 			SourceRouterID string             `json:"source_router_id,omitempty"`
+			sourceRouterIDs
 		}{
-			LSPrefixSID:    p.LSPrefixSID,
-			SourceRouterID: p.SourceRouterID,
+			LSPrefixSID:     p.LSPrefixSID,
+			SourceRouterID:  p.SourceRouterID,
+			sourceRouterIDs: sourceIDs,
 		})
 	}
 }
@@ -126,6 +145,16 @@ func (p *PrefixAttrTLVs) UnmarshalJSON(b []byte) error {
 	// SourceRouterID string             `json:"source_router_id,omitempty"`
 	if v, ok := objVal["source_router_id"]; ok {
 		if err := json.Unmarshal(v, &result.SourceRouterID); err != nil {
+			return err
+		}
+	}
+	if v, ok := objVal["source_router_identifier"]; ok {
+		if err := json.Unmarshal(v, &result.SourceRouterIdentifier); err != nil {
+			return err
+		}
+	}
+	if v, ok := objVal["source_ospf_router_id"]; ok {
+		if err := json.Unmarshal(v, &result.SourceOSPFRouterID); err != nil {
 			return err
 		}
 	}
@@ -445,12 +474,19 @@ func (ls *NLRI) GetPrefixAttrTLVs(proto base.ProtoID) (*PrefixAttrTLVs, error) {
 	if paf, err := ls.GetLSPrefixAttrFlags(proto); err == nil {
 		pr.Flags = paf
 	}
-	if s, err := ls.GetLSSourceRouterID(); err == nil {
-		pr.SourceRouterID = s
+	// These attributes are optional and decoded independently. Each getter
+	// returns an empty string when its TLV is absent or malformed.
+	pr.SourceRouterIdentifier, _ = ls.GetLSSourceRouterIdentifier()
+	var ospfErr error
+	pr.SourceOSPFRouterID, ospfErr = ls.GetLSSourceOSPFRouterID()
+	pr.SourceRouterID = pr.SourceOSPFRouterID
+	if ospfErr == errSourceOSPFRouterIDNotFound {
+		pr.SourceRouterID = pr.SourceRouterIdentifier
 	}
 	// Do not want to return instantiated but empty object if non of attributes present
 	// returning instantiated object if there is at least 1 initialized attribute.
-	if len(pr.LSPrefixSID) == 0 && pr.Range == nil && pr.Flags == nil && pr.SourceRouterID == "" {
+	if len(pr.LSPrefixSID) == 0 && pr.Range == nil && pr.Flags == nil && pr.SourceRouterID == "" &&
+		pr.SourceRouterIdentifier == "" && pr.SourceOSPFRouterID == "" {
 		return nil, fmt.Errorf("none of prefix attribute tlvs is present")
 	}
 
