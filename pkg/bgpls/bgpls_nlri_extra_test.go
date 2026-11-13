@@ -423,8 +423,8 @@ func TestGetSRCandidatePathName_Present(t *testing.T) {
 func TestGetSRCandidatePathConstraints_Present(t *testing.T) {
 	val := make([]byte, 8)
 	val[0] = 0x80                           // FlagD
-	binary.BigEndian.PutUint16(val[2:4], 5) // MTID=5
-	val[4] = 128                            // Algo
+	binary.BigEndian.PutUint16(val[4:6], 5) // MTID=5
+	val[6] = 128                            // Algo
 	nlri := &NLRI{LS: []TLV{{Type: SRCandidatePathConstraintsType, Length: 8, Value: val}}}
 	got, err := nlri.GetSRCandidatePathConstraints()
 	if err != nil {

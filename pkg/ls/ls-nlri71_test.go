@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
+	"github.com/sbezverk/gobmp/pkg/srpolicycp"
 	"github.com/sbezverk/gobmp/pkg/srv6"
-	"github.com/sbezverk/gobmp/pkg/te"
 )
 
 func TestLSNLRI71(t *testing.T) {
@@ -78,7 +78,7 @@ func TestLSNLRI71(t *testing.T) {
 				case 4:
 					t.Logf("NLRI element: %+v", e.LS.(*base.PrefixNLRI))
 				case 5:
-					t.Logf("NLRI element: %+v", e.LS.(*te.NLRI))
+					t.Logf("NLRI element: %+v", e.LS.(*srpolicycp.SrPolicyCandidatePathNLRI))
 				case 6:
 					t.Logf("NLRI element: %+v", e.LS.(*srv6.SIDNLRI))
 				default:
@@ -278,18 +278,26 @@ func TestUnmarshalLSNLRI71_Type4_IPv6Prefix(t *testing.T) {
 	}
 }
 
-// TestUnmarshalLSNLRI71_Type5_TEPolicy covers the case=5 (TE Policy NLRI) branch.
-func TestUnmarshalLSNLRI71_Type5_TEPolicy(t *testing.T) {
-	// Valid TE Policy NLRI payload (from te package test data).
-	tePolicyVal := []byte{
+// TestUnmarshalLSNLRI71_Type5_SRPolicyCandidatePath covers case 5 (RFC 9857).
+func TestUnmarshalLSNLRI71_Type5_SRPolicyCandidatePath(t *testing.T) {
+	// Valid SR Policy Candidate Path NLRI payload (RFC 9857 Section 3).
+	srPolicyVal := []byte{
 		0x09,                                           // ProtocolID=9 (SR)
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Identifier=0
-		0x01, 0x00, 0x00, 0x10, // Node Descriptor type=256, len=16
+		0x01, 0x00, 0x00, 0x18, // Node Descriptor type=256, len=24
 		0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0xfd, 0xe8, // TLV 512 ASN=65000
 		0x02, 0x04, 0x00, 0x04, 0xc0, 0xa8, 0x01, 0x01, // TLV 516 BGP Router-ID
+		0x04, 0x04, 0x00, 0x04, 0xc0, 0xa8, 0x01, 0x01, // TLV 1028 IPv4 Router-ID
+		0x02, 0x2a, 0x00, 0x18, // TLV 554 SR Policy Candidate Path Descriptor, len=24
+		0x02, 0x00, 0x00, 0x00, // Origin= BGP SR Policy, flags, reserved
+		0xc0, 0x00, 0x02, 0x01, // Endpoint=192.0.2.1
+		0x00, 0x00, 0x00, 0x2a, // Policy color=42
+		0x00, 0x00, 0xfd, 0xe8, // Originator AS=65000
+		0xc0, 0x00, 0x02, 0x02, // Originator address=192.0.2.2
+		0x00, 0x00, 0x00, 0x01, // Discriminator=1
 	}
-	hdr := []byte{0x00, 0x05, 0x00, byte(len(tePolicyVal))}
-	input := append(hdr, tePolicyVal...)
+	hdr := []byte{0x00, 0x05, 0x00, byte(len(srPolicyVal))}
+	input := append(hdr, srPolicyVal...)
 	nlri, err := UnmarshalLSNLRI71(input, false)
 	if err != nil {
 		t.Fatalf("UnmarshalLSNLRI71 type 5 failed: %v", err)
@@ -297,8 +305,8 @@ func TestUnmarshalLSNLRI71_Type5_TEPolicy(t *testing.T) {
 	if len(nlri.NLRI) != 1 || nlri.NLRI[0].Type != 5 {
 		t.Fatalf("expected NLRI type 5, got %v", nlri.NLRI)
 	}
-	if _, ok := nlri.NLRI[0].LS.(*te.NLRI); !ok {
-		t.Fatalf("expected *te.NLRI, got %T", nlri.NLRI[0].LS)
+	if _, ok := nlri.NLRI[0].LS.(*srpolicycp.SrPolicyCandidatePathNLRI); !ok {
+		t.Fatalf("expected *srpolicycp.SrPolicyCandidatePathNLRI, got %T", nlri.NLRI[0].LS)
 	}
 }
 

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
+	"github.com/sbezverk/gobmp/pkg/srpolicycp"
 	"github.com/sbezverk/gobmp/pkg/srv6"
-	"github.com/sbezverk/gobmp/pkg/te"
 )
 
 // rdType0 builds an 8-byte RD of type 0: 2-byte type + 2-byte AS + 4-byte assigned number.
@@ -173,16 +173,26 @@ func TestUnmarshalLSNLRI72(t *testing.T) {
 		}
 	})
 
-	t.Run("TE policy element decoded", func(t *testing.T) {
-		// TE Policy NLRI: ProtocolID(1) + Identifier(8) + Node Descriptor TLV with type 256.
-		teBody := []byte{
+	t.Run("SR Policy candidate path element decoded", func(t *testing.T) {
+		// SR Policy Candidate Path NLRI: ProtocolID(1) + Identifier(8) +
+		// Local Node Descriptor (including IPv4 Router-ID TLV 1028) + mandatory
+		// SR Policy Candidate Path Descriptor TLV 554.
+		srPolicyBody := []byte{
 			0x09,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x01, 0x00, 0x00, 0x10,
+			0x01, 0x00, 0x00, 0x18,
 			0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0xFD, 0xE8,
 			0x02, 0x04, 0x00, 0x04, 0xC0, 0xA8, 0x01, 0x01,
+			0x04, 0x04, 0x00, 0x04, 0xC0, 0xA8, 0x01, 0x01,
+			0x02, 0x2A, 0x00, 0x18,
+			0x02, 0x00, 0x00, 0x00,
+			0xC0, 0x00, 0x02, 0x01,
+			0x00, 0x00, 0x00, 0x2A,
+			0x00, 0x00, 0xFD, 0xE8,
+			0xC0, 0x00, 0x02, 0x02,
+			0x00, 0x00, 0x00, 0x01,
 		}
-		input := makeEntry(rdType0(100, 1), 5, teBody)
+		input := makeEntry(rdType0(100, 1), 5, srPolicyBody)
 		got, err := UnmarshalLSNLRI72(input, false)
 		if err != nil {
 			t.Fatalf("UnmarshalLSNLRI72 error: %v", err)
@@ -190,8 +200,8 @@ func TestUnmarshalLSNLRI72(t *testing.T) {
 		if len(got.NLRI) != 1 || got.NLRI[0].Type != 5 {
 			t.Fatalf("got %d elements / type %d, want 1 / 5", len(got.NLRI), got.NLRI[0].Type)
 		}
-		if _, ok := got.NLRI[0].LS.(*te.NLRI); !ok {
-			t.Errorf("LS type = %T, want *te.NLRI", got.NLRI[0].LS)
+		if _, ok := got.NLRI[0].LS.(*srpolicycp.SrPolicyCandidatePathNLRI); !ok {
+			t.Errorf("LS type = %T, want *srpolicycp.SrPolicyCandidatePathNLRI", got.NLRI[0].LS)
 		}
 	})
 
