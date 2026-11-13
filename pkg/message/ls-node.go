@@ -113,7 +113,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 // isModeledNodeTLV mirrors the path-attribute fields populated by lsNode.
 func isModeledNodeTLV(typ uint16, protocol base.ProtoID) bool {
 	switch typ {
-	case 263, 266, 1024, 1025, 1026, 1028, 1029, 1034, 1035, 1036, 1038, 1039:
+	case 263, 266, 1024, 1025, 1026, 1028, 1029, 1032, 1034, 1035, 1036, 1037, 1038, 1039:
 		return true
 	case 1027:
 		return protocol == base.ISISL1 || protocol == base.ISISL2

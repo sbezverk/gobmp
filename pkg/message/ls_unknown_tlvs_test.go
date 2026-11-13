@@ -57,9 +57,11 @@ func TestPublishedLSUnknownBGPLSTLVs(t *testing.T) {
 			topic: bmp.LSNodeMsg,
 			fields: map[string]string{
 				"area_id":               `"49.0001"`,
+				"sbfd_discriminators":   "[7]",
+				"srms_preference":       "200",
 				"opaque_node_attribute": `["80"]`,
 			},
-			raw: `[{"type":64512,"value_hex":"00ab"},{"type":1037,"value_hex":"c8"},{"type":64512,"value_hex":""},{"type":1032,"value_hex":"00000007"},{"type":64512,"value_hex":"00ab"},{"type":1098,"value_hex":"78"}]`,
+			raw: `[{"type":64512,"value_hex":"00ab"},{"type":64512,"value_hex":""},{"type":64512,"value_hex":"00ab"},{"type":1098,"value_hex":"78"}]`,
 		},
 		{
 			name: "node does not map an IS-IS area TLV on OSPF",

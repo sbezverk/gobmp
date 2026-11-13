@@ -204,6 +204,13 @@ func isModeledLinkTLV(typ uint16, protocol base.ProtoID) bool {
 		return true
 	case 1101, 1102, 1103:
 		return protocol == base.BGP
+	case 1100:
+		return protocol == base.ISISL1 || protocol == base.ISISL2 ||
+			protocol == base.OSPFv2 || protocol == base.OSPFv3
+	case 1107:
+		return protocol == base.ISISL1 || protocol == base.ISISL2
+	case 1108:
+		return protocol == base.OSPFv3
 	default:
 		return false
 	}
