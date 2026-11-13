@@ -72,6 +72,23 @@ func TestRouterNameFromInitiation(t *testing.T) {
 	}
 }
 
+func TestRouterNameTypedNilInitiation(t *testing.T) {
+	p := NewProducer(&recordingPublisher{}, false).(*producer)
+	rec := p.publisher.(*recordingPublisher)
+	var nilInit *bmp.InitiationMessage
+	p.producingWorker(bmp.Message{Payload: nilInit})
+	if len(rec.msgs) != 0 {
+		t.Fatalf("typed-nil Initiation published %d messages, want 0", len(rec.msgs))
+	}
+	p.producingWorker(bmp.Message{PeerHeader: makePeerHeader(t, bmp.PeerType0, 0x00), Payload: buildPeerUpMessage(t, "192.0.2.1")})
+	_, keys := lastPeerMessage(t, rec, 1)
+	for _, k := range []string{"router_name", "router_descr"} {
+		if _, ok := keys[k]; ok {
+			t.Errorf("key %s present after typed-nil Initiation", k)
+		}
+	}
+}
+
 func TestRouterNameAbsentWithoutInitiation(t *testing.T) {
 	p := NewProducer(&recordingPublisher{}, false).(*producer)
 	rec := p.publisher.(*recordingPublisher)

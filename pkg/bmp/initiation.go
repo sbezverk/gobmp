@@ -68,6 +68,9 @@ func (m *InitiationMessage) SysName() string {
 }
 
 func (m *InitiationMessage) firstString(infoType uint16) string {
+	if m == nil {
+		return ""
+	}
 	for _, t := range m.TLV {
 		if t.InformationType == infoType {
 			return string(t.Information)

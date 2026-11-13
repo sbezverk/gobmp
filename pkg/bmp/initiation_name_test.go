@@ -46,3 +46,13 @@ func TestInitiationSysNameDescr(t *testing.T) {
 		})
 	}
 }
+
+func TestInitiationSysNameDescrNil(t *testing.T) {
+	var m *InitiationMessage
+	if got := m.SysName(); got != "" {
+		t.Errorf("SysName() on nil = %q, want empty", got)
+	}
+	if got := m.SysDescr(); got != "" {
+		t.Errorf("SysDescr() on nil = %q, want empty", got)
+	}
+}
