@@ -28,52 +28,28 @@ type PrefixAttrFlags interface {
 func (p *PrefixAttrTLVs) MarshalJSON() ([]byte, error) {
 	// Do not want to return instantiated but empty object if non of attributes present
 	// returning instantiated object if there is at least 1 initialized attribute.
-	if len(p.LSPrefixSID) == 0 && p.Flags == nil && p.SourceRouterID == "" {
+	if len(p.LSPrefixSID) == 0 && p.Range == nil && p.Flags == nil && p.SourceRouterID == "" {
 		return nil, nil
 	}
-	switch p.Flags.(type) {
+	// Whitelist the variants supported by the current JSON schema.
+	type prefixAttributes PrefixAttrTLVs
+	wire := prefixAttributes(*p)
+	wire.Flags = nil
+	switch f := p.Flags.(type) {
 	case *ISISFlags:
-		f := p.Flags.(*ISISFlags)
-		return json.Marshal(struct {
-			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
-			Flags          *ISISFlags         `json:"flags,omitempty"`
-			SourceRouterID string             `json:"source_router_id,omitempty"`
-		}{
-			Flags:          f,
-			LSPrefixSID:    p.LSPrefixSID,
-			SourceRouterID: p.SourceRouterID,
-		})
+		if f != nil {
+			wire.Flags = f
+		}
 	case *OSPFFlags:
-		f := p.Flags.(*OSPFFlags)
-		return json.Marshal(struct {
-			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
-			Flags          *OSPFFlags         `json:"flags,omitempty"`
-			SourceRouterID string             `json:"source_router_id,omitempty"`
-		}{
-			Flags:          f,
-			LSPrefixSID:    p.LSPrefixSID,
-			SourceRouterID: p.SourceRouterID,
-		})
+		if f != nil {
+			wire.Flags = f
+		}
 	case *UnknownProtoFlags:
-		f := p.Flags.(*UnknownProtoFlags)
-		return json.Marshal(struct {
-			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
-			Flags          *UnknownProtoFlags `json:"flags,omitempty"`
-			SourceRouterID string             `json:"source_router_id,omitempty"`
-		}{
-			Flags:          f,
-			LSPrefixSID:    p.LSPrefixSID,
-			SourceRouterID: p.SourceRouterID,
-		})
-	default:
-		return json.Marshal(struct {
-			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
-			SourceRouterID string             `json:"source_router_id,omitempty"`
-		}{
-			LSPrefixSID:    p.LSPrefixSID,
-			SourceRouterID: p.SourceRouterID,
-		})
+		if f != nil {
+			wire.Flags = f
+		}
 	}
+	return json.Marshal(&wire)
 }
 
 func (p *PrefixAttrTLVs) UnmarshalJSON(b []byte) error {
@@ -120,6 +96,11 @@ func (p *PrefixAttrTLVs) UnmarshalJSON(b []byte) error {
 	// LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
 	if v, ok := objVal["ls_prefix_sid"]; ok {
 		if err := json.Unmarshal(v, &result.LSPrefixSID); err != nil {
+			return err
+		}
+	}
+	if v, ok := objVal["range"]; ok {
+		if err := json.Unmarshal(v, &result.Range); err != nil {
 			return err
 		}
 	}
@@ -309,6 +290,40 @@ type RangeTLV struct {
 	Flags     RangeTLVFlags      `json:"flags,omitempty"`
 	RangeSize uint16             `json:"range_size"`
 	PrefixSID []*sr.PrefixSIDTLV `json:"prefix_sid,omitempty"`
+}
+
+// UnmarshalJSON restores the protocol-specific flags from the Range TLV object.
+func (r *RangeTLV) UnmarshalJSON(data []byte) error {
+	var wire struct {
+		Flags     json.RawMessage    `json:"flags"`
+		RangeSize uint16             `json:"range_size"`
+		PrefixSID []*sr.PrefixSIDTLV `json:"prefix_sid"`
+	}
+	if err := json.Unmarshal(data, &wire); err != nil {
+		return err
+	}
+	result := RangeTLV{RangeSize: wire.RangeSize, PrefixSID: wire.PrefixSID}
+	var flags map[string]json.RawMessage
+	if len(wire.Flags) != 0 {
+		if err := json.Unmarshal(wire.Flags, &flags); err != nil {
+			return err
+		}
+	}
+	if flags != nil {
+		switch {
+		case flags["f_flag"] != nil:
+			result.Flags = &ISISRangeFlags{}
+		case flags["ia_flag"] != nil:
+			result.Flags = &OSPFRangeFlags{}
+		default:
+			result.Flags = &UnknownProtoRangeFlags{}
+		}
+		if err := json.Unmarshal(wire.Flags, result.Flags); err != nil {
+			return err
+		}
+	}
+	*r = result
+	return nil
 }
 
 // RangeTLVFlags interface for protocol-specific flags
