@@ -348,7 +348,11 @@ type LSLink struct {
 	UnidirResidualBW      uint32                        `json:"unidir_residual_bw,omitempty"`
 	UnidirAvailableBW     uint32                        `json:"unidir_available_bw,omitempty"`
 	UnidirBWUtilization   uint32                        `json:"unidir_bw_utilization,omitempty"`
-	OpaqueLinkAttribute   []string                      `json:"opaque_link_attribute,omitempty"` // RFC 9552 §5.3.2.6 TLV 1097, hex-encoded raw values
+	// A nil bandwidth means there was no valid TLV. A pointer to zero preserves a reported zero.
+	UnidirResidualBWKbps    *uint64  `json:"unidir_residual_bw_kbps,omitempty"`
+	UnidirAvailableBWKbps   *uint64  `json:"unidir_available_bw_kbps,omitempty"`
+	UnidirBWUtilizationKbps *uint64  `json:"unidir_bw_utilization_kbps,omitempty"`
+	OpaqueLinkAttribute     []string `json:"opaque_link_attribute,omitempty"` // RFC 9552 §5.3.2.6 TLV 1097, hex-encoded raw values
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
