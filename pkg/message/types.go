@@ -259,6 +259,7 @@ type LSNode struct {
 	SRCapabilities      *sr.Capability                  `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         []int                           `json:"sr_algorithm,omitempty"`
 	SRLocalBlock        *sr.LocalBlock                  `json:"sr_local_block,omitempty"`
+	SRMSPreference      *uint8                          `json:"srms_preference,omitempty"`
 	SRv6CapabilitiesTLV *srv6.CapabilityTLV             `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             []*base.MSDTV                   `json:"node_msd,omitempty"`
 	SBFDDiscriminators  []uint32                        `json:"sbfd_discriminators,omitempty"`

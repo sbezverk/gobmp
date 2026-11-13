@@ -254,6 +254,20 @@ func (ls *NLRI) GetNodeSRLocalBlock() *sr.LocalBlock {
 	return nil
 }
 
+// GetNodeSRMSPreference returns the first well-formed SRMS Preference TLV
+// (RFC 9085 §2.1.5), or nil when none is present.
+func (ls *NLRI) GetNodeSRMSPreference() *uint8 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1037 || len(tlv.Value) != 1 {
+			continue
+		}
+		preference := tlv.Value[0]
+		return &preference
+	}
+
+	return nil
+}
+
 // GetFlexAlgoDefinition returns node's FlexAlgo Definition object
 func (ls *NLRI) GetFlexAlgoDefinition() ([]*FlexAlgoDefinition, error) {
 	fads := make([]*FlexAlgoDefinition, 0)
