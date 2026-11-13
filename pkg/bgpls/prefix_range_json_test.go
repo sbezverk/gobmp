@@ -96,3 +96,59 @@ func TestPrefixRangeRejectsMalformedNestedSIDFlags(t *testing.T) {
 		t.Fatal("malformed nested Prefix-SID flags decoded without error")
 	}
 }
+
+func TestPrefixRangeJSONWithOSPFv3Flags(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		flags    byte
+		typedNil bool
+	}{
+		{name: "set flags", flags: 0x29},
+		{name: "clear flags"},
+		{name: "typed nil flags", typedNil: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			wire := []byte{
+				0x04, 0x87, 0, 16, 0, 0, 0, 100, 0x04, 0x86, 0, 8, 0, 128, 0, 0, 0, 0, 0, 42,
+				0x04, 0x92, 0, 1, tt.flags,
+			}
+			attrs, err := UnmarshalBGPLSNLRI(wire)
+			if err != nil {
+				t.Fatal(err)
+			}
+			prefix, err := attrs.GetPrefixAttrTLVs(base.OSPFv3)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.typedNil {
+				prefix.Flags = (*OSPFv3Flags)(nil)
+			}
+			payload, err := json.Marshal(prefix)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got PrefixAttrTLVs
+			if err := json.Unmarshal(payload, &got); err != nil {
+				t.Fatalf("decode %s: %v", payload, err)
+			}
+			if got.Range == nil || got.Range.RangeSize != 100 || len(got.Range.PrefixSID) != 1 ||
+				got.Range.PrefixSID[0].SID != 42 {
+				t.Errorf("range = %+v, want range size 100 with Prefix-SID 42", got.Range)
+			}
+			if tt.typedNil {
+				var keys map[string]json.RawMessage
+				if err := json.Unmarshal(payload, &keys); err != nil {
+					t.Fatal(err)
+				}
+				if _, present := keys["flags"]; present {
+					t.Errorf("typed nil should omit flags: %s", payload)
+				}
+				return
+			}
+			flags, ok := got.Flags.(*OSPFv3Flags)
+			if !ok || flags == nil || flags.GetPrefixAttrFlagsByte() != tt.flags {
+				t.Errorf("flags = %#v, want OSPFv3 flags %#02x", got.Flags, tt.flags)
+			}
+		})
+	}
+}

@@ -44,6 +44,10 @@ func (p *PrefixAttrTLVs) MarshalJSON() ([]byte, error) {
 		if f != nil {
 			wire.Flags = f
 		}
+	case *OSPFv3Flags:
+		if f != nil {
+			wire.Flags = f
+		}
 	case *UnknownProtoFlags:
 		if f != nil {
 			wire.Flags = f
