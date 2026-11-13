@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/sbezverk/gobmp/pkg/bmp"
 	"github.com/sbezverk/gobmp/pkg/config"
@@ -261,6 +262,8 @@ func newTestFlagSet() *flag.FlagSet {
 	fs.BoolVar(&kafkaTLS, "kafka-tls", false, "")
 	fs.StringVar(&kafkaCA, "kafka-ca", "", "")
 	fs.StringVar(&natsSrv, "nats-server", "", "")
+	fs.IntVar(&natsMaxPendingAcks, "nats-max-pending-acks", defaultNATSMaxPendingAcks, "")
+	fs.IntVar(&natsAckTimeoutMs, "nats-ack-timeout-ms", defaultNATSAckTimeoutMs, "")
 	fs.StringVar(&splitAF, "split-af", "", "")
 	fs.StringVar(&dump, "dump", "", "")
 	fs.StringVar(&file, "msg-file", "", "")
@@ -782,5 +785,128 @@ func TestApplyConfigOverrides_KafkaTLSFlagOverridesFileValue(t *testing.T) {
 	}
 	if cfg.KafkaConfig.KafkaTLS {
 		t.Error("KafkaTLS = true, want false: an explicit --kafka-tls=false must override the file")
+	}
+}
+
+func TestApplyConfigDefaults_NATSConfig_AckDefaults_Applied(t *testing.T) {
+	cfg := &config.Config{NATSConfig: &config.NATSConfig{NatsSrv: "nats://127.0.0.1:4222"}}
+	applyConfigDefaults(cfg)
+	if got := cfg.NATSConfig.NatsMaxPendingAcks; got != 4096 {
+		t.Errorf("NatsMaxPendingAcks = %d, want 4096", got)
+	}
+	if got := cfg.NATSConfig.NatsAckTimeoutMs; got != 30000 {
+		t.Errorf("NatsAckTimeoutMs = %d, want 30000", got)
+	}
+
+	cfg = &config.Config{NATSConfig: &config.NATSConfig{NatsMaxPendingAcks: 8, NatsAckTimeoutMs: 500}}
+	applyConfigDefaults(cfg)
+	if cfg.NATSConfig.NatsMaxPendingAcks != 8 || cfg.NATSConfig.NatsAckTimeoutMs != 500 {
+		t.Errorf("NATS ack settings overwritten: %+v", *cfg.NATSConfig)
+	}
+
+	cfg = &config.Config{}
+	applyConfigDefaults(cfg)
+	if cfg.NATSConfig != nil {
+		t.Error("NATSConfig should stay nil for a zero config; got non-nil")
+	}
+}
+
+func TestApplyConfigOverrides_NatsAckOptions(t *testing.T) {
+	fs := newTestFlagSet()
+	for name, v := range map[string]string{
+		"nats-server":           "nats://127.0.0.1:4222",
+		"nats-max-pending-acks": "128",
+		"nats-ack-timeout-ms":   "5000",
+	} {
+		if err := fs.Set(name, v); err != nil {
+			t.Fatalf("failed to set flag %s: %v", name, err)
+		}
+	}
+	cfg := &config.Config{NATSConfig: &config.NATSConfig{NatsMaxPendingAcks: 64, NatsAckTimeoutMs: 1000}}
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.NATSConfig.NatsMaxPendingAcks != 128 {
+		t.Errorf("NatsMaxPendingAcks = %d, want 128 (CLI over config file)", cfg.NATSConfig.NatsMaxPendingAcks)
+	}
+	if cfg.NATSConfig.NatsAckTimeoutMs != 5000 {
+		t.Errorf("NatsAckTimeoutMs = %d, want 5000 (CLI over config file)", cfg.NATSConfig.NatsAckTimeoutMs)
+	}
+}
+
+func TestApplyConfigOverrides_NatsServer_LazyInit_AckDefaults(t *testing.T) {
+	fs := newTestFlagSet()
+	if err := fs.Set("nats-server", "nats://127.0.0.1:4222"); err != nil {
+		t.Fatalf("failed to set flag: %v", err)
+	}
+	cfg := &config.Config{}
+	if err := applyConfigOverrides(cfg, fs); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.NATSConfig == nil {
+		t.Fatal("NATSConfig is nil, want non-nil (lazy init)")
+	}
+	if cfg.NATSConfig.NatsMaxPendingAcks != 4096 || cfg.NATSConfig.NatsAckTimeoutMs != 30000 {
+		t.Errorf("lazily created NATSConfig = %+v, want 4096 pending acks and 30000 ms", *cfg.NATSConfig)
+	}
+}
+
+// TestApplyConfigOverrides_NatsAckOptions_WithoutNats checks that each NATS
+// ack flag alone creates NATSConfig and is accepted, with a warning, for a
+// publisher other than NATS.
+func TestApplyConfigOverrides_NatsAckOptions_WithoutNats(t *testing.T) {
+	for _, tc := range []struct{ name, value string }{
+		{"nats-max-pending-acks", "128"},
+		{"nats-ack-timeout-ms", "5000"},
+	} {
+		fs := newTestFlagSet()
+		if err := fs.Set(tc.name, tc.value); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+		if err := fs.Set("dump", "console"); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+		cfg := &config.Config{}
+		if err := applyConfigOverrides(cfg, fs); err != nil {
+			t.Fatalf("--%s=%s: unexpected error: %v", tc.name, tc.value, err)
+		}
+		if cfg.NATSConfig == nil {
+			t.Fatalf("--%s=%s: NATSConfig is nil, want non-nil (lazy init)", tc.name, tc.value)
+		}
+	}
+}
+
+func TestNATSPublisherConfig(t *testing.T) {
+	got, err := natsPublisherConfig(&config.NATSConfig{NatsSrv: "nats://127.0.0.1:4222", NatsMaxPendingAcks: 16, NatsAckTimeoutMs: 1500})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.ServerAddress != "nats://127.0.0.1:4222" || got.MaxPendingAcks != 16 || got.AckTimeout != 1500*time.Millisecond {
+		t.Errorf("natsPublisherConfig = %+v, want the server, 16 pending acks and 1.5 s", *got)
+	}
+	if got.OnConnectionLost == nil {
+		t.Error("OnConnectionLost is nil: goBMP would keep running with every publish failing")
+	}
+	if _, err := natsPublisherConfig(&config.NATSConfig{NatsAckTimeoutMs: maxNATSAckTimeoutMs + 1}); err == nil {
+		t.Error("ack timeout over the cap: error = nil, want an error")
+	}
+}
+
+func TestApplyConfigOverrides_NatsAckOptions_Invalid(t *testing.T) {
+	for _, tc := range []struct{ name, value string }{
+		{"nats-max-pending-acks", "0"},
+		{"nats-max-pending-acks", "-1"},
+		{"nats-ack-timeout-ms", "0"},
+		{"nats-ack-timeout-ms", "-5"},
+		{"nats-ack-timeout-ms", "86400001"},
+		{"nats-ack-timeout-ms", "9300000000000"},
+	} {
+		fs := newTestFlagSet()
+		if err := fs.Set(tc.name, tc.value); err != nil {
+			t.Fatalf("failed to set flag: %v", err)
+		}
+		if err := applyConfigOverrides(&config.Config{}, fs); err == nil {
+			t.Errorf("--%s=%s: expected error, got nil", tc.name, tc.value)
+		}
 	}
 }
