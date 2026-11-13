@@ -3,6 +3,7 @@ package bgpls
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -324,9 +325,20 @@ func (ls *NLRI) GetLSPrefixAttrFlags(proto base.ProtoID) (PrefixAttrFlags, error
 	return nil, fmt.Errorf("prefix Attribute Flags TLV 1170 not found")
 }
 
-// GetLSSourceRouterID returns a Prefix Source Router ID
+var errSourceOSPFRouterIDNotFound = errors.New("source OSPF Router-ID TLV 1174 not found")
+
+// GetLSSourceRouterID returns the Source OSPF Router-ID if present, otherwise
+// the Source Router Identifier. A malformed Source OSPF Router-ID returns an error.
 func (ls *NLRI) GetLSSourceRouterID() (string, error) {
-	// First check for OSPF-specific TLV 1174 (RFC 9085 Section 2.3.4)
+	id, err := ls.GetLSSourceOSPFRouterID()
+	if err != errSourceOSPFRouterIDNotFound {
+		return id, err
+	}
+	return ls.GetLSSourceRouterIdentifier()
+}
+
+// GetLSSourceOSPFRouterID returns the Source OSPF Router-ID (RFC 9085 §2.3.4, TLV 1174).
+func (ls *NLRI) GetLSSourceOSPFRouterID() (string, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type == 1174 {
 			if len(tlv.Value) != 4 {
@@ -336,7 +348,11 @@ func (ls *NLRI) GetLSSourceRouterID() (string, error) {
 		}
 	}
 
-	// Fallback to generic TLV 1171
+	return "", errSourceOSPFRouterIDNotFound
+}
+
+// GetLSSourceRouterIdentifier returns the Source Router Identifier (RFC 9085 §2.3.3, TLV 1171).
+func (ls *NLRI) GetLSSourceRouterIdentifier() (string, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1171 {
 			continue
