@@ -122,11 +122,11 @@ func TestGetSRCandidatePathConstraints(t *testing.T) {
 	// 8-byte fixed header: flags(1), reserved(1), MTID(2), algo(1), reserved(3)
 	// Byte 0 flags: FlagD=0x80
 	value := []byte{
-		0x80,       // FlagD=1
-		0x00,       // reserved
+		0x80, 0x0, // FlagD=1
+		0x00, 0x0, // reserved
 		0x00, 0x00, // MTID = 0
-		0x80,             // Algo = 128 (FlexAlgo 128)
-		0x00, 0x00, 0x00, // 3 reserved bytes
+		0x80, // Algo = 128 (FlexAlgo 128)
+		0x00, // 1 reserved byte
 	}
 
 	nlri := &NLRI{
@@ -233,12 +233,30 @@ func buildSegmentBytes(segType SegmentType, flagHi byte, sid []byte) []byte {
 	return append(b, sid...)
 }
 
+func buildSegmentBytesWithZeroDescriptor(segType SegmentType, flagHi byte, sid []byte) []byte {
+	b := buildSegmentBytes(segType, flagHi, sid)
+	descriptorLen := map[SegmentType]int{
+		SegmentType1:  1,
+		SegmentType2:  1,
+		SegmentType3:  5,
+		SegmentType4:  17,
+		SegmentType5:  8,
+		SegmentType6:  8,
+		SegmentType7:  40,
+		SegmentType8:  32,
+		SegmentType9:  17,
+		SegmentType10: 40,
+		SegmentType11: 32,
+	}[segType]
+	return append(b, make([]byte, descriptorLen)...)
+}
+
 // TestUnmarshalSRSegment_Type1_WithSID verifies SegmentType1 parses an MPLS Label SID.
 func TestUnmarshalSRSegment_Type1_WithSID(t *testing.T) {
 	label := uint32(100) << 12
 	sid := make([]byte, 4)
 	binary.BigEndian.PutUint32(sid, label)
-	b := buildSegmentBytes(SegmentType1, 0x80, sid)
+	b := buildSegmentBytesWithZeroDescriptor(SegmentType1, 0x80, sid)
 
 	seg, err := UnmarshalSRSegment(b)
 	if err != nil {
@@ -258,7 +276,7 @@ func TestUnmarshalSRSegment_Type3_WithSID(t *testing.T) {
 	label := uint32(200) << 12
 	sid := make([]byte, 4)
 	binary.BigEndian.PutUint32(sid, label)
-	b := buildSegmentBytes(SegmentType3, 0x80, sid)
+	b := buildSegmentBytesWithZeroDescriptor(SegmentType3, 0x80, sid)
 
 	seg, err := UnmarshalSRSegment(b)
 	if err != nil {
@@ -274,7 +292,7 @@ func TestUnmarshalSRSegment_Type3_WithSID(t *testing.T) {
 func TestUnmarshalSRSegment_Type9_WithSID(t *testing.T) {
 	ipv6 := make([]byte, 16)
 	ipv6[15] = 0x01 // ::1
-	b := buildSegmentBytes(SegmentType9, 0x80, ipv6)
+	b := buildSegmentBytesWithZeroDescriptor(SegmentType9, 0x80, ipv6)
 
 	seg, err := UnmarshalSRSegment(b)
 	if err != nil {
@@ -288,7 +306,7 @@ func TestUnmarshalSRSegment_Type9_WithSID(t *testing.T) {
 
 // TestUnmarshalSRSegment_Type1_NoSID verifies SegmentType1 without FlagS set does not panic.
 func TestUnmarshalSRSegment_Type1_NoSID(t *testing.T) {
-	b := buildSegmentBytes(SegmentType1, 0x00 /* FlagS clear */, nil)
+	b := buildSegmentBytesWithZeroDescriptor(SegmentType1, 0x00 /* FlagS clear */, nil)
 	seg, err := UnmarshalSRSegment(b)
 	if err != nil {
 		t.Fatalf("UnmarshalSRSegment Type1 no SID: %v", err)
@@ -304,7 +322,7 @@ func TestUnmarshalSRSegment_Type1_NoSID(t *testing.T) {
 
 // TestUnmarshalSRSegment_Type3_NoSID verifies SegmentType3 without FlagS set does not panic.
 func TestUnmarshalSRSegment_Type3_NoSID(t *testing.T) {
-	b := buildSegmentBytes(SegmentType3, 0x00, nil)
+	b := buildSegmentBytesWithZeroDescriptor(SegmentType3, 0x00, nil)
 	seg, err := UnmarshalSRSegment(b)
 	if err != nil {
 		t.Fatalf("UnmarshalSRSegment Type3 no SID: %v", err)
@@ -326,7 +344,7 @@ func TestUnmarshalSRSegment_InvalidType(t *testing.T) {
 
 // TestUnmarshalSRType3Descriptor verifies parsing of a 5-byte Type3 descriptor.
 func TestUnmarshalSRType3Descriptor(t *testing.T) {
-	b := []byte{10, 0, 0, 1, 128} // IPv4 10.0.0.1, Algorithm 128
+	b := []byte{128, 10, 0, 0, 1} // IPv4 10.0.0.1, Algorithm 128
 	d, err := UnmarshalSRType3Descriptor(b)
 	if err != nil {
 		t.Fatalf("UnmarshalSRType3Descriptor: %v", err)
@@ -343,7 +361,7 @@ func TestUnmarshalSRType3Descriptor(t *testing.T) {
 // TestUnmarshalSRType4Descriptor verifies parsing of a 17-byte Type4 descriptor.
 func TestUnmarshalSRType4Descriptor(t *testing.T) {
 	b := make([]byte, 17)
-	b[16] = 64 // Algorithm 64
+	b[0] = 64 // Algorithm 64
 	d, err := UnmarshalSRType4Descriptor(b)
 	if err != nil {
 		t.Fatalf("UnmarshalSRType4Descriptor: %v", err)
@@ -450,7 +468,7 @@ func TestUnmarshalSRType3Descriptor_BadLength(t *testing.T) {
 func TestUnmarshalSRSegment_Type2_WithSID(t *testing.T) {
 	ipv6 := make([]byte, 16)
 	ipv6[0] = 0x20 // 2000::
-	b := buildSegmentBytes(SegmentType2, 0x80, ipv6)
+	b := buildSegmentBytesWithZeroDescriptor(SegmentType2, 0x80, ipv6)
 
 	seg, err := UnmarshalSRSegment(b)
 	if err != nil {
@@ -468,7 +486,7 @@ func TestUnmarshalSRSegment_MPLSTypes_WithSID(t *testing.T) {
 	binary.BigEndian.PutUint32(sid, label)
 
 	for _, segType := range []SegmentType{SegmentType4, SegmentType5, SegmentType6, SegmentType7, SegmentType8} {
-		b := buildSegmentBytes(segType, 0x80, sid)
+		b := buildSegmentBytesWithZeroDescriptor(segType, 0x80, sid)
 		seg, err := UnmarshalSRSegment(b)
 		if err != nil {
 			t.Fatalf("UnmarshalSRSegment type %d: %v", segType, err)
@@ -485,7 +503,7 @@ func TestUnmarshalSRSegment_SRv6Types_WithSID(t *testing.T) {
 	ipv6[15] = 0x02
 
 	for _, segType := range []SegmentType{SegmentType10, SegmentType11} {
-		b := buildSegmentBytes(segType, 0x80, ipv6)
+		b := buildSegmentBytesWithZeroDescriptor(segType, 0x80, ipv6)
 		seg, err := UnmarshalSRSegment(b)
 		if err != nil {
 			t.Fatalf("UnmarshalSRSegment type %d: %v", segType, err)
@@ -505,7 +523,7 @@ func TestUnmarshalSRSegment_UnknownType(t *testing.T) {
 	}
 }
 
-// TestUnmarshalSRSegment_Type1_WithDescriptor verifies FlagA triggers Type1 descriptor parsing.
+// TestUnmarshalSRSegment_Type1_WithDescriptor verifies Type1 descriptor parsing.
 func TestUnmarshalSRSegment_Type1_WithDescriptor(t *testing.T) {
 	// FlagA=0x08, FlagS clear — header (4) + Type1 descriptor (1 byte algorithm).
 	b := []byte{byte(SegmentType1), 0x00, 0x08, 0x00, 0x80} // algorithm = 128
@@ -522,13 +540,51 @@ func TestUnmarshalSRSegment_Type1_WithDescriptor(t *testing.T) {
 	}
 }
 
-// TestUnmarshalSRSegment_Type3_WithDescriptor verifies FlagA triggers Type3 descriptor parsing.
+func TestUnmarshalSRSegment_DescriptorsPresentWhenAFlagClear(t *testing.T) {
+	label := make([]byte, 4)
+	binary.BigEndian.PutUint32(label, uint32(16001)<<12)
+	ipv6SID := make([]byte, 16)
+	ipv6SID[0] = 0x20
+
+	tests := []struct {
+		name string
+		typ  SegmentType
+		sid  []byte
+	}{
+		{name: "SR-MPLS type 1", typ: SegmentType1, sid: label},
+		{name: "SRv6 type 2", typ: SegmentType2, sid: ipv6SID},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// S/E/V are set, A is clear. The one-byte Algorithm descriptor is
+			// still present on the wire and must be consumed.
+			b := buildSegmentBytesWithZeroDescriptor(tt.typ, 0xe0, tt.sid)
+			seg, err := UnmarshalSRSegment(b)
+			if err != nil {
+				t.Fatalf("UnmarshalSRSegment() error = %v", err)
+			}
+			got, ok := seg.(*SRSegment)
+			if !ok || got.SegmentDescriptor == nil {
+				t.Fatalf("segment = %#v, want SRSegment with descriptor", seg)
+			}
+			if got.FlagA {
+				t.Fatal("FlagA = true, want false")
+			}
+			desc, ok := got.SegmentDescriptor.(*SRType1Descriptor)
+			if !ok || desc.Algorithm != 0 {
+				t.Fatalf("descriptor = %#v, want SRType1Descriptor{Algorithm: 0}", got.SegmentDescriptor)
+			}
+		})
+	}
+}
+
+// TestUnmarshalSRSegment_Type3_WithDescriptor verifies Type3 descriptor parsing.
 func TestUnmarshalSRSegment_Type3_WithDescriptor(t *testing.T) {
 	// FlagS=0x80 + FlagA=0x08 — header(4) + MPLS SID(4) + Type3 descriptor(5).
 	label := uint32(100) << 12
 	sid := make([]byte, 4)
 	binary.BigEndian.PutUint32(sid, label)
-	desc := []byte{10, 0, 0, 1, 64} // IPv4 10.0.0.1, algo 64
+	desc := []byte{64, 10, 0, 0, 1} // IPv4 10.0.0.1, algo 64
 	b := buildSegmentBytes(SegmentType3, 0x80|0x08, append(sid, desc...))
 
 	seg, err := UnmarshalSRSegment(b)
@@ -545,13 +601,13 @@ func TestUnmarshalSRSegment_Type3_WithDescriptor(t *testing.T) {
 	}
 }
 
-// TestUnmarshalSRSegment_Type9_WithDescriptor verifies FlagA triggers Type4 descriptor parsing for Type9.
+// TestUnmarshalSRSegment_Type9_WithDescriptor verifies Type4 descriptor parsing for Type9.
 func TestUnmarshalSRSegment_Type9_WithDescriptor(t *testing.T) {
 	// FlagS=0x80 + FlagA=0x08 — header(4) + SRv6 SID(16) + Type4 descriptor(17).
 	ipv6SID := make([]byte, 16)
 	ipv6SID[15] = 1
 	desc := make([]byte, 17) // IPv6 node + algo 0
-	desc[16] = 32            // algorithm 32
+	desc[0] = 32             // algorithm 32
 	b := buildSegmentBytes(SegmentType9, 0x80|0x08, append(ipv6SID, desc...))
 
 	seg, err := UnmarshalSRSegment(b)
@@ -568,13 +624,14 @@ func TestUnmarshalSRSegment_Type9_WithDescriptor(t *testing.T) {
 	}
 }
 
-// TestUnmarshalSRSegment_FlagA_NoBytes verifies error when FlagA is set but no bytes remain.
-func TestUnmarshalSRSegment_FlagA_NoBytes(t *testing.T) {
-	// FlagA set but buffer is exactly 4 bytes (header only) — no descriptor bytes.
+// TestUnmarshalSRSegment_MissingDescriptor verifies an error when the mandatory
+// type-specific descriptor is absent, regardless of the A flag.
+func TestUnmarshalSRSegment_MissingDescriptor(t *testing.T) {
+	// The buffer is exactly 4 bytes (header only) — no descriptor bytes.
 	b := []byte{byte(SegmentType1), 0x00, 0x08, 0x00}
 	_, err := UnmarshalSRSegment(b)
 	if err == nil {
-		t.Error("expected error when FlagA set but no descriptor bytes, got nil")
+		t.Error("expected error when descriptor is absent, got nil")
 	}
 }
 
@@ -618,7 +675,7 @@ func TestUnmarshalSRType8Descriptor_BadLength(t *testing.T) {
 	}
 }
 
-// TestUnmarshalSRSegment_Type5_WithDescriptor verifies FlagA triggers Type5 descriptor parsing.
+// TestUnmarshalSRSegment_Type5_WithDescriptor verifies Type5 descriptor parsing.
 func TestUnmarshalSRSegment_Type5_WithDescriptor(t *testing.T) {
 	label := uint32(100) << 12
 	sid := make([]byte, 4)
@@ -642,7 +699,7 @@ func TestUnmarshalSRSegment_Type5_WithDescriptor(t *testing.T) {
 	}
 }
 
-// TestUnmarshalSRSegment_Type6_WithDescriptor verifies FlagA triggers Type6 descriptor parsing.
+// TestUnmarshalSRSegment_Type6_WithDescriptor verifies Type6 descriptor parsing.
 func TestUnmarshalSRSegment_Type6_WithDescriptor(t *testing.T) {
 	label := uint32(200) << 12
 	sid := make([]byte, 4)
@@ -664,7 +721,7 @@ func TestUnmarshalSRSegment_Type6_WithDescriptor(t *testing.T) {
 	}
 }
 
-// TestUnmarshalSRSegment_Type7_WithDescriptor verifies FlagA triggers Type7 descriptor parsing.
+// TestUnmarshalSRSegment_Type7_WithDescriptor verifies Type7 descriptor parsing.
 func TestUnmarshalSRSegment_Type7_WithDescriptor(t *testing.T) {
 	label := uint32(300) << 12
 	sid := make([]byte, 4)
@@ -690,7 +747,7 @@ func TestUnmarshalSRSegment_Type7_WithDescriptor(t *testing.T) {
 	}
 }
 
-// TestUnmarshalSRSegment_Type8_WithDescriptor verifies FlagA triggers Type8 descriptor parsing.
+// TestUnmarshalSRSegment_Type8_WithDescriptor verifies Type8 descriptor parsing.
 func TestUnmarshalSRSegment_Type8_WithDescriptor(t *testing.T) {
 	label := uint32(400) << 12
 	sid := make([]byte, 4)
@@ -851,7 +908,7 @@ func TestSRType8Descriptor_RoundTrip(t *testing.T) {
 // TestUnmarshalSRSegmentListMetric verifies parsing of a 16-byte Segment List Metric sub-TLV.
 func TestUnmarshalSRSegmentListMetric(t *testing.T) {
 	b := make([]byte, 16)
-	b[0] = 1                                  // SRMetricMinUnidirLinkDelay
+	b[0] = byte(SRMetricAverageUnidirectionalDelay)
 	b[1] = 0x80                               // FlagM set
 	binary.BigEndian.PutUint32(b[4:8], 100)   // Margin
 	binary.BigEndian.PutUint32(b[8:12], 200)  // Bound
@@ -862,8 +919,8 @@ func TestUnmarshalSRSegmentListMetric(t *testing.T) {
 		t.Fatalf("UnmarshalSRSegmentListMetric: %v", err)
 	}
 	m := stlv.(*SRSegmentListMetric)
-	if m.Metric != SRMetricMinUnidirLinkDelay {
-		t.Errorf("Metric = %d, want %d", m.Metric, SRMetricMinUnidirLinkDelay)
+	if m.Metric != SRMetricAverageUnidirectionalDelay {
+		t.Errorf("Metric = %d, want %d", m.Metric, SRMetricAverageUnidirectionalDelay)
 	}
 	if !m.FlagM {
 		t.Error("FlagM = false, want true")

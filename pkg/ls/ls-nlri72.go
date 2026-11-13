@@ -6,8 +6,8 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/base"
+	"github.com/sbezverk/gobmp/pkg/srpolicycp"
 	"github.com/sbezverk/gobmp/pkg/srv6"
-	"github.com/sbezverk/gobmp/pkg/te"
 	"github.com/sbezverk/tools"
 )
 
@@ -101,7 +101,7 @@ func UnmarshalLSNLRI72(b []byte, pathID bool) (*NLRI72, error) {
 			}
 			el.LS = n
 		case 5:
-			n, err := te.UnmarshalTEPolicyNLRI(body)
+			n, err := srpolicycp.UnmarshalSRPolicyCandidatePathNLRI(body)
 			if err != nil {
 				return nil, err
 			}
