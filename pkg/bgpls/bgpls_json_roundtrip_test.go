@@ -485,6 +485,96 @@ func TestUnmarshalJSON_ErrorPaths(t *testing.T) {
 	})
 }
 
+func TestSRPolicyJSONValidation(t *testing.T) {
+	assertMarshalError := func(name string, marshal func() ([]byte, error)) {
+		t.Helper()
+		t.Run("Marshal/"+name, func(t *testing.T) {
+			if _, err := marshal(); err == nil {
+				t.Fatal("expected MarshalJSON error")
+			}
+		})
+	}
+	assertUnmarshalError := func(name string, value any, input string) {
+		t.Helper()
+		t.Run("Unmarshal/"+name, func(t *testing.T) {
+			if err := json.Unmarshal([]byte(input), value); err == nil {
+				t.Fatalf("expected UnmarshalJSON error for %s", input)
+			}
+		})
+	}
+
+	var nilSID *SRv6SID
+	assertMarshalError("SRv6SID/nil", nilSID.MarshalJSON)
+	assertMarshalError("SRv6SID/short", func() ([]byte, error) {
+		return (&SRv6SID{SID: make([]byte, 15)}).MarshalJSON()
+	})
+	assertUnmarshalError("SRv6SID/invalid-address", &SRv6SID{}, `{"srv6_sid":"not-an-ip"}`)
+	assertUnmarshalError("SRv6SID/ipv4", &SRv6SID{}, `{"srv6_sid":"192.0.2.1"}`)
+
+	var nilType3 *SRType3Descriptor
+	assertMarshalError("SRType3/nil", nilType3.MarshalJSON)
+	assertMarshalError("SRType3/short", func() ([]byte, error) {
+		return (&SRType3Descriptor{IPv4NodeAddress: make([]byte, 3)}).MarshalJSON()
+	})
+	assertUnmarshalError("SRType3/invalid-address", &SRType3Descriptor{}, `{"ipv4_node_address":"not-an-ip"}`)
+	assertUnmarshalError("SRType3/ipv6", &SRType3Descriptor{}, `{"ipv4_node_address":"2001:db8::1"}`)
+
+	var nilType4 *SRType4Descriptor
+	assertMarshalError("SRType4/nil", nilType4.MarshalJSON)
+	assertMarshalError("SRType4/short", func() ([]byte, error) {
+		return (&SRType4Descriptor{IPv6NodeAddress: make([]byte, 15)}).MarshalJSON()
+	})
+	assertUnmarshalError("SRType4/invalid-address", &SRType4Descriptor{}, `{"ipv6_node_address":"not-an-ip"}`)
+	assertUnmarshalError("SRType4/ipv4", &SRType4Descriptor{}, `{"ipv6_node_address":"192.0.2.1"}`)
+
+	var nilType5 *SRType5Descriptor
+	assertMarshalError("SRType5/nil", nilType5.MarshalJSON)
+	assertMarshalError("SRType5/short", func() ([]byte, error) {
+		return (&SRType5Descriptor{LocalNodeIPv4: make([]byte, 3)}).MarshalJSON()
+	})
+	assertUnmarshalError("SRType5/invalid-address", &SRType5Descriptor{}, `{"local_node_ipv4":"not-an-ip"}`)
+	assertUnmarshalError("SRType5/ipv6", &SRType5Descriptor{}, `{"local_node_ipv4":"2001:db8::1"}`)
+
+	var nilType6 *SRType6Descriptor
+	assertMarshalError("SRType6/nil", nilType6.MarshalJSON)
+	assertMarshalError("SRType6/local-short", func() ([]byte, error) {
+		return (&SRType6Descriptor{LocalInterfaceIPv4: make([]byte, 3), RemoteInterfaceIPv4: make([]byte, 4)}).MarshalJSON()
+	})
+	assertMarshalError("SRType6/remote-short", func() ([]byte, error) {
+		return (&SRType6Descriptor{LocalInterfaceIPv4: make([]byte, 4), RemoteInterfaceIPv4: make([]byte, 3)}).MarshalJSON()
+	})
+	assertUnmarshalError("SRType6/local-invalid", &SRType6Descriptor{}, `{"local_interface_ipv4":"not-an-ip","remote_interface_ipv4":"192.0.2.2"}`)
+	assertUnmarshalError("SRType6/local-ipv6", &SRType6Descriptor{}, `{"local_interface_ipv4":"2001:db8::1","remote_interface_ipv4":"192.0.2.2"}`)
+	assertUnmarshalError("SRType6/remote-invalid", &SRType6Descriptor{}, `{"local_interface_ipv4":"192.0.2.1","remote_interface_ipv4":"not-an-ip"}`)
+	assertUnmarshalError("SRType6/remote-ipv6", &SRType6Descriptor{}, `{"local_interface_ipv4":"192.0.2.1","remote_interface_ipv4":"2001:db8::2"}`)
+
+	var nilType7 *SRType7Descriptor
+	assertMarshalError("SRType7/nil", nilType7.MarshalJSON)
+	assertMarshalError("SRType7/local-short", func() ([]byte, error) {
+		return (&SRType7Descriptor{LocalNodeIPv6: make([]byte, 15), RemoteNodeIPv6: make([]byte, 16)}).MarshalJSON()
+	})
+	assertMarshalError("SRType7/remote-short", func() ([]byte, error) {
+		return (&SRType7Descriptor{LocalNodeIPv6: make([]byte, 16), RemoteNodeIPv6: make([]byte, 15)}).MarshalJSON()
+	})
+	assertUnmarshalError("SRType7/local-invalid", &SRType7Descriptor{}, `{"local_node_ipv6":"not-an-ip","remote_node_ipv6":"2001:db8::2"}`)
+	assertUnmarshalError("SRType7/local-ipv4", &SRType7Descriptor{}, `{"local_node_ipv6":"192.0.2.1","remote_node_ipv6":"2001:db8::2"}`)
+	assertUnmarshalError("SRType7/remote-invalid", &SRType7Descriptor{}, `{"local_node_ipv6":"2001:db8::1","remote_node_ipv6":"not-an-ip"}`)
+	assertUnmarshalError("SRType7/remote-ipv4", &SRType7Descriptor{}, `{"local_node_ipv6":"2001:db8::1","remote_node_ipv6":"192.0.2.2"}`)
+
+	var nilType8 *SRType8Descriptor
+	assertMarshalError("SRType8/nil", nilType8.MarshalJSON)
+	assertMarshalError("SRType8/local-short", func() ([]byte, error) {
+		return (&SRType8Descriptor{LocalInterfaceIPv6: make([]byte, 15), RemoteInterfaceIPv6: make([]byte, 16)}).MarshalJSON()
+	})
+	assertMarshalError("SRType8/remote-short", func() ([]byte, error) {
+		return (&SRType8Descriptor{LocalInterfaceIPv6: make([]byte, 16), RemoteInterfaceIPv6: make([]byte, 15)}).MarshalJSON()
+	})
+	assertUnmarshalError("SRType8/local-invalid", &SRType8Descriptor{}, `{"local_interface_ipv6":"not-an-ip","remote_interface_ipv6":"2001:db8::2"}`)
+	assertUnmarshalError("SRType8/local-ipv4", &SRType8Descriptor{}, `{"local_interface_ipv6":"192.0.2.1","remote_interface_ipv6":"2001:db8::2"}`)
+	assertUnmarshalError("SRType8/remote-invalid", &SRType8Descriptor{}, `{"local_interface_ipv6":"2001:db8::1","remote_interface_ipv6":"not-an-ip"}`)
+	assertUnmarshalError("SRType8/remote-ipv4", &SRType8Descriptor{}, `{"local_interface_ipv6":"2001:db8::1","remote_interface_ipv6":"192.0.2.2"}`)
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // UnmarshalSRSegmentListSubTLV
 // ─────────────────────────────────────────────────────────────────────────────

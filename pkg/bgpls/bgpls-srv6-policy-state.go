@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"net/netip"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/srv6"
@@ -215,6 +216,18 @@ type SRCandidatePathConstraintsSubTLV interface {
 	UnmarshalJSON([]byte) error
 }
 
+//  0                   1                   2                   3
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |               Type            |              Length           |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |              Flags            |          RESERVED1            |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |             MTID              |   Algorithm   |   RESERVED2   |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |   sub-TLVs (variable)                                        //
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 //  0                   1
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -257,12 +270,13 @@ func UnmarshalSRCandidatePathConstraints(b []byte) (*SRCandidatePathConstraints,
 	s.FlagH = b[p]&0x01 == 0x01
 	p += 2
 	// Skip reserved 2 bytes
+	p += 2
 	s.MTID = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	s.Algo = b[p]
 	p++
-	// Skip 3 reserved bytes (word 2 of fixed header: algo + 3 reserved)
-	p += 3
+	// Skip 1 reserved byte
+	p++
 	if p < len(b) {
 		var err error
 		s.SubTLV, s.MetricConstraints, err = unmarshalSRCandidatePathConstraintsSubTLV(b[p:])
@@ -929,6 +943,24 @@ type SRv6SID struct {
 	SID []byte `json:"srv6_sid"`
 }
 
+func (sid *SRv6SID) MarshalJSON() ([]byte, error) {
+	if sid == nil {
+		return nil, fmt.Errorf("SRv6 SID is nil")
+	}
+	if len(sid.SID) != 16 {
+		return nil, fmt.Errorf("SRv6 SID must be 16 bytes, got %d", len(sid.SID))
+	}
+	addr := netip.AddrFrom16([16]byte(sid.SID))
+	if !addr.IsValid() {
+		return nil, fmt.Errorf("invalid SRv6 SID")
+	}
+	return json.Marshal(struct {
+		SID string `json:"srv6_sid"`
+	}{
+		SID: addr.String(),
+	})
+}
+
 // UnmarshalSRv6SID instantiates SRv6 SID object from a slice of bytes
 func UnmarshalSRv6SID(b []byte) (*SRv6SID, error) {
 	if glog.V(6) {
@@ -950,24 +982,22 @@ func (sid *SRv6SID) Len() int {
 	return 16
 }
 
-// MarshalJSON serializes SRv6SID into a slice of bytes
-func (sid *SRv6SID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		SID []byte `json:"srv6_sid"`
-	}{
-		SID: sid.SID,
-	})
-}
-
 // UnmarshalJSON instantiates SRv6SID object from  a slice of bytes
 func (sid *SRv6SID) UnmarshalJSON(b []byte) error {
 	t := struct {
-		SID []byte `json:"srv6_sid"`
+		SID string `json:"srv6_sid"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	sid.SID = t.SID
+	addr, err := netip.ParseAddr(t.SID)
+	if err != nil {
+		return fmt.Errorf("invalid SRv6 SID: %w", err)
+	}
+	if addr.Is4() {
+		return fmt.Errorf("SRv6 SID must be IPv6 address")
+	}
+	sid.SID = addr.AsSlice()
 
 	return nil
 }
@@ -1029,8 +1059,8 @@ func (d *SRType1Descriptor) UnmarshalJSON(b []byte) error {
 
 // SRType3Descriptor is the descriptor for SegmentType3 (SR-MPLS Prefix SID, IPv4 node address).
 type SRType3Descriptor struct {
-	IPv4NodeAddress []byte `json:"ipv4_node_address"`
 	Algorithm       uint8  `json:"algorithm"`
+	IPv4NodeAddress []byte `json:"ipv4_node_address"`
 }
 
 var _ SegmentDescriptor = &SRType3Descriptor{}
@@ -1041,8 +1071,8 @@ func UnmarshalSRType3Descriptor(b []byte) (SegmentDescriptor, error) {
 		return nil, fmt.Errorf("not enough bytes for SR Type3 Descriptor: got %d, want at least 5", len(b))
 	}
 	d := &SRType3Descriptor{
-		IPv4NodeAddress: append([]byte(nil), b[:4]...),
-		Algorithm:       b[4],
+		Algorithm:       b[0],
+		IPv4NodeAddress: append([]byte(nil), b[1:5]...),
 	}
 	return d, nil
 }
@@ -1052,22 +1082,39 @@ func (d *SRType3Descriptor) Len() int { return 5 }
 
 // MarshalJSON serializes SRType3Descriptor.
 func (d *SRType3Descriptor) MarshalJSON() ([]byte, error) {
+	if d == nil {
+		return nil, fmt.Errorf("SRType3Descriptor is nil")
+	}
+	if len(d.IPv4NodeAddress) != 4 {
+		return nil, fmt.Errorf("IPv4NodeAddress must be 4 bytes, got %d", len(d.IPv4NodeAddress))
+	}
+	addr := netip.AddrFrom4([4]byte(d.IPv4NodeAddress))
+	if !addr.IsValid() {
+		return nil, fmt.Errorf("invalid IPv4NodeAddress")
+	}
 	return json.Marshal(struct {
-		IPv4NodeAddress []byte `json:"ipv4_node_address"`
+		IPv4NodeAddress string `json:"ipv4_node_address"`
 		Algorithm       uint8  `json:"algorithm"`
-	}{IPv4NodeAddress: d.IPv4NodeAddress, Algorithm: d.Algorithm})
+	}{IPv4NodeAddress: addr.String(), Algorithm: d.Algorithm})
 }
 
 // UnmarshalJSON deserializes SRType3Descriptor.
 func (d *SRType3Descriptor) UnmarshalJSON(b []byte) error {
 	t := struct {
-		IPv4NodeAddress []byte `json:"ipv4_node_address"`
+		IPv4NodeAddress string `json:"ipv4_node_address"`
 		Algorithm       uint8  `json:"algorithm"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	d.IPv4NodeAddress = t.IPv4NodeAddress
+	addr, err := netip.ParseAddr(t.IPv4NodeAddress)
+	if err != nil {
+		return fmt.Errorf("invalid IPv4NodeAddress: %w", err)
+	}
+	if !addr.Is4() {
+		return fmt.Errorf("SR Type3 Descriptor must have an IPv4 address")
+	}
+	d.IPv4NodeAddress = addr.AsSlice()
 	d.Algorithm = t.Algorithm
 	return nil
 }
@@ -1088,8 +1135,8 @@ func UnmarshalSRType4Descriptor(b []byte) (SegmentDescriptor, error) {
 		return nil, fmt.Errorf("not enough bytes for SR Type4 Descriptor: got %d, want at least 17", len(b))
 	}
 	d := &SRType4Descriptor{
-		IPv6NodeAddress: append([]byte(nil), b[:16]...),
-		Algorithm:       b[16],
+		Algorithm:       b[0],
+		IPv6NodeAddress: append([]byte(nil), b[1:17]...),
 	}
 	return d, nil
 }
@@ -1099,22 +1146,39 @@ func (d *SRType4Descriptor) Len() int { return 17 }
 
 // MarshalJSON serializes SRType4Descriptor.
 func (d *SRType4Descriptor) MarshalJSON() ([]byte, error) {
+	if d == nil {
+		return nil, fmt.Errorf("SRType4Descriptor is nil")
+	}
+	if len(d.IPv6NodeAddress) != 16 {
+		return nil, fmt.Errorf("IPv6NodeAddress must be 16 bytes, got %d", len(d.IPv6NodeAddress))
+	}
+	addr := netip.AddrFrom16([16]byte(d.IPv6NodeAddress))
+	if !addr.IsValid() {
+		return nil, fmt.Errorf("invalid IPv6NodeAddress")
+	}
 	return json.Marshal(struct {
-		IPv6NodeAddress []byte `json:"ipv6_node_address"`
+		IPv6NodeAddress string `json:"ipv6_node_address"`
 		Algorithm       uint8  `json:"algorithm"`
-	}{IPv6NodeAddress: d.IPv6NodeAddress, Algorithm: d.Algorithm})
+	}{IPv6NodeAddress: addr.String(), Algorithm: d.Algorithm})
 }
 
 // UnmarshalJSON deserializes SRType4Descriptor.
 func (d *SRType4Descriptor) UnmarshalJSON(b []byte) error {
 	t := struct {
-		IPv6NodeAddress []byte `json:"ipv6_node_address"`
+		IPv6NodeAddress string `json:"ipv6_node_address"`
 		Algorithm       uint8  `json:"algorithm"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	d.IPv6NodeAddress = t.IPv6NodeAddress
+	addr, err := netip.ParseAddr(t.IPv6NodeAddress)
+	if err != nil {
+		return fmt.Errorf("invalid IPv6NodeAddress: %w", err)
+	}
+	if addr.Is4() {
+		return fmt.Errorf("SR Type4 Descriptor must have an IPv6 address")
+	}
+	d.IPv6NodeAddress = addr.AsSlice()
 	d.Algorithm = t.Algorithm
 	return nil
 }
@@ -1146,22 +1210,39 @@ func (d *SRType5Descriptor) Len() int { return 8 }
 
 // MarshalJSON serializes SRType5Descriptor.
 func (d *SRType5Descriptor) MarshalJSON() ([]byte, error) {
+	if d == nil {
+		return nil, fmt.Errorf("SRType5Descriptor is nil")
+	}
+	if len(d.LocalNodeIPv4) != 4 {
+		return nil, fmt.Errorf("LocalNodeIPv4 must be 4 bytes, got %d", len(d.LocalNodeIPv4))
+	}
+	addr := netip.AddrFrom4([4]byte(d.LocalNodeIPv4))
+	if !addr.IsValid() {
+		return nil, fmt.Errorf("invalid LocalNodeIPv4")
+	}
 	return json.Marshal(struct {
-		LocalNodeIPv4    []byte `json:"local_node_ipv4"`
+		LocalNodeIPv4    string `json:"local_node_ipv4"`
 		LocalInterfaceID uint32 `json:"local_interface_id"`
-	}{LocalNodeIPv4: d.LocalNodeIPv4, LocalInterfaceID: d.LocalInterfaceID})
+	}{LocalNodeIPv4: addr.String(), LocalInterfaceID: d.LocalInterfaceID})
 }
 
 // UnmarshalJSON deserializes SRType5Descriptor.
 func (d *SRType5Descriptor) UnmarshalJSON(b []byte) error {
 	t := struct {
-		LocalNodeIPv4    []byte `json:"local_node_ipv4"`
+		LocalNodeIPv4    string `json:"local_node_ipv4"`
 		LocalInterfaceID uint32 `json:"local_interface_id"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	d.LocalNodeIPv4 = t.LocalNodeIPv4
+	addr, err := netip.ParseAddr(t.LocalNodeIPv4)
+	if err != nil {
+		return fmt.Errorf("invalid LocalNodeIPv4: %w", err)
+	}
+	if !addr.Is4() {
+		return fmt.Errorf("SR Type5 Descriptor must have an IPv4 address")
+	}
+	d.LocalNodeIPv4 = addr.AsSlice()
 	d.LocalInterfaceID = t.LocalInterfaceID
 	return nil
 }
@@ -1193,23 +1274,55 @@ func (d *SRType6Descriptor) Len() int { return 8 }
 
 // MarshalJSON serializes SRType6Descriptor.
 func (d *SRType6Descriptor) MarshalJSON() ([]byte, error) {
+	if d == nil {
+		return nil, fmt.Errorf("SRType6Descriptor is nil")
+	}
+	if len(d.LocalInterfaceIPv4) != 4 {
+		return nil, fmt.Errorf("LocalInterfaceIPv4 must be 4 bytes, got %d", len(d.LocalInterfaceIPv4))
+	}
+	if len(d.RemoteInterfaceIPv4) != 4 {
+		return nil, fmt.Errorf("RemoteInterfaceIPv4 must be 4 bytes, got %d", len(d.RemoteInterfaceIPv4))
+	}
+	addrLocal := netip.AddrFrom4([4]byte(d.LocalInterfaceIPv4))
+	if !addrLocal.IsValid() {
+		return nil, fmt.Errorf("invalid LocalInterfaceIPv4")
+	}
+	addrRemote := netip.AddrFrom4([4]byte(d.RemoteInterfaceIPv4))
+	if !addrRemote.IsValid() {
+		return nil, fmt.Errorf("invalid RemoteInterfaceIPv4")
+	}
 	return json.Marshal(struct {
-		LocalInterfaceIPv4  []byte `json:"local_interface_ipv4"`
-		RemoteInterfaceIPv4 []byte `json:"remote_interface_ipv4"`
-	}{LocalInterfaceIPv4: d.LocalInterfaceIPv4, RemoteInterfaceIPv4: d.RemoteInterfaceIPv4})
+		LocalInterfaceIPv4  string `json:"local_interface_ipv4"`
+		RemoteInterfaceIPv4 string `json:"remote_interface_ipv4"`
+	}{LocalInterfaceIPv4: addrLocal.String(), RemoteInterfaceIPv4: addrRemote.String()})
 }
 
 // UnmarshalJSON deserializes SRType6Descriptor.
 func (d *SRType6Descriptor) UnmarshalJSON(b []byte) error {
 	t := struct {
-		LocalInterfaceIPv4  []byte `json:"local_interface_ipv4"`
-		RemoteInterfaceIPv4 []byte `json:"remote_interface_ipv4"`
+		LocalInterfaceIPv4  string `json:"local_interface_ipv4"`
+		RemoteInterfaceIPv4 string `json:"remote_interface_ipv4"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	d.LocalInterfaceIPv4 = t.LocalInterfaceIPv4
-	d.RemoteInterfaceIPv4 = t.RemoteInterfaceIPv4
+	addrLocal, err := netip.ParseAddr(t.LocalInterfaceIPv4)
+	if err != nil {
+		return fmt.Errorf("invalid LocalInterfaceIPv4: %w", err)
+	}
+	if !addrLocal.Is4() {
+		return fmt.Errorf("SR Type6 Descriptor must have an IPv4 address for LocalInterfaceIPv4")
+	}
+	addrRemote, err := netip.ParseAddr(t.RemoteInterfaceIPv4)
+	if err != nil {
+		return fmt.Errorf("invalid RemoteInterfaceIPv4: %w", err)
+	}
+	if !addrRemote.Is4() {
+		return fmt.Errorf("SR Type6 Descriptor must have an IPv4 address for RemoteInterfaceIPv4")
+	}
+	d.LocalInterfaceIPv4 = addrLocal.AsSlice()
+	d.RemoteInterfaceIPv4 = addrRemote.AsSlice()
+
 	return nil
 }
 
@@ -1245,15 +1358,32 @@ func (d *SRType7Descriptor) Len() int { return 40 }
 
 // MarshalJSON serializes SRType7Descriptor.
 func (d *SRType7Descriptor) MarshalJSON() ([]byte, error) {
+	if d == nil {
+		return nil, fmt.Errorf("SRType7Descriptor is nil")
+	}
+	if len(d.LocalNodeIPv6) != 16 {
+		return nil, fmt.Errorf("LocalNodeIPv6 must be 16 bytes, got %d", len(d.LocalNodeIPv6))
+	}
+	if len(d.RemoteNodeIPv6) != 16 {
+		return nil, fmt.Errorf("RemoteNodeIPv6 must be 16 bytes, got %d", len(d.RemoteNodeIPv6))
+	}
+	addrLocal := netip.AddrFrom16([16]byte(d.LocalNodeIPv6))
+	if !addrLocal.IsValid() {
+		return nil, fmt.Errorf("invalid LocalNodeIPv6")
+	}
+	addrRemote := netip.AddrFrom16([16]byte(d.RemoteNodeIPv6))
+	if !addrRemote.IsValid() {
+		return nil, fmt.Errorf("invalid RemoteNodeIPv6")
+	}
 	return json.Marshal(struct {
-		LocalNodeIPv6     []byte `json:"local_node_ipv6"`
+		LocalNodeIPv6     string `json:"local_node_ipv6"`
 		LocalInterfaceID  uint32 `json:"local_interface_id"`
-		RemoteNodeIPv6    []byte `json:"remote_node_ipv6"`
+		RemoteNodeIPv6    string `json:"remote_node_ipv6"`
 		RemoteInterfaceID uint32 `json:"remote_interface_id"`
 	}{
-		LocalNodeIPv6:     d.LocalNodeIPv6,
+		LocalNodeIPv6:     addrLocal.String(),
 		LocalInterfaceID:  d.LocalInterfaceID,
-		RemoteNodeIPv6:    d.RemoteNodeIPv6,
+		RemoteNodeIPv6:    addrRemote.String(),
 		RemoteInterfaceID: d.RemoteInterfaceID,
 	})
 }
@@ -1261,17 +1391,31 @@ func (d *SRType7Descriptor) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON deserializes SRType7Descriptor.
 func (d *SRType7Descriptor) UnmarshalJSON(b []byte) error {
 	t := struct {
-		LocalNodeIPv6     []byte `json:"local_node_ipv6"`
+		LocalNodeIPv6     string `json:"local_node_ipv6"`
 		LocalInterfaceID  uint32 `json:"local_interface_id"`
-		RemoteNodeIPv6    []byte `json:"remote_node_ipv6"`
+		RemoteNodeIPv6    string `json:"remote_node_ipv6"`
 		RemoteInterfaceID uint32 `json:"remote_interface_id"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	d.LocalNodeIPv6 = t.LocalNodeIPv6
+	blna, err := netip.ParseAddr(t.LocalNodeIPv6)
+	if err != nil {
+		return fmt.Errorf("invalid LocalNodeIPv6: %w", err)
+	}
+	if !blna.Is6() {
+		return fmt.Errorf("SR Type7 Descriptor must have an IPv6 address for LocalNodeIPv6")
+	}
+	brna, err := netip.ParseAddr(t.RemoteNodeIPv6)
+	if err != nil {
+		return fmt.Errorf("invalid RemoteNodeIPv6: %w", err)
+	}
+	d.LocalNodeIPv6 = append([]byte(nil), blna.AsSlice()...)
+	if !brna.Is6() {
+		return fmt.Errorf("SR Type7 Descriptor must have an IPv6 address for RemoteNodeIPv6")
+	}
 	d.LocalInterfaceID = t.LocalInterfaceID
-	d.RemoteNodeIPv6 = t.RemoteNodeIPv6
+	d.RemoteNodeIPv6 = append([]byte(nil), brna.AsSlice()...)
 	d.RemoteInterfaceID = t.RemoteInterfaceID
 	return nil
 }
@@ -1304,23 +1448,57 @@ func (d *SRType8Descriptor) Len() int { return 32 }
 
 // MarshalJSON serializes SRType8Descriptor.
 func (d *SRType8Descriptor) MarshalJSON() ([]byte, error) {
+	if d == nil {
+		return nil, fmt.Errorf("SRType8Descriptor is nil")
+	}
+	if len(d.LocalInterfaceIPv6) != 16 {
+		return nil, fmt.Errorf("LocalInterfaceIPv6 must be 16 bytes, got %d", len(d.LocalInterfaceIPv6))
+	}
+	if len(d.RemoteInterfaceIPv6) != 16 {
+		return nil, fmt.Errorf("RemoteInterfaceIPv6 must be 16 bytes, got %d", len(d.RemoteInterfaceIPv6))
+	}
+	addrLocal := netip.AddrFrom16([16]byte(d.LocalInterfaceIPv6))
+	if !addrLocal.IsValid() {
+		return nil, fmt.Errorf("invalid LocalInterfaceIPv6")
+	}
+	addrRemote := netip.AddrFrom16([16]byte(d.RemoteInterfaceIPv6))
+	if !addrRemote.IsValid() {
+		return nil, fmt.Errorf("invalid RemoteInterfaceIPv6")
+	}
 	return json.Marshal(struct {
-		LocalInterfaceIPv6  []byte `json:"local_interface_ipv6"`
-		RemoteInterfaceIPv6 []byte `json:"remote_interface_ipv6"`
-	}{LocalInterfaceIPv6: d.LocalInterfaceIPv6, RemoteInterfaceIPv6: d.RemoteInterfaceIPv6})
+		LocalInterfaceIPv6  string `json:"local_interface_ipv6"`
+		RemoteInterfaceIPv6 string `json:"remote_interface_ipv6"`
+	}{LocalInterfaceIPv6: addrLocal.String(), RemoteInterfaceIPv6: addrRemote.String()})
 }
 
 // UnmarshalJSON deserializes SRType8Descriptor.
 func (d *SRType8Descriptor) UnmarshalJSON(b []byte) error {
 	t := struct {
-		LocalInterfaceIPv6  []byte `json:"local_interface_ipv6"`
-		RemoteInterfaceIPv6 []byte `json:"remote_interface_ipv6"`
+		LocalInterfaceIPv6  string `json:"local_interface_ipv6"`
+		RemoteInterfaceIPv6 string `json:"remote_interface_ipv6"`
 	}{}
 	if err := json.Unmarshal(b, &t); err != nil {
 		return err
 	}
-	d.LocalInterfaceIPv6 = t.LocalInterfaceIPv6
-	d.RemoteInterfaceIPv6 = t.RemoteInterfaceIPv6
+	addrLocal, err := netip.ParseAddr(t.LocalInterfaceIPv6)
+	if err != nil {
+		return fmt.Errorf("invalid LocalInterfaceIPv6: %w", err)
+	}
+	if !addrLocal.Is6() {
+		return fmt.Errorf("SR Type8 Descriptor must have an IPv6 address for LocalInterfaceIPv6")
+	}
+	addrRemote, err := netip.ParseAddr(t.RemoteInterfaceIPv6)
+	if err != nil {
+		return fmt.Errorf("invalid RemoteInterfaceIPv6: %w", err)
+	}
+	if !addrRemote.Is6() {
+		return fmt.Errorf("SR Type8 Descriptor must have an IPv6 address for RemoteInterfaceIPv6")
+	}
+	bla := addrLocal.As16()
+	bra := addrRemote.As16()
+	d.LocalInterfaceIPv6 = bla[:]
+	d.RemoteInterfaceIPv6 = bra[:]
+
 	return nil
 }
 
@@ -1609,7 +1787,7 @@ type SRSegmentListMetric struct {
 	FlagA  bool         `json:"a_flag"`
 	FlagB  bool         `json:"b_flag"`
 	FlagV  bool         `json:"v_flag"`
-	Margin uint32       `json:"metric_margine"`
+	Margin uint32       `json:"metric_margin"`
 	Bound  uint32       `json:"metric_bound"`
 	Value  uint32       `json:"metric_value"`
 }
@@ -1650,7 +1828,7 @@ func (m *SRSegmentListMetric) MarshalJSON() ([]byte, error) {
 		FlagA  bool         `json:"a_flag"`
 		FlagB  bool         `json:"b_flag"`
 		FlagV  bool         `json:"v_flag"`
-		Margin uint32       `json:"metric_margine"`
+		Margin uint32       `json:"metric_margin"`
 		Bound  uint32       `json:"metric_bound"`
 		Value  uint32       `json:"metric_value"`
 	}{
@@ -1673,7 +1851,7 @@ func (m *SRSegmentListMetric) UnmarshalJSON(b []byte) error {
 		FlagA  bool         `json:"a_flag"`
 		FlagB  bool         `json:"b_flag"`
 		FlagV  bool         `json:"v_flag"`
-		Margin uint32       `json:"metric_margine"`
+		Margin uint32       `json:"metric_margin"`
 		Bound  uint32       `json:"metric_bound"`
 		Value  uint32       `json:"metric_value"`
 	}{}
@@ -1989,6 +2167,7 @@ type SRPolicyState struct {
 	PolicyName         *SRPolicyName               `json:"policy_name,omitempty"`
 	Constraints        *SRCandidatePathConstraints `json:"constraints,omitempty"`
 	SegmentLists       []*SRSegmentList            `json:"segment_lists,omitempty"`
+	UnknownTLV         []TLV                       `json:"unknown_tlv,omitempty"`
 }
 
 func (s *SRPolicyState) HasData() bool {

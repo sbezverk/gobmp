@@ -120,6 +120,32 @@ func TestGetSRPolicyStateEmptyAndMalformed(t *testing.T) {
 	}
 }
 
+func TestGetSRPolicyStateUnknownTLV(t *testing.T) {
+	value := []byte{0x01, 0x02, 0x03}
+	state, err := (&NLRI{LS: []TLV{{Type: 65000, Value: value}}}).GetSRPolicyState()
+	if err != nil {
+		t.Fatalf("GetSRPolicyState() error = %v", err)
+	}
+	if len(state.UnknownTLV) != 1 {
+		t.Fatalf("UnknownTLV length = %d, want 1", len(state.UnknownTLV))
+	}
+	if state.UnknownTLV[0].Type != 65000 || state.UnknownTLV[0].Length != uint16(len(value)) {
+		t.Fatalf("UnknownTLV metadata = %+v, want type 65000 and length %d", state.UnknownTLV[0], len(value))
+	}
+	value[0] = 0xff
+	if state.UnknownTLV[0].Value[0] != 0x01 {
+		t.Fatal("UnknownTLV value aliases the input TLV")
+	}
+
+	oversized, err := (&NLRI{LS: []TLV{{Type: 65001, Value: make([]byte, 1<<16)}}}).GetSRPolicyState()
+	if err != nil {
+		t.Fatalf("GetSRPolicyState() oversized unknown TLV error = %v", err)
+	}
+	if len(oversized.UnknownTLV) != 0 {
+		t.Fatalf("oversized UnknownTLV was retained: %+v", oversized.UnknownTLV)
+	}
+}
+
 func TestSRPolicyStateSubTLVJSONRoundTrip(t *testing.T) {
 	id := uint32(7)
 	tests := []struct {

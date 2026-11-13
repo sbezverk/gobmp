@@ -1015,10 +1015,11 @@ func TestUnmarshalSRCandidatePathConstraints(t *testing.T) {
 	makeBase := func(flags byte, mtid uint16, algo uint8) []byte {
 		b := make([]byte, 8)
 		b[0] = flags
-		// b[1] reserved
-		binary.BigEndian.PutUint16(b[2:4], mtid)
-		b[4] = algo
-		// b[5..7] reserved
+		// b[1] flags second  byte unused
+		// b[2..3] reserved
+		binary.BigEndian.PutUint16(b[4:6], mtid)
+		b[6] = algo
+		// b[7] reserved
 		return b
 	}
 

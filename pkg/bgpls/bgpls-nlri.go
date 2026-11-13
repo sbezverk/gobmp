@@ -920,6 +920,20 @@ func (ls *NLRI) GetSRPolicyState() (*SRPolicyState, error) {
 			if err == nil {
 				state.SegmentLists = append(state.SegmentLists, segmentList)
 			}
+		default:
+			if state.UnknownTLV == nil {
+				state.UnknownTLV = make([]TLV, 0)
+			}
+			if len(tlv.Value) > math.MaxUint16 {
+				glog.Warningf("Unknown TLV %d has value length of %d bytes, which is exceeding max allowed %d bytes", tlv.Type, len(tlv.Value), math.MaxUint16)
+				continue
+			}
+			state.UnknownTLV = append(state.UnknownTLV, TLV{
+				Type:   tlv.Type,
+				Length: uint16(len(tlv.Value)),
+				Value:  make([]byte, len(tlv.Value)),
+			})
+			copy(state.UnknownTLV[len(state.UnknownTLV)-1].Value, tlv.Value)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode SR Policy State TLV %d: %w", tlv.Type, err)

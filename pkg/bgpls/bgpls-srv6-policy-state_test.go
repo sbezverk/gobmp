@@ -122,11 +122,11 @@ func TestGetSRCandidatePathConstraints(t *testing.T) {
 	// 8-byte fixed header: flags(1), reserved(1), MTID(2), algo(1), reserved(3)
 	// Byte 0 flags: FlagD=0x80
 	value := []byte{
-		0x80,       // FlagD=1
-		0x00,       // reserved
+		0x80, 0x0, // FlagD=1
+		0x00, 0x0, // reserved
 		0x00, 0x00, // MTID = 0
-		0x80,             // Algo = 128 (FlexAlgo 128)
-		0x00, 0x00, 0x00, // 3 reserved bytes
+		0x80, // Algo = 128 (FlexAlgo 128)
+		0x00, // 1 reserved byte
 	}
 
 	nlri := &NLRI{
@@ -344,7 +344,7 @@ func TestUnmarshalSRSegment_InvalidType(t *testing.T) {
 
 // TestUnmarshalSRType3Descriptor verifies parsing of a 5-byte Type3 descriptor.
 func TestUnmarshalSRType3Descriptor(t *testing.T) {
-	b := []byte{10, 0, 0, 1, 128} // IPv4 10.0.0.1, Algorithm 128
+	b := []byte{128, 10, 0, 0, 1} // IPv4 10.0.0.1, Algorithm 128
 	d, err := UnmarshalSRType3Descriptor(b)
 	if err != nil {
 		t.Fatalf("UnmarshalSRType3Descriptor: %v", err)
@@ -361,7 +361,7 @@ func TestUnmarshalSRType3Descriptor(t *testing.T) {
 // TestUnmarshalSRType4Descriptor verifies parsing of a 17-byte Type4 descriptor.
 func TestUnmarshalSRType4Descriptor(t *testing.T) {
 	b := make([]byte, 17)
-	b[16] = 64 // Algorithm 64
+	b[0] = 64 // Algorithm 64
 	d, err := UnmarshalSRType4Descriptor(b)
 	if err != nil {
 		t.Fatalf("UnmarshalSRType4Descriptor: %v", err)
@@ -584,7 +584,7 @@ func TestUnmarshalSRSegment_Type3_WithDescriptor(t *testing.T) {
 	label := uint32(100) << 12
 	sid := make([]byte, 4)
 	binary.BigEndian.PutUint32(sid, label)
-	desc := []byte{10, 0, 0, 1, 64} // IPv4 10.0.0.1, algo 64
+	desc := []byte{64, 10, 0, 0, 1} // IPv4 10.0.0.1, algo 64
 	b := buildSegmentBytes(SegmentType3, 0x80|0x08, append(sid, desc...))
 
 	seg, err := UnmarshalSRSegment(b)
@@ -607,7 +607,7 @@ func TestUnmarshalSRSegment_Type9_WithDescriptor(t *testing.T) {
 	ipv6SID := make([]byte, 16)
 	ipv6SID[15] = 1
 	desc := make([]byte, 17) // IPv6 node + algo 0
-	desc[16] = 32            // algorithm 32
+	desc[0] = 32             // algorithm 32
 	b := buildSegmentBytes(SegmentType9, 0x80|0x08, append(ipv6SID, desc...))
 
 	seg, err := UnmarshalSRSegment(b)
