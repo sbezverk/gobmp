@@ -370,6 +370,23 @@ func (ls *NLRI) GetLSSRv6ENDXSID() ([]*srv6.EndXSIDTLV, error) {
 	return endxs, nil
 }
 
+// GetLANSRv6EndXSID returns the valid LAN End.X SID TLVs in wire order.
+func (ls *NLRI) GetLANSRv6EndXSID(proto base.ProtoID) []*srv6.LANEndXSIDTLV {
+	var sids []*srv6.LANEndXSIDTLV
+	for _, tlv := range ls.LS {
+		if tlv.Type != srv6.ISISLANEndXSIDType && tlv.Type != srv6.OSPFv3LANEndXSIDType {
+			continue
+		}
+		sid, err := srv6.UnmarshalLANEndXSIDTLV(tlv.Value, tlv.Type, proto)
+		if err != nil {
+			glog.V(4).Infof("skipping invalid LAN End.X SID TLV %d: %v", tlv.Type, err)
+			continue
+		}
+		sids = append(sids, sid)
+	}
+	return sids
+}
+
 // GetNodeSRv6CapabilitiesTLV returns string representation of SRv6 Capabilities TLV
 func (ls *NLRI) GetNodeSRv6CapabilitiesTLV() (*srv6.CapabilityTLV, error) {
 	for _, tlv := range ls.LS {
@@ -833,6 +850,23 @@ func (ls *NLRI) GetSRAdjacencySID(proto base.ProtoID) ([]*sr.AdjacencySIDTLV, er
 	}
 
 	return adjs, nil
+}
+
+// GetSRLANAdjacencySID returns the valid LAN Adjacency SID TLVs in wire order.
+func (ls *NLRI) GetSRLANAdjacencySID(proto base.ProtoID) []*sr.LANAdjacencySIDTLV {
+	var sids []*sr.LANAdjacencySIDTLV
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1100 {
+			continue
+		}
+		sid, err := sr.UnmarshalLANAdjacencySIDTLV(tlv.Value, proto)
+		if err != nil {
+			glog.V(4).Infof("skipping invalid LAN Adjacency SID TLV 1100: %v", err)
+			continue
+		}
+		sids = append(sids, sid)
+	}
+	return sids
 }
 
 // GetSRBindingSID returns the SR Binding SID TLV (type 1201)

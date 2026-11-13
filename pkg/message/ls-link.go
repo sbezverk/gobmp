@@ -162,6 +162,7 @@ func populateLSLinkAttributes(msg *LSLink, update *bgp.Update, spf bool) {
 		if sid, err := lslink.GetLSSRv6ENDXSID(); err == nil {
 			msg.SRv6ENDXSID = sid
 		}
+		msg.SRv6LANEndXSID = lslink.GetLANSRv6EndXSID(msg.ProtocolID)
 		if aslas, err := lslink.GetAppSpecLinkAttr(); err == nil {
 			msg.AppSpecLinkAttr = aslas
 		}
@@ -175,6 +176,7 @@ func populateLSLinkAttributes(msg *LSLink, update *bgp.Update, spf bool) {
 		if adj, err := lslink.GetSRAdjacencySID(msg.ProtocolID); err == nil {
 			msg.LSAdjacencySID = adj
 		}
+		msg.LSLANAdjacencySID = lslink.GetSRLANAdjacencySID(msg.ProtocolID)
 		if msg.ProtocolID == base.BGP {
 			if sid, err := lslink.GetPeerNodeSID(); err == nil {
 				msg.PeerNodeSID = sid
