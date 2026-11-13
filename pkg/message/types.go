@@ -242,6 +242,8 @@ type LSNode struct {
 	Timestamp           string                          `json:"timestamp,omitempty"`
 	IGPRouterID         string                          `json:"igp_router_id,omitempty"`
 	RouterID            string                          `json:"router_id,omitempty"`
+	LocalIPv4RouterID   string                          `json:"local_ipv4_router_id,omitempty"`
+	LocalIPv6RouterID   string                          `json:"local_ipv6_router_id,omitempty"`
 	ASN                 uint32                          `json:"asn,omitempty"`
 	LSID                uint32                          `json:"ls_id,omitempty"`
 	MTID                []*base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
