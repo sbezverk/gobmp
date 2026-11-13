@@ -108,11 +108,12 @@ func TestPublishedLSUnknownBGPLSTLVs(t *testing.T) {
 			raw:    `[{"type":1101,"value_hex":"0005000000000021"},{"type":1102,"value_hex":"0005000000000021"},{"type":1103,"value_hex":"0005000000000021"},{"type":1107,"value_hex":"ab"},{"type":1108,"value_hex":"cd"}]`,
 		},
 		{
-			name: "prefix preserves forwarding address with no mapping and skips nested TLVs",
+			name: "prefix publishes forwarding address once and skips nested TLVs",
 			nlri: prefix,
 			attr: slices.Concat(
 				benchTLV(1155, 0, 0, 0, 5),
 				benchTLV(1156, 192, 0, 2, 7),
+				benchTLV(64513, 0xca, 0xfe),
 				benchTLV(1157, 0xee),
 				benchTLV(1159, append([]byte{0, 0, 0, 1}, benchTLV(64512, 0xfe)...)...),
 				benchTLV(1170, 0),
@@ -122,9 +123,10 @@ func TestPublishedLSUnknownBGPLSTLVs(t *testing.T) {
 			topic: bmp.LSPrefixMsg,
 			fields: map[string]string{
 				"prefix_metric":           "5",
+				"ospf_fwd_addr":           `"192.0.2.7"`,
 				"opaque_prefix_attribute": `["ee"]`,
 			},
-			raw: `[{"type":1156,"value_hex":"c0000207"}]`,
+			raw: `[{"type":64513,"value_hex":"cafe"}]`,
 		},
 		{
 			name:   "known-only attributes omit the field",
