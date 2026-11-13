@@ -2,6 +2,7 @@ package bgpls
 
 import (
 	"encoding/binary"
+	"math"
 	"testing"
 )
 
@@ -593,14 +594,17 @@ func TestUnmarshalSRBindingSID(t *testing.T) {
 			},
 		},
 		{
-			name:  "MPLS, FlagU set — PSID field skipped",
+			name:  "MPLS, FlagU set — PSID remains present as zero",
 			input: makeMPLS(0x20, 100, 0),
 			checkFn: func(t *testing.T, b *SRBindingSID) {
 				if !b.FlagU {
 					t.Error("FlagU should be set")
 				}
-				if b.PSID != nil {
-					t.Error("PSID should be nil when FlagU is set")
+				if b.PSID == nil {
+					t.Error("PSID should be present when FlagU is set")
+				}
+				if psid, ok := b.PSID.(*MPLSLabelSID); !ok || psid.Label != 0 {
+					t.Errorf("PSID = %#v, want zero MPLS SID", b.PSID)
 				}
 			},
 		},
@@ -762,7 +766,7 @@ func TestUnmarshalSRAffinityConstraint(t *testing.T) {
 			name:  "all sizes zero — no EAG fields",
 			input: []byte{0x00, 0x00, 0x00, 0x00},
 			checkFn: func(t *testing.T, s *SRAffinityConstraint) {
-				if s.ExclAnyEAG != 0 || s.InclAnyEAG != 0 || s.InclAllEAG != 0 {
+				if s.ExclAnyEAG != nil || s.InclAnyEAG != nil || s.InclAllEAG != nil {
 					t.Error("all EAG values should be zero")
 				}
 			},
@@ -781,14 +785,14 @@ func TestUnmarshalSRAffinityConstraint(t *testing.T) {
 				return b
 			}(),
 			checkFn: func(t *testing.T, s *SRAffinityConstraint) {
-				if s.ExclAnyEAG != 0xDEAD0001 {
-					t.Errorf("ExclAnyEAG = 0x%X, want 0xDEAD0001", s.ExclAnyEAG)
+				if len(s.ExclAnyEAG) != 1 || s.ExclAnyEAG[0] != 0xDEAD0001 {
+					t.Errorf("ExclAnyEAG = %+v, want [0xDEAD0001]", s.ExclAnyEAG)
 				}
-				if s.InclAnyEAG != 0xBEEF0002 {
-					t.Errorf("InclAnyEAG = 0x%X, want 0xBEEF0002", s.InclAnyEAG)
+				if len(s.InclAnyEAG) != 1 || s.InclAnyEAG[0] != 0xBEEF0002 {
+					t.Errorf("InclAnyEAG = %+v, want [0xBEEF0002]", s.InclAnyEAG)
 				}
-				if s.InclAllEAG != 0xCAFE0003 {
-					t.Errorf("InclAllEAG = 0x%X, want 0xCAFE0003", s.InclAllEAG)
+				if len(s.InclAllEAG) != 1 || s.InclAllEAG[0] != 0xCAFE0003 {
+					t.Errorf("InclAllEAG = %+v, want [0xCAFE0003]", s.InclAllEAG)
 				}
 			},
 		},
@@ -894,12 +898,16 @@ func TestUnmarshalSRBandwidthConstraint(t *testing.T) {
 		name    string
 		input   []byte
 		wantErr bool
-		wantBW  uint32
+		wantBW  float32
 	}{
 		{name: "too short", input: []byte{0x00, 0x00, 0x01}, wantErr: true},
 		{name: "too long", input: []byte{0x00, 0x00, 0x00, 0x64, 0xFF}, wantErr: true},
-		{name: "bandwidth = 100", input: []byte{0x00, 0x00, 0x00, 0x64}, wantBW: 100},
-		{name: "bandwidth = 0", input: []byte{0x00, 0x00, 0x00, 0x00}, wantBW: 0},
+		{name: "bandwidth = 100", input: func() []byte {
+			b := make([]byte, 4)
+			binary.BigEndian.PutUint32(b, math.Float32bits(100))
+			return b
+		}(), wantBW: float32(100)},
+		{name: "bandwidth = 0", input: []byte{0x00, 0x00, 0x00, 0x00}, wantBW: float32(0)},
 	}
 
 	for _, tt := range tests {
@@ -912,7 +920,7 @@ func TestUnmarshalSRBandwidthConstraint(t *testing.T) {
 				return
 			}
 			if got.Bandwidth != tt.wantBW {
-				t.Errorf("Bandwidth = %d, want %d", got.Bandwidth, tt.wantBW)
+				t.Errorf("Bandwidth = %f, want %f", got.Bandwidth, tt.wantBW)
 			}
 		})
 	}
@@ -939,7 +947,18 @@ func TestUnmarshalSRDisjointGroupConstraint(t *testing.T) {
 		checkFn func(*testing.T, *SRDisjointGroupConstraint)
 	}{
 		{name: "too short (7 bytes)", input: make([]byte, 7), wantErr: true},
-		{name: "too long (9 bytes)", input: make([]byte, 9), wantErr: true},
+		{
+			name:  "PCEP association object",
+			input: make([]byte, 9),
+			checkFn: func(t *testing.T, d *SRDisjointGroupConstraint) {
+				if d.DisJointGroupID != nil {
+					t.Fatal("DisJointGroupID should be nil for a PCEP association object")
+				}
+				if len(d.PCEPAssociationObj) != 5 {
+					t.Errorf("PCEPAssociationObj length = %d, want 5", len(d.PCEPAssociationObj))
+				}
+			},
+		},
 		{
 			name:  "request flags S and N, group ID 99",
 			input: makeInput(0x80|0x40, 0x00, 99),
@@ -950,8 +969,8 @@ func TestUnmarshalSRDisjointGroupConstraint(t *testing.T) {
 				if !d.RequestFlagN {
 					t.Error("RequestFlagN should be set")
 				}
-				if d.DisjointGroupID != 99 {
-					t.Errorf("DisjointGroupID = %d, want 99", d.DisjointGroupID)
+				if *d.DisJointGroupID != 99 {
+					t.Errorf("DisjointGroupID = %d, want 99", *d.DisJointGroupID)
 				}
 			},
 		},
@@ -996,10 +1015,11 @@ func TestUnmarshalSRCandidatePathConstraints(t *testing.T) {
 	makeBase := func(flags byte, mtid uint16, algo uint8) []byte {
 		b := make([]byte, 8)
 		b[0] = flags
-		// b[1] reserved
-		binary.BigEndian.PutUint16(b[2:4], mtid)
-		b[4] = algo
-		// b[5..7] reserved
+		// b[1] flags second  byte unused
+		// b[2..3] reserved
+		binary.BigEndian.PutUint16(b[4:6], mtid)
+		b[6] = algo
+		// b[7] reserved
 		return b
 	}
 
