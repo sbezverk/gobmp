@@ -4,6 +4,12 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-12
+
+#### Added
+
+- Peer Up and Peer Down messages on the parsed peer topic carry `router_name` and `router_descr`, the sysName and sysDescr from the BMP Initiation message; both are omitted until the router sends an Initiation
+
 ### 2026-11-11
 
 #### Fixed
