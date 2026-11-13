@@ -135,7 +135,7 @@ func TestPrefixPaddingPublication(t *testing.T) {
 							if got.Action != action || got.Hash == "" {
 								t.Fatalf("action/hash = %q/%q", got.Action, got.Hash)
 							}
-							if addPath && got.PathID != int32(pathID) {
+							if addPath && got.PathID != pathID {
 								t.Fatalf("PathID = %d, want %d", got.PathID, pathID)
 							}
 							return got

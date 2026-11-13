@@ -81,7 +81,7 @@ func (p *producer) mup(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 			Nexthop:        nextHop,
 			BaseAttributes: update.BaseAttributes,
 			IsIPv4:         !nlri.IsIPv6NLRI(),
-			PathID:         int32(e.PathID),
+			PathID:         e.PathID,
 			ArchType:       e.GetMUPArchitectureType(),
 			RouteType:      e.GetMUPRouteType(),
 		}

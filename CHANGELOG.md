@@ -4,6 +4,12 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-16
+
+#### Fixed
+
+- `path_id` (RFC 7911 §3, a 4-octet field) in unicast, labeled unicast, multicast, L3VPN and MUP messages was published as a signed number, so IDs of 2^31 and above came out negative; it is now a `uint32`, as in BGP-LS messages. The route `hash` is unchanged, so withdrawals match announcements across an upgrade or rollback. The message types read both the historical signed value and the unsigned one (`-1` and `4294967295` are the same ID). Consumers with their own `int32` fields or schemas should accept values up to 4294967295 before the producer is upgraded
+
 ### 2026-11-13
 
 #### Added

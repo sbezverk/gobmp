@@ -1,8 +1,10 @@
 package message
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -309,6 +311,99 @@ func TestPathIDDecodersPublishedJSON(t *testing.T) {
 				t.Errorf("message type = %d, want %d", msgs[0].msgType, tt.wantType)
 			}
 			checkJSONFields(t, msgs[0].payload, fields(common, tt.want), optionalFields)
+		})
+	}
+}
+
+// TestPathIDFullRangePublishedJSON checks that a Path Identifier, a 4-octet
+// field (RFC 7911 §3), is published unchanged for values that do not fit an
+// int32, that paths differing only in the high bit hash apart, and that a
+// withdrawal hashes like its announcement.
+func TestPathIDFullRangePublishedJSON(t *testing.T) {
+	v4NH := []byte{192, 0, 2, 1}
+	v6NH := []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01}
+	vpnNH := testCat(make([]byte, 8), v4NH)
+	v4Prefix := []byte{0x18, 0x0a, 0x01, 0x02}
+	v6Prefix := []byte{0x40, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01, 0x00, 0x00}
+	luV4 := []byte{0x30, 0x05, 0xdc, 0x31, 10, 1, 2}                                // label 24003, 10.1.2.0/24
+	luV4Withdraw := []byte{0x30, 0x80, 0x00, 0x00, 10, 1, 2}                        // RFC 8277 §2.4 withdrawal label
+	vpnV4 := []byte{0x70, 0x05, 0xdc, 0x31, 0, 0, 0, 0x64, 0, 0, 0, 0x01, 10, 1, 2} // label 24003, RD 100:1, 10.1.2.0/24
+	vpnV4Withdraw := []byte{0x70, 0x80, 0x00, 0x00, 0, 0, 0, 0x64, 0, 0, 0, 0x01, 10, 1, 2}
+
+	type builder func(t *testing.T, pathID []byte) *bgp.Update
+	families := []struct {
+		name     string
+		addPath  [2]byte
+		announce builder
+		withdraw builder // nil when the message carries no hash
+	}{
+		{"unicast IPv4 MP_REACH", [2]byte{1, 1},
+			func(t *testing.T, id []byte) *bgp.Update {
+				return testUpdate(t, mpTestAttr(0x0e, 1, 1, v4NH, testCat(id, v4Prefix)))
+			},
+			func(t *testing.T, id []byte) *bgp.Update {
+				return testUpdate(t, mpTestAttr(0x0f, 1, 1, nil, testCat(id, v4Prefix)))
+			}},
+		{"unicast IPv4 NLRI field", [2]byte{1, 1},
+			func(t *testing.T, id []byte) *bgp.Update { return plainTestUpdate(t, nil, testCat(id, v4Prefix)) },
+			func(t *testing.T, id []byte) *bgp.Update { return plainTestUpdate(t, testCat(id, v4Prefix), nil) }},
+		{"labeled unicast IPv4", [2]byte{1, 4},
+			func(t *testing.T, id []byte) *bgp.Update {
+				return testUpdate(t, mpTestAttr(0x0e, 1, 4, v4NH, testCat(id, luV4)))
+			},
+			func(t *testing.T, id []byte) *bgp.Update {
+				return testUpdate(t, mpTestAttr(0x0f, 1, 4, nil, testCat(id, luV4Withdraw)))
+			}},
+		{"multicast IPv6", [2]byte{2, 2},
+			func(t *testing.T, id []byte) *bgp.Update {
+				return testUpdate(t, mpTestAttr(0x0e, 2, 2, v6NH, testCat(id, v6Prefix)))
+			}, nil},
+		{"VPNv4", [2]byte{1, 128},
+			func(t *testing.T, id []byte) *bgp.Update {
+				return testUpdate(t, mpTestAttr(0x0e, 1, 128, vpnNH, testCat(id, vpnV4)), testRT)
+			},
+			func(t *testing.T, id []byte) *bgp.Update {
+				return testUpdate(t, mpTestAttr(0x0f, 1, 128, nil, testCat(id, vpnV4Withdraw)))
+			}},
+	}
+	type published struct {
+		PathID json.RawMessage `json:"path_id"`
+		Hash   string          `json:"hash"`
+	}
+	publish := func(t *testing.T, addPath [2]byte, update *bgp.Update) published {
+		t.Helper()
+		msgs := publishWithPeerUp(t, minimalPeerHeader(), [][2]byte{addPath}, update)
+		if len(msgs) != 1 {
+			t.Fatalf("published %d messages, want 1", len(msgs))
+		}
+		var got published
+		if err := json.Unmarshal(msgs[0].payload, &got); err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	for _, f := range families {
+		t.Run(f.name, func(t *testing.T) {
+			hashes := map[string]uint32{}
+			for _, id := range []uint32{1<<31 - 1, 1 << 31, ^uint32(0)} {
+				wire := binary.BigEndian.AppendUint32(nil, id)
+				want := strconv.FormatUint(uint64(id), 10)
+				add := publish(t, f.addPath, f.announce(t, wire))
+				if string(add.PathID) != want {
+					t.Errorf("path_id = %s, want %s", add.PathID, want)
+				}
+				if f.withdraw == nil {
+					continue
+				}
+				if prev, dup := hashes[add.Hash]; dup {
+					t.Errorf("paths %d and %d share hash %s", prev, id, add.Hash)
+				}
+				hashes[add.Hash] = id
+				del := publish(t, f.addPath, f.withdraw(t, wire))
+				if string(del.PathID) != want || del.Hash != add.Hash {
+					t.Errorf("withdrawal path_id/hash = %s %s, want %s %s", del.PathID, del.Hash, want, add.Hash)
+				}
+			}
 		})
 	}
 }

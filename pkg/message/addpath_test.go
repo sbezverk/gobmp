@@ -186,7 +186,7 @@ func checkAddPathRoute(t *testing.T, p *producer, ph *bmp.PerPeerHeader, family 
 	if family.AFI == 2 {
 		nlri, wantPrefix, wantLength = []byte{32, 0x20, 1, 0x0d, 0xb8}, "2001:db8::", 32
 	}
-	wantPath := int32(0)
+	wantPath := uint32(0)
 	if enabled {
 		nlri, wantPath = append([]byte{0, 0, 1, 0}, nlri...), 256
 	}

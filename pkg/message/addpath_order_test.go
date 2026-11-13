@@ -169,7 +169,7 @@ func TestProducerAddPathStateOrder(t *testing.T) {
 							if err := json.Unmarshal(recorded.payload, &route); err != nil {
 								t.Fatal(err)
 							}
-							wantPath := int32(256)
+							wantPath := uint32(256)
 							wantTable := ""
 							if view.peerType == bmp.PeerType3 {
 								wantTable = "VRF-A"

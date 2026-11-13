@@ -70,7 +70,7 @@ func setUnicastPrefixHash(m *UnicastPrefix) {
 		m.Prefix,
 		strconv.FormatInt(int64(m.PrefixLen), 10),
 		strconv.FormatBool(m.IsIPv4),
-		strconv.FormatInt(int64(m.PathID), 10),
+		strconv.FormatUint(uint64(m.PathID), 10),
 		family,
 	)
 }
@@ -91,7 +91,7 @@ func setL3VPNPrefixHash(m *L3VPNPrefix) {
 		m.Prefix,
 		strconv.FormatInt(int64(m.PrefixLen), 10),
 		strconv.FormatBool(m.IsIPv4),
-		strconv.FormatInt(int64(m.PathID), 10),
+		strconv.FormatUint(uint64(m.PathID), 10),
 		"",
 	)
 }
@@ -118,7 +118,7 @@ func setMUPPrefixHash(m *MUPPrefix) {
 		strconv.FormatUint(uint64(m.ArchType), 10),
 		strconv.FormatUint(uint64(m.RouteType), 10),
 		strconv.FormatBool(m.IsIPv4),
-		strconv.FormatInt(int64(m.PathID), 10),
+		strconv.FormatUint(uint64(m.PathID), 10),
 	}
 	switch m.RouteType {
 	case mup.RouteTypeISD, mup.RouteTypeST1:
