@@ -114,7 +114,7 @@ func (nd *NodeDescriptor) GetIGPRouterIDWithProtocol(proto ProtoID) string {
 	case 6, 7:
 		// IS-IS non-pseudonode ISO Node-ID, or IS-IS pseudonode (ISO Node-ID
 		// + 1-octet PSN): hex-encoded, 2-byte groups dot-separated.
-		return isisNodeIDHex(tlv.Value)
+		return FormatISISNodeID(tlv.Value)
 	case 8:
 		// OSPF pseudonode: 4-octet DR Router-ID followed by the DR interface
 		// IPv4 address (OSPFv2, "a.b.c.d:e.f.g.h") or the 32-bit interface
@@ -126,7 +126,7 @@ func (nd *NodeDescriptor) GetIGPRouterIDWithProtocol(proto ProtoID) string {
 		case OSPFv3:
 			return dr + ":" + strconv.FormatUint(uint64(binary.BigEndian.Uint32(tlv.Value[4:8])), 10)
 		default:
-			return isisNodeIDHex(tlv.Value)
+			return FormatISISNodeID(tlv.Value)
 		}
 	case 16:
 		// Direct or Static configuration: IPv6 address.
@@ -134,14 +134,14 @@ func (nd *NodeDescriptor) GetIGPRouterIDWithProtocol(proto ProtoID) string {
 	default:
 		// Length not defined by RFC 9552: keep the raw value visible rather
 		// than dropping the identifier.
-		return isisNodeIDHex(tlv.Value)
+		return FormatISISNodeID(tlv.Value)
 	}
 }
 
-// isisNodeIDHex renders bytes as hex digits grouped 2 bytes at a time and
+// FormatISISNodeID renders bytes as hex digits grouped 2 bytes at a time and
 // dot-separated, the ISO Node-ID format, e.g. "0000.0c00.1234" or
 // "0000.0c00.1234.01".
-func isisNodeIDHex(b []byte) string {
+func FormatISISNodeID(b []byte) string {
 	var sb strings.Builder
 	for p, v := range b {
 		fmt.Fprintf(&sb, "%02x", v)
