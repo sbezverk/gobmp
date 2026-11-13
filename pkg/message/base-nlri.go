@@ -92,7 +92,7 @@ func (p *producer) nlri(op int, ph *bmp.PerPeerHeader, update *bgp.Update) ([]*U
 			Timestamp:      ph.GetPeerTimestamp(),
 			PeerType:       uint8(ph.PeerType),
 			PrefixLen:      int32(pr.Length),
-			PathID:         int32(pr.PathID),
+			PathID:         pr.PathID,
 			BaseAttributes: update.BaseAttributes,
 			AFI:            1,
 			SAFI:           1,

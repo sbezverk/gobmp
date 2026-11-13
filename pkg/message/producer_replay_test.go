@@ -54,7 +54,7 @@ func replayedRoutes(t *testing.T, rec *recordingPublisher) []UnicastPrefix {
 
 func checkReplayedRoute(t *testing.T, route UnicastPrefix, up bmp.Message, family bgp.AFISAFI, kind string, addPath bool) {
 	t.Helper()
-	wantPrefix, wantLength, wantPath, wantAction := "192.0.2.0", int32(24), int32(0), "add"
+	wantPrefix, wantLength, wantPath, wantAction := "192.0.2.0", int32(24), uint32(0), "add"
 	if family.AFI == 2 {
 		wantPrefix, wantLength = "2001:db8::", 32
 	}

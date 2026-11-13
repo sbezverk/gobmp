@@ -96,7 +96,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),
 			PrefixLen:      int32(e.Length),
-			PathID:         int32(e.PathID),
+			PathID:         e.PathID,
 			BaseAttributes: update.BaseAttributes,
 			AFI:            afi,
 			SAFI:           safi,

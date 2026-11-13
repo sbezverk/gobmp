@@ -1,7 +1,9 @@
 package message
 
 import (
+	"encoding/binary"
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/bgp"
@@ -296,6 +298,47 @@ func TestProducerMUPAddPath(t *testing.T) {
 	}
 	if got["path_id"] != float64(5) {
 		t.Fatalf("marshalled path_id = %v, want 5: %s", got["path_id"], b)
+	}
+}
+
+// A BGP-MUP Path Identifier that does not fit an int32 is published unchanged
+// and keeps paths that differ only in the high bit apart in the route hash.
+func TestProducerMUPAddPathFullRange(t *testing.T) {
+	hashes := map[string]uint32{}
+	for _, id := range []uint32{1<<31 - 1, 1 << 31, ^uint32(0)} {
+		raw := append([]byte{0x00, 0x01, 85, 0x04, 10, 0, 0, 1, 0x00}, binary.BigEndian.AppendUint32(nil, id)...)
+		raw = append(raw,
+			0x01, 0x00, 0x01, 0x0c,
+			0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
+			0x18, 0x0a, 0x0a, 0x0a,
+		)
+		nlri, err := bgp.UnmarshalMPReachNLRI(raw, false, map[int]bool{bgp.NLRIMessageType(1, 85): true})
+		if err != nil {
+			t.Fatalf("path %d: UnmarshalMPReachNLRI() unexpected error: %+v", id, err)
+		}
+		msgs, err := mupProducer().mup(nlri, AddPrefix, minimalPeerHeader(), mupUpdateWithPrefixSID())
+		if err != nil {
+			t.Fatalf("path %d: mup() unexpected error: %+v", id, err)
+		}
+		setMUPPrefixHash(&msgs[0])
+		b, err := json.Marshal(&msgs[0])
+		if err != nil {
+			t.Fatalf("json.Marshal() unexpected error: %+v", err)
+		}
+		var got struct {
+			PathID json.RawMessage `json:"path_id"`
+			Hash   string          `json:"hash"`
+		}
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatalf("json.Unmarshal() unexpected error: %+v", err)
+		}
+		if want := strconv.FormatUint(uint64(id), 10); string(got.PathID) != want {
+			t.Errorf("path_id = %s, want %s", got.PathID, want)
+		}
+		if prev, dup := hashes[got.Hash]; dup {
+			t.Errorf("paths %d and %d share hash %s", prev, id, got.Hash)
+		}
+		hashes[got.Hash] = id
 	}
 }
 

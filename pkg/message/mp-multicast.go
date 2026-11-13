@@ -52,7 +52,7 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),
 			PrefixLen:      int32(e.Length),
-			PathID:         int32(e.PathID),
+			PathID:         e.PathID,
 			BaseAttributes: update.BaseAttributes,
 		}
 		if f, err := ph.IsAdjRIBInPost(); err == nil {
