@@ -22,7 +22,7 @@ func UnmarshalInitiationMessage(b []byte) (*InitiationMessage, error) {
 		TLV: make([]InformationalTLV, 0),
 	}
 	if len(b) == 0 {
-		// According to rfc7854, Initiation Message may have no TLVs, so if there are no bytes to decode, we return empty InitiationMessage object
+		// rfc7854 Section 4.3 requires sysDescr and sysName, but an empty Initiation is accepted and decodes to no TLVs
 		return im, nil
 	}
 	for i := 0; i < len(b); {
@@ -49,4 +49,32 @@ func UnmarshalInitiationMessage(b []byte) (*InitiationMessage, error) {
 	}
 
 	return im, nil
+}
+
+// Information TLV types carried by the Initiation message, rfc7854 Section 4.4.
+const (
+	initiationSysDescr = 1
+	initiationSysName  = 2
+)
+
+// SysDescr returns the first sysDescr string TLV, or "" when there is none.
+func (m *InitiationMessage) SysDescr() string {
+	return m.firstString(initiationSysDescr)
+}
+
+// SysName returns the first sysName string TLV, or "" when there is none.
+func (m *InitiationMessage) SysName() string {
+	return m.firstString(initiationSysName)
+}
+
+func (m *InitiationMessage) firstString(infoType uint16) string {
+	if m == nil {
+		return ""
+	}
+	for _, t := range m.TLV {
+		if t.InformationType == infoType {
+			return string(t.Information)
+		}
+	}
+	return ""
 }
