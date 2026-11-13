@@ -85,7 +85,7 @@ type UnicastPrefix struct {
 	OriginAS         uint32              `json:"origin_as,omitempty"`
 	Nexthop          string              `json:"nexthop,omitempty"`
 	IsNexthopIPv4    bool                `json:"is_nexthop_ipv4"`
-	PathID           int32               `json:"path_id,omitempty"`
+	PathID           uint32              `json:"path_id,omitempty"`
 	Labels           []uint32            `json:"labels,omitempty"`
 	Color            *uint32             `json:"color,omitempty"`             // RFC 9723 BGP Colored Prefix Routing (CPR) for SRv6
 	OriginValidation *string             `json:"origin_validation,omitempty"` // RFC 8097 RPKI Origin Validation State
@@ -170,7 +170,7 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 	}
 	if u.PathID != ou.PathID {
 		equal = false
-		diffs = append(diffs, "path_id mismatch: "+strconv.Itoa(int(u.PathID))+" and "+strconv.Itoa(int(ou.PathID)))
+		diffs = append(diffs, "path_id mismatch: "+strconv.FormatUint(uint64(u.PathID), 10)+" and "+strconv.FormatUint(uint64(ou.PathID), 10))
 	}
 	if !reflect.DeepEqual(sort.SortMergeComparableSlice(u.Labels), sort.SortMergeComparableSlice(ou.Labels)) {
 		equal = false
@@ -384,7 +384,7 @@ type MulticastPrefix struct {
 	OriginAS       uint32              `json:"origin_as,omitempty"`
 	Nexthop        string              `json:"nexthop,omitempty"`
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
-	PathID         int32               `json:"path_id,omitempty"`
+	PathID         uint32              `json:"path_id,omitempty"`
 	IsEOR          bool                `json:"is_eor,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
@@ -492,7 +492,7 @@ type MUPPrefix struct {
 	IsNexthopIPv4   bool                `json:"is_nexthop_ipv4"`
 	VPNRD           string              `json:"vpn_rd,omitempty"`
 	VPNRDType       uint16              `json:"vpn_rd_type"`
-	PathID          int32               `json:"path_id,omitempty"`
+	PathID          uint32              `json:"path_id,omitempty"`
 	ArchType        uint8               `json:"arch_type"`
 	RouteType       uint16              `json:"route_type"`
 	Prefix          string              `json:"prefix,omitempty"`
@@ -545,7 +545,7 @@ type L3VPNPrefix struct {
 	Nexthop          string              `json:"nexthop,omitempty"`
 	ClusterList      string              `json:"cluster_list,omitempty"`
 	IsNexthopIPv4    bool                `json:"is_nexthop_ipv4"`
-	PathID           int32               `json:"path_id,omitempty"`
+	PathID           uint32              `json:"path_id,omitempty"`
 	Labels           []uint32            `json:"labels,omitempty"`
 	OriginValidation *string             `json:"origin_validation,omitempty"` // RFC 8097 RPKI Origin Validation State
 	VPNRD            string              `json:"vpn_rd,omitempty"`
@@ -770,7 +770,7 @@ type EVPNPrefix struct {
 	Nexthop        string              `json:"nexthop,omitempty"`
 	ClusterList    string              `json:"cluster_list,omitempty"`
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
-	PathID         int32               `json:"path_id,omitempty"`
+	PathID         uint32              `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
 	RawLabels      []uint32            `json:"rawlabels,omitempty"`
 	VPNRD          string              `json:"vpn_rd,omitempty"`
@@ -872,7 +872,7 @@ type SRPolicy struct {
 	Nexthop        string                  `json:"nexthop,omitempty"`
 	ClusterList    string                  `json:"cluster_list,omitempty"`
 	IsNexthopIPv4  bool                    `json:"is_nexthop_ipv4"`
-	PathID         int32                   `json:"path_id,omitempty"`
+	PathID         uint32                  `json:"path_id,omitempty"`
 	Labels         []uint32                `json:"labels,omitempty"`
 	Distinguisher  uint32                  `json:"distinguisher,omitempty"`
 	Color          uint32                  `json:"color,omitempty"`
@@ -911,7 +911,7 @@ type Flowspec struct {
 	OriginAS       uint32              `json:"origin_as,omitempty"`
 	Nexthop        string              `json:"nexthop,omitempty"`
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
-	PathID         int32               `json:"path_id,omitempty"`
+	PathID         uint32              `json:"path_id,omitempty"`
 	SpecHash       string              `json:"spec_hash,omitempty"`
 	Spec           []flowspec.Spec     `json:"spec,omitempty"`
 	RD             string              `json:"rd,omitempty"` // VPN FlowSpec Route Distinguisher (SAFI=134, RFC 8955 §6)

@@ -84,7 +84,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 			Timestamp:      ph.GetPeerTimestamp(),
 			Nexthop:        nextHop,
 			PrefixLen:      int32(e.Length),
-			PathID:         int32(e.PathID),
+			PathID:         e.PathID,
 			BaseAttributes: update.BaseAttributes,
 			AFI:            afi,
 			SAFI:           safi,

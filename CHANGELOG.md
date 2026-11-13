@@ -4,6 +4,12 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-13
+
+#### Fixed
+
+- `path_id` (RFC 7911 §3, a 4-octet field) in unicast, labeled unicast, multicast, L3VPN and MUP messages was published as a signed number, so IDs of 2^31 and above came out negative; it is now a `uint32`, as in BGP-LS messages. The route `hash` of those paths changes accordingly, and stored JSON with a negative `path_id` no longer decodes into the message types (add 2^32 to convert). EVPN, SR Policy and Flowspec `path_id`, which is never set, has the same type change
+
 ### 2026-11-11
 
 #### Fixed

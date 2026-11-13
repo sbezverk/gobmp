@@ -228,7 +228,7 @@ func TestRouteHashWireLabelLifecycle(t *testing.T) {
 						Hash   string   `json:"hash"`
 						AFI    uint16   `json:"afi"`
 						SAFI   uint8    `json:"safi"`
-						PathID int32    `json:"path_id"`
+						PathID uint32   `json:"path_id"`
 						Labels []uint32 `json:"labels"`
 					}
 					active := make(map[string]route)
@@ -259,9 +259,9 @@ func TestRouteHashWireLabelLifecycle(t *testing.T) {
 						if msg.msgType != wantTopic || got.AFI != e.family.afi || got.SAFI != e.family.safi {
 							t.Errorf("%s: topic/family = %d %d/%d, want %d %d/%d", e.name, msg.msgType, got.AFI, got.SAFI, wantTopic, e.family.afi, e.family.safi)
 						}
-						var wantPath int32
+						var wantPath uint32
 						if e.path != nil {
-							wantPath = int32(*e.path)
+							wantPath = *e.path
 						}
 						if got.Hash == "" || got.PathID != wantPath || !reflect.DeepEqual(got.Labels, e.labels) {
 							t.Errorf("%s: hash/path/labels = %q %d %v, want nonempty %d %v", e.name, got.Hash, got.PathID, got.Labels, wantPath, e.labels)
@@ -419,7 +419,7 @@ func TestRouteHashIdentityFields(t *testing.T) {
 		{"prefix-length", func(m *UnicastPrefix) { m.PrefixLen = 32 }},
 		{"AFI", func(m *UnicastPrefix) { m.AFI, m.IsIPv4 = 2, false }},
 		{"SAFI", func(m *UnicastPrefix) { m.SAFI = 1 }},
-		{"PathID", func(m *UnicastPrefix) { m.PathID = -1 }},
+		{"PathID", func(m *UnicastPrefix) { m.PathID = ^uint32(0) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := original
@@ -458,7 +458,7 @@ func TestVPNRouteHashIdentityFields(t *testing.T) {
 		{"RD", func(m *L3VPNPrefix) { m.VPNRD = "65000:2" }},
 		{"RD-type", func(m *L3VPNPrefix) { m.VPNRDType = 2 }},
 		{"AFI", func(m *L3VPNPrefix) { m.AFI, m.IsIPv4 = 2, false }},
-		{"PathID", func(m *L3VPNPrefix) { m.PathID = -1 }},
+		{"PathID", func(m *L3VPNPrefix) { m.PathID = ^uint32(0) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := original
