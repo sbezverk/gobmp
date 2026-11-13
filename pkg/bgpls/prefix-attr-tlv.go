@@ -54,6 +54,17 @@ func (p *PrefixAttrTLVs) MarshalJSON() ([]byte, error) {
 			LSPrefixSID:    p.LSPrefixSID,
 			SourceRouterID: p.SourceRouterID,
 		})
+	case *OSPFv3Flags:
+		f := p.Flags.(*OSPFv3Flags)
+		return json.Marshal(struct {
+			LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
+			Flags          *OSPFv3Flags       `json:"flags,omitempty"`
+			SourceRouterID string             `json:"source_router_id,omitempty"`
+		}{
+			Flags:          f,
+			LSPrefixSID:    p.LSPrefixSID,
+			SourceRouterID: p.SourceRouterID,
+		})
 	case *UnknownProtoFlags:
 		f := p.Flags.(*UnknownProtoFlags)
 		return json.Marshal(struct {
