@@ -28,6 +28,9 @@ type NodeDescriptor struct {
 // An auxiliary TE Router-ID TLV (defined in RFC 9552 and used extensively
 // in constructs like Segment Routing policies or Inter-AS links).
 func (nd *NodeDescriptor) GetLocalNodeIPv4RouterID() []byte {
+	if nd == nil {
+		return nil
+	}
 	if tlv, ok := nd.SubTLV[1028]; ok && len(tlv.Value) == 4 {
 		return tlv.Value[:4]
 	}
@@ -38,6 +41,9 @@ func (nd *NodeDescriptor) GetLocalNodeIPv4RouterID() []byte {
 // An auxiliary TE Router-ID TLV (defined in RFC 9552 and used extensively
 // in constructs like Segment Routing policies or Inter-AS links).
 func (nd *NodeDescriptor) GetLocalNodeIPv6RouterID() []byte {
+	if nd == nil {
+		return nil
+	}
 	if tlv, ok := nd.SubTLV[1029]; ok && len(tlv.Value) == 16 {
 		return tlv.Value[:16]
 	}

@@ -133,6 +133,9 @@ func TestSRPolicyCandidatePathFlagsJSONRoundTrip(t *testing.T) {
 	if got != 0x80 {
 		t.Fatalf("UnmarshalJSON() retained unknown bits: got %#x, want %#x", got, 0x80)
 	}
+	if err := got.UnmarshalJSON([]byte(`{"e_flag":`)); err == nil {
+		t.Fatal("invalid JSON returned nil error")
+	}
 }
 
 func TestUnmarshalSRPCPDescriptorAllFlagLengthForms(t *testing.T) {
@@ -265,6 +268,7 @@ func TestUnmarshalSRPolicyCandidatePathNLRIRejectsMalformedInput(t *testing.T) {
 		{"wrong protocol", append([]byte{byte(base.OSPFv2)}, make([]byte, 12)...)},
 		{"truncated node descriptor header", append(validPrefix[:9], 1, 0, 0)},
 		{"truncated node descriptor value", append(validPrefix[:9], 1, 0, 0, 24, 0)},
+		{"malformed node descriptor TLV", append(append([]byte{}, []byte{byte(base.SR)}...), append(make([]byte, 8), append(srpcpTLV(base.LocalNodeDescriptorType, []byte{0, 1, 0}), srpcpDescriptor(0)...)...)...)},
 		{"node descriptor has no router ID", append(append([]byte{}, []byte{byte(base.SR)}...), append(make([]byte, 8), append(withoutRouterID, srpcpDescriptor(0)...)...)...)},
 		{"missing mandatory descriptor", append(validPrefix, srpcpTLV(999, []byte{1})...)},
 		{"malformed mandatory descriptor", append(validPrefix, []byte{0x02, 0x2a, 0, 24, 1}...)},
