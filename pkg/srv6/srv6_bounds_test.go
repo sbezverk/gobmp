@@ -5,10 +5,11 @@ import (
 	"testing"
 )
 
-func TestUnmarshalSRv6BGPPeerNodeSIDTLV_TooShort(t *testing.T) {
-	_, err := UnmarshalSRv6BGPPeerNodeSIDTLV(make([]byte, 10))
-	if err == nil {
-		t.Fatal("expected error for short input")
+func TestUnmarshalSRv6BGPPeerNodeSIDTLV_WrongLength(t *testing.T) {
+	for _, n := range []int{0, 10, 11, 13} {
+		if _, err := UnmarshalSRv6BGPPeerNodeSIDTLV(make([]byte, n)); err == nil {
+			t.Errorf("length %d: expected error, RFC 9514 §7.2 fixes the length at 12", n)
+		}
 	}
 }
 

@@ -879,15 +879,14 @@ func TestRFC9252_BGPPeerNodeSID(t *testing.T) {
 		expected *BGPPeerNodeSID
 	}{
 		{
-			// Layout: Flags(1) + Weight(1) + skip 2 reserved via p+=2 = PeerASN at b[3:7]
-			// Implementation: p=0 flags, p++ -> p=1 weight, p+=2 -> p=3, PeerASN=b[3:7], p+=4 -> p=7, PeerID=b[7:11]
+			// RFC 9514 §7.2: Flags(1) Weight(1) Reserved(2) Peer AS(4) Peer BGP Identifier(4)
 			name: "Basic peer node SID",
 			input: []byte{
-				0x00,                   // [0] Flags: all clear
-				0x0a,                   // [1] Weight: 10
-				0x00,                   // [2] Reserved (skipped via p+=2)
-				0x00, 0x00, 0xfd, 0xe8, // [3-6] PeerASN: 65000
-				0xc0, 0xa8, 0x01, 0x01, // [7-10] PeerID: 192.168.1.1
+				0x00,       // [0] Flags: all clear
+				0x0a,       // [1] Weight: 10
+				0x00, 0x00, // [2-3] Reserved
+				0x00, 0x00, 0xfd, 0xe8, // [4-7] PeerASN: 65000
+				0xc0, 0xa8, 0x01, 0x01, // [8-11] PeerID: 192.168.1.1
 			},
 			expected: &BGPPeerNodeSID{
 				Flags:   &BGPPeerNodeFlags{BFlag: false, SFlag: false, PFlag: false},
@@ -899,11 +898,11 @@ func TestRFC9252_BGPPeerNodeSID(t *testing.T) {
 		{
 			name: "All flags set",
 			input: []byte{
-				0xe0,                   // [0] Flags: B=true, S=true, P=true
-				0xff,                   // [1] Weight: 255
-				0x00,                   // [2] Reserved
-				0x00, 0x01, 0x00, 0x00, // [3-6] PeerASN: 65536
-				0x0a, 0x00, 0x00, 0x01, // [7-10] PeerID: 10.0.0.1
+				0xe0,       // [0] Flags: B=true, S=true, P=true
+				0xff,       // [1] Weight: 255
+				0xff, 0xff, // [2-3] Reserved: ignored on receipt
+				0x00, 0x01, 0x00, 0x00, // [4-7] PeerASN: 65536
+				0x0a, 0x00, 0x00, 0x01, // [8-11] PeerID: 10.0.0.1
 			},
 			expected: &BGPPeerNodeSID{
 				Flags:   &BGPPeerNodeFlags{BFlag: true, SFlag: true, PFlag: true},
