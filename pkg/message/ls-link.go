@@ -187,5 +187,22 @@ func populateLSLinkAttributes(msg *LSLink, update *bgp.Update, spf bool) {
 			}
 		}
 		msg.OpaqueLinkAttribute = lslink.GetOpaqueLinkAttribute()
+		msg.UnknownBGPLSTLVs = collectUnknownBGPLSTLVs(lslink.LS, func(typ uint16) bool {
+			return isModeledLinkTLV(typ, msg.ProtocolID)
+		})
+	}
+}
+
+// isModeledLinkTLV mirrors the path-attribute fields populated by populateLSLinkAttributes.
+func isModeledLinkTLV(typ uint16, protocol base.ProtoID) bool {
+	switch typ {
+	case 258, 267, 1028, 1029, 1030, 1031,
+		1088, 1089, 1090, 1091, 1092, 1093, 1094, 1095, 1096, 1097, 1098, 1099,
+		1106, 1114, 1115, 1116, 1117, 1118, 1119, 1120, 1122, 1251:
+		return true
+	case 1101, 1102, 1103:
+		return protocol == base.BGP
+	default:
+		return false
 	}
 }

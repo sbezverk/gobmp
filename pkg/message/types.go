@@ -223,6 +223,12 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 	return equal, diffs
 }
 
+// UnknownBGPLSTLV holds a BGP-LS path attribute TLV without a dedicated event mapping.
+type UnknownBGPLSTLV struct {
+	Type     uint16 `json:"type"`
+	ValueHex string `json:"value_hex"`
+}
+
 // LSNode defines a structure of LS Node message
 type LSNode struct {
 	Key                 string                          `json:"_key,omitempty"`
@@ -257,6 +263,7 @@ type LSNode struct {
 	NodeMSD             []*base.MSDTV                   `json:"node_msd,omitempty"`
 	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition     `json:"flex_algo_definition,omitempty"`
 	OpaqueNodeAttribute []string                        `json:"opaque_node_attribute,omitempty"` // RFC 9552 §5.3.1.5 TLV 1025, hex-encoded raw values
+	UnknownBGPLSTLVs    []UnknownBGPLSTLV               `json:"unknown_bgp_ls_tlvs,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -349,6 +356,7 @@ type LSLink struct {
 	UnidirAvailableBW     uint32                        `json:"unidir_available_bw,omitempty"`
 	UnidirBWUtilization   uint32                        `json:"unidir_bw_utilization,omitempty"`
 	OpaqueLinkAttribute   []string                      `json:"opaque_link_attribute,omitempty"` // RFC 9552 §5.3.2.6 TLV 1097, hex-encoded raw values
+	UnknownBGPLSTLVs      []UnknownBGPLSTLV             `json:"unknown_bgp_ls_tlvs,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -602,6 +610,7 @@ type LSPrefix struct {
 	FlexAlgoPrefixMetric  []*bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
 	SRv6Locator           *srv6.LocatorTLV              `json:"srv6_locator,omitempty"`
 	OpaquePrefixAttribute []string                      `json:"opaque_prefix_attribute,omitempty"` // RFC 9552 §5.3.3.6 TLV 1157, hex-encoded raw values
+	UnknownBGPLSTLVs      []UnknownBGPLSTLV             `json:"unknown_bgp_ls_tlvs,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`

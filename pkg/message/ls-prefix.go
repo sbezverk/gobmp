@@ -115,7 +115,18 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 			msg.SRv6Locator = loc
 		}
 		msg.OpaquePrefixAttribute = lsprefix.GetOpaquePrefixAttribute()
+		msg.UnknownBGPLSTLVs = collectUnknownBGPLSTLVs(lsprefix.LS, isModeledPrefixTLV)
 	}
 
 	return &msg, nil
+}
+
+// isModeledPrefixTLV mirrors the path-attribute fields populated by lsPrefix.
+func isModeledPrefixTLV(typ uint16) bool {
+	switch typ {
+	case 1028, 1029, 1044, 1152, 1153, 1154, 1155, 1157, 1158, 1159, 1162, 1170, 1171, 1174:
+		return true
+	default:
+		return false
+	}
 }
