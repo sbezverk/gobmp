@@ -21,6 +21,7 @@ func TestUnmarshalFlexAlgoPrefixMetric(t *testing.T) {
 		wantErr    bool
 		wantAlgo   uint8
 		wantMetric uint32
+		wantFlags  string
 	}{
 		{
 			name:    "too short (7 bytes)",
@@ -29,9 +30,16 @@ func TestUnmarshalFlexAlgoPrefixMetric(t *testing.T) {
 		},
 		{
 			name:       "algo=128, metric=1000",
-			input:      []byte{128, 0, 0, 0, 0x00, 0x00, 0x03, 0xE8},
+			input:      []byte{128, 0, 0x34, 0x56, 0x00, 0x00, 0x03, 0xE8},
 			wantAlgo:   128,
 			wantMetric: 1000,
+		},
+		{
+			name:       "OSPF external type flag",
+			input:      []byte{129, 0x80, 0x34, 0x56, 0x12, 0x34, 0x56, 0x78},
+			wantAlgo:   129,
+			wantMetric: 0x12345678,
+			wantFlags:  "128",
 		},
 		{
 			name:       "algo=0, metric=0",
@@ -55,6 +63,17 @@ func TestUnmarshalFlexAlgoPrefixMetric(t *testing.T) {
 			}
 			if got.Metric != tt.wantMetric {
 				t.Errorf("Metric = %d, want %d", got.Metric, tt.wantMetric)
+			}
+			wire, err := json.Marshal(got)
+			if err != nil {
+				t.Fatalf("marshal prefix metric: %v", err)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(wire, &fields); err != nil {
+				t.Fatalf("unmarshal prefix metric JSON: %v", err)
+			}
+			if flags := string(fields["flags"]); flags != tt.wantFlags {
+				t.Errorf("JSON flags = %q, want %q", flags, tt.wantFlags)
 			}
 		})
 	}
