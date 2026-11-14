@@ -4,6 +4,12 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-13
+
+#### Fixed
+
+- A BMP Route Mirroring message whose Information TLV has code 0 "Errored PDU" (RFC 7854 §4.7) published the routes of its BGP UPDATE as `add`: the router treated that UPDATE as withdrawn (RFC 7606 §2), so announced IPv4 and MP_REACH_NLRI routes are now published as `del`, and such a message never produces an End-of-RIB marker
+
 ### 2026-11-12
 
 #### Added

@@ -26,6 +26,10 @@ type Update struct {
 	PathAttributes           []PathAttribute
 	NLRI                     []byte
 	BaseAttributes           *BaseAttributes
+	// TreatAsWithdraw marks an UPDATE the router reported as errored (RFC 7854
+	// Section 4.7 code 0): its announcements are handled as withdrawn (RFC 7606
+	// Section 2). It is set by the consumer, never decoded from the wire.
+	TreatAsWithdraw bool
 }
 
 // GetAllAttributeID returns a slice of uint8 with all attribute type codes found in BGP Update
