@@ -176,3 +176,30 @@ func TestRouteMirrorSizeIncludesTLVHeadersAndValues(t *testing.T) {
 		t.Fatalf("Size() = %d, want %d", got, want)
 	}
 }
+
+func TestRouteMirrorErrored(t *testing.T) {
+	bgpMsg := TLV{Type: RouteMirrorBGPMsgTLV, Length: 4, Value: []byte{0, 0, 0, 0}}
+	tests := []struct {
+		name string
+		tlvs []TLV
+		want bool
+	}{
+		{name: "no TLVs", want: false},
+		{name: "BGP message only", tlvs: []TLV{bgpMsg}, want: false},
+		{name: "errored PDU code", tlvs: []TLV{bgpMsg, {Type: RouteMirrorInfoTLV, Length: 2, Value: []byte{0, 0}}}, want: true},
+		{name: "messages lost code", tlvs: []TLV{{Type: RouteMirrorInfoTLV, Length: 2, Value: []byte{0, 1}}}, want: false},
+		{name: "information value too short", tlvs: []TLV{{Type: RouteMirrorInfoTLV, Length: 1, Value: []byte{0}}}, want: false},
+		{name: "errored code after lost code", tlvs: []TLV{
+			{Type: RouteMirrorInfoTLV, Length: 2, Value: []byte{0, 1}},
+			{Type: RouteMirrorInfoTLV, Length: 2, Value: []byte{0, 0}},
+		}, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rm := &RouteMirror{TLVs: tt.tlvs}
+			if got := rm.Errored(); got != tt.want {
+				t.Errorf("Errored() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -47,6 +47,16 @@ func (p *producer) produceRouteMessage(msg bmp.Message) {
 			glog.Errorf("failed to get BGP update from route mirror message with error: %+v", err)
 			return
 		}
+		if routeMirrorMsg.Errored() {
+			// RFC 7854 Section 4.7 code 0 and Section 6: the router treated
+			// this UPDATE as withdrawn (RFC 7606 Section 2). Its content is
+			// never an End-of-RIB marker.
+			if _, _, eor := endOfRIBFamily(update); eor || isEndOfRIB(update) {
+				return
+			}
+			update = copyUpdate(update)
+			update.TreatAsWithdraw = true
+		}
 	default:
 		glog.Errorf("got invalid Payload type %+v in bmp.Message", t)
 		return
@@ -101,9 +111,14 @@ func (p *producer) processMPReach(attribute []byte, ph *bmp.PerPeerHeader, updat
 // attributeErrorOperation applies treat-as-withdraw error handling to
 // announcements: RFC 10039 Section 4 for D-PATH and RFC 6514 Section 8 for a
 // malformed PE Distinguisher Labels attribute with the Partial bit set, and
-// RFC 7606 Section 7.16 for a malformed ATTR_SET. It is
+// RFC 7606 Section 7.16 for a malformed ATTR_SET, and RFC 7854 Section 4.7
+// code 0 (Errored PDU) for a mirrored UPDATE the router already treated as
+// withdrawn (RFC 7606 Section 2). It is
 // shared by the MP_REACH_NLRI and legacy IPv4 NLRI paths.
 func attributeErrorOperation(update *bgp.Update, afi uint16, safi uint8) int {
+	if update != nil && update.TreatAsWithdraw {
+		return DelPrefix
+	}
 	if update == nil || update.BaseAttributes == nil {
 		return AddPrefix
 	}
