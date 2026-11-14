@@ -266,9 +266,9 @@ services:
       target: /etc/xrd/startup.cfg
       type: bind
     - xr-1:/xr-storage/
-  depends_on:
-    xrd-host-prep:
-      condition: service_completed_successfully
+    depends_on:
+      xrd-host-prep:
+        condition: service_completed_successfully
 
   bgpinjector:
     image: ${BGPINJECTOR_IMAGE:-ghcr.io/sbezverk/bgpinjector:latest}
