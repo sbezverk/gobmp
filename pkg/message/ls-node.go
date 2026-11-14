@@ -94,6 +94,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 		}
 		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
 		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
+		msg.SRMSPreference = lsnode.GetNodeSRMSPreference()
 		if cap, err := lsnode.GetNodeSRv6CapabilitiesTLV(); err == nil {
 			msg.SRv6CapabilitiesTLV = cap
 		}
