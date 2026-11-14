@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
+	"math/bits"
 	"net"
 
 	"github.com/golang/glog"
@@ -798,8 +799,8 @@ func (ls *NLRI) GetUnidirLinkLoss() uint32 {
 	return 0
 }
 
-// GetUnidirResidualBandwidth returns a value of the the residual bandwidth between two
-// directly connected IGP link-state neighbor
+// GetUnidirResidualBandwidth returns the raw IEEE 754 bits of the residual bandwidth.
+// Use GetUnidirResidualBandwidthKbps for the decoded value.
 func (ls *NLRI) GetUnidirResidualBandwidth() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1118 {
@@ -814,8 +815,8 @@ func (ls *NLRI) GetUnidirResidualBandwidth() uint32 {
 	return 0
 }
 
-// GetUnidirAvailableBandwidth returns a value of the the available bandwidth between two
-// directly connected IGP link-state neighbor
+// GetUnidirAvailableBandwidth returns the raw IEEE 754 bits of the available bandwidth.
+// Use GetUnidirAvailableBandwidthKbps for the decoded value.
 func (ls *NLRI) GetUnidirAvailableBandwidth() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1119 {
@@ -830,8 +831,8 @@ func (ls *NLRI) GetUnidirAvailableBandwidth() uint32 {
 	return 0
 }
 
-// GetUnidirUtilizedBandwidth returns a value of the the utilized bandwidth between two
-// directly connected IGP link-state neighbor
+// GetUnidirUtilizedBandwidth returns the raw IEEE 754 bits of the utilized bandwidth.
+// Use GetUnidirUtilizedBandwidthKbps for the decoded value.
 func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1120 {
@@ -844,6 +845,50 @@ func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
 	}
 
 	return 0
+}
+
+// GetUnidirResidualBandwidthKbps returns the residual bandwidth in whole kbps,
+// or nil if TLV 1118 is absent or invalid.
+func (ls *NLRI) GetUnidirResidualBandwidthKbps() *uint64 {
+	return ls.getUnidirBandwidthKbps(1118)
+}
+
+// GetUnidirAvailableBandwidthKbps returns the available bandwidth in whole kbps,
+// or nil if TLV 1119 is absent or invalid.
+func (ls *NLRI) GetUnidirAvailableBandwidthKbps() *uint64 {
+	return ls.getUnidirBandwidthKbps(1119)
+}
+
+// GetUnidirUtilizedBandwidthKbps returns the utilized bandwidth in whole kbps,
+// or nil if TLV 1120 is absent or invalid.
+func (ls *NLRI) GetUnidirUtilizedBandwidthKbps() *uint64 {
+	return ls.getUnidirBandwidthKbps(1120)
+}
+
+func (ls *NLRI) getUnidirBandwidthKbps(tlvType uint16) *uint64 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != tlvType {
+			continue
+		}
+		if len(tlv.Value) != 4 {
+			return nil
+		}
+		// RFC 8571 Sections 2.5–2.7 and RFC 8570 Sections 4.5–4.7:
+		// bandwidth is an IEEE 754 single-precision value in bytes/s.
+		bytesPerSecond := float64(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value)))
+		const bytesPerKilobit = 125
+		const twoTo64 = 0x1p64
+		if math.IsNaN(bytesPerSecond) || bytesPerSecond < 0 || bytesPerSecond >= twoTo64*bytesPerKilobit {
+			return nil
+		}
+		// Integer division truncates exactly. A valid bytes/s value can exceed
+		// uint64 before the division, so split it into high and low words.
+		high := uint64(bytesPerSecond / twoTo64)
+		low := uint64(bytesPerSecond - float64(high)*twoTo64)
+		kbps, _ := bits.Div64(high, low, bytesPerKilobit)
+		return &kbps
+	}
+	return nil
 }
 
 // GetAppSpecLinkAttr returns a slice of Application Specifc Link Attributes

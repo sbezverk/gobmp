@@ -166,13 +166,16 @@ func populateLSLinkAttributes(msg *LSLink, update *bgp.Update, spf bool) {
 		if aslas, err := lslink.GetAppSpecLinkAttr(); err == nil {
 			msg.AppSpecLinkAttr = aslas
 		}
-		msg.UnidirAvailableBW = lslink.GetUnidirAvailableBandwidth()
-		msg.UnidirBWUtilization = lslink.GetUnidirUtilizedBandwidth()
 		msg.UnidirDelayVariation = lslink.GetUnidirDelayVariation()
 		msg.UnidirLinkDelay = lslink.GetUnidirLinkDelay()
 		msg.UnidirLinkDelayMinMax = lslink.GetUnidirLinkDelayMinMax()
 		msg.UnidirPacketLoss = lslink.GetUnidirLinkLoss()
 		msg.UnidirResidualBW = lslink.GetUnidirResidualBandwidth()
+		msg.UnidirAvailableBW = lslink.GetUnidirAvailableBandwidth()
+		msg.UnidirBWUtilization = lslink.GetUnidirUtilizedBandwidth()
+		msg.UnidirResidualBWKbps = lslink.GetUnidirResidualBandwidthKbps()
+		msg.UnidirAvailableBWKbps = lslink.GetUnidirAvailableBandwidthKbps()
+		msg.UnidirBWUtilizationKbps = lslink.GetUnidirUtilizedBandwidthKbps()
 		if adj, err := lslink.GetSRAdjacencySID(msg.ProtocolID); err == nil {
 			msg.LSAdjacencySID = adj
 		}
