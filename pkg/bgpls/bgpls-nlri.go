@@ -111,6 +111,19 @@ func (ls *NLRI) GetISISAreaID() string {
 	return s
 }
 
+// GetISISAreaIDs returns each IS-IS Area Identifier TLV as a lowercase hex string
+// in wire order (RFC 9552 §5.3.1.2). Invalid area address lengths are skipped.
+func (ls *NLRI) GetISISAreaIDs() []string {
+	var ids []string
+	for _, tlv := range ls.LS {
+		// An IS-IS area address is 1–13 octets (RFC 7898 §3.2.2).
+		if tlv.Type == 1027 && len(tlv.Value) >= 1 && len(tlv.Value) <= 13 {
+			ids = append(ids, hex.EncodeToString(tlv.Value))
+		}
+	}
+	return ids
+}
+
 // GetLocalIPv4RouterID returns string with local Node IPv4 router ID
 func (ls *NLRI) GetLocalIPv4RouterID() string {
 	for _, tlv := range ls.LS {
@@ -169,6 +182,22 @@ func (ls *NLRI) GetRemoteIPv6RouterID() string {
 	}
 
 	return ""
+}
+
+// GetNodeSBFDDiscriminators returns the discriminators from well-formed S-BFD
+// Discriminators TLVs (RFC 9247 §3), in wire order.
+func (ls *NLRI) GetNodeSBFDDiscriminators() []uint32 {
+	var discriminators []uint32
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1032 || len(tlv.Value) < 4 || len(tlv.Value)%4 != 0 {
+			continue
+		}
+		for offset := 0; offset < len(tlv.Value); offset += 4 {
+			discriminators = append(discriminators, binary.BigEndian.Uint32(tlv.Value[offset:offset+4]))
+		}
+	}
+
+	return discriminators
 }
 
 // GetNodeMSD returns Node's MSD object
@@ -234,6 +263,20 @@ func (ls *NLRI) GetNodeSRLocalBlock() *sr.LocalBlock {
 			return nil
 		}
 		return lb
+	}
+
+	return nil
+}
+
+// GetNodeSRMSPreference returns the first well-formed SRMS Preference TLV
+// (RFC 9085 §2.1.5), or nil when none is present.
+func (ls *NLRI) GetNodeSRMSPreference() *uint8 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1037 || len(tlv.Value) != 1 {
+			continue
+		}
+		preference := tlv.Value[0]
+		return &preference
 	}
 
 	return nil
