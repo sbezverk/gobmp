@@ -387,6 +387,16 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 48: (ls_adjacency_sid):
 
 ```
+
+BGP-LS Link events expose TLVs 1118–1120 as
+`unidir_residual_bw_kbps`, `unidir_available_bw_kbps`, and
+`unidir_bw_utilization_kbps`, respectively. GoBMP converts the IEEE 754
+bytes-per-second values to whole kilobits per second (1 kbps = 1,000 bits/s),
+truncating any fraction. A valid zero is emitted as `0`. Missing, malformed,
+negative, non-finite, and out-of-range values omit the corresponding field.
+The legacy `unidir_residual_bw`, `unidir_available_bw`, and
+`unidir_bw_utilization` fields still carry the raw IEEE 754 bit patterns.
+
 #### BMP ls_prefix message:
 
 ```

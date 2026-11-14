@@ -209,7 +209,7 @@ func (p *parser) parsingWorker(b []byte) {
 				return
 			}
 		case bmp.InitiationMsg:
-			if _, err := bmp.UnmarshalInitiationMessage(b[pos : pos+msgLen-bmp.CommonHeaderLength]); err != nil {
+			if bmpMsg.Payload, err = bmp.UnmarshalInitiationMessage(b[pos : pos+msgLen-bmp.CommonHeaderLength]); err != nil {
 				glog.Errorf("fail to recover BMP Initiation message with error: %+v", err)
 				return
 			}
