@@ -2,6 +2,7 @@ networks:
   mgmt:
     driver_opts:
       com.docker.network.container_iface_prefix: xr-1
+    enable_ipv6: true
     ipam:
       config:
       - subnet: 172.30.0.0/24
@@ -25,7 +26,45 @@ networks:
       - subnet: fd00:100::/64
         gateway: fd00:100::ffff
     name: xr-1-gi1-bgpinjector-gi0
+
 services:
+  xrd-host-prep:
+    image: alpine:3.20
+    container_name: xrd-host-prep
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        if [ ! -e /proc/sys/net/bridge/bridge-nf-call-iptables ]; then
+          if command -v modprobe >/dev/null 2>&1; then modprobe br_netfilter || true; fi
+        fi
+        if [ ! -e /proc/sys/net/bridge/bridge-nf-call-iptables ]; then
+          echo "ERROR: load br_netfilter on the Docker host before starting XRd" >&2
+          exit 1
+        fi
+        sysctl -w net.bridge.bridge-nf-call-iptables=0
+        sysctl -w net.bridge.bridge-nf-call-ip6tables=0
+        sysctl -w net.ipv6.conf.all.disable_ipv6=0
+        sysctl -w net.ipv6.conf.default.disable_ipv6=0
+        sysctl -w fs.inotify.max_user_instances=65536
+        sysctl -w fs.inotify.max_user_watches=65536
+        sysctl -w net.ipv4.udp_mem='1124736 10000000 67108864'
+        sysctl -w net.core.netdev_max_backlog=300000
+        sysctl -w net.core.optmem_max=67108864
+        sysctl -w net.core.rmem_max=67108864
+        sysctl -w net.core.rmem_default=67108864
+        sysctl -w net.core.wmem_max=67108864
+        sysctl -w net.core.wmem_default=67108864
+    network_mode: host
+    pid: host
+    privileged: true
+    restart: "no"
+    volumes:
+      - type: bind
+        source: /lib/modules
+        target: /lib/modules
+        read_only: true
+
   gobmp:
     image: ${GOBMP_IMAGE:-localhost/gobmp:cicd}
     container_name: gobmp-multinode
@@ -208,7 +247,7 @@ services:
       XR_MGMT_INTERFACES: linux:xr-10,xr_name=Mg0/RP0/CPU0/0,chksum
     image: ${XR_IMAGE:-sbezverk/xrd-control-plane:26.4.1}
     networks:
-      mgmt: mgmt
+      mgmt:
         ipv4_address: 172.30.0.16
         ipv6_address: fd04:b400:20::16
       gobmp-xrd-1:
