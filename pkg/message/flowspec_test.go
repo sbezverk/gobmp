@@ -74,6 +74,13 @@ func TestFlowspecUnmarshalJSON_GenericSpec(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// RFC 8955 Section 4.2.1.2: types 9 and 12 use the bitmask
+			// operator, whose low bit is "m" (match) rather than "eq".
+			bitmask := tt.specType == 9 || tt.specType == 12
+			cmpKey := "equal"
+			if bitmask {
+				cmpKey = "match"
+			}
 			input := buildFlowspecJSON(t, []map[string]interface{}{
 				{
 					"type": float64(tt.specType),
@@ -82,7 +89,7 @@ func TestFlowspecUnmarshalJSON_GenericSpec(t *testing.T) {
 							"operator": map[string]interface{}{
 								"value_length":    float64(1),
 								"end_of_list_bit": true,
-								"equal":           true,
+								cmpKey:            true,
 							},
 							"value": "Bg==",
 						},
@@ -112,10 +119,85 @@ func TestFlowspecUnmarshalJSON_GenericSpec(t *testing.T) {
 			if !gs.OpVal[0].Op.EOLBit {
 				t.Error("EOLBit should be true")
 			}
-			if !gs.OpVal[0].Op.EQBit {
-				t.Error("EQBit should be true")
+			op := gs.OpVal[0].Op
+			if bitmask {
+				if !op.MatchBit || op.EQBit {
+					t.Errorf("MatchBit = %v, EQBit = %v, want true, false", op.MatchBit, op.EQBit)
+				}
+			} else if !op.EQBit || op.MatchBit {
+				t.Errorf("EQBit = %v, MatchBit = %v, want true, false", op.EQBit, op.MatchBit)
 			}
 		})
+	}
+}
+
+// TestFlowspecJSONRoundTrip_BitmaskOperator decodes RFC 8955 Section 4.2.1.2
+// bitmask operators from wire bytes, publishes them and reads the message back.
+func TestFlowspecJSONRoundTrip_BitmaskOperator(t *testing.T) {
+	// TCP flags: match SYN, then AND NOT RST; fragment: match IsF.
+	wire := []byte{0x09, 0x01, 0x02, 0xc2, 0x04, 0x0c, 0x81, 0x02}
+	nlri, err := flowspec.UnmarshalFlowspecNLRI(append([]byte{byte(len(wire))}, wire...))
+	if err != nil {
+		t.Fatalf("UnmarshalFlowspecNLRI: %v", err)
+	}
+	b, err := json.Marshal(&Flowspec{Action: "add", SpecHash: nlri.SpecHash, Spec: nlri.Spec})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var got Flowspec
+	if err := got.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	want := []struct {
+		specType   uint8
+		not, match bool
+		and, eol   bool
+		value      byte
+	}{
+		{9, false, true, false, false, 0x02},
+		{9, true, false, true, true, 0x04},
+		{12, false, true, false, true, 0x02},
+	}
+	var ops []*flowspec.OpVal
+	var types []uint8
+	for _, s := range got.Spec {
+		gs, ok := s.(*flowspec.GenericSpec)
+		if !ok {
+			t.Fatalf("spec: expected *flowspec.GenericSpec, got %T", s)
+		}
+		for _, ov := range gs.OpVal {
+			ops = append(ops, ov)
+			types = append(types, gs.SpecType)
+		}
+	}
+	if len(ops) != len(want) {
+		t.Fatalf("got %d op/value pairs, want %d", len(ops), len(want))
+	}
+	for i, w := range want {
+		op := ops[i].Op
+		if types[i] != w.specType || op.NotBit != w.not || op.MatchBit != w.match ||
+			op.ANDBit != w.and || op.EOLBit != w.eol || op.EQBit || op.GTBit || op.LTBit {
+			t.Errorf("pair %d: type %d op %+v, want type %d not=%v match=%v and=%v eol=%v",
+				i, types[i], *op, w.specType, w.not, w.match, w.and, w.eol)
+		}
+		if len(ops[i].Val) != 1 || ops[i].Val[0] != w.value {
+			t.Errorf("pair %d: value %x, want %02x", i, ops[i].Val, w.value)
+		}
+	}
+}
+
+func TestFlowspecUnmarshalJSON_InvalidBitmaskBits(t *testing.T) {
+	for _, key := range []string{"not", "match"} {
+		input := buildFlowspecJSON(t, []map[string]interface{}{{
+			"type": float64(9),
+			"op_val_pairs": []interface{}{map[string]interface{}{
+				"operator": map[string]interface{}{key: "yes"},
+				"value":    "Ag==",
+			}},
+		}})
+		if err := (&Flowspec{}).UnmarshalJSON(input); err == nil {
+			t.Errorf("%s: expected error for non-bool value", key)
+		}
 	}
 }
 

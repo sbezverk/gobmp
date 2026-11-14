@@ -309,6 +309,20 @@ func makeOpValPair(src []interface{}) ([]*flowspec.OpVal, error) {
 				}
 				op.EQBit = v
 			}
+			if e, ok := opMap["not"]; ok {
+				v, ok := e.(bool)
+				if !ok {
+					return nil, fmt.Errorf("op_val_pairs[%d].operator.not: expected bool, got %T", i, e)
+				}
+				op.NotBit = v
+			}
+			if e, ok := opMap["match"]; ok {
+				v, ok := e.(bool)
+				if !ok {
+					return nil, fmt.Errorf("op_val_pairs[%d].operator.match: expected bool, got %T", i, e)
+				}
+				op.MatchBit = v
+			}
 			o.Op = op
 		}
 		ovp[i] = o
