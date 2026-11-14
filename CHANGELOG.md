@@ -10,6 +10,10 @@ Message updates and major project changes should be documented here.
 
 - Peer Up and Peer Down messages on the parsed peer topic carry `speaker_ip`, the remote address of the BMP TCP connection; it is omitted when the address is unknown, and `router_ip` and `router_hash` are unchanged, so a consumer that only knows the TCP source can map the connection to `router_ip` even when the router sends BMP from a loopback different from its BGP local address
 
+#### Fixed
+
+- A BMP Route Mirroring message whose Information TLV has code 0 "Errored PDU" (RFC 7854 §4.7) published the routes of its BGP UPDATE as `add`: the router treated that UPDATE as withdrawn (RFC 7606 §2), so announced IPv4 and MP_REACH_NLRI routes are now published as `del`, and such a message never produces an End-of-RIB marker
+
 ### 2026-11-12
 
 #### Added
