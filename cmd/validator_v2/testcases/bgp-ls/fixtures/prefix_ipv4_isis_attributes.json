@@ -1,0 +1,32 @@
+{
+  "address_family": "bgp-ls",
+  "action": "announce",
+  "next_hops": ["fd00:100::2"],
+  "nlri": {
+    "protocol_id": "isis-level-2",
+    "instance_id": "0",
+    "link_state": {
+      "kind": "ipv4_topology_prefix",
+      "local_node": {"autonomous_system": 65000, "igp_router_id": {"kind": "isis-system-id", "value": "0000.0000.0004"}},
+      "prefix": "198.51.100.0/24",
+      "prefix_descriptors": {"multi_topology_id": 4}
+    },
+    "attributes": {
+      "igp_flags": {"isis_up_down": true},
+      "igp_route_tags": [100, 200],
+      "igp_extended_route_tags": [4294967300],
+      "prefix_metric": 20,
+      "opaque_attributes": ["00010004deadbeef"],
+      "prefix_attribute_flags": {"flags": [128, 0, 0, 1]},
+      "prefix_sids": [{"flags": 12, "algorithm": 0, "value": 16024, "is_label": true}],
+      "ranges": [
+        {"flags": 248, "range_size": 64, "prefix_sids": [{"flags": 0, "algorithm": 0, "value": 12345}]}
+      ],
+      "source_router_identifiers": ["192.0.2.4"],
+      "flexible_algorithm_metrics": [{"algorithm": 128, "metric": 85}],
+      "unknown_tlvs": [{"type": 65003, "value_hex": "aabbccdd"}]
+    }
+  },
+  "origin": "igp",
+  "local_pref": 100
+}

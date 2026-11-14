@@ -1,0 +1,27 @@
+{
+  "address_family": "bgp-ls",
+  "action": "announce",
+  "next_hops": ["fd00:100::2"],
+  "nlri": {
+    "protocol_id": "ospfv3",
+    "instance_id": "4",
+    "link_state": {
+      "kind": "ipv6_topology_prefix",
+      "local_node": {"autonomous_system": 65000, "ospf_area_id": 0, "igp_router_id": {"kind": "ospfv3-router-id", "value": "10.0.0.4"}},
+      "prefix": "2001:db8:400::/48",
+      "prefix_descriptors": {"ospf_route_type": 3}
+    },
+    "attributes": {
+      "igp_flags": {"ospf_no_unicast": true, "ospf_local_address": true},
+      "prefix_metric": 40,
+      "prefix_attribute_flags": {"flags": [0, 0, 0, 1]},
+      "source_router_identifiers": ["2001:db8::4"],
+      "source_ospf_router_ids": ["10.0.0.4"],
+      "srv6_locator": {"flags": 0, "algorithm": 0, "metric": 40},
+      "flexible_algorithm_metrics": [{"algorithm": 128, "metric": 140}],
+      "unknown_tlvs": [{"type": 65005, "value_hex": "deadc0de"}]
+    }
+  },
+  "origin": "igp",
+  "local_pref": 100
+}

@@ -1,0 +1,42 @@
+{
+  "address_family": "bgp-ls",
+  "action": "announce",
+  "next_hops": ["fd00:100::2"],
+  "nlri": {
+    "protocol_id": "ospfv3",
+    "instance_id": "2",
+    "link_state": {
+      "kind": "link",
+      "local_node": {"autonomous_system": 65000, "ospf_area_id": 0, "igp_router_id": {"kind": "ospfv3-router-id", "value": "10.0.0.1"}},
+      "remote_node": {"autonomous_system": 65000, "ospf_area_id": 0, "igp_router_id": {"kind": "ospfv3-router-id", "value": "10.0.0.2"}},
+      "link_descriptors": {"ipv6_interface_address": "2001:db8:23::1", "ipv6_neighbor_address": "2001:db8:23::2"}
+    },
+    "attributes": {
+      "administrative_group": 100,
+      "maximum_link_bandwidth": 8000000,
+      "maximum_reservable_bandwidth": 7000000,
+      "unreserved_bandwidth": [7000000, 6000000, 5000000, 4000000, 3000000, 2000000, 1000000, 500000],
+      "te_default_metric": 30,
+      "igp_metric": 20,
+      "shared_risk_link_groups": [301, 302],
+      "adjacency_sids": [{"flags": 224, "weight": 10, "sid_value": 16030}],
+      "lan_adjacency_sids": [{"flags": 224, "weight": 20, "neighbor_id": "10.0.0.2", "sid_value": 16031}],
+      "srv6_end_x_sids": [
+        {"endpoint_behavior": 5, "weight": 10, "sid": "2001:db8:100::1", "sid_structure": {"locator_block_length": 32, "locator_node_length": 16, "function_length": 16, "argument_length": 0}}
+      ],
+      "srv6_lan_end_x_sids": [
+        {"endpoint_behavior": 5, "weight": 20, "neighbor_id": "10.0.0.2", "sid": "2001:db8:100::2", "sid_structure": {"locator_block_length": 32, "locator_node_length": 16, "function_length": 16, "argument_length": 0}}
+      ],
+      "unidirectional_link_delay": 1200,
+      "min_max_unidirectional_delay": {"minimum": 1100, "maximum": 1500},
+      "unidirectional_delay_variation": 50,
+      "unidirectional_link_loss": 100,
+      "unidirectional_residual_bandwidth": 6000000,
+      "unidirectional_available_bandwidth": 5000000,
+      "unidirectional_utilized_bandwidth": 2000000,
+      "application_specific_attributes": [{"standard_application_mask": [0, 0, 0, 1], "attributes": [{"type": 1088, "value_hex": "00000064"}]}]
+    }
+  },
+  "origin": "igp",
+  "local_pref": 100
+}

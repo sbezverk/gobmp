@@ -1,0 +1,23 @@
+{
+  "address_family": "bgp-ls",
+  "action": "announce",
+  "next_hops": ["fd00:100::2"],
+  "nlri": {
+    "protocol_id": "bgp",
+    "instance_id": "1",
+    "link_state": {
+      "kind": "srv6_sid",
+      "local_node": {"autonomous_system": 65000, "bgp_router_id": "192.0.2.1"},
+      "descriptors": {"sid": "2001:db8:100::1"}
+    },
+    "attributes": {
+      "endpoint_behavior": 5,
+      "flags": 0,
+      "algorithm": 0,
+      "peer_node_sids": [{"peer_as_number": 65001, "peer_bgp_identifier": "192.0.2.2", "flags": 128, "weight": 10}],
+      "sid_structure": {"locator_block_length": 32, "locator_node_length": 16, "function_length": 16, "argument_length": 0}
+    }
+  },
+  "origin": "igp",
+  "local_pref": 100
+}

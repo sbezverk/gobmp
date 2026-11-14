@@ -1,0 +1,62 @@
+{
+  "address_family": "bgp-ls",
+  "action": "announce",
+  "next_hops": ["fd00:100::2"],
+  "nlri": {
+    "protocol_id": "segment-routing",
+    "instance_id": "0",
+    "link_state": {
+      "kind": "sr_policy_candidate_path",
+      "local_node": {"autonomous_system": 65000, "bgp_router_id": "192.0.2.1", "ipv4_router_id_local": "192.0.2.1"},
+      "candidate_path": {
+        "protocol_origin": 3,
+        "endpoint": "192.0.2.9",
+        "color": 100,
+        "originator_as": 65000,
+        "originator_address": "192.0.2.1",
+        "discriminator": 1001
+      }
+    },
+    "attributes": {
+      "policy_name": "gobmp-mpls-policy",
+      "candidate_path_name": "all-mpls-segment-descriptors",
+      "candidate_path_state": {"priority": 100, "flags": 0, "preference": 200},
+      "binding_sids": [{"flags": 16384, "sid": "24001", "specified_sid": "24002"}],
+      "constraints": {
+        "flags": 32768,
+        "multi_topology_id": 4,
+        "algorithm": 128,
+        "exclude_any_affinity": [1, 2],
+        "include_any_affinity": [3],
+        "include_all_affinity": [4],
+        "exclude_srlgs": [1001],
+        "bandwidth": 8000000,
+        "disjoint_group": {"request_flags": 8, "status_flags": 4, "group_id": 11},
+        "bidirectional_group": {"flags": 128, "group_id": 12},
+        "metric": {"metric_type": 5, "flags": 32, "metric_margin": 10, "metric_bound": 20000}
+      },
+      "segment_lists": [
+        {
+          "flags": 28672,
+          "multi_topology_id": 4,
+          "algorithm": 128,
+          "weight": 100,
+          "segments": [
+            {"type": 1, "flags": 57344, "value": "16001"},
+            {"type": 3, "flags": 57344, "algorithm": 0, "value": "16003", "value_hex": "c0000201"},
+            {"type": 4, "flags": 57344, "algorithm": 1, "value": "16004", "value_hex": "20010db8000000000000000000000001"},
+            {"type": 5, "flags": 57344, "value": "16005", "value_hex": "c000020100000001"},
+            {"type": 6, "flags": 57344, "value": "16006", "value_hex": "c0000201c0000202"},
+            {"type": 7, "flags": 57344, "value": "16007", "value_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+            {"type": 8, "flags": 57344, "value": "16008", "value_hex": "0000000000000000000000000000000000000000000000000000000000000000"}
+          ],
+          "metric": {"metric_type": 1, "flags": 16, "metric_margin": 0, "metric_bound": 20000, "metric": 18000},
+          "bandwidth": 8000000,
+          "identifier": 7
+        }
+      ]
+    }
+  },
+  "origin": "igp",
+  "local_pref": 100
+}
