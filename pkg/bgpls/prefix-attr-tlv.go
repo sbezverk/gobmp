@@ -62,39 +62,27 @@ func (p *PrefixAttrTLVs) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &objVal); err != nil {
 		return err
 	}
-	// Flags     PrefixSIDFlags `json:"flags,omitempty"`
 	if v, ok := objVal["flags"]; ok {
-		var flags interface{}
+		var flags map[string]json.RawMessage
 		if err := json.Unmarshal(v, &flags); err != nil {
 			return err
 		}
-		// Presence of `x_flag` indicates ISIS's flags structure
-		if _, ok := flags.(map[string]interface{})["x_flag"]; ok {
-			f := &ISISFlags{}
-			if err := json.Unmarshal(v, &f); err != nil {
+		switch {
+		case flags == nil:
+			// JSON null represents absent flags.
+		case flags["x_flag"] != nil:
+			result.Flags = &ISISFlags{}
+		case flags["a_flag"] != nil:
+			result.Flags = &OSPFFlags{}
+		case flags["nu_flag"] != nil:
+			result.Flags = &OSPFv3Flags{}
+		default:
+			result.Flags = &UnknownProtoFlags{}
+		}
+		if result.Flags != nil {
+			if err := json.Unmarshal(v, result.Flags); err != nil {
 				return err
 			}
-			result.Flags = f
-			// Presence of `a_flag` indicates OSPF's flags structure
-		} else if _, ok := flags.(map[string]interface{})["a_flag"]; ok {
-			f := &OSPFFlags{}
-			if err := json.Unmarshal(v, &f); err != nil {
-				return err
-			}
-			result.Flags = f
-			// Presence of `a_flag` indicates OSPFv3's flags structure
-		} else if _, ok := flags.(map[string]interface{})["nu_flag"]; ok {
-			f := &OSPFv3Flags{}
-			if err := json.Unmarshal(v, &f); err != nil {
-				return err
-			}
-			result.Flags = f
-		} else {
-			f := &UnknownProtoFlags{}
-			if err := json.Unmarshal(v, &f); err != nil {
-				return err
-			}
-			result.Flags = f
 		}
 	}
 	// LSPrefixSID    []*sr.PrefixSIDTLV `json:"ls_prefix_sid,omitempty"`
