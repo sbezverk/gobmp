@@ -466,6 +466,18 @@ func type5(subType uint8, value []byte) string {
 	return s
 }
 
+// ipv6ExtCommunity renders one IPv6 Address Specific Extended Community
+// (RFC 5701) given its Type and Sub-Type octets and the 18-octet value.
+// RFC 8956 Section 6.1 defines the FlowSpec rt-redirect-ipv6 action as
+// transitive only, "with the Type value always 0x000d".
+func ipv6ExtCommunity(typ, subType uint8, value []byte) string {
+	if typ != 0x00 || subType != 0x0d || len(value) < 18 {
+		return type5(subType, value)
+	}
+	return CPFlowspecRedirect + net.IP(value[0:16]).String() + ":" +
+		strconv.Itoa(int(binary.BigEndian.Uint16(value[16:18])))
+}
+
 // 0x08 Flow spec redirect/mirror to IP next-hop [draft-simpson-idr-flowspec-redirect] 2012-09-28
 func type8(subType uint8, value []byte) string {
 	return ECPFlowspec + "redirect_to_ip_next_hop"
@@ -644,8 +656,7 @@ func unmarshalAttrIPv6ExtCommunity(b []byte) []string {
 	}
 	result := make([]string, 0, len(b)/20)
 	for p := 0; p+20 <= len(b); p += 20 {
-		subType := b[p+1]
-		result = append(result, type5(subType, b[p+2:p+20]))
+		result = append(result, ipv6ExtCommunity(b[p], b[p+1], b[p+2:p+20]))
 	}
 	if len(result) == 0 {
 		return nil
