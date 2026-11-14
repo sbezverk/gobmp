@@ -349,17 +349,41 @@ func UnmarshalAllVPNFlowspecNLRI(b []byte, ipv6 bool) ([]*NLRI, error) {
 	return result, nil
 }
 
-// Operator defines a data structure representing Flowspec operator byte
+// Operator defines a data structure representing Flowspec operator byte.
+// Numeric operators (RFC 8955 Section 4.2.1.1) set LTBit/GTBit/EQBit;
+// bitmask operators (Section 4.2.1.2, TCP flags and fragment) set
+// NotBit/MatchBit instead.
 type Operator struct {
-	EOLBit bool
-	ANDBit bool
-	Length uint8
-	LTBit  bool
-	GTBit  bool
-	EQBit  bool
+	EOLBit   bool
+	ANDBit   bool
+	Length   uint8
+	LTBit    bool
+	GTBit    bool
+	EQBit    bool
+	NotBit   bool
+	MatchBit bool
 }
 
-// UnmarshalFlowspecOperator creates an instance of Operator object from a byte
+// isBitmaskSpec reports whether a component type uses the bitmask operator
+// (RFC 8955 Section 4.2.2.9 TCP flags, 4.2.2.12 fragment).
+func isBitmaskSpec(specType uint8) bool {
+	return specType == 9 || specType == 12
+}
+
+// UnmarshalFlowspecBitmaskOperator decodes a bitmask operator byte
+// (RFC 8955 Section 4.2.1.2): e a len 0 0 not match.
+func UnmarshalFlowspecBitmaskOperator(b byte) (*Operator, error) {
+	return &Operator{
+		EOLBit:   b&0x80 != 0,
+		ANDBit:   b&0x40 != 0,
+		Length:   1 << ((b & 0x30) >> 4),
+		NotBit:   b&0x02 != 0,
+		MatchBit: b&0x01 != 0,
+	}, nil
+}
+
+// UnmarshalFlowspecOperator decodes a numeric operator byte
+// (RFC 8955 Section 4.2.1.1): e a len 0 lt gt eq.
 func UnmarshalFlowspecOperator(b byte) (*Operator, error) {
 	o := &Operator{}
 	if b&0x80 == 0x80 {
@@ -383,39 +407,31 @@ func UnmarshalFlowspecOperator(b byte) (*Operator, error) {
 	return o, nil
 }
 
+// operatorJSON is the wire JSON form of Operator, shared by MarshalJSON and
+// UnmarshalJSON so the two round-trip.
+type operatorJSON struct {
+	EOLBit   bool  `json:"end_of_list_bit,omitempty"`
+	ANDBit   bool  `json:"and_bit,omitempty"`
+	Length   uint8 `json:"value_length,omitempty"`
+	LTBit    bool  `json:"less_than,omitempty"`
+	GTBit    bool  `json:"greater_than,omitempty"`
+	EQBit    bool  `json:"equal,omitempty"`
+	NotBit   bool  `json:"not,omitempty"`
+	MatchBit bool  `json:"match,omitempty"`
+}
+
 // MarshalJSON returns a binary representation of Flowspec Operator structure
 func (o *Operator) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		EOLBit bool  `json:"end_of_list_bit,omitempty"`
-		ANDBit bool  `json:"and_bit,omitempty"`
-		Length uint8 `json:"value_length,omitempty"`
-		LTBit  bool  `json:"less_than,omitempty"`
-		GTBit  bool  `json:"greater_than,omitempty"`
-		EQBit  bool  `json:"equal,omitempty"`
-	}{
-		EOLBit: o.EOLBit,
-		ANDBit: o.ANDBit,
-		Length: o.Length,
-		LTBit:  o.LTBit,
-		GTBit:  o.GTBit,
-		EQBit:  o.EQBit,
-	})
-
+	return json.Marshal(operatorJSON(*o))
 }
 
 // UnmarshalJSON creates a new instance of Flowspec Operator
 func (o *Operator) UnmarshalJSON(b []byte) error {
-	// Use type alias to avoid infinite recursion
-	type Alias Operator
-	aux := &struct {
-		*Alias
-	}{
-		Alias: (*Alias)(o),
-	}
+	var aux operatorJSON
 	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-
+	*o = Operator(aux)
 	return nil
 }
 
@@ -556,12 +572,16 @@ func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
 	if len(b) < 2 {
 		return nil, fmt.Errorf("input too short for operator/value sequence: need at least 2 bytes, got %d", len(b))
 	}
+	decode := UnmarshalFlowspecOperator
+	if isBitmaskSpec(b[0]) {
+		decode = UnmarshalFlowspecBitmaskOperator
+	}
 	p := 0
 	// Skip type
 	p++
 	eol := false
 	for !eol && p < len(b) {
-		o, err := UnmarshalFlowspecOperator(b[p])
+		o, err := decode(b[p])
 		if err != nil {
 			return nil, err
 		}
