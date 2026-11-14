@@ -27,7 +27,7 @@ networks:
     name: xr-1-gi1-bgpinjector-gi0
 services:
   gobmp:
-    image: localhost/gobmp:cicd
+    image: ${GOBMP_IMAGE:-localhost/gobmp:cicd}
     container_name: gobmp-multinode
     hostname: gobmp-multinode
     restart: on-failure
@@ -206,9 +206,11 @@ services:
       XR_EVERY_BOOT_CONFIG: /etc/xrd/startup.cfg
       XR_INTERFACES: linux:xr-20,xr_name=Gi0/0/0/0,chksum;linux:xr-00,xr_name=Gi0/0/0/1,chksum
       XR_MGMT_INTERFACES: linux:xr-10,xr_name=Mg0/RP0/CPU0/0,chksum
-    image: sbezverk/xrd-control-plane:26.4.1
+    image: ${XR_IMAGE:-sbezverk/xrd-control-plane:26.4.1}
     networks:
-      mgmt: null
+      mgmt: mgmt
+        ipv4_address: 172.30.0.16
+        ipv6_address: fd04:b400:20::16
       gobmp-xrd-1:
         ipv4_address: 10.1.1.3
       xr-1-gi1-bgpinjector-gi0:
