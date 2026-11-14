@@ -250,10 +250,13 @@ type LSNode struct {
 	Timestamp           string                          `json:"timestamp,omitempty"`
 	IGPRouterID         string                          `json:"igp_router_id,omitempty"`
 	RouterID            string                          `json:"router_id,omitempty"`
+	LocalIPv4RouterID   string                          `json:"local_ipv4_router_id,omitempty"`
+	LocalIPv6RouterID   string                          `json:"local_ipv6_router_id,omitempty"`
 	ASN                 uint32                          `json:"asn,omitempty"`
 	LSID                uint32                          `json:"ls_id,omitempty"`
 	MTID                []*base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
 	AreaID              string                          `json:"area_id"`
+	ISISAreaIDs         []string                        `json:"isis_area_ids,omitempty"` // RFC 9552 §5.3.1.2 TLV 1027, hex-encoded area addresses
 	Protocol            string                          `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID                    `json:"protocol_id,omitempty"`
 	NodeFlags           *bgpls.NodeAttrFlags            `json:"node_flags,omitempty"`

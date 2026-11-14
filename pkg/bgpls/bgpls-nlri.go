@@ -111,6 +111,19 @@ func (ls *NLRI) GetISISAreaID() string {
 	return s
 }
 
+// GetISISAreaIDs returns each IS-IS Area Identifier TLV as a lowercase hex string
+// in wire order (RFC 9552 §5.3.1.2). Invalid area address lengths are skipped.
+func (ls *NLRI) GetISISAreaIDs() []string {
+	var ids []string
+	for _, tlv := range ls.LS {
+		// An IS-IS area address is 1–13 octets (RFC 7898 §3.2.2).
+		if tlv.Type == 1027 && len(tlv.Value) >= 1 && len(tlv.Value) <= 13 {
+			ids = append(ids, hex.EncodeToString(tlv.Value))
+		}
+	}
+	return ids
+}
+
 // GetLocalIPv4RouterID returns string with local Node IPv4 router ID
 func (ls *NLRI) GetLocalIPv4RouterID() string {
 	for _, tlv := range ls.LS {
