@@ -17,15 +17,15 @@ func TestRFC9012_TunnelTLVStructure(t *testing.T) {
 	}{
 		{
 			name:        "SR Policy with single sub-TLV",
-			description: "Type 13 (SR Policy) with Preference sub-TLV",
-			input:       []byte{0x00, 0x0d, 0x00, 0x06, 0x0c, 0x04, 0x00, 0x00, 0x00, 0x64},
-			wantType:    13,
+			description: "Type 15 (SR Policy) with Preference sub-TLV",
+			input:       []byte{0x00, 0x0f, 0x00, 0x06, 0x0c, 0x04, 0x00, 0x00, 0x00, 0x64},
+			wantType:    15,
 			wantLength:  6,
 			wantSubTLVs: 1,
 		},
 		{
-			name:        "SRv6 with multiple sub-TLVs",
-			description: "Type 15 (SRv6) with Encapsulation and Color sub-TLVs",
+			name:        "SR Policy with multiple sub-TLVs",
+			description: "Type 15 (SR Policy) with two sub-TLVs",
 			input: []byte{
 				0x00, 0x0f, 0x00, 0x0c, // Type=15, Length=12
 				0x01, 0x04, 0xaa, 0xbb, 0xcc, 0xdd, // Sub-TLV Type=1, Len=4
@@ -104,7 +104,9 @@ func TestRFC9012_SubTLVLengthEncoding(t *testing.T) {
 	}
 }
 
-// TestRFC9012_TunnelTypes validates common tunnel types from IANA registry
+// TestRFC9012_TunnelTypes validates common tunnel types from the IANA "BGP
+// Tunnel Encapsulation Attribute Tunnel Types" registry: 13 = MPLS in UDP
+// Encapsulation (RFC 7510), 15 = SR Policy (RFC 9830 §6.2).
 func TestRFC9012_TunnelTypes(t *testing.T) {
 	tests := []struct {
 		tunnelType uint16
@@ -115,8 +117,15 @@ func TestRFC9012_TunnelTypes(t *testing.T) {
 		{8, "VXLAN"},
 		{9, "NVGRE"},
 		{11, "MPLS-in-GRE"},
-		{13, "SR Policy"},
-		{15, "SRv6"},
+		{13, "MPLS-in-UDP"},
+		{15, "SR Policy"},
+		{7, "IP in IP"},
+		{10, "MPLS"},
+		{12, "VXLAN GPE"},
+		{17, "SR Tunnel (DEPRECATED)"},
+		{19, "Geneve"},
+		{28, "ESP-Protected-Payload"},
+		{29, "Unknown"},
 	}
 
 	for _, tt := range tests {
@@ -143,7 +152,11 @@ func TestRFC9012_TunnelTypes(t *testing.T) {
 	}
 }
 
-// TestRFC9012_SubTLVTypes validates common sub-TLV types from IANA registry
+// TestRFC9012_SubTLVTypes validates sub-TLV names against the IANA "BGP
+// Tunnel Encapsulation Attribute Sub-TLVs" registry: 3 = IPsec Tunnel
+// Authenticator (DEPRECATED), 4 = Color, 6 = Tunnel Egress Endpoint, 8 = UDP
+// Destination Port (RFC 9012 Sections 3.1, 3.3.2, 3.4.2, 14.6); 12 and 13
+// per RFC 9830 Section 6.3.
 func TestRFC9012_SubTLVTypes(t *testing.T) {
 	tests := []struct {
 		subTLVType uint8
@@ -151,18 +164,37 @@ func TestRFC9012_SubTLVTypes(t *testing.T) {
 	}{
 		{1, "Encapsulation"},
 		{2, "Protocol Type"},
-		{3, "Color"},
-		{4, "Tunnel Egress Endpoint"},
-		{6, "UDP Destination Port"},
+		{3, "IPsec Tunnel Authenticator (DEPRECATED)"},
+		{4, "Color"},
+		{5, "Load-Balancing Block"},
+		{6, "Tunnel Egress Endpoint"},
+		{8, "UDP Destination Port"},
 		{9, "Embedded Label Handling"},
 		{12, "Preference"},
 		{13, "Binding SID"},
+		// Further IANA registrations (RFC 9012 §14.6, RFC 9830 §6.3, RFC 9015)
+		{7, "DS Field"},
+		{10, "MPLS Label Stack"},
+		{11, "Prefix-SID"},
+		{14, "ENLP"},
+		{15, "Priority"},
+		{16, "SPI/SI Representation"},
+		{20, "SRv6 Binding SID"},
+		{21, "Unknown"},
+		{128, "Segment List"},
+		{129, "SR Policy Candidate Path Name"},
+		{130, "SR Policy Name"},
+		{131, "Reverse Segment List (TEMPORARY)"},
+		{200, "Unknown"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create sub-TLV with zero length
+			// Create sub-TLV with zero length (2-octet length for types >= 128)
 			input := []byte{tt.subTLVType, 0x00}
+			if tt.subTLVType >= 128 {
+				input = append(input, 0x00)
+			}
 			subTLVs, err := UnmarshalSubTLVs(input)
 			if err != nil {
 				t.Fatalf("UnmarshalSubTLVs() error = %v", err)
@@ -182,13 +214,13 @@ func TestRFC9012_SubTLVTypes(t *testing.T) {
 
 // TestRFC9012_MultipleTunnels validates multiple tunnel TLVs in single attribute
 func TestRFC9012_MultipleTunnels(t *testing.T) {
-	// Three tunnels: SR Policy, GRE, SRv6
+	// Three tunnels: MPLS-in-UDP, GRE, SR Policy
 	input := []byte{
-		// Tunnel 1: SR Policy
+		// Tunnel 1: MPLS-in-UDP
 		0x00, 0x0d, 0x00, 0x02, 0x0c, 0x00,
 		// Tunnel 2: GRE
 		0x00, 0x02, 0x00, 0x02, 0x01, 0x00,
-		// Tunnel 3: SRv6
+		// Tunnel 3: SR Policy
 		0x00, 0x0f, 0x00, 0x02, 0x03, 0x00,
 	}
 
