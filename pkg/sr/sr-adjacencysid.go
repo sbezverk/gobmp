@@ -76,31 +76,11 @@ func (a *AdjacencySIDTLV) UnmarshalJSON(b []byte) error {
 	}
 	// Flags  AdjacencySIDFlags `json:"flags,omitempty"`
 	if v, ok := objVal["flags"]; ok {
-		var flags interface{}
-		if err := json.Unmarshal(v, &flags); err != nil {
+		flags, err := unmarshalAdjacencySIDFlagsJSON(v)
+		if err != nil {
 			return err
 		}
-		if _, ok := flags.(map[string]interface{})["f_flag"]; ok {
-			// ISIS flags
-			f := &AdjISISFlags{}
-			if err := json.Unmarshal(v, &f); err != nil {
-				return err
-			}
-			result.Flags = f
-		} else if _, ok := flags.(map[string]interface{})["g_flag"]; ok {
-			// OSPF flags
-			f := &AdjOSPFFlags{}
-			if err := json.Unmarshal(v, &f); err != nil {
-				return err
-			}
-			result.Flags = f
-		} else {
-			f := &UnknownProtoFlags{}
-			if err := json.Unmarshal(v, &f); err != nil {
-				return err
-			}
-			result.Flags = f
-		}
+		result.Flags = flags
 	}
 	// Algorithm uint8          `json:"algo"`
 	if v, ok := objVal["weight"]; ok {
@@ -119,6 +99,39 @@ func (a *AdjacencySIDTLV) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+func unmarshalAdjacencySIDFlagsJSON(b []byte) (AdjacencySIDFlags, error) {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return nil, err
+	}
+	if fields == nil {
+		return nil, nil
+	}
+	var flags AdjacencySIDFlags
+	if _, ok := fields["f_flag"]; ok {
+		flags = &AdjISISFlags{}
+	} else if _, ok := fields["g_flag"]; ok {
+		flags = &AdjOSPFFlags{}
+	} else {
+		flags = &UnknownProtoFlags{}
+	}
+	if err := json.Unmarshal(b, flags); err != nil {
+		return nil, err
+	}
+	return flags, nil
+}
+
+func unmarshalAdjacencySIDFlags(b []byte, proto base.ProtoID) (AdjacencySIDFlags, error) {
+	switch proto {
+	case base.ISISL1, base.ISISL2:
+		return UnmarshalAdjISISFlags(b)
+	case base.OSPFv2, base.OSPFv3:
+		return UnmarshalAdjOSPFFlags(b)
+	default:
+		return UnmarshalUnknownProtoFlags(b)
+	}
+}
+
 // UnmarshalAdjacencySIDTLV builds Adjacency SID TLV Object
 func UnmarshalAdjacencySIDTLV(b []byte, proto base.ProtoID) (*AdjacencySIDTLV, error) {
 	if glog.V(6) {
@@ -127,38 +140,12 @@ func UnmarshalAdjacencySIDTLV(b []byte, proto base.ProtoID) (*AdjacencySIDTLV, e
 	if len(b) < 2 {
 		return nil, fmt.Errorf("adjacency SID TLV too short: need at least 2 bytes, have %d", len(b))
 	}
-	asid := AdjacencySIDTLV{}
-	p := 0
-	switch proto {
-	case base.ISISL1:
-		fallthrough
-	case base.ISISL2:
-		f, err := UnmarshalAdjISISFlags(b[p : p+1])
-		if err != nil {
-			return nil, err
-		}
-		asid.Flags = f
-	case base.OSPFv2:
-		fallthrough
-	case base.OSPFv3:
-		f, err := UnmarshalAdjOSPFFlags(b[p : p+1])
-		if err != nil {
-			return nil, err
-		}
-		asid.Flags = f
-	case base.Direct, base.Static, base.BGP, base.RSVPTE, base.SR:
-		f, err := UnmarshalUnknownProtoFlags(b[p : p+1])
-		if err != nil {
-			return nil, err
-		}
-		asid.Flags = f
-	default:
-		f, err := UnmarshalUnknownProtoFlags(b[p : p+1])
-		if err != nil {
-			return nil, err
-		}
-		asid.Flags = f
+	flags, err := unmarshalAdjacencySIDFlags(b[:1], proto)
+	if err != nil {
+		return nil, err
 	}
+	asid := AdjacencySIDTLV{Flags: flags}
+	p := 0
 	p++
 	asid.Weight = b[p]
 	p++

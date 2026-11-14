@@ -225,6 +225,12 @@ func (u *UnicastPrefix) Equal(ou *UnicastPrefix) (bool, []string) {
 	return equal, diffs
 }
 
+// UnknownBGPLSTLV holds a BGP-LS path attribute TLV without a dedicated event mapping.
+type UnknownBGPLSTLV struct {
+	Type     uint16 `json:"type"`
+	ValueHex string `json:"value_hex"`
+}
+
 // LSNode defines a structure of LS Node message
 type LSNode struct {
 	Key                 string                          `json:"_key,omitempty"`
@@ -264,6 +270,7 @@ type LSNode struct {
 	SBFDDiscriminators  []uint32                        `json:"sbfd_discriminators,omitempty"`
 	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition     `json:"flex_algo_definition,omitempty"`
 	OpaqueNodeAttribute []string                        `json:"opaque_node_attribute,omitempty"` // RFC 9552 §5.3.1.5 TLV 1025, hex-encoded raw values
+	UnknownBGPLSTLVs    []UnknownBGPLSTLV               `json:"unknown_bgp_ls_tlvs,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -346,6 +353,8 @@ type LSLink struct {
 	SRv6BGPPeerNodeSID    *srv6.BGPPeerNodeSID          `json:"srv6_bgp_peer_node_sid,omitempty"`
 	SRv6ENDXSID           []*srv6.EndXSIDTLV            `json:"srv6_endx_sid,omitempty"`
 	LSAdjacencySID        []*sr.AdjacencySIDTLV         `json:"ls_adjacency_sid,omitempty"`
+	SRv6LANEndXSID        []*srv6.LANEndXSIDTLV         `json:"srv6_lan_endx_sid,omitempty"`
+	LSLANAdjacencySID     []*sr.LANAdjacencySIDTLV      `json:"ls_lan_adjacency_sid,omitempty"`
 	LinkMSD               []*base.MSDTV                 `json:"link_msd,omitempty"`
 	AppSpecLinkAttr       []*bgpls.AppSpecLinkAttr      `json:"app_spec_link_attr,omitempty"`
 	UnidirLinkDelay       uint32                        `json:"unidir_link_delay,omitempty"`
@@ -356,10 +365,11 @@ type LSLink struct {
 	UnidirAvailableBW     uint32                        `json:"unidir_available_bw,omitempty"`
 	UnidirBWUtilization   uint32                        `json:"unidir_bw_utilization,omitempty"`
 	// A nil bandwidth means there was no valid TLV. A pointer to zero preserves a reported zero.
-	UnidirResidualBWKbps    *uint64  `json:"unidir_residual_bw_kbps,omitempty"`
-	UnidirAvailableBWKbps   *uint64  `json:"unidir_available_bw_kbps,omitempty"`
-	UnidirBWUtilizationKbps *uint64  `json:"unidir_bw_utilization_kbps,omitempty"`
-	OpaqueLinkAttribute     []string `json:"opaque_link_attribute,omitempty"` // RFC 9552 §5.3.2.6 TLV 1097, hex-encoded raw values
+	UnidirResidualBWKbps    *uint64           `json:"unidir_residual_bw_kbps,omitempty"`
+	UnidirAvailableBWKbps   *uint64           `json:"unidir_available_bw_kbps,omitempty"`
+	UnidirBWUtilizationKbps *uint64           `json:"unidir_bw_utilization_kbps,omitempty"`
+	OpaqueLinkAttribute     []string          `json:"opaque_link_attribute,omitempty"` // RFC 9552 §5.3.2.6 TLV 1097, hex-encoded raw values
+	UnknownBGPLSTLVs        []UnknownBGPLSTLV `json:"unknown_bgp_ls_tlvs,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -613,6 +623,7 @@ type LSPrefix struct {
 	FlexAlgoPrefixMetric  []*bgpls.FlexAlgoPrefixMetric `json:"flex_algo_prefix_metric,omitempty"`
 	SRv6Locator           *srv6.LocatorTLV              `json:"srv6_locator,omitempty"`
 	OpaquePrefixAttribute []string                      `json:"opaque_prefix_attribute,omitempty"` // RFC 9552 §5.3.3.6 TLV 1157, hex-encoded raw values
+	UnknownBGPLSTLVs      []UnknownBGPLSTLV             `json:"unknown_bgp_ls_tlvs,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
