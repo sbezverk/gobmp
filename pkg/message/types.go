@@ -260,6 +260,7 @@ type LSNode struct {
 	SRLocalBlock        *sr.LocalBlock                  `json:"sr_local_block,omitempty"`
 	SRv6CapabilitiesTLV *srv6.CapabilityTLV             `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             []*base.MSDTV                   `json:"node_msd,omitempty"`
+	SBFDDiscriminators  []uint32                        `json:"sbfd_discriminators,omitempty"`
 	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition     `json:"flex_algo_definition,omitempty"`
 	OpaqueNodeAttribute []string                        `json:"opaque_node_attribute,omitempty"` // RFC 9552 §5.3.1.5 TLV 1025, hex-encoded raw values
 	// Values are assigned based on PerPeerHeader flags

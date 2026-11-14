@@ -88,6 +88,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 		if msd, err := lsnode.GetNodeMSD(); err == nil {
 			msg.NodeMSD = msd
 		}
+		msg.SBFDDiscriminators = lsnode.GetNodeSBFDDiscriminators()
 		if cap, err := lsnode.GetNodeSRCapabilities(msg.ProtocolID); err == nil {
 			msg.SRCapabilities = cap
 		}

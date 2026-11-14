@@ -184,6 +184,22 @@ func (ls *NLRI) GetRemoteIPv6RouterID() string {
 	return ""
 }
 
+// GetNodeSBFDDiscriminators returns the discriminators from well-formed S-BFD
+// Discriminators TLVs (RFC 9247 §3), in wire order.
+func (ls *NLRI) GetNodeSBFDDiscriminators() []uint32 {
+	var discriminators []uint32
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1032 || len(tlv.Value) < 4 || len(tlv.Value)%4 != 0 {
+			continue
+		}
+		for offset := 0; offset < len(tlv.Value); offset += 4 {
+			discriminators = append(discriminators, binary.BigEndian.Uint32(tlv.Value[offset:offset+4]))
+		}
+	}
+
+	return discriminators
+}
+
 // GetNodeMSD returns Node's MSD object
 func (ls *NLRI) GetNodeMSD() ([]*base.MSDTV, error) {
 	for _, tlv := range ls.LS {
