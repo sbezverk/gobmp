@@ -27,6 +27,8 @@ type PeerStateChange struct {
 	Sequence        int            `json:"sequence,omitempty"`
 	Hash            string         `json:"hash,omitempty"`
 	RouterHash      string         `json:"router_hash,omitempty"`
+	RouterName      string         `json:"router_name,omitempty"`  // sysName from the BMP Initiation message
+	RouterDescr     string         `json:"router_descr,omitempty"` // sysDescr from the BMP Initiation message
 	Name            string         `json:"name,omitempty"`
 	RemoteBGPID     string         `json:"remote_bgp_id,omitempty"`
 	RouterIP        string         `json:"router_ip,omitempty"`
@@ -248,6 +250,7 @@ type LSNode struct {
 	LSID                uint32                          `json:"ls_id,omitempty"`
 	MTID                []*base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
 	AreaID              string                          `json:"area_id"`
+	ISISAreaIDs         []string                        `json:"isis_area_ids,omitempty"` // RFC 9552 §5.3.1.2 TLV 1027, hex-encoded area addresses
 	Protocol            string                          `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID                    `json:"protocol_id,omitempty"`
 	NodeFlags           *bgpls.NodeAttrFlags            `json:"node_flags,omitempty"`
@@ -350,7 +353,11 @@ type LSLink struct {
 	UnidirResidualBW      uint32                        `json:"unidir_residual_bw,omitempty"`
 	UnidirAvailableBW     uint32                        `json:"unidir_available_bw,omitempty"`
 	UnidirBWUtilization   uint32                        `json:"unidir_bw_utilization,omitempty"`
-	OpaqueLinkAttribute   []string                      `json:"opaque_link_attribute,omitempty"` // RFC 9552 §5.3.2.6 TLV 1097, hex-encoded raw values
+	// A nil bandwidth means there was no valid TLV. A pointer to zero preserves a reported zero.
+	UnidirResidualBWKbps    *uint64  `json:"unidir_residual_bw_kbps,omitempty"`
+	UnidirAvailableBWKbps   *uint64  `json:"unidir_available_bw_kbps,omitempty"`
+	UnidirBWUtilizationKbps *uint64  `json:"unidir_bw_utilization_kbps,omitempty"`
+	OpaqueLinkAttribute     []string `json:"opaque_link_attribute,omitempty"` // RFC 9552 §5.3.2.6 TLV 1097, hex-encoded raw values
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`

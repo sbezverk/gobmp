@@ -74,6 +74,7 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 			fallthrough
 		case base.ISISL2:
 			msg.AreaID = lsnode.GetISISAreaID()
+			msg.ISISAreaIDs = lsnode.GetISISAreaIDs()
 		case base.OSPFv2, base.Direct, base.Static, base.OSPFv3, base.BGP, base.RSVPTE, base.SR:
 		}
 		// RFC 9552 §5.3.1.4: TLVs 1028 and 1029 can both be present.
