@@ -77,14 +77,13 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 			msg.ISISAreaIDs = lsnode.GetISISAreaIDs()
 		case base.OSPFv2, base.Direct, base.Static, base.OSPFv3, base.BGP, base.RSVPTE, base.SR:
 		}
-		// RFC 9552 Sections 5.2.1 and 5.3.1.4: TLVs 1028 (IPv4) and 1029 (IPv6) local
-		// router-ID are chosen by which TLV is present in the attribute, never
-		// by the BMP peer's address family (V-flag) - both may legally be
-		// absent, present alone, or present together. Prefer IPv4, fall back
-		// to IPv6.
-		msg.RouterID = lsnode.GetLocalIPv4RouterID()
+		// RFC 9552 §5.3.1.4: TLVs 1028 and 1029 can both be present.
+		msg.LocalIPv4RouterID = lsnode.GetLocalIPv4RouterID()
+		msg.LocalIPv6RouterID = lsnode.GetLocalIPv6RouterID()
+		// Preserve the IPv4 preference of the legacy router_id field.
+		msg.RouterID = msg.LocalIPv4RouterID
 		if msg.RouterID == "" {
-			msg.RouterID = lsnode.GetLocalIPv6RouterID()
+			msg.RouterID = msg.LocalIPv6RouterID
 		}
 		if msd, err := lsnode.GetNodeMSD(); err == nil {
 			msg.NodeMSD = msd
