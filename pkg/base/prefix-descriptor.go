@@ -30,8 +30,13 @@ func (pd *PrefixDescriptor) GetPrefixMTID() *MultiTopologyIdentifier {
 // GetPrefixIPReachability returns BGP route struct encoded in Prefix Descriptor TLV
 func (pd *PrefixDescriptor) GetPrefixIPReachability(ipv4 bool) *Route {
 	if tlv, ok := pd.PrefixTLV[265]; ok {
-		// Route incoded in PrefixTLV does not carry Path ID, hence passing "false" to UnmarshalRoutes
-		routes, err := UnmarshalRoutes(tlv.Value, false)
+		// The TLV carries no Path ID (RFC 9552 §5.2.3.2), so there is nothing
+		// to retry: a prefix over 32 bits, or 128 for IPv6, is rejected.
+		maxBits := uint8(128)
+		if ipv4 {
+			maxBits = 32
+		}
+		routes, err := unmarshalRoutes(tlv.Value, false, false, maxBits)
 		if err != nil {
 			return nil
 		}

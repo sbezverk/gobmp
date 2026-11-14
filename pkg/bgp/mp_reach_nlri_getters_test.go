@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/sbezverk/gobmp/pkg/base"
 )
 
 // ---------------------------------------------------------------------------
@@ -818,5 +820,42 @@ func TestMPReachNLRI_GetNLRI72_WrongSAFI(t *testing.T) {
 	notFound := &NLRINotFoundError{}
 	if !errors.As(err, &notFound) {
 		t.Fatalf("GetNLRI72() with SAFI=71: expected NLRINotFoundError, got %T: %v", err, err)
+	}
+}
+
+// TestGetNLRIPrefixBound checks that SAFI 1 and 2 getters take the bound from the
+// AFI: /32 is the longest IPv4 prefix and /128 the longest IPv6 one.
+func TestGetNLRIPrefixBound(t *testing.T) {
+	v4 := func(bits byte) []byte { return append([]byte{bits}, make([]byte, (int(bits)+7)/8)...) }
+	tests := []struct {
+		name    string
+		afi     uint16
+		safi    uint8
+		nlri    []byte
+		wantErr bool
+	}{
+		{"unicast IPv4 /32", 1, 1, v4(32), false},
+		{"unicast IPv4 /33", 1, 1, v4(33), true},
+		{"unicast IPv6 /128", 2, 1, v4(128), false},
+		{"unicast IPv6 /129", 2, 1, v4(129), true},
+		{"multicast IPv4 /32", 1, 2, v4(32), false},
+		{"multicast IPv4 /33", 1, 2, v4(33), true},
+		{"multicast IPv6 /128", 2, 2, v4(128), false},
+		{"multicast IPv6 /129", 2, 2, v4(129), true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reach := &MPReachNLRI{AddressFamilyID: tt.afi, SubAddressFamilyID: tt.safi, NLRI: tt.nlri}
+			unreach := &MPUnReachNLRI{AddressFamilyID: tt.afi, SubAddressFamilyID: tt.safi, WithdrawnRoutes: tt.nlri}
+			get := []func() (*base.MPNLRI, error){reach.GetNLRIUnicast, unreach.GetNLRIUnicast}
+			if tt.safi == 2 {
+				get = []func() (*base.MPNLRI, error){reach.GetNLRIMulticast, unreach.GetNLRIMulticast}
+			}
+			for _, f := range get {
+				if _, err := f(); (err != nil) != tt.wantErr {
+					t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+				}
+			}
+		})
 	}
 }
