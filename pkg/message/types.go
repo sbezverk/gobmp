@@ -248,6 +248,7 @@ type LSNode struct {
 	LSID                uint32                          `json:"ls_id,omitempty"`
 	MTID                []*base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
 	AreaID              string                          `json:"area_id"`
+	ISISAreaIDs         []string                        `json:"isis_area_ids,omitempty"` // RFC 9552 §5.3.1.2 TLV 1027, hex-encoded area addresses
 	Protocol            string                          `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID                    `json:"protocol_id,omitempty"`
 	NodeFlags           *bgpls.NodeAttrFlags            `json:"node_flags,omitempty"`
