@@ -241,8 +241,9 @@ func (f *OSPFFlags) GetPrefixAttrFlagsByte() byte {
 	if f.AFlag {
 		b += 0x80
 	}
+	// RFC 7684 Section 2.1: N is 0x40, matching UnmarshalOSPFFlags.
 	if f.NFlag {
-		b += 0x20
+		b += 0x40
 	}
 
 	return b

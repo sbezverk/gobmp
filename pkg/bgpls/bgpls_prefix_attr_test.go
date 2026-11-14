@@ -198,6 +198,9 @@ func TestUnmarshalOSPFFlags(t *testing.T) {
 	if !got2.NFlag {
 		t.Error("NFlag should be set")
 	}
+	if b := got2.GetPrefixAttrFlagsByte(); b != 0x40 {
+		t.Errorf("GetPrefixAttrFlagsByte() = 0x%X, want 0x40", b)
+	}
 }
 
 func TestUnmarshalOSPFv3Flags(t *testing.T) {
