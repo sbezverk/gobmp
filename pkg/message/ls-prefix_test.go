@@ -63,6 +63,9 @@ func TestLSPrefixSourceRouterIDsWire(t *testing.T) {
 	ospfv2WithFlags = append(ospfv2WithFlags, ospf...)
 	ospfv3WithFlags := append(messageInterASTLV(1170, []byte{0x01}), generic6...)
 	ospfv3WithFlags = append(ospfv3WithFlags, ospf...)
+	// RFC 9085 §2.3.5: Range Size 100 with a nested Prefix-SID of 42.
+	ospfv3WithFlags = append(ospfv3WithFlags,
+		messageInterASTLV(1159, []byte{0, 0, 0, 100, 0x04, 0x86, 0, 8, 0, 128, 0, 0, 0, 0, 0, 42})...)
 	tests := []struct {
 		name string
 		tlvs []byte
@@ -90,8 +93,10 @@ func TestLSPrefixSourceRouterIDsWire(t *testing.T) {
 		{"invalid OSPF with valid generic", append(append([]byte(nil), badOSPF...), generic4...), false, map[string]string{
 			"source_router_identifier": "192.0.2.1",
 		}},
-		{"OSPFv3 with flags", ospfv3WithFlags, true, map[string]string{
+		{"OSPFv3 with flags and range", ospfv3WithFlags, true, map[string]string{
 			"source_router_id": "198.51.100.2", "source_router_identifier": "2001:db8::1", "source_ospf_router_id": "198.51.100.2",
+			"flags": `{"n_flag":false,"dn_flag":false,"p_flag":false,"la_flag":false,"nu_flag":true}`,
+			"range": `{"flags":{"ia_flag":false},"range_size":100,"prefix_sid":[{"flags":{"np_flag":false,"m_flag":false,"e_flag":false,"v_flag":false,"l_flag":false},"algo":128,"prefix_sid":42}]}`,
 		}},
 		{"both invalid", append(append([]byte(nil), badGeneric...), badOSPF...), false, nil},
 		{"both absent", nil, false, nil},
@@ -153,6 +158,11 @@ func TestLSPrefixSourceRouterIDsWire(t *testing.T) {
 					var id string
 					if err := json.Unmarshal(raw, &id); err != nil || id != want {
 						t.Errorf("%s = %s, want %q (decode error: %v)", key, raw, want, err)
+					}
+				}
+				for _, key := range []string{"flags", "range"} {
+					if want, exists := tt.want[key]; exists && string(got.PrefixAttrTLVs[key]) != want {
+						t.Errorf("%s = %s, want %s", key, got.PrefixAttrTLVs[key], want)
 					}
 				}
 			}
