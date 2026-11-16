@@ -45,11 +45,13 @@ func (rm *RouteMirror) Size() int {
 	return size
 }
 
-// Errored reports whether an Info TLV carries code 0 "Errored PDU" (RFC 7854
-// Section 4.7): the contained message was treated as withdrawn (RFC 7606).
+// Errored reports whether an Information TLV carries code 0 "Errored PDU"
+// (RFC 7854 Section 4.7): the contained message was treated as withdrawn
+// (RFC 7606). The Information TLV value is a 2-byte code; a TLV of any other
+// length is not taken as Errored PDU.
 func (rm *RouteMirror) Errored() bool {
 	for _, tlv := range rm.TLVs {
-		if tlv.Type == RouteMirrorInfoTLV && len(tlv.Value) >= 2 &&
+		if tlv.Type == RouteMirrorInfoTLV && len(tlv.Value) == 2 &&
 			RouteMirrorTLVInfoCode(binary.BigEndian.Uint16(tlv.Value[:2])) == RouteMirrorInfoCodeErrored {
 			return true
 		}

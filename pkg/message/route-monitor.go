@@ -42,6 +42,7 @@ func (p *producer) produceRouteMessage(msg bmp.Message) {
 			glog.Errorf("route mirror message is nil")
 			return
 		}
+		msg.PeerHeader = msg.PeerHeader.WithoutPolicyFlag()
 		update, err = routeMirrorMsg.GetBGPUpdate()
 		if err != nil {
 			glog.Errorf("failed to get BGP update from route mirror message with error: %+v", err)

@@ -3,10 +3,14 @@ package message
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
+	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
+	"github.com/sbezverk/gobmp/pkg/parser"
 )
 
 func routeMirrorLSUpdatePDU() []byte {
@@ -170,6 +174,126 @@ func TestRouteMirrorErroredPDUTreatAsWithdraw(t *testing.T) {
 	}
 }
 
+// bmpFrame returns a BMP message of msgType (RFC 7854 Section 4.1) whose
+// Per-Peer Header matches makePeerHeader(t, peerType, flags), followed by body.
+func bmpFrame(msgType byte, peerType bmp.PeerType, flags byte, body []byte) []byte {
+	ph := make([]byte, bmp.PerPeerHeaderLength)
+	ph[0], ph[1] = byte(peerType), flags
+	binary.BigEndian.PutUint32(ph[26:30], 65000)
+	copy(ph[30:34], []byte{10, 0, 0, 1})
+	frame := append([]byte{3, 0, 0, 0, 0, msgType}, ph...)
+	frame = append(frame, body...)
+	binary.BigEndian.PutUint32(frame[1:5], uint32(len(frame)))
+	return frame
+}
+
+// parseFrames runs frames through the BMP parser and returns its output.
+func parseFrames(t *testing.T, frames ...[]byte) []bmp.Message {
+	t.Helper()
+	queue := make(chan []byte, len(frames))
+	out := make(chan bmp.Message, len(frames))
+	for _, f := range frames {
+		queue <- f
+	}
+	close(queue)
+	parser.NewParser(queue, out, make(chan struct{}), nil).Start()
+	close(out)
+	var msgs []bmp.Message
+	for m := range out {
+		msgs = append(msgs, m)
+	}
+	if len(msgs) != len(frames) {
+		t.Fatalf("parser produced %d messages from %d frames", len(msgs), len(frames))
+	}
+	return msgs
+}
+
+// TestRouteMirrorParserToProducer sends Route Mirroring and Route Monitoring
+// frames through the parser and producer, both after Peer Up and through the
+// pre-Peer Up replay, and checks the route events published.
+func TestRouteMirrorParserToProducer(t *testing.T) {
+	const (
+		flagL   = 0x40 // RFC 7854 Section 4.2
+		mirror  = byte(bmp.RouteMirrorMsg)
+		monitor = byte(bmp.RouteMonitorMsg)
+	)
+	attrs := []byte{
+		0x40, 0x01, 0x01, 0x00, // ORIGIN IGP
+		0x40, 0x02, 0x06, 0x02, 0x01, 0x00, 0x00, 0xfd, 0xe8, // AS_PATH 65000
+	}
+	v4Attrs := append(append([]byte{}, attrs...), 0x40, 0x03, 0x04, 192, 0, 2, 1) // NEXT_HOP
+	v4NLRI := []byte{24, 198, 51, 100}                                            // 198.51.100.0/24
+	mpReach := []byte{0x00, 0x02, 0x01, 0x10}                                     // AFI 2, SAFI 1, next hop length 16
+	mpReach = append(mpReach, 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+	mpReach = append(mpReach, 0x00, 48, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x01) // reserved, 2001:db8:1::/48
+	v6Attrs := append(append([]byte{}, attrs...), 0x80, 0x0e, byte(len(mpReach)))
+	v6Attrs = append(v6Attrs, mpReach...)
+	v4Update := routeMirrorUpdatePDU(nil, v4Attrs, v4NLRI)
+	v4Withdraw := routeMirrorUpdatePDU(v4NLRI, nil, nil)
+	// An Information TLV with a 3-byte value starting with code 0.
+	overlongInfo := []byte{0, byte(bmp.RouteMirrorInfoTLV), 0, 3, 0, 0, 0}
+
+	type event struct {
+		action   string
+		postPol  bool
+		isLocRIB bool
+	}
+	tests := []struct {
+		name     string
+		msgType  byte
+		peerType bmp.PeerType
+		flags    byte
+		body     []byte
+		want     []event
+	}{
+		{"errored IPv4 NLRI", mirror, bmp.PeerType0, 0, routeMirrorWire(v4Update, 0), []event{{action: "del"}}},
+		{"errored IPv6 MP_REACH", mirror, bmp.PeerType0, 0, routeMirrorWire(routeMirrorUpdatePDU(nil, v6Attrs, nil), 0), []event{{action: "del"}}},
+		{"errored empty UPDATE is not End-of-RIB", mirror, bmp.PeerType0, 0, routeMirrorWire(routeMirrorUpdatePDU(nil, nil, nil), 0), nil},
+		{"overlong Information TLV is not Errored PDU", mirror, bmp.PeerType0, 0, append(overlongInfo, routeMirrorWire(v4Update)...), []event{{action: "add"}}},
+		{"errored Loc-RIB mirror ignored", mirror, bmp.PeerType3, 0, routeMirrorWire(v4Update, 0), nil},
+		{"Loc-RIB mirror ignored", mirror, bmp.PeerType3, 0, routeMirrorWire(v4Update), nil},
+		{"mirror with L set has no post-policy label", mirror, bmp.PeerType0, flagL, routeMirrorWire(v4Update), []event{{action: "add"}}},
+		{"errored mirror with L set has no post-policy label", mirror, bmp.PeerType0, flagL, routeMirrorWire(v4Update, 0), []event{{action: "del"}}},
+		{"post-policy Route Monitoring withdrawal", monitor, bmp.PeerType0, flagL, v4Withdraw, []event{{action: "del", postPol: true}}},
+		{"Loc-RIB Route Monitoring withdrawal", monitor, bmp.PeerType3, 0, v4Withdraw, []event{{action: "del", isLocRIB: true}}},
+	}
+	for _, tt := range tests {
+		for _, replay := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/replay=%v", tt.name, replay), func(t *testing.T) {
+				msg := parseFrames(t, bmpFrame(tt.msgType, tt.peerType, tt.flags, tt.body))[0]
+				rec := &recordingPublisher{}
+				p := NewProducer(rec, false).(*producer)
+				if replay {
+					// A Loc-RIB message replays only for a family its Peer Up
+					// declares (RFC 9069 Section 5.2).
+					up := buildPeerUpMessage(t, "198.51.100.1")
+					up.SentOpen = addPathOpen(t, []bgp.AFISAFI{{AFI: 1, SAFI: 1}, {AFI: 2, SAFI: 1}}, nil)
+					up.ReceivedOpen = up.SentOpen
+					p.producingWorker(msg)
+					p.producingWorker(bmp.Message{PeerHeader: makePeerHeader(t, tt.peerType, 0), Payload: up})
+				} else {
+					close(p.speakerReady)
+					p.producingWorker(msg)
+				}
+				var got []event
+				for _, m := range rec.msgs {
+					if m.msgType == bmp.PeerStateChangeMsg {
+						continue
+					}
+					var up UnicastPrefix
+					if err := json.Unmarshal(m.payload, &up); err != nil {
+						t.Fatalf("unmarshal published message: %v", err)
+					}
+					got = append(got, event{up.Action, up.IsAdjRIBInPost, up.IsLocRIB})
+				}
+				if !reflect.DeepEqual(got, tt.want) {
+					t.Fatalf("events = %+v, want %+v", got, tt.want)
+				}
+			})
+		}
+	}
+}
+
 func TestPrePeerUpRouteMirrorByteAccounting(t *testing.T) {
 	payload := &bmp.RouteMirror{TLVs: []bmp.TLV{{
 		Type:  bmp.RouteMirrorBGPMsgTLV,
@@ -182,6 +306,19 @@ func TestPrePeerUpRouteMirrorByteAccounting(t *testing.T) {
 	})
 	if len(p.prePeerUp) != 0 || p.prePeerUpBytes != 0 {
 		t.Fatalf("oversized mirror retained: messages=%d bytes=%d", len(p.prePeerUp), p.prePeerUpBytes)
+	}
+}
+
+// A Loc-RIB Route Mirroring message is dropped before the pre-Peer Up buffer,
+// so it takes no buffer space (RFC 9069 Section 5.5).
+func TestPrePeerUpLocRIBRouteMirrorNotBuffered(t *testing.T) {
+	p := NewProducer(&recordingPublisher{}, false).(*producer)
+	p.producingWorker(bmp.Message{
+		PeerHeader: makePeerHeader(t, bmp.PeerType3, 0),
+		Payload:    &bmp.RouteMirror{TLVs: []bmp.TLV{{Type: bmp.RouteMirrorInfoTLV, Value: []byte{0, 0}}}},
+	})
+	if len(p.prePeerUp) != 0 || p.prePeerUpBytes != 0 {
+		t.Fatalf("Loc-RIB mirror buffered: messages=%d bytes=%d", len(p.prePeerUp), p.prePeerUpBytes)
 	}
 }
 

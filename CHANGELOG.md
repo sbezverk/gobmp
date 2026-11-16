@@ -12,7 +12,9 @@ Message updates and major project changes should be documented here.
 
 #### Fixed
 
-- A BMP Route Mirroring message whose Information TLV has code 0 "Errored PDU" (RFC 7854 §4.7) published the routes of its BGP UPDATE as `add`: the router treated that UPDATE as withdrawn (RFC 7606 §2), so announced IPv4 and MP_REACH_NLRI routes are now published as `del`, and such a message never produces an End-of-RIB marker
+- A BMP Route Mirroring message whose Information TLV has code 0 "Errored PDU" (RFC 7854 §4.7) published the routes of its BGP UPDATE as `add`: the router treated that UPDATE as withdrawn (RFC 7606 §2), so announced IPv4 and MP_REACH_NLRI routes of an UPDATE gobmp can decode are now published as `del`, and such a message never produces an End-of-RIB marker. Only a 2-byte Information TLV value is read as a code. An UPDATE gobmp cannot decode is still dropped
+- Route Mirroring messages from a Loc-RIB peer are ignored (RFC 9069 §5.5)
+- Routes from a Route Mirroring message no longer carry a post-policy label when the per-peer header L flag is set; the flag has no significance for Route Mirroring (RFC 7854 §4.2)
 
 ### 2026-11-12
 

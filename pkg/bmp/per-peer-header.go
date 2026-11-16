@@ -175,6 +175,15 @@ func (p *PerPeerHeader) IsPostPolicy() (bool, error) {
 	return false, ErrInvFlagRequestForPeerType
 }
 
+// WithoutPolicyFlag returns a copy of the header with the L flag cleared. The
+// L flag has no significance for Route Mirroring messages (RFC 7854 Section
+// 4.2), so a mirrored message carries no post-policy label.
+func (p *PerPeerHeader) WithoutPolicyFlag() *PerPeerHeader {
+	c := *p
+	c.flagL = false
+	return &c
+}
+
 // Is4ByteASN returns true if AS_PATH uses 4-byte ASNs, false for 2-byte ASNs.
 // Per RFC 7854 §4.2: A flag set to 1 indicates legacy 2-byte AS_PATH format;
 // A flag set to 0 indicates 4-byte AS_PATH format (RFC 6793). Returns
