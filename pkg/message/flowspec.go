@@ -238,7 +238,7 @@ func makeGenericSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 	if s.OpVal, err = makeOpValPair(pairs); err != nil {
 		return nil, err
 	}
-
+	s.NormalizeBitmaskOperators()
 	return s, nil
 }
 

@@ -75,3 +75,54 @@ func TestOperator_JSONRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+// An Operator marshalled by value bypasses MarshalJSON and is written with
+// its Go field names; the reader still accepts that form.
+func TestOperator_JSONReadsGoFieldNames(t *testing.T) {
+	for _, orig := range []Operator{
+		{EOLBit: true, ANDBit: true, Length: 2, LTBit: true, GTBit: true, EQBit: true},
+		{Length: 1, NotBit: true, MatchBit: true},
+	} {
+		b, err := json.Marshal(orig)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := Operator{EQBit: true, Length: 7}
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatal(err)
+		}
+		if got != orig {
+			t.Errorf("%s: got %+v, want %+v", b, got, orig)
+		}
+	}
+}
+
+// JSON published before types 9 and 12 were decoded as bitmask operators
+// carries the NOT bit as greater_than and the Match bit as equal.
+func TestGenericSpec_ReadsHistoricalBitmaskKeys(t *testing.T) {
+	tests := []struct {
+		name string
+		json string
+		want Operator
+	}{
+		{"tcp_flags_equal", `{"type":9,"op_val_pairs":[{"operator":{"end_of_list_bit":true,"value_length":1,"equal":true},"value":"Ag=="}]}`,
+			Operator{EOLBit: true, Length: 1, MatchBit: true}},
+		{"fragment_greater_than_equal", `{"type":12,"op_val_pairs":[{"operator":{"and_bit":true,"greater_than":true,"equal":true},"value":"AQ=="}]}`,
+			Operator{ANDBit: true, NotBit: true, MatchBit: true}},
+		{"fragment_rfc_keys", `{"type":12,"op_val_pairs":[{"operator":{"not":true},"value":"AQ=="}]}`,
+			Operator{NotBit: true}},
+		{"protocol_numeric_unchanged", `{"type":3,"op_val_pairs":[{"operator":{"greater_than":true,"equal":true},"value":"Bg=="}]}`,
+			Operator{GTBit: true, EQBit: true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var g GenericSpec
+			if err := json.Unmarshal([]byte(tt.json), &g); err != nil {
+				t.Fatal(err)
+			}
+			if got := *g.OpVal[0].Op; got != tt.want {
+				t.Errorf("got %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}

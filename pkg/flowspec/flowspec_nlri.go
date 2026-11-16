@@ -425,14 +425,37 @@ func (o *Operator) MarshalJSON() ([]byte, error) {
 	return json.Marshal(operatorJSON(*o))
 }
 
-// UnmarshalJSON creates a new instance of Flowspec Operator
+// operatorFields is Operator without its JSON methods, so its fields read the
+// Go field names that json.Marshal writes for an Operator value ("EQBit").
+type operatorFields Operator
+
+// UnmarshalJSON creates a new instance of Flowspec Operator. It reads both the
+// published keys ("equal") and the Go field names ("EQBit").
 func (o *Operator) UnmarshalJSON(b []byte) error {
-	var aux operatorJSON
-	if err := json.Unmarshal(b, &aux); err != nil {
-		return err
+	*o = Operator{}
+	return json.Unmarshal(b, &struct {
+		*operatorJSON
+		*operatorFields
+	}{(*operatorJSON)(o), (*operatorFields)(o)})
+}
+
+// NormalizeBitmaskOperators maps the keys published for TCP flags (type 9)
+// and fragment (type 12) operators before they were decoded as bitmask
+// operators (RFC 8955 Section 4.2.1.2), where the NOT bit came out as
+// greater_than and the Match bit as equal. A bit is set when either its
+// RFC key or its historical key is true.
+func (t *GenericSpec) NormalizeBitmaskOperators() {
+	if !isBitmaskSpec(t.SpecType) {
+		return
 	}
-	*o = Operator(aux)
-	return nil
+	for _, ov := range t.OpVal {
+		if ov == nil || ov.Op == nil {
+			continue
+		}
+		ov.Op.NotBit = ov.Op.NotBit || ov.Op.GTBit
+		ov.Op.MatchBit = ov.Op.MatchBit || ov.Op.EQBit
+		ov.Op.GTBit, ov.Op.EQBit = false, false
+	}
 }
 
 // PrefixSpec defines a structure of Flowspec Type 1 and Type 2 (Destination/Source Prefix) spec.
@@ -649,7 +672,7 @@ func (t *GenericSpec) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-
+	t.NormalizeBitmaskOperators()
 	return nil
 }
 

@@ -186,6 +186,49 @@ func TestFlowspecJSONRoundTrip_BitmaskOperator(t *testing.T) {
 	}
 }
 
+// TestFlowspecUnmarshalJSON_HistoricalBitmaskKeys reads TCP flags and
+// fragment components published before they were decoded as bitmask
+// operators, when the NOT bit came out as greater_than and the Match bit as
+// equal, and checks that they read and republish as the RFC 8955 bits.
+func TestFlowspecUnmarshalJSON_HistoricalBitmaskKeys(t *testing.T) {
+	input := buildFlowspecJSON(t, []map[string]interface{}{
+		{"type": float64(9), "op_val_pairs": []interface{}{map[string]interface{}{
+			"operator": map[string]interface{}{"value_length": float64(1), "equal": true},
+			"value":    "Ag==",
+		}}},
+		{"type": float64(12), "op_val_pairs": []interface{}{map[string]interface{}{
+			"operator": map[string]interface{}{"end_of_list_bit": true, "greater_than": true},
+			"value":    "AQ==",
+		}}},
+	})
+	var fs Flowspec
+	if err := fs.UnmarshalJSON(input); err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+	want := []flowspec.Operator{
+		{Length: 1, MatchBit: true},
+		{EOLBit: true, NotBit: true},
+	}
+	for i, w := range want {
+		if got := *fs.Spec[i].(*flowspec.GenericSpec).OpVal[0].Op; got != w {
+			t.Errorf("spec %d: got %+v, want %+v", i, got, w)
+		}
+	}
+	b, err := json.Marshal(&fs)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var again Flowspec
+	if err := again.UnmarshalJSON(b); err != nil {
+		t.Fatalf("UnmarshalJSON republished: %v", err)
+	}
+	for i, w := range want {
+		if got := *again.Spec[i].(*flowspec.GenericSpec).OpVal[0].Op; got != w {
+			t.Errorf("republished spec %d: got %+v, want %+v", i, got, w)
+		}
+	}
+}
+
 func TestFlowspecUnmarshalJSON_InvalidBitmaskBits(t *testing.T) {
 	for _, key := range []string{"not", "match"} {
 		input := buildFlowspecJSON(t, []map[string]interface{}{{
