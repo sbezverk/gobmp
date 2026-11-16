@@ -439,11 +439,12 @@ func (o *Operator) UnmarshalJSON(b []byte) error {
 	}{(*operatorJSON)(o), (*operatorFields)(o)})
 }
 
-// NormalizeBitmaskOperators maps the keys published for TCP flags (type 9)
-// and fragment (type 12) operators before they were decoded as bitmask
-// operators (RFC 8955 Section 4.2.1.2), where the NOT bit came out as
-// greater_than and the Match bit as equal. A bit is set when either its
-// RFC key or its historical key is true.
+// NormalizeBitmaskOperators maps the published keys of TCP flags (type 9)
+// and fragment (type 12) bitmask operators (RFC 8955 Section 4.2.1.2) to
+// their bits: greater_than carries the NOT bit and equal the Match bit (see
+// GenericSpec.MarshalJSON). The not and match keys are read too, and a bit is
+// set when either of its keys is true, so an explicit false on one key does
+// not clear a true on the other.
 func (t *GenericSpec) NormalizeBitmaskOperators() {
 	if !isBitmaskSpec(t.SpecType) {
 		return
@@ -676,13 +677,36 @@ func (t *GenericSpec) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// MarshalJSON returns a binary representation of FlowSPec GenericSpec
+// MarshalJSON returns a binary representation of FlowSPec GenericSpec. TCP
+// flags (type 9) and fragment (type 12) operators keep the published schema:
+// the NOT bit is written as greater_than and the Match bit as equal.
 func (t *GenericSpec) MarshalJSON() ([]byte, error) {
+	opVal := t.OpVal
+	if isBitmaskSpec(t.SpecType) {
+		opVal = publishedBitmaskOpVal(t.OpVal)
+	}
 	return json.Marshal(struct {
 		SpecType uint8    `json:"type,omitempty"`
 		OpVal    []*OpVal `json:"op_val_pairs,omitempty"`
 	}{
 		SpecType: t.SpecType,
-		OpVal:    t.OpVal,
+		OpVal:    opVal,
 	})
+}
+
+// publishedBitmaskOpVal returns copies of the pairs with each bitmask
+// operator's NOT and Match bits moved to the greater_than and equal keys.
+func publishedBitmaskOpVal(src []*OpVal) []*OpVal {
+	out := make([]*OpVal, len(src))
+	for i, ov := range src {
+		if ov == nil || ov.Op == nil {
+			out[i] = ov
+			continue
+		}
+		op := *ov.Op
+		op.GTBit, op.EQBit = op.GTBit || op.NotBit, op.EQBit || op.MatchBit
+		op.NotBit, op.MatchBit = false, false
+		out[i] = &OpVal{Op: &op, Val: ov.Val}
+	}
+	return out
 }

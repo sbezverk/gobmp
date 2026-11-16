@@ -2,6 +2,7 @@ package flowspec
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 )
 
@@ -97,8 +98,40 @@ func TestOperator_JSONReadsGoFieldNames(t *testing.T) {
 	}
 }
 
-// JSON published before types 9 and 12 were decoded as bitmask operators
-// carries the NOT bit as greater_than and the Match bit as equal.
+// TestGenericSpec_PublishesBitmaskAsGreaterThanEqual checks that TCP flags and
+// fragment operators keep the published keys, greater_than for NOT and equal
+// for Match, and that the JSON reads back to the same bits.
+func TestGenericSpec_PublishesBitmaskAsGreaterThanEqual(t *testing.T) {
+	op := &Operator{EOLBit: true, Length: 1, NotBit: true, MatchBit: true}
+	for _, specType := range []uint8{9, 12} {
+		g := &GenericSpec{SpecType: specType, OpVal: []*OpVal{{Op: op, Val: []byte{2}}, nil}}
+		b, err := json.Marshal(g)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := fmt.Sprintf(`{"type":%d,"op_val_pairs":[{"operator":{"end_of_list_bit":true,"value_length":1,"greater_than":true,"equal":true},"value":"Ag=="},null]}`, specType)
+		if string(b) != want {
+			t.Errorf("type %d published %s, want %s", specType, b, want)
+		}
+		if !op.NotBit || !op.MatchBit || op.GTBit || op.EQBit {
+			t.Fatalf("marshal changed the operator: %+v", *op)
+		}
+		var got GenericSpec
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatal(err)
+		}
+		if *got.OpVal[0].Op != *op {
+			t.Errorf("type %d read back %+v, want %+v", specType, *got.OpVal[0].Op, *op)
+		}
+	}
+	numeric := &GenericSpec{SpecType: 3, OpVal: []*OpVal{{Op: &Operator{Length: 1, GTBit: true}, Val: []byte{6}}}}
+	if b, _ := json.Marshal(numeric); string(b) != `{"type":3,"op_val_pairs":[{"operator":{"value_length":1,"greater_than":true},"value":"Bg=="}]}` {
+		t.Errorf("numeric operator published %s", b)
+	}
+}
+
+// Readers map greater_than to the NOT bit and equal to the Match bit on types
+// 9 and 12, and also accept the not and match keys.
 func TestGenericSpec_ReadsHistoricalBitmaskKeys(t *testing.T) {
 	tests := []struct {
 		name string
@@ -111,6 +144,12 @@ func TestGenericSpec_ReadsHistoricalBitmaskKeys(t *testing.T) {
 			Operator{ANDBit: true, NotBit: true, MatchBit: true}},
 		{"fragment_rfc_keys", `{"type":12,"op_val_pairs":[{"operator":{"not":true},"value":"AQ=="}]}`,
 			Operator{NotBit: true}},
+		{"tcp_flags_equal_true_match_false", `{"type":9,"op_val_pairs":[{"operator":{"equal":true,"match":false},"value":"Ag=="}]}`,
+			Operator{MatchBit: true}},
+		{"tcp_flags_greater_than_false_not_true", `{"type":9,"op_val_pairs":[{"operator":{"greater_than":false,"not":true},"value":"Ag=="}]}`,
+			Operator{NotBit: true}},
+		{"fragment_explicit_false", `{"type":12,"op_val_pairs":[{"operator":{"greater_than":false,"equal":false,"not":false,"match":false},"value":"AQ=="}]}`,
+			Operator{}},
 		{"protocol_numeric_unchanged", `{"type":3,"op_val_pairs":[{"operator":{"greater_than":true,"equal":true},"value":"Bg=="}]}`,
 			Operator{GTBit: true, EQBit: true}},
 	}

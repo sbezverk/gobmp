@@ -140,6 +140,18 @@ func TestFlowspecJSONRoundTrip_BitmaskOperator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UnmarshalFlowspecNLRI: %v", err)
 	}
+	// Published spec and spec_hash (the broker key) for this NLRI before
+	// types 9 and 12 were decoded as bitmask operators.
+	const (
+		publishedSpec = `[{"type":9,"op_val_pairs":[{"operator":{"value_length":1,"equal":true},"value":"Ag=="},{"operator":{"end_of_list_bit":true,"and_bit":true,"value_length":1,"greater_than":true},"value":"BA=="}]},{"type":12,"op_val_pairs":[{"operator":{"end_of_list_bit":true,"value_length":1,"equal":true},"value":"Ag=="}]}]`
+		publishedHash = "42b7252305c7f4b90f5a1e92aa0c9dba"
+	)
+	if spec, err := json.Marshal(nlri.Spec); err != nil || string(spec) != publishedSpec {
+		t.Errorf("published spec = %s %v, want %s", spec, err, publishedSpec)
+	}
+	if nlri.SpecHash != publishedHash {
+		t.Errorf("spec_hash = %s, want %s", nlri.SpecHash, publishedHash)
+	}
 	b, err := json.Marshal(&Flowspec{Action: "add", SpecHash: nlri.SpecHash, Spec: nlri.Spec})
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
