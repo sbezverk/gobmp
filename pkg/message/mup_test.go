@@ -303,7 +303,13 @@ func TestProducerMUPAddPath(t *testing.T) {
 
 // A BGP-MUP Path Identifier that does not fit an int32 is published unchanged
 // and keeps paths that differ only in the high bit apart in the route hash.
+// The hashes are pinned to those published while path_id was signed.
 func TestProducerMUPAddPathFullRange(t *testing.T) {
+	prevHash := map[uint32]string{
+		1<<31 - 1:  "bd71328cefa66964536e85ddd98592bf",
+		1 << 31:    "988eb94903d4f8655de5b4804e5ec76e",
+		^uint32(0): "ad668c3f4ac941ec4564a486c24cb88d",
+	}
 	hashes := map[string]uint32{}
 	for _, id := range []uint32{1<<31 - 1, 1 << 31, ^uint32(0)} {
 		raw := append([]byte{0x00, 0x01, 85, 0x04, 10, 0, 0, 1, 0x00}, binary.BigEndian.AppendUint32(nil, id)...)
@@ -334,6 +340,9 @@ func TestProducerMUPAddPathFullRange(t *testing.T) {
 		}
 		if want := strconv.FormatUint(uint64(id), 10); string(got.PathID) != want {
 			t.Errorf("path_id = %s, want %s", got.PathID, want)
+		}
+		if got.Hash != prevHash[id] {
+			t.Errorf("path %d hash = %s, want previously published %s", id, got.Hash, prevHash[id])
 		}
 		if prev, dup := hashes[got.Hash]; dup {
 			t.Errorf("paths %d and %d share hash %s", prev, id, got.Hash)

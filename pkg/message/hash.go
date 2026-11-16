@@ -52,6 +52,14 @@ func setPeerStateChangeHash(m *PeerStateChange) {
 	)
 }
 
+// pathIDHashPart formats an RFC 7911 Path Identifier for a route hash as its
+// signed 32-bit reading, the form hashed before path_id was published
+// unsigned. The mapping is one to one, so every four-octet ID still hashes
+// distinctly, and hashes stay equal across producer upgrades and rollbacks.
+func pathIDHashPart(id uint32) string {
+	return strconv.FormatInt(int64(int32(id)), 10)
+}
+
 func setUnicastPrefixHash(m *UnicastPrefix) {
 	if m == nil || m.Hash != "" || m.IsEOR {
 		return
@@ -70,7 +78,7 @@ func setUnicastPrefixHash(m *UnicastPrefix) {
 		m.Prefix,
 		strconv.FormatInt(int64(m.PrefixLen), 10),
 		strconv.FormatBool(m.IsIPv4),
-		strconv.FormatUint(uint64(m.PathID), 10),
+		pathIDHashPart(m.PathID),
 		family,
 	)
 }
@@ -91,7 +99,7 @@ func setL3VPNPrefixHash(m *L3VPNPrefix) {
 		m.Prefix,
 		strconv.FormatInt(int64(m.PrefixLen), 10),
 		strconv.FormatBool(m.IsIPv4),
-		strconv.FormatUint(uint64(m.PathID), 10),
+		pathIDHashPart(m.PathID),
 		"",
 	)
 }
@@ -118,7 +126,7 @@ func setMUPPrefixHash(m *MUPPrefix) {
 		strconv.FormatUint(uint64(m.ArchType), 10),
 		strconv.FormatUint(uint64(m.RouteType), 10),
 		strconv.FormatBool(m.IsIPv4),
-		strconv.FormatUint(uint64(m.PathID), 10),
+		pathIDHashPart(m.PathID),
 	}
 	switch m.RouteType {
 	case mup.RouteTypeISD, mup.RouteTypeST1:

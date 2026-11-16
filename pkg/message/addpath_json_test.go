@@ -318,7 +318,9 @@ func TestPathIDDecodersPublishedJSON(t *testing.T) {
 // TestPathIDFullRangePublishedJSON checks that a Path Identifier, a 4-octet
 // field (RFC 7911 §3), is published unchanged for values that do not fit an
 // int32, that paths differing only in the high bit hash apart, and that a
-// withdrawal hashes like its announcement.
+// withdrawal hashes like its announcement. The hashes are pinned to those
+// published while path_id was signed, so an announcement from either producer
+// version is removed by a withdrawal from the other.
 func TestPathIDFullRangePublishedJSON(t *testing.T) {
 	v4NH := []byte{192, 0, 2, 1}
 	v6NH := []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01}
@@ -330,12 +332,20 @@ func TestPathIDFullRangePublishedJSON(t *testing.T) {
 	vpnV4 := []byte{0x70, 0x05, 0xdc, 0x31, 0, 0, 0, 0x64, 0, 0, 0, 0x01, 10, 1, 2} // label 24003, RD 100:1, 10.1.2.0/24
 	vpnV4Withdraw := []byte{0x70, 0x80, 0x00, 0x00, 0, 0, 0, 0x64, 0, 0, 0, 0x01, 10, 1, 2}
 
+	// Hashes for path IDs 2^31-1, 2^31 and 2^32-1, published while path_id
+	// was signed.
+	unicastHashes := map[uint32]string{
+		1<<31 - 1:  "a42cdb8bba467713cb9fd9ed9dd03538",
+		1 << 31:    "a40f51150a52b0997c0d138337d3695f",
+		^uint32(0): "8c82837d02956724832cac38632f657b",
+	}
 	type builder func(t *testing.T, pathID []byte) *bgp.Update
 	families := []struct {
 		name     string
 		addPath  [2]byte
 		announce builder
-		withdraw builder // nil when the message carries no hash
+		withdraw builder           // nil when the message carries no hash
+		hashes   map[uint32]string // nil when the message carries no hash
 	}{
 		{"unicast IPv4 MP_REACH", [2]byte{1, 1},
 			func(t *testing.T, id []byte) *bgp.Update {
@@ -343,27 +353,36 @@ func TestPathIDFullRangePublishedJSON(t *testing.T) {
 			},
 			func(t *testing.T, id []byte) *bgp.Update {
 				return testUpdate(t, mpTestAttr(0x0f, 1, 1, nil, testCat(id, v4Prefix)))
-			}},
+			}, unicastHashes},
 		{"unicast IPv4 NLRI field", [2]byte{1, 1},
 			func(t *testing.T, id []byte) *bgp.Update { return plainTestUpdate(t, nil, testCat(id, v4Prefix)) },
-			func(t *testing.T, id []byte) *bgp.Update { return plainTestUpdate(t, testCat(id, v4Prefix), nil) }},
+			func(t *testing.T, id []byte) *bgp.Update { return plainTestUpdate(t, testCat(id, v4Prefix), nil) },
+			unicastHashes},
 		{"labeled unicast IPv4", [2]byte{1, 4},
 			func(t *testing.T, id []byte) *bgp.Update {
 				return testUpdate(t, mpTestAttr(0x0e, 1, 4, v4NH, testCat(id, luV4)))
 			},
 			func(t *testing.T, id []byte) *bgp.Update {
 				return testUpdate(t, mpTestAttr(0x0f, 1, 4, nil, testCat(id, luV4Withdraw)))
+			}, map[uint32]string{
+				1<<31 - 1:  "91278a02cd27f88c11faa3b76ffb8a40",
+				1 << 31:    "086bf6caad5c578cc244dc5f6b373a52",
+				^uint32(0): "f907033db4a9e90a86c957a8dadbd4d5",
 			}},
 		{"multicast IPv6", [2]byte{2, 2},
 			func(t *testing.T, id []byte) *bgp.Update {
 				return testUpdate(t, mpTestAttr(0x0e, 2, 2, v6NH, testCat(id, v6Prefix)))
-			}, nil},
+			}, nil, nil},
 		{"VPNv4", [2]byte{1, 128},
 			func(t *testing.T, id []byte) *bgp.Update {
 				return testUpdate(t, mpTestAttr(0x0e, 1, 128, vpnNH, testCat(id, vpnV4)), testRT)
 			},
 			func(t *testing.T, id []byte) *bgp.Update {
 				return testUpdate(t, mpTestAttr(0x0f, 1, 128, nil, testCat(id, vpnV4Withdraw)))
+			}, map[uint32]string{
+				1<<31 - 1:  "1e716e7a6228669709a36a3105a79191",
+				1 << 31:    "ed27474ee64f3d9d4d7d628716a36a2d",
+				^uint32(0): "cc447ff83ffb9f1ba92dfb22c8384925",
 			}},
 	}
 	type published struct {
@@ -394,6 +413,9 @@ func TestPathIDFullRangePublishedJSON(t *testing.T) {
 				}
 				if f.withdraw == nil {
 					continue
+				}
+				if add.Hash != f.hashes[id] {
+					t.Errorf("path %d hash = %s, want previously published %s", id, add.Hash, f.hashes[id])
 				}
 				if prev, dup := hashes[add.Hash]; dup {
 					t.Errorf("paths %d and %d share hash %s", prev, id, add.Hash)

@@ -784,7 +784,7 @@ type EVPNPrefix struct {
 	Nexthop        string              `json:"nexthop,omitempty"`
 	ClusterList    string              `json:"cluster_list,omitempty"`
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
-	PathID         uint32              `json:"path_id,omitempty"`
+	PathID         int32               `json:"path_id,omitempty"`
 	Labels         []uint32            `json:"labels,omitempty"`
 	RawLabels      []uint32            `json:"rawlabels,omitempty"`
 	VPNRD          string              `json:"vpn_rd,omitempty"`
@@ -886,7 +886,7 @@ type SRPolicy struct {
 	Nexthop        string                  `json:"nexthop,omitempty"`
 	ClusterList    string                  `json:"cluster_list,omitempty"`
 	IsNexthopIPv4  bool                    `json:"is_nexthop_ipv4"`
-	PathID         uint32                  `json:"path_id,omitempty"`
+	PathID         int32                   `json:"path_id,omitempty"`
 	Labels         []uint32                `json:"labels,omitempty"`
 	Distinguisher  uint32                  `json:"distinguisher,omitempty"`
 	Color          uint32                  `json:"color,omitempty"`
@@ -925,7 +925,7 @@ type Flowspec struct {
 	OriginAS       uint32              `json:"origin_as,omitempty"`
 	Nexthop        string              `json:"nexthop,omitempty"`
 	IsNexthopIPv4  bool                `json:"is_nexthop_ipv4"`
-	PathID         uint32              `json:"path_id,omitempty"`
+	PathID         int32               `json:"path_id,omitempty"`
 	SpecHash       string              `json:"spec_hash,omitempty"`
 	Spec           []flowspec.Spec     `json:"spec,omitempty"`
 	RD             string              `json:"rd,omitempty"` // VPN FlowSpec Route Distinguisher (SAFI=134, RFC 8955 §6)
