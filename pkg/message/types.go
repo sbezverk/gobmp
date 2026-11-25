@@ -346,6 +346,8 @@ type LSLink struct {
 	SRv6BGPPeerNodeSID    *srv6.BGPPeerNodeSID          `json:"srv6_bgp_peer_node_sid,omitempty"`
 	SRv6ENDXSID           []*srv6.EndXSIDTLV            `json:"srv6_endx_sid,omitempty"`
 	LSAdjacencySID        []*sr.AdjacencySIDTLV         `json:"ls_adjacency_sid,omitempty"`
+	SRv6LANEndXSID        []*srv6.LANEndXSIDTLV         `json:"srv6_lan_endx_sid,omitempty"`
+	LSLANAdjacencySID     []*sr.LANAdjacencySIDTLV      `json:"ls_lan_adjacency_sid,omitempty"`
 	LinkMSD               []*base.MSDTV                 `json:"link_msd,omitempty"`
 	AppSpecLinkAttr       []*bgpls.AppSpecLinkAttr      `json:"app_spec_link_attr,omitempty"`
 	UnidirLinkDelay       uint32                        `json:"unidir_link_delay,omitempty"`
