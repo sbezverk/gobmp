@@ -12,7 +12,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        go-version: [1.25.x]
+        go-version: [1.26.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -43,7 +43,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           # Require: The version of golangci-lint to use.
-          version: v2.8.0
+          version: v2.15.0
           args: --timeout=5m
 
       # --- Unit Tests ---
@@ -111,7 +111,7 @@ jobs:
     strategy:
         matrix:
           os: [ubuntu-latest]
-          go-version: [1.25.x]
+          go-version: [1.26.x]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -327,7 +327,7 @@ jobs:
     strategy:
         matrix:
           os: [ubuntu-latest]
-          go-version: [1.25.x]
+          go-version: [1.26.x]
     runs-on: ${{ matrix.os }}
     env:
       VALIDATOR_TESTBED_COMPOSE: ./cmd/validator_v2/testbed/test_bed_injector_multinode_kafka.yml
@@ -401,7 +401,7 @@ jobs:
     strategy:
         matrix:
           os: [ubuntu-latest]
-          go-version: [1.25.x]
+          go-version: [1.26.x]
     runs-on: ${{ matrix.os }}
     env:
       VALIDATOR_MUP_TESTBED_COMPOSE: ./cmd/validator_v2/testbed/test_bed_gobgp_mup.yml
@@ -529,7 +529,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run BGP-LS RFC 7752 compliance tests
         run: |
@@ -581,7 +581,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Verify VPLS test data exists
         run: |
@@ -630,7 +630,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run L3VPN RFC 4364 compliance tests
         run: |
@@ -669,7 +669,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run RFC 9069 LocRIB compliance tests
         run: |
@@ -719,7 +719,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run EVPN RFC 7432 compliance tests
         run: |
@@ -795,7 +795,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run RTC RFC 4684 compliance tests
         run: |
@@ -834,7 +834,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run FlowSpec RFC 8955/8956 compliance tests
         run: |
@@ -874,7 +874,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run SR Policy RFC 9256 compliance tests
         run: |
@@ -913,7 +913,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run MCAST-VPN RFC 6513/6514 compliance tests
         run: |
@@ -953,7 +953,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run Multicast RFC 4760 compliance tests
         run: |
@@ -992,7 +992,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run RFC 9252 SRv6 compliance tests
         run: |
@@ -1031,7 +1031,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run RFC 8097 RPKI compliance tests (Extended Community)
         run: |
@@ -1080,7 +1080,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run RFC 9723 Color Prefix Routing compliance tests
         run: |
@@ -1119,7 +1119,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v7
         with:
-          go-version: 1.25.x
+          go-version: 1.26.x
 
       - name: Run RFC 9012 Tunnel Encapsulation compliance tests
         run: |

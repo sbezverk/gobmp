@@ -43,6 +43,7 @@ func TestPublishLSLinkLANSIDs(t *testing.T) {
 		wantAdj      string
 		wantEndX     string
 		wantP2PFlags string
+		wantRawType  uint16
 	}{
 		{
 			name:        "IS-IS L1 label and index with repeated End.X and sub-TLVs",
@@ -64,6 +65,7 @@ func TestPublishLSLinkLANSIDs(t *testing.T) {
 			wantAdj:      "[" + isisLabelJSON + "," + isisIndexJSON + "]",
 			wantEndX:     "[" + isisEndXJSON + "," + isisEndXWithoutSubTLVs + "]",
 			wantP2PFlags: `{"f_flag":false,"b_flag":false,"v_flag":false,"l_flag":false,"s_flag":false,"p_flag":false}`,
+			wantRawType:  1108,
 		},
 		{
 			name:        "IS-IS L2 wrong label width and short End.X",
@@ -88,6 +90,7 @@ func TestPublishLSLinkLANSIDs(t *testing.T) {
 			}, nil),
 			wantAdj:      "[" + ospfLabelJSON + "]",
 			wantP2PFlags: `{"b_flag":false,"v_flag":false,"l_flag":false,"g_flag":false,"p_flag":false}`,
+			wantRawType:  1108,
 		},
 		{
 			name:        "OSPFv3 Router-ID and valid End.X after a short instance",
@@ -103,6 +106,7 @@ func TestPublishLSLinkLANSIDs(t *testing.T) {
 			wantAdj:      "[" + ospfIndexJSON + "]",
 			wantEndX:     "[" + ospfEndXJSON + "]",
 			wantP2PFlags: `{"b_flag":false,"v_flag":false,"l_flag":false,"g_flag":false,"p_flag":false}`,
+			wantRawType:  1107,
 		},
 		{
 			name:         "point-to-point SIDs only",
@@ -164,6 +168,13 @@ func TestPublishLSLinkLANSIDs(t *testing.T) {
 			var link LSLink
 			if err := json.Unmarshal(publisher.msgs[0].payload, &link); err != nil {
 				t.Fatalf("unmarshal Link event: %v", err)
+			}
+			if tt.wantRawType == 0 {
+				if len(link.UnknownBGPLSTLVs) != 0 {
+					t.Errorf("modeled LAN types unexpectedly included in raw TLVs: %v", link.UnknownBGPLSTLVs)
+				}
+			} else if len(link.UnknownBGPLSTLVs) != 1 || link.UnknownBGPLSTLVs[0].Type != tt.wantRawType {
+				t.Errorf("raw TLVs = %v, want only unexpected type %d", link.UnknownBGPLSTLVs, tt.wantRawType)
 			}
 			roundTrip, err := json.Marshal(link)
 			if err != nil {
