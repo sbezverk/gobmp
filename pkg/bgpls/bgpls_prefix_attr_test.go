@@ -2,6 +2,8 @@ package bgpls
 
 import (
 	"encoding/json"
+	"errors"
+	"maps"
 	"slices"
 	"testing"
 
@@ -19,6 +21,7 @@ func TestUnmarshalFlexAlgoPrefixMetric(t *testing.T) {
 		wantErr    bool
 		wantAlgo   uint8
 		wantMetric uint32
+		wantFlags  string
 	}{
 		{
 			name:    "too short (7 bytes)",
@@ -27,9 +30,16 @@ func TestUnmarshalFlexAlgoPrefixMetric(t *testing.T) {
 		},
 		{
 			name:       "algo=128, metric=1000",
-			input:      []byte{128, 0, 0, 0, 0x00, 0x00, 0x03, 0xE8},
+			input:      []byte{128, 0, 0x34, 0x56, 0x00, 0x00, 0x03, 0xE8},
 			wantAlgo:   128,
 			wantMetric: 1000,
+		},
+		{
+			name:       "OSPF external type flag",
+			input:      []byte{129, 0x80, 0x34, 0x56, 0x12, 0x34, 0x56, 0x78},
+			wantAlgo:   129,
+			wantMetric: 0x12345678,
+			wantFlags:  "128",
 		},
 		{
 			name:       "algo=0, metric=0",
@@ -53,6 +63,17 @@ func TestUnmarshalFlexAlgoPrefixMetric(t *testing.T) {
 			}
 			if got.Metric != tt.wantMetric {
 				t.Errorf("Metric = %d, want %d", got.Metric, tt.wantMetric)
+			}
+			wire, err := json.Marshal(got)
+			if err != nil {
+				t.Fatalf("marshal prefix metric: %v", err)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(wire, &fields); err != nil {
+				t.Fatalf("unmarshal prefix metric JSON: %v", err)
+			}
+			if flags := string(fields["flags"]); flags != tt.wantFlags {
+				t.Errorf("JSON flags = %q, want %q", flags, tt.wantFlags)
 			}
 		})
 	}
@@ -419,6 +440,90 @@ func TestPrefixAttrTLVs_MarshalJSON_WithUnknownFlags(t *testing.T) {
 		t.Fatalf("MarshalJSON() error = %v", err)
 	}
 	_ = b // valid JSON bytes
+}
+
+func TestPrefixAttrTLVs_SourceRouterIDsJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		original PrefixAttrTLVs
+		want     map[string]string
+	}{
+		{
+			name:     "generic identifier without flags or legacy ID",
+			original: PrefixAttrTLVs{SourceRouterIdentifier: "192.0.2.1"},
+			want:     map[string]string{"source_router_identifier": "192.0.2.1"},
+		},
+		{
+			name: "both identifiers with OSPFv3 flags",
+			original: PrefixAttrTLVs{
+				Flags:                  &OSPFv3Flags{NUFlag: true},
+				SourceRouterIdentifier: "2001:db8::1",
+				SourceOSPFRouterID:     "198.51.100.2",
+				SourceRouterID:         "198.51.100.2",
+			},
+			want: map[string]string{
+				"source_router_identifier": "2001:db8::1",
+				"source_ospf_router_id":    "198.51.100.2",
+				"source_router_id":         "198.51.100.2",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wire, err := json.Marshal(&tt.original)
+			if err != nil {
+				t.Fatalf("marshal prefix attributes: %v", err)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(wire, &fields); err != nil {
+				t.Fatalf("decode JSON fields: %v", err)
+			}
+			got := make(map[string]string)
+			for _, key := range []string{"source_router_identifier", "source_ospf_router_id", "source_router_id"} {
+				if raw, ok := fields[key]; ok {
+					var id string
+					if err := json.Unmarshal(raw, &id); err != nil {
+						t.Fatalf("decode %s: %v", key, err)
+					}
+					got[key] = id
+				}
+			}
+			if !maps.Equal(got, tt.want) {
+				t.Errorf("source IDs in JSON = %v, want %v", got, tt.want)
+			}
+
+			var recovered PrefixAttrTLVs
+			if err := json.Unmarshal(wire, &recovered); err != nil {
+				t.Fatalf("unmarshal prefix attributes: %v", err)
+			}
+			if recovered.SourceRouterIdentifier != tt.original.SourceRouterIdentifier ||
+				recovered.SourceOSPFRouterID != tt.original.SourceOSPFRouterID ||
+				recovered.SourceRouterID != tt.original.SourceRouterID {
+				t.Errorf("round trip changed source IDs: got %+v, want %+v", recovered, tt.original)
+			}
+		})
+	}
+}
+
+func TestPrefixAttrTLVs_SourceRouterIDsJSONInvalidType(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		wire string
+	}{
+		{"generic identifier", `{"source_router_identifier":42,"source_ospf_router_id":"198.51.100.2"}`},
+		{"OSPF router ID", `{"source_router_identifier":"2001:db8::1","source_ospf_router_id":[]}`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := PrefixAttrTLVs{SourceRouterIdentifier: "192.0.2.1"}
+			var typeErr *json.UnmarshalTypeError
+			if err := json.Unmarshal([]byte(tt.wire), &got); !errors.As(err, &typeErr) {
+				t.Fatalf("unmarshal error = %v, want JSON type error", err)
+			}
+			if got.SourceRouterIdentifier != "192.0.2.1" || got.SourceOSPFRouterID != "" {
+				t.Errorf("failed decode changed source IDs: %+v", got)
+			}
+		})
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

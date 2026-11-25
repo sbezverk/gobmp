@@ -74,25 +74,27 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 			fallthrough
 		case base.ISISL2:
 			msg.AreaID = lsnode.GetISISAreaID()
+			msg.ISISAreaIDs = lsnode.GetISISAreaIDs()
 		case base.OSPFv2, base.Direct, base.Static, base.OSPFv3, base.BGP, base.RSVPTE, base.SR:
 		}
-		// RFC 9552 Sections 5.2.1 and 5.3.1.4: TLVs 1028 (IPv4) and 1029 (IPv6) local
-		// router-ID are chosen by which TLV is present in the attribute, never
-		// by the BMP peer's address family (V-flag) - both may legally be
-		// absent, present alone, or present together. Prefer IPv4, fall back
-		// to IPv6.
-		msg.RouterID = lsnode.GetLocalIPv4RouterID()
+		// RFC 9552 §5.3.1.4: TLVs 1028 and 1029 can both be present.
+		msg.LocalIPv4RouterID = lsnode.GetLocalIPv4RouterID()
+		msg.LocalIPv6RouterID = lsnode.GetLocalIPv6RouterID()
+		// Preserve the IPv4 preference of the legacy router_id field.
+		msg.RouterID = msg.LocalIPv4RouterID
 		if msg.RouterID == "" {
-			msg.RouterID = lsnode.GetLocalIPv6RouterID()
+			msg.RouterID = msg.LocalIPv6RouterID
 		}
 		if msd, err := lsnode.GetNodeMSD(); err == nil {
 			msg.NodeMSD = msd
 		}
+		msg.SBFDDiscriminators = lsnode.GetNodeSBFDDiscriminators()
 		if cap, err := lsnode.GetNodeSRCapabilities(msg.ProtocolID); err == nil {
 			msg.SRCapabilities = cap
 		}
 		msg.SRAlgorithm = lsnode.GetSRAlgorithm()
 		msg.SRLocalBlock = lsnode.GetNodeSRLocalBlock()
+		msg.SRMSPreference = lsnode.GetNodeSRMSPreference()
 		if cap, err := lsnode.GetNodeSRv6CapabilitiesTLV(); err == nil {
 			msg.SRv6CapabilitiesTLV = cap
 		}
@@ -100,7 +102,22 @@ func (p *producer) lsNode(node *base.NodeNLRI, _ /* place holder for the next ho
 			msg.FlexAlgoDefinition = fad
 		}
 		msg.OpaqueNodeAttribute = lsnode.GetOpaqueNodeAttribute()
+		msg.UnknownBGPLSTLVs = collectUnknownBGPLSTLVs(lsnode.LS, func(typ uint16) bool {
+			return isModeledNodeTLV(typ, msg.ProtocolID)
+		})
 	}
 
 	return &msg, nil
+}
+
+// isModeledNodeTLV mirrors the path-attribute fields populated by lsNode.
+func isModeledNodeTLV(typ uint16, protocol base.ProtoID) bool {
+	switch typ {
+	case 263, 266, 1024, 1025, 1026, 1028, 1029, 1032, 1034, 1035, 1036, 1037, 1038, 1039:
+		return true
+	case 1027:
+		return protocol == base.ISISL1 || protocol == base.ISISL2
+	default:
+		return false
+	}
 }

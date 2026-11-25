@@ -14,9 +14,9 @@ func TestUnmarshalTunnelEncapsulation_Valid(t *testing.T) {
 	}{
 		{
 			name: "Single SR Policy tunnel with Preference sub-TLV",
-			// Tunnel Type=13 (SR Policy), Length=6
+			// Tunnel Type=15 (SR Policy, RFC 9830 §6.2), Length=6
 			// Sub-TLV Type=12 (Preference), Length=4, Value=0x00000064 (100)
-			input:         []byte{0x00, 0x0d, 0x00, 0x06, 0x0c, 0x04, 0x00, 0x00, 0x00, 0x64},
+			input:         []byte{0x00, 0x0f, 0x00, 0x06, 0x0c, 0x04, 0x00, 0x00, 0x00, 0x64},
 			expectedCount: 1,
 			expectedType:  TypeSRPolicy,
 		},
@@ -30,10 +30,10 @@ func TestUnmarshalTunnelEncapsulation_Valid(t *testing.T) {
 		},
 		{
 			name: "Multiple tunnels",
-			// Tunnel 1: Type=13, Length=6, Sub-TLV Type=12, Length=4, Value=100
+			// Tunnel 1: Type=15, Length=6, Sub-TLV Type=12, Length=4, Value=100
 			// Tunnel 2: Type=2, Length=6, Sub-TLV Type=1, Length=4, Value=4 bytes
 			input: []byte{
-				0x00, 0x0d, 0x00, 0x06, 0x0c, 0x04, 0x00, 0x00, 0x00, 0x64,
+				0x00, 0x0f, 0x00, 0x06, 0x0c, 0x04, 0x00, 0x00, 0x00, 0x64,
 				0x00, 0x02, 0x00, 0x06, 0x01, 0x04, 0xaa, 0xbb, 0xcc, 0xdd,
 			},
 			expectedCount: 2,
@@ -205,13 +205,17 @@ func TestTunnelJSON(t *testing.T) {
 	}
 }
 
+// TestGetTunnelTypeName checks names against the IANA "BGP Tunnel
+// Encapsulation Attribute Tunnel Types" registry: 13 = MPLS in UDP
+// Encapsulation (RFC 7510), 15 = SR Policy (RFC 9830 §6.2).
 func TestGetTunnelTypeName(t *testing.T) {
 	tests := []struct {
 		code uint16
 		want string
 	}{
+		{13, "MPLS-in-UDP"},
+		{15, "SR Policy"},
 		{TypeSRPolicy, "SR Policy"},
-		{TypeSRv6, "SRv6"},
 		{TypeGRE, "GRE"},
 		{TypeVXLAN, "VXLAN"},
 		{999, "Unknown"},

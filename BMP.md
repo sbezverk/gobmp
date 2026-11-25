@@ -174,6 +174,36 @@ https://www.snas.io/docs/
 31: (is_adj_rib_in): 1
 ```
 
+#### Unrecognized BGP-LS attribute TLVs
+
+The `ls_node`, `ls_link` (including Inter-AS links), and `ls_prefix` JSON
+events can include an `unknown_bgp_ls_tlvs` array. Each element has a numeric
+`type` and a lowercase hexadecimal `value_hex` containing the TLV value bytes.
+
+```json
+{
+  "unknown_bgp_ls_tlvs": [
+    {"type": 64512, "value_hex": "00ab"},
+    {"type": 64512, "value_hex": ""}
+  ]
+}
+```
+
+The array keeps the order and duplicates from the top-level BGP-LS path
+attribute (type 29), including empty TLV values. It includes unassigned types
+and registered types without a field mapping for that event and source
+protocol. For example, IS-IS Area Identifier (1027) is mapped on IS-IS node
+events, and Peer SID TLVs (1101–1103) are mapped on BGP link events.
+
+Recognition is by type. A modeled type stays out of the array when its value
+cannot be decoded or another modeled type takes precedence, such as when the
+IPv4 router ID takes precedence over the IPv6 router ID. The array omits NLRI
+descriptors and does not descend into sub-TLVs. When the attribute is missing,
+its TLV framing is malformed, or no TLVs qualify, the field is omitted.
+
+This field applies to event publication. BGP-LS protocol handling continues
+to follow the existing parser and validation paths. [RFC 9552, Sections 3 and 5.1](https://www.rfc-editor.org/rfc/rfc9552.html#section-5.1)
+
 #### BMP ls_node message:
 ```
 // add ls_node
@@ -387,6 +417,16 @@ Bonus item (OpenBMP never carried remote node router ID field, which would be ve
 48: (ls_adjacency_sid):
 
 ```
+
+BGP-LS Link events expose TLVs 1118–1120 as
+`unidir_residual_bw_kbps`, `unidir_available_bw_kbps`, and
+`unidir_bw_utilization_kbps`, respectively. GoBMP converts the IEEE 754
+bytes-per-second values to whole kilobits per second (1 kbps = 1,000 bits/s),
+truncating any fraction. A valid zero is emitted as `0`. Missing, malformed,
+negative, non-finite, and out-of-range values omit the corresponding field.
+The legacy `unidir_residual_bw`, `unidir_available_bw`, and
+`unidir_bw_utilization` fields still carry the raw IEEE 754 bit patterns.
+
 #### BMP ls_prefix message:
 
 ```
