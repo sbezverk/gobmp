@@ -4,6 +4,32 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-12
+
+#### Added
+
+- Peer Up and Peer Down messages on the parsed peer topic carry `router_name` and `router_descr`, the sysName and sysDescr from the BMP Initiation message; both are omitted until the router sends an Initiation
+
+### 2026-11-11
+
+#### Fixed
+
+- SRv6 BGP PeerNode SID TLV 1251 (RFC 9514 §7.2) skipped one of its two reserved octets, so `peer_asn` and `peer_id` were read one byte early and came out wrong: they are now read from offsets 4-7 and 8-11, and a TLV whose length is not 12 is rejected
+- BGP-LS IGP Flags TLV 1152 (RFC 9552 §5.3.3.1) was read from the low four bits, so set flags came out false in `igp_flags`: D, N, L and P are now read from 0x80, 0x40, 0x20 and 0x10, e.g. IS-IS `0x80` reads `d_flag: true` and OSPFv2 `0x50` reads `n_flag` and `p_flag` true
+
+### 2026-11-09
+
+#### Changed
+
+- Producer hot paths allocate less, with unchanged JSON output: the Prefix-SID attribute and next hop are read once per UPDATE, route keys are hashed in one MD5 call, and EVPN ESI/MAC, extended and large communities are formatted without `fmt`
+- SR Policy sub-TLVs are logged only at verbosity 5
+- `base_attrs.unknown_attributes` now includes path attribute types 11–13, 19–21, 24, 28, 30, 31, 33, 34, 37, 38, 41 and 42, which were dropped
+- `base_attrs.unknown_attributes` now includes an ATTR_SET that is truncated, holds MP_REACH_NLRI/MP_UNREACH_NLRI, or holds an attribute the parser flags as malformed, published raw as type 128; its routes are treated as withdrawn (RFC 7606 §7.16)
+
+#### Fixed
+
+- Publish failures no longer report `to kafka` when the publisher is NATS: they read `failed to publish a message of type N with error: ...`
+
 ### 2026-10-30
 
 #### Added

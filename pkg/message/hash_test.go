@@ -2,11 +2,27 @@ package message
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/bgp"
 	"github.com/sbezverk/gobmp/pkg/bmp"
 )
+
+// TestMarshalAndPublishErrorNamesNoBroker checks that a publish failure keeps
+// the publisher's error and does not blame Kafka, as the publisher may be NATS.
+func TestMarshalAndPublishErrorNamesNoBroker(t *testing.T) {
+	p := NewProducer(&failingPublisher{}, false).(*producer)
+	err := p.marshalAndPublish(&UnicastPrefix{RouterHash: "router"}, bmp.UnicastPrefixMsg, []byte("router"))
+	if !errors.Is(err, errPublishFailure) {
+		t.Fatalf("error = %v, want it to wrap %v", err, errPublishFailure)
+	}
+	want := fmt.Sprintf("failed to publish a message of type %d with error: publish failed", bmp.UnicastPrefixMsg)
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err, want)
+	}
+}
 
 func TestMarshalAndPublishPopulatesUnicastHash(t *testing.T) {
 	p := NewProducer(&recordingPublisher{}, false).(*producer)

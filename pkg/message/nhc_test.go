@@ -96,7 +96,7 @@ func TestRouteMonitorPublishesMPReachAndUnreach(t *testing.T) {
 		},
 		BaseAttributes: &bgp.BaseAttributes{NHCAttr: nhcValue, NHC: nhc},
 	}
-	p.produceRouteMonitorMessage(bmp.Message{
+	p.produceRouteMessage(bmp.Message{
 		PeerHeader: makePeerHeader(t, bmp.PeerType0, 0),
 		Payload:    &bmp.RouteMonitor{Update: update},
 	})

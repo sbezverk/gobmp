@@ -286,8 +286,9 @@ func TestUnmarshalAttrSet_ValidAtomicAggregate(t *testing.T) {
 	}
 }
 
-func TestUnmarshalAttrSet_DeprecatedAttrsSkipped(t *testing.T) {
-	// Embed deprecated DPA (type 11) + ORIGIN (igp) - deprecated attr should be silently skipped
+func TestUnmarshalAttrSet_DeprecatedAttrsPreserved(t *testing.T) {
+	// Embed deprecated DPA (type 11) + ORIGIN (igp) - the deprecated attr is
+	// not decoded but must surface raw in UnknownAttributes.
 	dpaAttr := buildPathAttr(0xc0, 11, []byte{0x00, 0x01, 0x00, 0x02})
 	originAttr := buildPathAttr(0x40, 1, []byte{0x00})
 	value := buildAttrSetValue(65001, dpaAttr, originAttr)
@@ -302,15 +303,19 @@ func TestUnmarshalAttrSet_DeprecatedAttrsSkipped(t *testing.T) {
 	if as.PathAttributes.Origin != "igp" {
 		t.Errorf("expected origin igp, got %q", as.PathAttributes.Origin)
 	}
+	want := []UnknownPathAttribute{{Type: 11, Flags: 0xc0, Value: []byte{0x00, 0x01, 0x00, 0x02}}}
+	if !reflect.DeepEqual(as.PathAttributes.UnknownAttributes, want) {
+		t.Errorf("UnknownAttributes = %+v, want %+v", as.PathAttributes.UnknownAttributes, want)
+	}
 }
 
 func TestBaseAttributes_Equal_AttrSet(t *testing.T) {
 	tests := []struct {
-		name        string
-		a           *BaseAttributes
-		b           *BaseAttributes
-		isEqual     bool
-		diffSubstr  string
+		name       string
+		a          *BaseAttributes
+		b          *BaseAttributes
+		isEqual    bool
+		diffSubstr string
 	}{
 		{
 			name:    "both nil",

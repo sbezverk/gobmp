@@ -106,7 +106,7 @@ func TestPrefixPaddingPublication(t *testing.T) {
 								t.Fatal(err)
 							}
 							recorder.msgs = nil
-							p.produceRouteMonitorMessage(bmp.Message{PeerHeader: ph, Payload: rm})
+							p.produceRouteMessage(bmp.Message{PeerHeader: ph, Payload: rm})
 							after, err := json.Marshal(rm.Update)
 							if err != nil {
 								t.Fatal(err)

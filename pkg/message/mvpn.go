@@ -63,6 +63,7 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 		return []*MVPNPrefix{prfx}, nil
 	}
 
+	nextHop := nlri.GetNextHop()
 	for _, route := range mvpnRoute.Route {
 		prfx := &MVPNPrefix{
 			Action:         operation,
@@ -100,7 +101,7 @@ func (p *producer) mvpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *
 		prfx.IsIPv4 = !nlri.IsIPv6NLRI()
 
 		// Extract nexthop
-		nh := nlri.GetNextHop()
+		nh := nextHop
 		prfx.Nexthop = nh
 		prfx.IsNexthopIPv4 = len(nh) > 0 && net.ParseIP(nh).To4() != nil
 

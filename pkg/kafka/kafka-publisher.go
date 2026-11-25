@@ -21,32 +21,33 @@ import (
 
 // Define constants for each topic name.
 const (
-	PeerTopic              = "gobmp.parsed.peer"
-	UnicastMessageTopic    = "gobmp.parsed.unicast_prefix"
-	UnicastMessageV4Topic  = "gobmp.parsed.unicast_prefix_v4"
-	UnicastMessageV6Topic  = "gobmp.parsed.unicast_prefix_v6"
-	LSNodeMessageTopic     = "gobmp.parsed.ls_node"
-	LSLinkMessageTopic     = "gobmp.parsed.ls_link"
-	L3vpnMessageTopic      = "gobmp.parsed.l3vpn"
-	L3vpnMessageV4Topic    = "gobmp.parsed.l3vpn_v4"
-	L3vpnMessageV6Topic    = "gobmp.parsed.l3vpn_v6"
-	LSPrefixMessageTopic   = "gobmp.parsed.ls_prefix"
-	LSSRv6SIDMessageTopic  = "gobmp.parsed.ls_srv6_sid"
-	LSOpaqueMessageTopic   = "gobmp.parsed.ls_opaque"
-	EVPNMessageTopic       = "gobmp.parsed.evpn"
-	SRPolicyMessageTopic   = "gobmp.parsed.sr_policy"
-	SRPolicyMessageV4Topic = "gobmp.parsed.sr_policy_v4"
-	SRPolicyMessageV6Topic = "gobmp.parsed.sr_policy_v6"
-	FlowspecMessageTopic   = "gobmp.parsed.flowspec"
-	FlowspecMessageV4Topic = "gobmp.parsed.flowspec_v4"
-	FlowspecMessageV6Topic = "gobmp.parsed.flowspec_v6"
-	VPLSMessageTopic       = "gobmp.parsed.vpls"
-	MUPMessageTopic        = "gobmp.parsed.mup"
-	MUPMessageV4Topic      = "gobmp.parsed.mup_v4"
-	MUPMessageV6Topic      = "gobmp.parsed.mup_v6"
-	EndOfRIBMessageTopic   = "gobmp.parsed.end_of_rib"
-	StatsMessageTopic      = "gobmp.parsed.statistics"
-	RawMessageTopic        = "gobmp.raw"
+	PeerTopic                         = "gobmp.parsed.peer"
+	UnicastMessageTopic               = "gobmp.parsed.unicast_prefix"
+	UnicastMessageV4Topic             = "gobmp.parsed.unicast_prefix_v4"
+	UnicastMessageV6Topic             = "gobmp.parsed.unicast_prefix_v6"
+	LSNodeMessageTopic                = "gobmp.parsed.ls_node"
+	LSLinkMessageTopic                = "gobmp.parsed.ls_link"
+	L3vpnMessageTopic                 = "gobmp.parsed.l3vpn"
+	L3vpnMessageV4Topic               = "gobmp.parsed.l3vpn_v4"
+	L3vpnMessageV6Topic               = "gobmp.parsed.l3vpn_v6"
+	LSPrefixMessageTopic              = "gobmp.parsed.ls_prefix"
+	LSSRv6SIDMessageTopic             = "gobmp.parsed.ls_srv6_sid"
+	SRPolicyCandidatePathMessageTopic = "gobmp.parsed.sr_policy_candidate_path"
+	LSOpaqueMessageTopic              = "gobmp.parsed.ls_opaque"
+	EVPNMessageTopic                  = "gobmp.parsed.evpn"
+	SRPolicyMessageTopic              = "gobmp.parsed.sr_policy"
+	SRPolicyMessageV4Topic            = "gobmp.parsed.sr_policy_v4"
+	SRPolicyMessageV6Topic            = "gobmp.parsed.sr_policy_v6"
+	FlowspecMessageTopic              = "gobmp.parsed.flowspec"
+	FlowspecMessageV4Topic            = "gobmp.parsed.flowspec_v4"
+	FlowspecMessageV6Topic            = "gobmp.parsed.flowspec_v6"
+	VPLSMessageTopic                  = "gobmp.parsed.vpls"
+	MUPMessageTopic                   = "gobmp.parsed.mup"
+	MUPMessageV4Topic                 = "gobmp.parsed.mup_v4"
+	MUPMessageV6Topic                 = "gobmp.parsed.mup_v6"
+	EndOfRIBMessageTopic              = "gobmp.parsed.end_of_rib"
+	StatsMessageTopic                 = "gobmp.parsed.statistics"
+	RawMessageTopic                   = "gobmp.raw"
 )
 
 var (
@@ -76,6 +77,7 @@ var (
 		L3vpnMessageV6Topic,
 		LSPrefixMessageTopic,
 		LSSRv6SIDMessageTopic,
+		SRPolicyCandidatePathMessageTopic,
 		LSOpaqueMessageTopic,
 		EVPNMessageTopic,
 		SRPolicyMessageTopic,
@@ -139,6 +141,8 @@ func topicForMessage(t int) (string, bool) {
 		return LSPrefixMessageTopic, true
 	case bmp.LSSRv6SIDMsg:
 		return LSSRv6SIDMessageTopic, true
+	case bmp.SRPolicyCandidatePathMsg:
+		return SRPolicyCandidatePathMessageTopic, true
 	case bmp.LSOpaqueMsg:
 		return LSOpaqueMessageTopic, true
 	case bmp.EVPNMsg:

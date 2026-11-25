@@ -222,7 +222,7 @@ services:
       type: bind
     - xr-1:/xr-storage/
   bgpinjector:
-    image: ${BGPINJECTOR_IMAGE:-docker.io/sbezverk/bgpinjector:latest}
+    image: ${BGPINJECTOR_IMAGE:-ghcr.io/sbezverk/bgpinjector:latest}
     container_name: bgpinjector
     hostname: bgpinjector
     restart: on-failure

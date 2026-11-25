@@ -40,8 +40,8 @@ func TestProcessMPUpdateLSOpaque(t *testing.T) {
 		{name: "SAFI 80 malformed attribute", safi: 80, nlri: testLSUnknownNLRI, update: testLSUpdate(malformedSequence), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "del"},
 		{name: "SAFI 80 withdraw", safi: 80, withdraw: true, nlri: testLSUnknownNLRI, update: testLSUpdate(testLSSequence()), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "del"},
 		{name: "SAFI 71 add", safi: 71, nlri: testLSUnknownNLRI, update: minimalUpdate(), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "add"},
-		{name: "SAFI 72 add", safi: 72, nlri: append(append([]byte{}, testRD...), testLSUnknownNLRI...), update: minimalUpdate(), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "add", wantRD: "65000:1"},
-		{name: "SAFI 72 withdraw", safi: 72, withdraw: true, nlri: append(append([]byte{}, testRD...), testLSUnknownNLRI...), update: minimalUpdate(), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "del", wantRD: "65000:1"},
+		{name: "SAFI 72 add", safi: 72, nlri: testLSVPNEntry(99, testRD, testLSUnknownNLRI[4:]), update: minimalUpdate(), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "add", wantRD: "65000:1"},
+		{name: "SAFI 72 withdraw", safi: 72, withdraw: true, nlri: testLSVPNEntry(99, testRD, testLSUnknownNLRI[4:]), update: minimalUpdate(), wantTypes: []int{bmp.LSOpaqueMsg}, wantAction: "del", wantRD: "65000:1"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -71,7 +71,10 @@ func TestProcessMPUpdateLSOpaque(t *testing.T) {
 					t.Errorf("message %d topic = %d, want %d", i, publisher.msgs[i].msgType, want)
 				}
 			}
-			var got LSOpaque
+			var got struct {
+				LSOpaque
+				RawRD json.RawMessage `json:"route_distinguisher_raw"`
+			}
 			if err := json.Unmarshal(publisher.msgs[len(publisher.msgs)-1].payload, &got); err != nil {
 				t.Fatalf("published LSOpaque JSON: %v", err)
 			}
@@ -82,13 +85,19 @@ func TestProcessMPUpdateLSOpaque(t *testing.T) {
 			if got.PeerASN != 65000 {
 				t.Errorf("published LSOpaque PeerASN = %d, want 65000", got.PeerASN)
 			}
+			if tt.safi != 72 && got.RawRD != nil {
+				t.Errorf("published route_distinguisher_raw = %s for SAFI %d, want absent", got.RawRD, tt.safi)
+			}
+			if tt.safi == 72 && string(got.RawRD) != `"0000fde800000001"` {
+				t.Errorf("published route_distinguisher_raw = %s, want 0000fde800000001", got.RawRD)
+			}
 		})
 	}
 }
 
 // TestProcessMPUpdateLSOpaqueZeroLength checks that an unknown NLRI type with
-// no value portion is published and does not drop the NLRI after it. RFC 9552
-// Section 5.1: "a TLV with no value portion would have a length of zero".
+// no Link-State body is published and does not drop the NLRI after it.
+// For SAFI 72, Length still includes the RD (RFC 9552 §5.2).
 func TestProcessMPUpdateLSOpaqueZeroLength(t *testing.T) {
 	zeroLength := []byte{0x00, 0x64, 0x00, 0x00} // type 100, length 0
 	tests := []struct {
@@ -98,7 +107,7 @@ func TestProcessMPUpdateLSOpaqueZeroLength(t *testing.T) {
 		update *bgp.Update
 	}{
 		{name: "SAFI 71", safi: 71, nlri: append(append([]byte{}, zeroLength...), testLSUnknownNLRI...), update: minimalUpdate()},
-		{name: "SAFI 72", safi: 72, nlri: append(append(append(append([]byte{}, testRD...), zeroLength...), testRD...), testLSUnknownNLRI...), update: minimalUpdate()},
+		{name: "SAFI 72", safi: 72, nlri: append(testLSVPNEntry(100, testRD, nil), testLSVPNEntry(99, testRD, testLSUnknownNLRI[4:])...), update: minimalUpdate()},
 		{name: "SAFI 80", safi: 80, nlri: append(append([]byte{}, zeroLength...), testLSUnknownNLRI...), update: testLSUpdate(testLSSequence())},
 	}
 	for _, tt := range tests {

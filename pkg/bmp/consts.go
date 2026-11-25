@@ -85,6 +85,8 @@ const (
 	LSOpaqueMsg = 23
 	// EndOfRIBMsg identifies a received End-of-RIB control marker.
 	EndOfRIBMsg = 24
+	// SSRPolicyCandidatePathMsg defines BMP Route Monitoring message carrying SR Policy Candidate Path NLRI
+	SRPolicyCandidatePathMsg = 25
 	// BMPRawMsg defines BMP RAW message type for unprocessed BMP messages
 	BMPRawMsg = 255
 )

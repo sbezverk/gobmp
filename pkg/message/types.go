@@ -13,6 +13,7 @@ import (
 	"github.com/sbezverk/gobmp/pkg/prefixsid"
 	"github.com/sbezverk/gobmp/pkg/sr"
 	"github.com/sbezverk/gobmp/pkg/srpolicy"
+	"github.com/sbezverk/gobmp/pkg/srpolicycp"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 	"github.com/sbezverk/tools/sort"
 )
@@ -26,6 +27,8 @@ type PeerStateChange struct {
 	Sequence        int            `json:"sequence,omitempty"`
 	Hash            string         `json:"hash,omitempty"`
 	RouterHash      string         `json:"router_hash,omitempty"`
+	RouterName      string         `json:"router_name,omitempty"`  // sysName from the BMP Initiation message
+	RouterDescr     string         `json:"router_descr,omitempty"` // sysDescr from the BMP Initiation message
 	Name            string         `json:"name,omitempty"`
 	RemoteBGPID     string         `json:"remote_bgp_id,omitempty"`
 	RouterIP        string         `json:"router_ip,omitempty"`
@@ -241,10 +244,13 @@ type LSNode struct {
 	Timestamp           string                          `json:"timestamp,omitempty"`
 	IGPRouterID         string                          `json:"igp_router_id,omitempty"`
 	RouterID            string                          `json:"router_id,omitempty"`
+	LocalIPv4RouterID   string                          `json:"local_ipv4_router_id,omitempty"`
+	LocalIPv6RouterID   string                          `json:"local_ipv6_router_id,omitempty"`
 	ASN                 uint32                          `json:"asn,omitempty"`
 	LSID                uint32                          `json:"ls_id,omitempty"`
 	MTID                []*base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
 	AreaID              string                          `json:"area_id"`
+	ISISAreaIDs         []string                        `json:"isis_area_ids,omitempty"` // RFC 9552 §5.3.1.2 TLV 1027, hex-encoded area addresses
 	Protocol            string                          `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID                    `json:"protocol_id,omitempty"`
 	NodeFlags           *bgpls.NodeAttrFlags            `json:"node_flags,omitempty"`
@@ -252,8 +258,10 @@ type LSNode struct {
 	SRCapabilities      *sr.Capability                  `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         []int                           `json:"sr_algorithm,omitempty"`
 	SRLocalBlock        *sr.LocalBlock                  `json:"sr_local_block,omitempty"`
+	SRMSPreference      *uint8                          `json:"srms_preference,omitempty"`
 	SRv6CapabilitiesTLV *srv6.CapabilityTLV             `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             []*base.MSDTV                   `json:"node_msd,omitempty"`
+	SBFDDiscriminators  []uint32                        `json:"sbfd_discriminators,omitempty"`
 	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition     `json:"flex_algo_definition,omitempty"`
 	OpaqueNodeAttribute []string                        `json:"opaque_node_attribute,omitempty"` // RFC 9552 §5.3.1.5 TLV 1025, hex-encoded raw values
 	// Values are assigned based on PerPeerHeader flags
@@ -347,7 +355,11 @@ type LSLink struct {
 	UnidirResidualBW      uint32                        `json:"unidir_residual_bw,omitempty"`
 	UnidirAvailableBW     uint32                        `json:"unidir_available_bw,omitempty"`
 	UnidirBWUtilization   uint32                        `json:"unidir_bw_utilization,omitempty"`
-	OpaqueLinkAttribute   []string                      `json:"opaque_link_attribute,omitempty"` // RFC 9552 §5.3.2.6 TLV 1097, hex-encoded raw values
+	// A nil bandwidth means there was no valid TLV. A pointer to zero preserves a reported zero.
+	UnidirResidualBWKbps    *uint64  `json:"unidir_residual_bw_kbps,omitempty"`
+	UnidirAvailableBWKbps   *uint64  `json:"unidir_available_bw_kbps,omitempty"`
+	UnidirBWUtilizationKbps *uint64  `json:"unidir_bw_utilization_kbps,omitempty"`
+	OpaqueLinkAttribute     []string `json:"opaque_link_attribute,omitempty"` // RFC 9552 §5.3.2.6 TLV 1097, hex-encoded raw values
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
@@ -663,6 +675,56 @@ type LSSRv6SID struct {
 	RD string `json:"route_distinguisher,omitempty"`
 }
 
+// LSSrPolicyCandidatePath defines a structure of LS SR Policy Candidate Path message (BGP-LS NLRI rype 5)
+// https://www.rfc-editor.org/info/rfc9857
+type LSSrPolicyCandidatePath struct {
+	Key               string                      `json:"_key,omitempty"`
+	ID                string                      `json:"_id,omitempty"`
+	Rev               string                      `json:"_rev,omitempty"`
+	Action            string                      `json:"action,omitempty"`
+	PathID            uint32                      `json:"path_id,omitempty"`
+	Sequence          int                         `json:"sequence,omitempty"`
+	Hash              string                      `json:"hash,omitempty"`
+	RouterHash        string                      `json:"router_hash,omitempty"`
+	RouterIP          string                      `json:"router_ip,omitempty"`
+	DomainID          int64                       `json:"domain_id"`
+	SAFI              uint8                       `json:"safi,omitempty"`
+	PeerHash          string                      `json:"peer_hash,omitempty"`
+	PeerIP            string                      `json:"peer_ip,omitempty"`
+	PeerType          uint8                       `json:"peer_type"`
+	PeerASN           uint32                      `json:"peer_asn,omitempty"`
+	Timestamp         string                      `json:"timestamp,omitempty"`
+	IGPRouterID       string                      `json:"igp_router_id,omitempty"`
+	LocalNodeASN      uint32                      `json:"local_node_asn,omitempty"`
+	LocalIPv4RouterID string                      `json:"local_ipv4_router_id,omitempty"`
+	LocalIPv6RouterID string                      `json:"local_ipv6_router_id,omitempty"`
+	LSID              uint32                      `json:"ls_id,omitempty"`
+	AreaID            string                      `json:"area_id,omitempty"`
+	ProtocolID        base.ProtoID                `json:"protocol_id,omitempty"`
+	Protocol          string                      `json:"protocol,omitempty"`
+	Nexthop           string                      `json:"nexthop,omitempty"`
+	LocalNodeHash     string                      `json:"local_node_hash,omitempty"`
+	IGPFlags          uint8                       `json:"igp_flags"`
+	IGPRouteTag       uint8                       `json:"route_tag,omitempty"`
+	IGPExtRouteTag    uint8                       `json:"ext_route_tag,omitempty"`
+	OSPFFwdAddr       string                      `json:"ospf_fwd_addr,omitempty"`
+	IGPMetric         uint32                      `json:"igp_metric,omitempty"`
+	Prefix            string                      `json:"prefix,omitempty"`
+	PrefixLen         int32                       `json:"prefix_len,omitempty"`
+	Descriptor        *srpolicycp.SRPCPDescriptor `json:"descriptor,omitempty"`
+	PolicyState       *bgpls.SRPolicyState        `json:"policy_state,omitempty"`
+	// Values are assigned based on PerPeerHeader flags
+	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
+	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`
+	IsAdjRIBOut      bool   `json:"is_adj_rib_out"`
+	IsLocRIB         bool   `json:"is_loc_rib"`
+	IsLocRIBFiltered bool   `json:"is_loc_rib_filtered"`
+	TableName        string `json:"table_name,omitempty"` // RFC 9069 Table Name for LocRIB
+	// RD is the BGP-LS-VPN Route Distinguisher (RFC 9552 §5.2); set only
+	// for NLRI carried under AFI 16388 / SAFI 72, otherwise omitted.
+	RD string `json:"route_distinguisher,omitempty"`
+}
+
 // LSOpaque defines the structure of a BGP-LS NLRI whose type gobmp does not
 // decode. Per RFC 9552 §5.2, "An implementation MUST handle unknown
 // Link-State NLRI types as opaque objects and MUST preserve and propagate
@@ -683,6 +745,8 @@ type LSOpaque struct {
 	NLRIType uint16 `json:"nlri_type"`
 	// NLRI is the hex-encoded NLRI value, excluding the 4-byte Type/Length header.
 	NLRI string `json:"nlri"`
+	// RDRaw is the eight wire bytes of the SAFI 72 RD in lowercase hex (RFC 9552 §5.2).
+	RDRaw string `json:"route_distinguisher_raw,omitempty"`
 	// Values are assigned based on PerPeerHeader flags
 	IsAdjRIBInPost   bool   `json:"is_adj_rib_in_post_policy"`
 	IsAdjRIBOutPost  bool   `json:"is_adj_rib_out_post_policy"`

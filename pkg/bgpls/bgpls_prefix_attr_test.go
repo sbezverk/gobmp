@@ -2,6 +2,7 @@ package bgpls
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -18,6 +19,7 @@ func TestUnmarshalFlexAlgoPrefixMetric(t *testing.T) {
 		wantErr    bool
 		wantAlgo   uint8
 		wantMetric uint32
+		wantFlags  string
 	}{
 		{
 			name:    "too short (7 bytes)",
@@ -26,9 +28,16 @@ func TestUnmarshalFlexAlgoPrefixMetric(t *testing.T) {
 		},
 		{
 			name:       "algo=128, metric=1000",
-			input:      []byte{128, 0, 0, 0, 0x00, 0x00, 0x03, 0xE8},
+			input:      []byte{128, 0, 0x34, 0x56, 0x00, 0x00, 0x03, 0xE8},
 			wantAlgo:   128,
 			wantMetric: 1000,
+		},
+		{
+			name:       "OSPF external type flag",
+			input:      []byte{129, 0x80, 0x34, 0x56, 0x12, 0x34, 0x56, 0x78},
+			wantAlgo:   129,
+			wantMetric: 0x12345678,
+			wantFlags:  "128",
 		},
 		{
 			name:       "algo=0, metric=0",
@@ -52,6 +61,17 @@ func TestUnmarshalFlexAlgoPrefixMetric(t *testing.T) {
 			}
 			if got.Metric != tt.wantMetric {
 				t.Errorf("Metric = %d, want %d", got.Metric, tt.wantMetric)
+			}
+			wire, err := json.Marshal(got)
+			if err != nil {
+				t.Fatalf("marshal prefix metric: %v", err)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(wire, &fields); err != nil {
+				t.Fatalf("unmarshal prefix metric JSON: %v", err)
+			}
+			if flags := string(fields["flags"]); flags != tt.wantFlags {
+				t.Errorf("JSON flags = %q, want %q", flags, tt.wantFlags)
 			}
 		})
 	}
@@ -251,9 +271,9 @@ func TestSRAffinityConstraint_JSON(t *testing.T) {
 		ExclAnySize: 1,
 		InclAnySize: 2,
 		InclAllSize: 3,
-		ExclAnyEAG:  0xDEAD0001,
-		InclAnyEAG:  0xBEEF0002,
-		InclAllEAG:  0xCAFE0003,
+		ExclAnyEAG:  []uint32{0xDEAD0001},
+		InclAnyEAG:  []uint32{0xBEEF0002},
+		InclAllEAG:  []uint32{0xCAFE0003},
 	}
 	b, err := orig.MarshalJSON()
 	if err != nil {
@@ -266,7 +286,7 @@ func TestSRAffinityConstraint_JSON(t *testing.T) {
 	if got.ExclAnySize != orig.ExclAnySize || got.InclAnySize != orig.InclAnySize || got.InclAllSize != orig.InclAllSize {
 		t.Errorf("size fields mismatch: got %+v, want %+v", got, orig)
 	}
-	if got.ExclAnyEAG != orig.ExclAnyEAG || got.InclAnyEAG != orig.InclAnyEAG || got.InclAllEAG != orig.InclAllEAG {
+	if slices.Compare(got.ExclAnyEAG, orig.ExclAnyEAG) != 0 || slices.Compare(got.InclAnyEAG, orig.InclAnyEAG) != 0 || slices.Compare(got.InclAllEAG, orig.InclAllEAG) != 0 {
 		t.Errorf("EAG fields mismatch: got %+v, want %+v", got, orig)
 	}
 }
@@ -302,11 +322,12 @@ func TestSRBandwidthConstraint_JSON(t *testing.T) {
 		t.Fatalf("UnmarshalJSON() error = %v", err)
 	}
 	if got.Bandwidth != orig.Bandwidth {
-		t.Errorf("Bandwidth = %d, want %d", got.Bandwidth, orig.Bandwidth)
+		t.Errorf("Bandwidth = %f, want %f", got.Bandwidth, orig.Bandwidth)
 	}
 }
 
 func TestSRDisjointGroupConstraint_JSON(t *testing.T) {
+	id := uint32(42)
 	orig := &SRDisjointGroupConstraint{
 		RequestFlagS:    true,
 		RequestFlagN:    false,
@@ -319,7 +340,7 @@ func TestSRDisjointGroupConstraint_JSON(t *testing.T) {
 		StatusFlagF:     false,
 		StatusFlagI:     true,
 		StatusFlagX:     false,
-		DisjointGroupID: 42,
+		DisJointGroupID: &id,
 	}
 	b, err := orig.MarshalJSON()
 	if err != nil {
@@ -339,8 +360,8 @@ func TestSRDisjointGroupConstraint_JSON(t *testing.T) {
 		got.StatusFlagI != orig.StatusFlagI || got.StatusFlagX != orig.StatusFlagX {
 		t.Errorf("status flags mismatch: got %+v, want %+v", got, orig)
 	}
-	if got.DisjointGroupID != orig.DisjointGroupID {
-		t.Errorf("DisjointGroupID = %d, want %d", got.DisjointGroupID, orig.DisjointGroupID)
+	if got.DisJointGroupID == nil || *got.DisJointGroupID != *orig.DisJointGroupID {
+		t.Errorf("DisjointGroupID = %v, want %v", got.DisJointGroupID, orig.DisJointGroupID)
 	}
 }
 

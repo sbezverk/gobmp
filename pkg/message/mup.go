@@ -66,6 +66,7 @@ func (p *producer) mup(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 			glog.Errorf("error getting Prefix SID attribute: %v", err)
 		}
 	}
+	nextHop := nlri.GetNextHop()
 	for _, e := range route.Route {
 		prfx := MUPPrefix{
 			Action:         operation,
@@ -77,7 +78,7 @@ func (p *producer) mup(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 			PeerType:       uint8(ph.PeerType),
 			PeerASN:        ph.PeerAS,
 			Timestamp:      ph.GetPeerTimestamp(),
-			Nexthop:        nlri.GetNextHop(),
+			Nexthop:        nextHop,
 			BaseAttributes: update.BaseAttributes,
 			IsIPv4:         !nlri.IsIPv6NLRI(),
 			PathID:         int32(e.PathID),

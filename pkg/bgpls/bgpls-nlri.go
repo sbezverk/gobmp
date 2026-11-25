@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
+	"math/bits"
 	"net"
 
 	"github.com/golang/glog"
@@ -110,6 +111,19 @@ func (ls *NLRI) GetISISAreaID() string {
 	return s
 }
 
+// GetISISAreaIDs returns each IS-IS Area Identifier TLV as a lowercase hex string
+// in wire order (RFC 9552 §5.3.1.2). Invalid area address lengths are skipped.
+func (ls *NLRI) GetISISAreaIDs() []string {
+	var ids []string
+	for _, tlv := range ls.LS {
+		// An IS-IS area address is 1–13 octets (RFC 7898 §3.2.2).
+		if tlv.Type == 1027 && len(tlv.Value) >= 1 && len(tlv.Value) <= 13 {
+			ids = append(ids, hex.EncodeToString(tlv.Value))
+		}
+	}
+	return ids
+}
+
 // GetLocalIPv4RouterID returns string with local Node IPv4 router ID
 func (ls *NLRI) GetLocalIPv4RouterID() string {
 	for _, tlv := range ls.LS {
@@ -168,6 +182,22 @@ func (ls *NLRI) GetRemoteIPv6RouterID() string {
 	}
 
 	return ""
+}
+
+// GetNodeSBFDDiscriminators returns the discriminators from well-formed S-BFD
+// Discriminators TLVs (RFC 9247 §3), in wire order.
+func (ls *NLRI) GetNodeSBFDDiscriminators() []uint32 {
+	var discriminators []uint32
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1032 || len(tlv.Value) < 4 || len(tlv.Value)%4 != 0 {
+			continue
+		}
+		for offset := 0; offset < len(tlv.Value); offset += 4 {
+			discriminators = append(discriminators, binary.BigEndian.Uint32(tlv.Value[offset:offset+4]))
+		}
+	}
+
+	return discriminators
 }
 
 // GetNodeMSD returns Node's MSD object
@@ -233,6 +263,20 @@ func (ls *NLRI) GetNodeSRLocalBlock() *sr.LocalBlock {
 			return nil
 		}
 		return lb
+	}
+
+	return nil
+}
+
+// GetNodeSRMSPreference returns the first well-formed SRMS Preference TLV
+// (RFC 9085 §2.1.5), or nil when none is present.
+func (ls *NLRI) GetNodeSRMSPreference() *uint8 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1037 || len(tlv.Value) != 1 {
+			continue
+		}
+		preference := tlv.Value[0]
+		return &preference
 	}
 
 	return nil
@@ -751,8 +795,8 @@ func (ls *NLRI) GetUnidirLinkLoss() uint32 {
 	return 0
 }
 
-// GetUnidirResidualBandwidth returns a value of the the residual bandwidth between two
-// directly connected IGP link-state neighbor
+// GetUnidirResidualBandwidth returns the raw IEEE 754 bits of the residual bandwidth.
+// Use GetUnidirResidualBandwidthKbps for the decoded value.
 func (ls *NLRI) GetUnidirResidualBandwidth() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1118 {
@@ -767,8 +811,8 @@ func (ls *NLRI) GetUnidirResidualBandwidth() uint32 {
 	return 0
 }
 
-// GetUnidirAvailableBandwidth returns a value of the the available bandwidth between two
-// directly connected IGP link-state neighbor
+// GetUnidirAvailableBandwidth returns the raw IEEE 754 bits of the available bandwidth.
+// Use GetUnidirAvailableBandwidthKbps for the decoded value.
 func (ls *NLRI) GetUnidirAvailableBandwidth() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1119 {
@@ -783,8 +827,8 @@ func (ls *NLRI) GetUnidirAvailableBandwidth() uint32 {
 	return 0
 }
 
-// GetUnidirUtilizedBandwidth returns a value of the the utilized bandwidth between two
-// directly connected IGP link-state neighbor
+// GetUnidirUtilizedBandwidth returns the raw IEEE 754 bits of the utilized bandwidth.
+// Use GetUnidirUtilizedBandwidthKbps for the decoded value.
 func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1120 {
@@ -797,6 +841,50 @@ func (ls *NLRI) GetUnidirUtilizedBandwidth() uint32 {
 	}
 
 	return 0
+}
+
+// GetUnidirResidualBandwidthKbps returns the residual bandwidth in whole kbps,
+// or nil if TLV 1118 is absent or invalid.
+func (ls *NLRI) GetUnidirResidualBandwidthKbps() *uint64 {
+	return ls.getUnidirBandwidthKbps(1118)
+}
+
+// GetUnidirAvailableBandwidthKbps returns the available bandwidth in whole kbps,
+// or nil if TLV 1119 is absent or invalid.
+func (ls *NLRI) GetUnidirAvailableBandwidthKbps() *uint64 {
+	return ls.getUnidirBandwidthKbps(1119)
+}
+
+// GetUnidirUtilizedBandwidthKbps returns the utilized bandwidth in whole kbps,
+// or nil if TLV 1120 is absent or invalid.
+func (ls *NLRI) GetUnidirUtilizedBandwidthKbps() *uint64 {
+	return ls.getUnidirBandwidthKbps(1120)
+}
+
+func (ls *NLRI) getUnidirBandwidthKbps(tlvType uint16) *uint64 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != tlvType {
+			continue
+		}
+		if len(tlv.Value) != 4 {
+			return nil
+		}
+		// RFC 8571 Sections 2.5–2.7 and RFC 8570 Sections 4.5–4.7:
+		// bandwidth is an IEEE 754 single-precision value in bytes/s.
+		bytesPerSecond := float64(math.Float32frombits(binary.BigEndian.Uint32(tlv.Value)))
+		const bytesPerKilobit = 125
+		const twoTo64 = 0x1p64
+		if math.IsNaN(bytesPerSecond) || bytesPerSecond < 0 || bytesPerSecond >= twoTo64*bytesPerKilobit {
+			return nil
+		}
+		// Integer division truncates exactly. A valid bytes/s value can exceed
+		// uint64 before the division, so split it into high and low words.
+		high := uint64(bytesPerSecond / twoTo64)
+		low := uint64(bytesPerSecond - float64(high)*twoTo64)
+		kbps, _ := bits.Div64(high, low, bytesPerKilobit)
+		return &kbps
+	}
+	return nil
 }
 
 // GetAppSpecLinkAttr returns a slice of Application Specifc Link Attributes
@@ -866,6 +954,80 @@ func (ls *NLRI) GetSRCandidatePathName() (*SRCandidatePathName, error) {
 		return UnmarshalSRCandidatePathName(tlv.Value)
 	}
 	return nil, fmt.Errorf("not found")
+}
+
+// GetSRPolicyName returns the SR Policy Name TLV (type 1213).
+func (ls *NLRI) GetSRPolicyName() (*SRPolicyName, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != SRPolicyNameType {
+			continue
+		}
+		return UnmarshalSRPolicyName(tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+// GetSRv6BindingSID returns the SRv6 Binding SID TLV (type 1212).
+func (ls *NLRI) GetSRv6BindingSID() (*SRv6BindingSID, error) {
+	for _, tlv := range ls.LS {
+		if tlv.Type != SRv6BindingSIDType {
+			continue
+		}
+		return UnmarshalSRv6BindingSID(tlv.Value)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+// GetSRPolicyState decodes all SR Policy State TLVs from the BGP-LS
+// attribute. A state object is returned even when no recognized TLV is
+// present, allowing callers to distinguish a valid empty attribute from a
+// missing/malformed attribute.
+func (ls *NLRI) GetSRPolicyState() (*SRPolicyState, error) {
+	if ls == nil {
+		return nil, fmt.Errorf("BGP-LS attribute is nil")
+	}
+	state := &SRPolicyState{}
+	for _, tlv := range ls.LS {
+		var err error
+		switch tlv.Type {
+		case BindingSIDType:
+			state.BindingSID, err = UnmarshalSRBindingSID(tlv.Value)
+		case SRv6BindingSIDType:
+			state.SRv6BindingSID, err = UnmarshalSRv6BindingSID(tlv.Value)
+		case SRCandidatePathStateType:
+			state.CandidatePathState, err = UnmarshalSRCandidatePathState(tlv.Value)
+		case SRCandidatePathNameType:
+			state.CandidatePathName, err = UnmarshalSRCandidatePathName(tlv.Value)
+		case SRPolicyNameType:
+			state.PolicyName, err = UnmarshalSRPolicyName(tlv.Value)
+		case SRCandidatePathConstraintsType:
+			state.Constraints, err = UnmarshalSRCandidatePathConstraints(tlv.Value)
+		case SRSegmentListType:
+			var segmentList *SRSegmentList
+			segmentList, err = UnmarshalSRSegmentList(tlv.Value)
+			if err == nil {
+				state.SegmentLists = append(state.SegmentLists, segmentList)
+			}
+		default:
+			if state.UnknownTLV == nil {
+				state.UnknownTLV = make([]TLV, 0)
+			}
+			if len(tlv.Value) > math.MaxUint16 {
+				glog.Warningf("Unknown TLV %d has value length of %d bytes, which is exceeding max allowed %d bytes", tlv.Type, len(tlv.Value), math.MaxUint16)
+				continue
+			}
+			state.UnknownTLV = append(state.UnknownTLV, TLV{
+				Type:   tlv.Type,
+				Length: uint16(len(tlv.Value)),
+				Value:  make([]byte, len(tlv.Value)),
+			})
+			copy(state.UnknownTLV[len(state.UnknownTLV)-1].Value, tlv.Value)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode SR Policy State TLV %d: %w", tlv.Type, err)
+		}
+	}
+	return state, nil
 }
 
 // GetSRCandidatePathConstraints returns the SR Candidate Path Constraints TLV (type 1204)

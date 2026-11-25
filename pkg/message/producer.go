@@ -67,6 +67,10 @@ type producer struct {
 	identityLock sync.RWMutex
 	identities   map[string]bmp.PeerIdentity
 	speakerID    bmp.PeerIdentity
+	// routerName and routerDescr are the sysName and sysDescr of the latest
+	// Initiation message on this connection; identityLock protects them.
+	routerName  string
+	routerDescr string
 }
 
 // Producer publishes one BMP connection's messages in input order.
@@ -133,6 +137,10 @@ func prePeerUpMessageBytes(msg bmp.Message) int {
 			for _, attr := range payload.Update.PathAttributes {
 				size += len(attr.Attribute)
 			}
+		}
+	case *bmp.RouteMirror:
+		if payload != nil {
+			size += payload.Size()
 		}
 	case *bmp.StatsReport:
 		if payload != nil {
@@ -303,7 +311,16 @@ func (p *producer) producingWorker(msg bmp.Message) {
 			return
 		}
 		p.attachIdentitySnapshot(&msg)
-		p.produceRouteMonitorMessage(msg)
+		p.produceRouteMessage(msg)
+	case *bmp.RouteMirror:
+		select {
+		case <-p.speakerReady:
+		default:
+			p.bufferPrePeerUp(msg)
+			return
+		}
+		p.attachIdentitySnapshot(&msg)
+		p.produceRouteMessage(msg)
 	case *bmp.StatsReport:
 		select {
 		case <-p.speakerReady:
@@ -315,6 +332,12 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		p.produceStatsMessage(msg)
 	case *bmp.RawMessage:
 		p.produceRawMessage(msg)
+	case *bmp.InitiationMessage:
+		// RFC 7854 Section 4.3 allows a later Initiation; the newest one sets both values.
+		p.identityLock.Lock()
+		p.routerName = obj.SysName()
+		p.routerDescr = obj.SysDescr()
+		p.identityLock.Unlock()
 	default:
 		glog.Warningf("got Unknown message %T to push to the producer, ignoring it...", obj)
 	}

@@ -91,7 +91,7 @@ services:
       - gobmp
 
   bgpinjector:
-    image: ${BGPINJECTOR_IMAGE:-docker.io/sbezverk/bgpinjector:latest}
+    image: ${BGPINJECTOR_IMAGE:-ghcr.io/sbezverk/bgpinjector:latest}
     container_name: bgpinjector-mup
     hostname: bgpinjector-mup
     restart: on-failure

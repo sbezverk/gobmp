@@ -292,14 +292,21 @@ func (p *PerPeerHeader) GetTableKey() string {
 // Loc-RIB and intentionally omits peer address and ASN. Distinguisher bytes
 // are used directly: formatted RDs can hide different types or opaque values.
 func (p *PerPeerHeader) PeerIdentity() string {
-	switch p.PeerType {
-	case PeerType0, PeerType1, PeerType2:
-		return fmt.Sprintf("%d-%s-%s-%d-%s", p.PeerType, hex.EncodeToString(p.PeerDistinguisher), p.GetPeerAddrString(), p.PeerAS, p.GetPeerBGPIDString())
-	case PeerType3:
-		return fmt.Sprintf("%d-%s-%s", p.PeerType, hex.EncodeToString(p.PeerDistinguisher), p.GetPeerBGPIDString())
-	default:
+	if p.PeerType > PeerType3 {
 		return ""
 	}
+	var buf [96]byte // fits typical keys; append grows it otherwise
+	b := strconv.AppendUint(buf[:0], uint64(p.PeerType), 10)
+	b = append(b, '-')
+	b = hex.AppendEncode(b, p.PeerDistinguisher)
+	b = append(b, '-')
+	if p.PeerType != PeerType3 {
+		b = append(b, p.GetPeerAddrString()...)
+		b = append(b, '-')
+		b = strconv.AppendUint(b, uint64(p.PeerAS), 10)
+		b = append(b, '-')
+	}
+	return string(append(b, p.GetPeerBGPIDString()...))
 }
 
 // PeerIdentity holds information about the peer's identity extracted from the BMP PeerUP message.

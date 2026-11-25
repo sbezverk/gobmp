@@ -40,6 +40,7 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 			},
 		}, nil
 	}
+	nextHop := nlri.GetNextHop()
 	for _, e := range u.NLRI {
 		prfx := &MulticastPrefix{
 			Action:         operation,
@@ -76,7 +77,7 @@ func (p *producer) multicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, upd
 			prfx.OriginAS = ases[len(ases)-1]
 		}
 		prfx.PeerIP = ph.GetPeerAddrString()
-		prfx.Nexthop = nlri.GetNextHop()
+		prfx.Nexthop = nextHop
 		if nlri.IsIPv6NLRI() {
 			prfx.IsIPv4 = false
 			a := make([]byte, 16)

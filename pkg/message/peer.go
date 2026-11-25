@@ -106,6 +106,11 @@ func (p *producer) producePeerMessage(op int, msg bmp.Message, peerID bmp.PeerId
 		p.tableLock.Unlock()
 	}
 
+	p.identityLock.RLock()
+	m.RouterName = p.routerName
+	m.RouterDescr = p.routerDescr
+	p.identityLock.RUnlock()
+
 	return &m, nil
 }
 

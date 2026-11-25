@@ -105,6 +105,7 @@ func (p *producer) lsPrefix(prfx *base.PrefixNLRI, nextHop string, op int, ph *b
 			msg.IGPFlags = f
 		}
 		msg.IGPExtRouteTag = lsprefix.GetPrefixIGPExtRouteTag()
+		msg.OSPFFwdAddr = lsprefix.GetPrefixOSPFForwardAddr()
 		if s, err := lsprefix.GetPrefixAttrTLVs(prfx.ProtocolID); err == nil {
 			msg.PrefixAttrTLVs = s
 		}
