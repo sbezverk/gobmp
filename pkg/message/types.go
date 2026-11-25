@@ -27,6 +27,7 @@ type PeerStateChange struct {
 	Sequence        int            `json:"sequence,omitempty"`
 	Hash            string         `json:"hash,omitempty"`
 	RouterHash      string         `json:"router_hash,omitempty"`
+	SpeakerIP       string         `json:"speaker_ip,omitempty"`   // remote address of the BMP TCP connection
 	RouterName      string         `json:"router_name,omitempty"`  // sysName from the BMP Initiation message
 	RouterDescr     string         `json:"router_descr,omitempty"` // sysDescr from the BMP Initiation message
 	Name            string         `json:"name,omitempty"`
