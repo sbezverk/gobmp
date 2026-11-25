@@ -58,8 +58,22 @@ Incomplete trailing frames are never published.
 The standalone parser/producer APIs still support an explicit stop signal. The
 server uses input closure instead, so shutdown does not abort an accepted frame.
 `PublishMessage` has no cancellation parameter: a blocked call must return before
-that connection worker and server Stop can finish. No hard shutdown deadline or
-broker-delivery/flush guarantee is added.
+that connection worker and server Stop can finish. No hard shutdown deadline is
+added. If the NATS server stays away for about 5 minutes, goBMP exits with an
+error instead of dropping every later message. The NATS publisher publishes to
+JetStream asynchronously, in call order: a publish returns before its
+acknowledgement, so an acknowledgement failure or timeout
+(`nats_ack_timeout_ms`, default 30 s) does not reach the caller; it is logged,
+at most once a second, and the message may be lost (one buffered during a
+reconnect can still be stored). Once `nats_max_pending_acks` (default 4096)
+acknowledgements are outstanding, as during a JetStream outage, a publish waits
+for one, stalling reads from that BMP connection. The NATS publisher's Stop
+waits up to 10 s for outstanding acknowledgements. During an outage a stalled
+publish delays shutdown until acknowledgements time out, so stopping can take up
+to `nats_ack_timeout_ms` plus 10 s. Consumers should read the
+`goBMP` stream through JetStream, which delivers at the consumer's pace; a core
+NATS subscription receives messages at publish rate and, if it falls behind, is
+a slow consumer that loses messages.
 
 Regression tests exercise actual BMP wire frames through the parser/producer
 pipeline, including announcement, withdrawal, explicit End-of-RIB and Peer Down,

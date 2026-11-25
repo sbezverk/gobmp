@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -31,6 +32,8 @@ var (
 	kafkaTLS               bool
 	kafkaCA                string
 	natsSrv                string
+	natsMaxPendingAcks     int
+	natsAckTimeoutMs       int
 	splitAF                string
 	dump                   string
 	file                   string
@@ -44,6 +47,10 @@ const (
 	defaultKafkaTpRetnTimeMs = "900000" // 15 minutes in ms
 	defaultSplitAF           = true
 	defaultMsgFile           = ""
+	// NATS JetStream acknowledgement defaults, those of the nats package.
+	defaultNATSMaxPendingAcks = nats.DefaultMaxPendingAcks
+	defaultNATSAckTimeoutMs   = int(nats.DefaultAckTimeout / time.Millisecond)
+	maxNATSAckTimeoutMs       = 24 * 60 * 60 * 1000 // 24 h; larger values overflow or make no sense
 )
 
 func init() {
@@ -56,6 +63,8 @@ func init() {
 	flag.BoolVar(&kafkaTLS, "kafka-tls", false, "Use TLS when connecting to the Kafka broker. Required by brokers exposing a TLS-only listener (commonly :9094).")
 	flag.StringVar(&kafkaCA, "kafka-ca", "", "Path to a PEM CA bundle used to verify the Kafka broker certificate. Empty uses the system trust store. Only used with -kafka-tls.")
 	flag.StringVar(&natsSrv, "nats-server", "", "URL to access NATS server")
+	flag.IntVar(&natsMaxPendingAcks, "nats-max-pending-acks", defaultNATSMaxPendingAcks, "Maximum NATS JetStream publishes awaiting acknowledgement; at the limit publishing waits, holding up the BMP connection")
+	flag.IntVar(&natsAckTimeoutMs, "nats-ack-timeout-ms", defaultNATSAckTimeoutMs, "Time in ms a NATS JetStream publish waits for its acknowledgement before it is logged as failed and the message dropped")
 	flag.StringVar(&splitAF, "split-af", "true", "When set \"true\" ipv4 and ipv6 will be published in separate topics. if set \"false\" the same topic will be used for both address families.")
 	flag.IntVar(&perfPort, "performance-port", 0, "port used for performance debugging")
 	flag.StringVar(&dump, "dump", "", "Selects the dump publisher: 'console' prints JSON messages to stdout, 'file' writes them to the path set by --msg-file (falls back to console if --msg-file is omitted)")
@@ -122,7 +131,11 @@ func main() {
 		}
 	case config.PublisherTypeNATS:
 		if cfg.NATSConfig != nil && cfg.NATSConfig.NatsSrv != "" {
-			cfg.Publisher, err = nats.NewPublisher(cfg.NATSConfig.NatsSrv)
+			natsCfg, err := natsPublisherConfig(cfg.NATSConfig)
+			if err != nil {
+				fatal("%v", err)
+			}
+			cfg.Publisher, err = nats.NewPublisherWithConfig(natsCfg)
 			if err != nil {
 				fatal("failed to initialize NATS publisher with error: %+v", err)
 			} else {
@@ -173,6 +186,33 @@ func defaultKafkaConfig() *config.KafkaConfig {
 	return &config.KafkaConfig{KafkaTpRetnTimeMs: v}
 }
 
+// defaultNATSConfig returns a NATSConfig pre-populated with the
+// acknowledgement defaults, used when a NATS CLI flag creates it.
+// natsPublisherConfig returns the NATS publisher configuration for c, or an
+// error for an ack timeout over maxNATSAckTimeoutMs.
+func natsPublisherConfig(c *config.NATSConfig) (*nats.Config, error) {
+	if c.NatsAckTimeoutMs > maxNATSAckTimeoutMs {
+		return nil, fmt.Errorf("invalid nats_ack_timeout_ms %d: must be <= %d", c.NatsAckTimeoutMs, maxNATSAckTimeoutMs)
+	}
+	return &nats.Config{
+		ServerAddress:  c.NatsSrv,
+		MaxPendingAcks: c.NatsMaxPendingAcks,
+		AckTimeout:     time.Duration(c.NatsAckTimeoutMs) * time.Millisecond,
+		// Exit rather than drop every message: once restarted, goBMP gets
+		// each router's full table again.
+		OnConnectionLost: func() {
+			fatal("NATS server unreachable for about 5 minutes; exiting")
+		},
+	}, nil
+}
+
+func defaultNATSConfig() *config.NATSConfig {
+	return &config.NATSConfig{
+		NatsMaxPendingAcks: defaultNATSMaxPendingAcks,
+		NatsAckTimeoutMs:   defaultNATSAckTimeoutMs,
+	}
+}
+
 func applyConfigDefaults(cfg *config.Config) {
 	// PublisherType is always reset to Unknown here; the actual type is
 	// inferred from populated sub-configs in applyConfigOverrides.
@@ -199,6 +239,15 @@ func applyConfigDefaults(cfg *config.Config) {
 			cfg.KafkaConfig.KafkaTpRetnTimeMs = v
 		}
 	}
+	// NATSConfig, like KafkaConfig, gets its defaults only when present.
+	if cfg.NATSConfig != nil {
+		if cfg.NATSConfig.NatsMaxPendingAcks == 0 {
+			cfg.NATSConfig.NatsMaxPendingAcks = defaultNATSMaxPendingAcks
+		}
+		if cfg.NATSConfig.NatsAckTimeoutMs == 0 {
+			cfg.NATSConfig.NatsAckTimeoutMs = defaultNATSAckTimeoutMs
+		}
+	}
 	// SplitAF is *bool so nil means "not set in YAML". Apply the default (true)
 	// only when the pointer is nil; an explicit split_af: false in YAML yields
 	// &false and is left untouched.
@@ -216,7 +265,7 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 	// visitErr captures the first error from inside the closure (fs.Visit
 	// does not support early termination, so we skip further cases once set).
 	var visitErr error
-	var bmpRawSet, adminIDSet bool
+	var bmpRawSet, adminIDSet, natsAckSet bool
 	fs.Visit(func(f *flag.Flag) {
 		if visitErr != nil {
 			return
@@ -253,9 +302,29 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 			}
 		case "nats-server":
 			if cfg.NATSConfig == nil {
-				cfg.NATSConfig = &config.NATSConfig{}
+				cfg.NATSConfig = defaultNATSConfig()
 			}
 			cfg.NATSConfig.NatsSrv = natsSrv
+		case "nats-max-pending-acks":
+			if natsMaxPendingAcks <= 0 {
+				visitErr = fmt.Errorf("invalid value for --nats-max-pending-acks: %d: must be > 0", natsMaxPendingAcks)
+				return
+			}
+			if cfg.NATSConfig == nil {
+				cfg.NATSConfig = defaultNATSConfig()
+			}
+			cfg.NATSConfig.NatsMaxPendingAcks = natsMaxPendingAcks
+			natsAckSet = true
+		case "nats-ack-timeout-ms":
+			if natsAckTimeoutMs <= 0 || natsAckTimeoutMs > maxNATSAckTimeoutMs {
+				visitErr = fmt.Errorf("invalid value for --nats-ack-timeout-ms: %d: must be > 0 and <= %d", natsAckTimeoutMs, maxNATSAckTimeoutMs)
+				return
+			}
+			if cfg.NATSConfig == nil {
+				cfg.NATSConfig = defaultNATSConfig()
+			}
+			cfg.NATSConfig.NatsAckTimeoutMs = natsAckTimeoutMs
+			natsAckSet = true
 		case "msg-file":
 			if cfg.DumpConfig == nil {
 				cfg.DumpConfig = &config.DumpConfig{}
@@ -370,6 +439,9 @@ func applyConfigOverrides(cfg *config.Config, fs *flag.FlagSet) error {
 		if adminIDSet {
 			glog.Warningf("--admin-id is set but has no effect: it only applies to the Kafka publisher (current publisher: %s)", cfg.PublisherType.String())
 		}
+	}
+	if cfg.PublisherType != config.PublisherTypeNATS && natsAckSet {
+		glog.Warningf("--nats-max-pending-acks or --nats-ack-timeout-ms is set but has no effect: they only apply to the NATS publisher (current publisher: %s)", cfg.PublisherType.String())
 	}
 	return nil
 }

@@ -14,11 +14,25 @@ type fakeJetStream struct {
 	addStreamFn    func(*natsgo.StreamConfig, ...natsgo.JSOpt) (*natsgo.StreamInfo, error)
 	streamInfoFn   func(string, ...natsgo.JSOpt) (*natsgo.StreamInfo, error)
 	updateStreamFn func(*natsgo.StreamConfig, ...natsgo.JSOpt) (*natsgo.StreamInfo, error)
+	publishFn      func(*natsgo.Msg) error
+	completeFn     func() <-chan struct{}
 }
 
-func (f *fakeJetStream) PublishMsg(m *natsgo.Msg, _ ...natsgo.PubOpt) (*natsgo.PubAck, error) {
+func (f *fakeJetStream) PublishMsgAsync(m *natsgo.Msg, _ ...natsgo.PubOpt) (natsgo.PubAckFuture, error) {
+	if f.publishFn != nil {
+		return nil, f.publishFn(m)
+	}
 	return nil, nil
 }
+func (f *fakeJetStream) PublishAsyncComplete() <-chan struct{} {
+	if f.completeFn != nil {
+		return f.completeFn()
+	}
+	ch := make(chan struct{})
+	close(ch)
+	return ch
+}
+func (f *fakeJetStream) PublishAsyncPending() int { return 0 }
 func (f *fakeJetStream) AddStream(cfg *natsgo.StreamConfig, opts ...natsgo.JSOpt) (*natsgo.StreamInfo, error) {
 	return f.addStreamFn(cfg, opts...)
 }
@@ -258,30 +272,19 @@ func TestRawTopicNotUnderParsedWildcard(t *testing.T) {
 	}
 }
 
-type eorJetStream struct {
-	fakeJetStream
-	message *natsgo.Msg
-	err     error
-}
-
-func (f *eorJetStream) PublishMsg(m *natsgo.Msg, _ ...natsgo.PubOpt) (*natsgo.PubAck, error) {
-	f.message = m
-	return nil, f.err
-}
-
 func TestEndOfRIBPublicationAndStream(t *testing.T) {
-	for _, fail := range []bool{false, true} {
-		fake := &eorJetStream{}
-		if fail {
-			fake.err = errors.New("broker failure")
+	for _, wantErr := range []error{nil, errors.New("broker failure")} {
+		var message *natsgo.Msg
+		fake := &fakeJetStream{publishFn: func(m *natsgo.Msg) error {
+			message = m
+			return wantErr
+		}}
+		err := newPublisher(nil, fake).PublishMessage(bmp.EndOfRIBMsg, []byte("router-key"), []byte("marker"))
+		if !errors.Is(err, wantErr) {
+			t.Fatalf("publish error=%v want %v", err, wantErr)
 		}
-		p := &publisher{js: fake}
-		err := p.PublishMessage(bmp.EndOfRIBMsg, []byte("router-key"), []byte("marker"))
-		if !errors.Is(err, fake.err) {
-			t.Fatalf("publish error=%v want %v", err, fake.err)
-		}
-		if fake.message == nil || fake.message.Subject != "gobmp.parsed.end_of_rib" || fake.message.Header.Get("Hash") != "router-key" || string(fake.message.Data) != "marker" {
-			t.Fatalf("published=%+v", fake.message)
+		if message == nil || message.Subject != "gobmp.parsed.end_of_rib" || message.Header.Get("Hash") != "router-key" || string(message.Data) != "marker" {
+			t.Fatalf("published=%+v", message)
 		}
 	}
 	called := false
@@ -301,4 +304,44 @@ func TestEndOfRIBPublicationAndStream(t *testing.T) {
 	if !called {
 		t.Fatal("stream initialization skipped")
 	}
+}
+
+// TestConnectOptions checks that the connection reconnects without limit
+// and logs its transitions.
+func TestConnectOptions(t *testing.T) {
+	o := natsgo.GetDefaultOptions()
+	for _, opt := range connectOptions() {
+		if err := opt(&o); err != nil {
+			t.Fatalf("option: %v", err)
+		}
+	}
+	if o.MaxReconnect != maxReconnects {
+		t.Errorf("MaxReconnect = %d, want %d", o.MaxReconnect, maxReconnects)
+	}
+	if o.DisconnectedErrCB == nil || o.ReconnectedCB == nil {
+		t.Fatal("connection transitions are not all logged")
+	}
+	// The handlers only log; they must not panic, including a disconnect
+	// without an error (a deliberate close).
+	o.DisconnectedErrCB(nil, errors.New("EOF"))
+	o.DisconnectedErrCB(nil, nil)
+	o.ReconnectedCB(nil)
+}
+
+// TestConnectionClosed checks that a connection closing for good calls
+// OnConnectionLost, and one closed by Stop does not.
+func TestConnectionClosed(t *testing.T) {
+	lost := 0
+	p := newPublisher(nil, &fakeJetStream{})
+	p.onLost = func() { lost++ }
+	p.connectionClosed()
+	if lost != 1 {
+		t.Fatalf("connection lost: OnConnectionLost called %d times, want 1", lost)
+	}
+	p.Stop()
+	p.connectionClosed()
+	if lost != 1 {
+		t.Errorf("connection closed by Stop: OnConnectionLost called %d times in all, want 1", lost)
+	}
+	newPublisher(nil, &fakeJetStream{}).connectionClosed() // nil OnConnectionLost only logs
 }
