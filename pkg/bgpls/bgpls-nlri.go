@@ -3,6 +3,7 @@ package bgpls
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math"
 	"math/bits"
@@ -111,6 +112,19 @@ func (ls *NLRI) GetISISAreaID() string {
 	return s
 }
 
+// GetISISAreaIDs returns each IS-IS Area Identifier TLV as a lowercase hex string
+// in wire order (RFC 9552 §5.3.1.2). Invalid area address lengths are skipped.
+func (ls *NLRI) GetISISAreaIDs() []string {
+	var ids []string
+	for _, tlv := range ls.LS {
+		// An IS-IS area address is 1–13 octets (RFC 7898 §3.2.2).
+		if tlv.Type == 1027 && len(tlv.Value) >= 1 && len(tlv.Value) <= 13 {
+			ids = append(ids, hex.EncodeToString(tlv.Value))
+		}
+	}
+	return ids
+}
+
 // GetLocalIPv4RouterID returns string with local Node IPv4 router ID
 func (ls *NLRI) GetLocalIPv4RouterID() string {
 	for _, tlv := range ls.LS {
@@ -169,6 +183,22 @@ func (ls *NLRI) GetRemoteIPv6RouterID() string {
 	}
 
 	return ""
+}
+
+// GetNodeSBFDDiscriminators returns the discriminators from well-formed S-BFD
+// Discriminators TLVs (RFC 9247 §3), in wire order.
+func (ls *NLRI) GetNodeSBFDDiscriminators() []uint32 {
+	var discriminators []uint32
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1032 || len(tlv.Value) < 4 || len(tlv.Value)%4 != 0 {
+			continue
+		}
+		for offset := 0; offset < len(tlv.Value); offset += 4 {
+			discriminators = append(discriminators, binary.BigEndian.Uint32(tlv.Value[offset:offset+4]))
+		}
+	}
+
+	return discriminators
 }
 
 // GetNodeMSD returns Node's MSD object
@@ -234,6 +264,20 @@ func (ls *NLRI) GetNodeSRLocalBlock() *sr.LocalBlock {
 			return nil
 		}
 		return lb
+	}
+
+	return nil
+}
+
+// GetNodeSRMSPreference returns the first well-formed SRMS Preference TLV
+// (RFC 9085 §2.1.5), or nil when none is present.
+func (ls *NLRI) GetNodeSRMSPreference() *uint8 {
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1037 || len(tlv.Value) != 1 {
+			continue
+		}
+		preference := tlv.Value[0]
+		return &preference
 	}
 
 	return nil
@@ -325,9 +369,20 @@ func (ls *NLRI) GetLSPrefixAttrFlags(proto base.ProtoID) (PrefixAttrFlags, error
 	return nil, fmt.Errorf("prefix Attribute Flags TLV 1170 not found")
 }
 
-// GetLSSourceRouterID returns a Prefix Source Router ID
+var errSourceOSPFRouterIDNotFound = errors.New("source OSPF Router-ID TLV 1174 not found")
+
+// GetLSSourceRouterID returns the Source OSPF Router-ID if present, otherwise
+// the Source Router Identifier. A malformed Source OSPF Router-ID returns an error.
 func (ls *NLRI) GetLSSourceRouterID() (string, error) {
-	// First check for OSPF-specific TLV 1174 (RFC 9085 Section 2.3.4)
+	id, err := ls.GetLSSourceOSPFRouterID()
+	if err != errSourceOSPFRouterIDNotFound {
+		return id, err
+	}
+	return ls.GetLSSourceRouterIdentifier()
+}
+
+// GetLSSourceOSPFRouterID returns the Source OSPF Router-ID (RFC 9085 §2.3.4, TLV 1174).
+func (ls *NLRI) GetLSSourceOSPFRouterID() (string, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type == 1174 {
 			if len(tlv.Value) != 4 {
@@ -337,7 +392,11 @@ func (ls *NLRI) GetLSSourceRouterID() (string, error) {
 		}
 	}
 
-	// Fallback to generic TLV 1171
+	return "", errSourceOSPFRouterIDNotFound
+}
+
+// GetLSSourceRouterIdentifier returns the Source Router Identifier (RFC 9085 §2.3.3, TLV 1171).
+func (ls *NLRI) GetLSSourceRouterIdentifier() (string, error) {
 	for _, tlv := range ls.LS {
 		if tlv.Type != 1171 {
 			continue
@@ -369,6 +428,23 @@ func (ls *NLRI) GetLSSRv6ENDXSID() ([]*srv6.EndXSIDTLV, error) {
 		endxs = append(endxs, endx)
 	}
 	return endxs, nil
+}
+
+// GetLANSRv6EndXSID returns the valid LAN End.X SID TLVs in wire order.
+func (ls *NLRI) GetLANSRv6EndXSID(proto base.ProtoID) []*srv6.LANEndXSIDTLV {
+	var sids []*srv6.LANEndXSIDTLV
+	for _, tlv := range ls.LS {
+		if tlv.Type != srv6.ISISLANEndXSIDType && tlv.Type != srv6.OSPFv3LANEndXSIDType {
+			continue
+		}
+		sid, err := srv6.UnmarshalLANEndXSIDTLV(tlv.Value, tlv.Type, proto)
+		if err != nil {
+			glog.V(4).Infof("skipping invalid LAN End.X SID TLV %d: %v", tlv.Type, err)
+			continue
+		}
+		sids = append(sids, sid)
+	}
+	return sids
 }
 
 // GetNodeSRv6CapabilitiesTLV returns string representation of SRv6 Capabilities TLV
@@ -878,6 +954,23 @@ func (ls *NLRI) GetSRAdjacencySID(proto base.ProtoID) ([]*sr.AdjacencySIDTLV, er
 	}
 
 	return adjs, nil
+}
+
+// GetSRLANAdjacencySID returns the valid LAN Adjacency SID TLVs in wire order.
+func (ls *NLRI) GetSRLANAdjacencySID(proto base.ProtoID) []*sr.LANAdjacencySIDTLV {
+	var sids []*sr.LANAdjacencySIDTLV
+	for _, tlv := range ls.LS {
+		if tlv.Type != 1100 {
+			continue
+		}
+		sid, err := sr.UnmarshalLANAdjacencySIDTLV(tlv.Value, proto)
+		if err != nil {
+			glog.V(4).Infof("skipping invalid LAN Adjacency SID TLV 1100: %v", err)
+			continue
+		}
+		sids = append(sids, sid)
+	}
+	return sids
 }
 
 // GetSRBindingSID returns the SR Binding SID TLV (type 1201)

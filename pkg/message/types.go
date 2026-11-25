@@ -245,10 +245,13 @@ type LSNode struct {
 	Timestamp           string                          `json:"timestamp,omitempty"`
 	IGPRouterID         string                          `json:"igp_router_id,omitempty"`
 	RouterID            string                          `json:"router_id,omitempty"`
+	LocalIPv4RouterID   string                          `json:"local_ipv4_router_id,omitempty"`
+	LocalIPv6RouterID   string                          `json:"local_ipv6_router_id,omitempty"`
 	ASN                 uint32                          `json:"asn,omitempty"`
 	LSID                uint32                          `json:"ls_id,omitempty"`
 	MTID                []*base.MultiTopologyIdentifier `json:"mt_id_tlv,omitempty"`
 	AreaID              string                          `json:"area_id"`
+	ISISAreaIDs         []string                        `json:"isis_area_ids,omitempty"` // RFC 9552 §5.3.1.2 TLV 1027, hex-encoded area addresses
 	Protocol            string                          `json:"protocol,omitempty"`
 	ProtocolID          base.ProtoID                    `json:"protocol_id,omitempty"`
 	NodeFlags           *bgpls.NodeAttrFlags            `json:"node_flags,omitempty"`
@@ -256,8 +259,10 @@ type LSNode struct {
 	SRCapabilities      *sr.Capability                  `json:"ls_sr_capabilities,omitempty"`
 	SRAlgorithm         []int                           `json:"sr_algorithm,omitempty"`
 	SRLocalBlock        *sr.LocalBlock                  `json:"sr_local_block,omitempty"`
+	SRMSPreference      *uint8                          `json:"srms_preference,omitempty"`
 	SRv6CapabilitiesTLV *srv6.CapabilityTLV             `json:"srv6_capabilities_tlv,omitempty"`
 	NodeMSD             []*base.MSDTV                   `json:"node_msd,omitempty"`
+	SBFDDiscriminators  []uint32                        `json:"sbfd_discriminators,omitempty"`
 	FlexAlgoDefinition  []*bgpls.FlexAlgoDefinition     `json:"flex_algo_definition,omitempty"`
 	OpaqueNodeAttribute []string                        `json:"opaque_node_attribute,omitempty"` // RFC 9552 §5.3.1.5 TLV 1025, hex-encoded raw values
 	// Values are assigned based on PerPeerHeader flags
@@ -342,6 +347,8 @@ type LSLink struct {
 	SRv6BGPPeerNodeSID    *srv6.BGPPeerNodeSID          `json:"srv6_bgp_peer_node_sid,omitempty"`
 	SRv6ENDXSID           []*srv6.EndXSIDTLV            `json:"srv6_endx_sid,omitempty"`
 	LSAdjacencySID        []*sr.AdjacencySIDTLV         `json:"ls_adjacency_sid,omitempty"`
+	SRv6LANEndXSID        []*srv6.LANEndXSIDTLV         `json:"srv6_lan_endx_sid,omitempty"`
+	LSLANAdjacencySID     []*sr.LANAdjacencySIDTLV      `json:"ls_lan_adjacency_sid,omitempty"`
 	LinkMSD               []*base.MSDTV                 `json:"link_msd,omitempty"`
 	AppSpecLinkAttr       []*bgpls.AppSpecLinkAttr      `json:"app_spec_link_attr,omitempty"`
 	UnidirLinkDelay       uint32                        `json:"unidir_link_delay,omitempty"`

@@ -53,34 +53,60 @@ var (
 	}{1031, []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}}
 )
 
-// TestLSNode_RouterID_ByTLVPresence covers RFC 9552 Section 5.3.1.4: TLVs
-// 1028 (IPv4 local router-ID) and 1029 (IPv6 local router-ID) are chosen by
-// TLV presence, not by the BMP peer's V-flag, which lsNode no longer takes.
-// Previously an IPv6-only TLV used to be dropped for IPv4 peers and vice versa.
+// TestLSNode_RouterID_ByTLVPresence covers RFC 9552 §5.3.1.4. Both
+// families have their own optional JSON field, and the legacy router_id
+// still prefers IPv4 when both are present.
 func TestLSNode_RouterID_ByTLVPresence(t *testing.T) {
+	badV4, badV6 := v4Local, v6Local
+	badV4.Value = []byte{10, 0, 0}
+	badV6.Value = make([]byte, 17)
 	tests := []struct {
-		name string
-		attr *bgp.Update
-		want string
+		name   string
+		attr   *bgp.Update
+		legacy string
+		ipv4   string
+		ipv6   string
 	}{
-		{"ipv4-only TLV", rtIDAttr(v4Local), "10.0.0.1"},
-		{"ipv6-only TLV", rtIDAttr(v6Local), "2001:db8::1"},
-		{"both TLVs present, prefer IPv4", rtIDAttr(v4Local, v6Local), "10.0.0.1"},
-		{"neither TLV present", rtIDAttr(), ""},
+		{"ipv4-only TLV", rtIDAttr(v4Local), "10.0.0.1", "10.0.0.1", ""},
+		{"ipv6-only TLV", rtIDAttr(v6Local), "2001:db8::1", "", "2001:db8::1"},
+		{"both TLVs present, prefer IPv4", rtIDAttr(v4Local, v6Local), "10.0.0.1", "10.0.0.1", "2001:db8::1"},
+		{"neither TLV present", rtIDAttr(), "", "", ""},
+		{"no BGP-LS attribute", &bgp.Update{}, "", "", ""},
+		{"wrong IPv4 length and valid IPv6", rtIDAttr(badV4, v6Local), "2001:db8::1", "", "2001:db8::1"},
+		{"valid IPv4 and wrong IPv6 length", rtIDAttr(v4Local, badV6), "10.0.0.1", "10.0.0.1", ""},
+		{"both wrong lengths", rtIDAttr(badV4, badV6), "", "", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			node := &base.NodeNLRI{
-				ProtocolID: base.ISISL1,
-				LocalNode:  &base.NodeDescriptor{SubTLV: map[uint16]base.TLV{}},
-			}
 			p := &producer{}
-			msg, err := p.lsNode(node, "", 0, newPeerHeader(), tt.attr)
+			msg, err := p.lsNode(testLSNode(base.ISISL1), "", 0, newPeerHeader(), tt.attr)
 			if err != nil {
 				t.Fatalf("lsNode() error: %v", err)
 			}
-			if msg.RouterID != tt.want {
-				t.Errorf("RouterID = %q, want %q", msg.RouterID, tt.want)
+			payload, err := json.Marshal(msg)
+			if err != nil {
+				t.Fatalf("marshal LS Node JSON: %v", err)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(payload, &fields); err != nil {
+				t.Fatalf("unmarshal LS Node JSON: %v", err)
+			}
+			for name, want := range map[string]string{
+				"router_id":            tt.legacy,
+				"local_ipv4_router_id": tt.ipv4,
+				"local_ipv6_router_id": tt.ipv6,
+			} {
+				value, present := fields[name]
+				if want == "" {
+					if present {
+						t.Errorf("%s = %s, want field omitted", name, value)
+					}
+					continue
+				}
+				var got string
+				if err := json.Unmarshal(value, &got); err != nil || got != want {
+					t.Errorf("%s = %s, want %q (error: %v)", name, value, want, err)
+				}
 			}
 		})
 	}
@@ -197,8 +223,9 @@ func TestProcessMPUpdate_LS71_RouterIDWire(t *testing.T) {
 	var gotNode, gotLink bool
 	for _, m := range rec.msgs {
 		var out struct {
-			RouterID       string `json:"router_id"`
-			RemoteRouterID string `json:"remote_router_id"`
+			RouterID          string `json:"router_id"`
+			RemoteRouterID    string `json:"remote_router_id"`
+			LocalIPv6RouterID string `json:"local_ipv6_router_id"`
 		}
 		if err := json.Unmarshal(m.payload, &out); err != nil {
 			t.Fatalf("json.Unmarshal() error: %v", err)
@@ -208,6 +235,9 @@ func TestProcessMPUpdate_LS71_RouterIDWire(t *testing.T) {
 			gotNode = true
 			if out.RouterID != "2001:db8::1" {
 				t.Errorf("ls_node router_id = %q, want %q", out.RouterID, "2001:db8::1")
+			}
+			if out.LocalIPv6RouterID != "2001:db8::1" {
+				t.Errorf("ls_node local_ipv6_router_id = %q, want %q", out.LocalIPv6RouterID, "2001:db8::1")
 			}
 		case bmp.LSLinkMsg:
 			gotLink = true
