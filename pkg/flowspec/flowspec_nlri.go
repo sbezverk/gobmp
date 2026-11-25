@@ -349,17 +349,41 @@ func UnmarshalAllVPNFlowspecNLRI(b []byte, ipv6 bool) ([]*NLRI, error) {
 	return result, nil
 }
 
-// Operator defines a data structure representing Flowspec operator byte
+// Operator defines a data structure representing Flowspec operator byte.
+// Numeric operators (RFC 8955 Section 4.2.1.1) set LTBit/GTBit/EQBit;
+// bitmask operators (Section 4.2.1.2, TCP flags and fragment) set
+// NotBit/MatchBit instead.
 type Operator struct {
-	EOLBit bool
-	ANDBit bool
-	Length uint8
-	LTBit  bool
-	GTBit  bool
-	EQBit  bool
+	EOLBit   bool
+	ANDBit   bool
+	Length   uint8
+	LTBit    bool
+	GTBit    bool
+	EQBit    bool
+	NotBit   bool
+	MatchBit bool
 }
 
-// UnmarshalFlowspecOperator creates an instance of Operator object from a byte
+// isBitmaskSpec reports whether a component type uses the bitmask operator
+// (RFC 8955 Section 4.2.2.9 TCP flags, 4.2.2.12 fragment).
+func isBitmaskSpec(specType uint8) bool {
+	return specType == 9 || specType == 12
+}
+
+// UnmarshalFlowspecBitmaskOperator decodes a bitmask operator byte
+// (RFC 8955 Section 4.2.1.2): e a len 0 0 not match.
+func UnmarshalFlowspecBitmaskOperator(b byte) (*Operator, error) {
+	return &Operator{
+		EOLBit:   b&0x80 != 0,
+		ANDBit:   b&0x40 != 0,
+		Length:   1 << ((b & 0x30) >> 4),
+		NotBit:   b&0x02 != 0,
+		MatchBit: b&0x01 != 0,
+	}, nil
+}
+
+// UnmarshalFlowspecOperator decodes a numeric operator byte
+// (RFC 8955 Section 4.2.1.1): e a len 0 lt gt eq.
 func UnmarshalFlowspecOperator(b byte) (*Operator, error) {
 	o := &Operator{}
 	if b&0x80 == 0x80 {
@@ -383,40 +407,56 @@ func UnmarshalFlowspecOperator(b byte) (*Operator, error) {
 	return o, nil
 }
 
-// MarshalJSON returns a binary representation of Flowspec Operator structure
-func (o *Operator) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		EOLBit bool  `json:"end_of_list_bit,omitempty"`
-		ANDBit bool  `json:"and_bit,omitempty"`
-		Length uint8 `json:"value_length,omitempty"`
-		LTBit  bool  `json:"less_than,omitempty"`
-		GTBit  bool  `json:"greater_than,omitempty"`
-		EQBit  bool  `json:"equal,omitempty"`
-	}{
-		EOLBit: o.EOLBit,
-		ANDBit: o.ANDBit,
-		Length: o.Length,
-		LTBit:  o.LTBit,
-		GTBit:  o.GTBit,
-		EQBit:  o.EQBit,
-	})
-
+// operatorJSON is the wire JSON form of Operator, shared by MarshalJSON and
+// UnmarshalJSON so the two round-trip.
+type operatorJSON struct {
+	EOLBit   bool  `json:"end_of_list_bit,omitempty"`
+	ANDBit   bool  `json:"and_bit,omitempty"`
+	Length   uint8 `json:"value_length,omitempty"`
+	LTBit    bool  `json:"less_than,omitempty"`
+	GTBit    bool  `json:"greater_than,omitempty"`
+	EQBit    bool  `json:"equal,omitempty"`
+	NotBit   bool  `json:"not,omitempty"`
+	MatchBit bool  `json:"match,omitempty"`
 }
 
-// UnmarshalJSON creates a new instance of Flowspec Operator
-func (o *Operator) UnmarshalJSON(b []byte) error {
-	// Use type alias to avoid infinite recursion
-	type Alias Operator
-	aux := &struct {
-		*Alias
-	}{
-		Alias: (*Alias)(o),
-	}
-	if err := json.Unmarshal(b, &aux); err != nil {
-		return err
-	}
+// MarshalJSON returns a binary representation of Flowspec Operator structure
+func (o *Operator) MarshalJSON() ([]byte, error) {
+	return json.Marshal(operatorJSON(*o))
+}
 
-	return nil
+// operatorFields is Operator without its JSON methods, so its fields read the
+// Go field names that json.Marshal writes for an Operator value ("EQBit").
+type operatorFields Operator
+
+// UnmarshalJSON creates a new instance of Flowspec Operator. It reads both the
+// published keys ("equal") and the Go field names ("EQBit").
+func (o *Operator) UnmarshalJSON(b []byte) error {
+	*o = Operator{}
+	return json.Unmarshal(b, &struct {
+		*operatorJSON
+		*operatorFields
+	}{(*operatorJSON)(o), (*operatorFields)(o)})
+}
+
+// NormalizeBitmaskOperators maps the published keys of TCP flags (type 9)
+// and fragment (type 12) bitmask operators (RFC 8955 Section 4.2.1.2) to
+// their bits: greater_than carries the NOT bit and equal the Match bit (see
+// GenericSpec.MarshalJSON). The not and match keys are read too, and a bit is
+// set when either of its keys is true, so an explicit false on one key does
+// not clear a true on the other.
+func (t *GenericSpec) NormalizeBitmaskOperators() {
+	if !isBitmaskSpec(t.SpecType) {
+		return
+	}
+	for _, ov := range t.OpVal {
+		if ov == nil || ov.Op == nil {
+			continue
+		}
+		ov.Op.NotBit = ov.Op.NotBit || ov.Op.GTBit
+		ov.Op.MatchBit = ov.Op.MatchBit || ov.Op.EQBit
+		ov.Op.GTBit, ov.Op.EQBit = false, false
+	}
 }
 
 // PrefixSpec defines a structure of Flowspec Type 1 and Type 2 (Destination/Source Prefix) spec.
@@ -556,12 +596,16 @@ func UnmarshalOpVal(b []byte) ([]*OpVal, error) {
 	if len(b) < 2 {
 		return nil, fmt.Errorf("input too short for operator/value sequence: need at least 2 bytes, got %d", len(b))
 	}
+	decode := UnmarshalFlowspecOperator
+	if isBitmaskSpec(b[0]) {
+		decode = UnmarshalFlowspecBitmaskOperator
+	}
 	p := 0
 	// Skip type
 	p++
 	eol := false
 	for !eol && p < len(b) {
-		o, err := UnmarshalFlowspecOperator(b[p])
+		o, err := decode(b[p])
 		if err != nil {
 			return nil, err
 		}
@@ -629,17 +673,40 @@ func (t *GenericSpec) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-
+	t.NormalizeBitmaskOperators()
 	return nil
 }
 
-// MarshalJSON returns a binary representation of FlowSPec GenericSpec
+// MarshalJSON returns a binary representation of FlowSPec GenericSpec. TCP
+// flags (type 9) and fragment (type 12) operators keep the published schema:
+// the NOT bit is written as greater_than and the Match bit as equal.
 func (t *GenericSpec) MarshalJSON() ([]byte, error) {
+	opVal := t.OpVal
+	if isBitmaskSpec(t.SpecType) {
+		opVal = publishedBitmaskOpVal(t.OpVal)
+	}
 	return json.Marshal(struct {
 		SpecType uint8    `json:"type,omitempty"`
 		OpVal    []*OpVal `json:"op_val_pairs,omitempty"`
 	}{
 		SpecType: t.SpecType,
-		OpVal:    t.OpVal,
+		OpVal:    opVal,
 	})
+}
+
+// publishedBitmaskOpVal returns copies of the pairs with each bitmask
+// operator's NOT and Match bits moved to the greater_than and equal keys.
+func publishedBitmaskOpVal(src []*OpVal) []*OpVal {
+	out := make([]*OpVal, len(src))
+	for i, ov := range src {
+		if ov == nil || ov.Op == nil {
+			out[i] = ov
+			continue
+		}
+		op := *ov.Op
+		op.GTBit, op.EQBit = op.GTBit || op.NotBit, op.EQBit || op.MatchBit
+		op.NotBit, op.MatchBit = false, false
+		out[i] = &OpVal{Op: &op, Val: ov.Val}
+	}
+	return out
 }

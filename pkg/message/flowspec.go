@@ -238,7 +238,7 @@ func makeGenericSpec(spec map[string]interface{}) (flowspec.Spec, error) {
 	if s.OpVal, err = makeOpValPair(pairs); err != nil {
 		return nil, err
 	}
-
+	s.NormalizeBitmaskOperators()
 	return s, nil
 }
 
@@ -308,6 +308,20 @@ func makeOpValPair(src []interface{}) ([]*flowspec.OpVal, error) {
 					return nil, fmt.Errorf("op_val_pairs[%d].operator.equal: expected bool, got %T", i, e)
 				}
 				op.EQBit = v
+			}
+			if e, ok := opMap["not"]; ok {
+				v, ok := e.(bool)
+				if !ok {
+					return nil, fmt.Errorf("op_val_pairs[%d].operator.not: expected bool, got %T", i, e)
+				}
+				op.NotBit = v
+			}
+			if e, ok := opMap["match"]; ok {
+				v, ok := e.(bool)
+				if !ok {
+					return nil, fmt.Errorf("op_val_pairs[%d].operator.match: expected bool, got %T", i, e)
+				}
+				op.MatchBit = v
 			}
 			o.Op = op
 		}

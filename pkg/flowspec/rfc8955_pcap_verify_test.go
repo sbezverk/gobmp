@@ -99,7 +99,9 @@ func TestRFC8955_PcapFullVerification(t *testing.T) {
 	gs, ok = nlris[1].Spec[1].(*GenericSpec)
 	if !ok { t.Fatalf("NLRI[1].Spec[1]: expected *GenericSpec, got %T", nlris[1].Spec[1]) }
 	assertGeneric(t, "NLRI[1].frag", gs, 12, 1)
-	assertOpVal(t, "NLRI[1].frag[0]", gs.OpVal[0], true, false, true, []byte{2})
+	// Bitmask operator (RFC 8955 4.2.1.2): low bit is MATCH, not EQ.
+	assertOpVal(t, "NLRI[1].frag[0]", gs.OpVal[0], true, false, false, []byte{2})
+	if !gs.OpVal[0].Op.MatchBit { t.Error("NLRI[1].frag[0]: expected MATCH bit") }
 
 	// --- NLRI 3: 6 specs ---
 	if len(nlris[2].Spec) != 6 {
@@ -129,7 +131,8 @@ func TestRFC8955_PcapFullVerification(t *testing.T) {
 	gs, ok = nlris[2].Spec[4].(*GenericSpec)
 	if !ok { t.Fatalf("NLRI[2].Spec[4]: expected *GenericSpec, got %T", nlris[2].Spec[4]) }
 	assertGeneric(t, "NLRI[2].tcpflags", gs, 9, 1)
-	assertOpVal(t, "NLRI[2].tcpflags[0]", gs.OpVal[0], true, false, true, []byte{0x03})
+	assertOpVal(t, "NLRI[2].tcpflags[0]", gs.OpVal[0], true, false, false, []byte{0x03})
+	if !gs.OpVal[0].Op.MatchBit { t.Error("NLRI[2].tcpflags[0]: expected MATCH bit") }
 	// Type11: dscp =42
 	gs, ok = nlris[2].Spec[5].(*GenericSpec)
 	if !ok { t.Fatalf("NLRI[2].Spec[5]: expected *GenericSpec, got %T", nlris[2].Spec[5]) }
