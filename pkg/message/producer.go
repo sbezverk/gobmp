@@ -313,6 +313,13 @@ func (p *producer) producingWorker(msg bmp.Message) {
 		p.attachIdentitySnapshot(&msg)
 		p.produceRouteMessage(msg)
 	case *bmp.RouteMirror:
+		if msg.PeerHeader != nil && msg.PeerHeader.PeerType == bmp.PeerType3 {
+			// RFC 9069 Section 5.5: Route Mirroring does not apply to
+			// Loc-RIB and received messages SHOULD be ignored. Dropping
+			// them here keeps them out of the pre-Peer Up buffer.
+			glog.V(5).Infof("ignoring Route Mirroring message for a Loc-RIB peer")
+			return
+		}
 		select {
 		case <-p.speakerReady:
 		default:
