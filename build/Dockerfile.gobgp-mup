@@ -2,7 +2,7 @@
 # Docker Hub repository. Build the test image from the official upstream tag.
 ARG GOBGP_VERSION=v4.8.0
 
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 ARG GOBGP_VERSION
 
