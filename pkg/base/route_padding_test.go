@@ -18,7 +18,7 @@ func TestRoutesPrefixPaddingOwnership(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			original := bytes.Clone(tt.wire)
-			routes, err := UnmarshalRoutes(tt.wire, false)
+			routes, err := UnmarshalRoutesAF(tt.wire, false, true)
 			if tt.want == nil {
 				if err == nil {
 					t.Fatal("expected truncation error")
