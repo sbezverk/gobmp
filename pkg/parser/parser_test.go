@@ -134,8 +134,8 @@ func TestParsingWorkerStatsReportBoundedSlice(t *testing.T) {
 	p.parsingWorker(input)
 	msgs := collectMessages(producerQueue)
 
-	if len(msgs) != 1 {
-		t.Fatalf("expected 1 message (StatsReport), got %d — bounded slice bug likely not fixed", len(msgs))
+	if len(msgs) != 2 {
+		t.Fatalf("expected 2 messages (StatsReport, Initiation), got %d — bounded slice bug likely not fixed", len(msgs))
 	}
 	sr, ok := msgs[0].Payload.(*bmp.StatsReport)
 	if !ok {
@@ -258,12 +258,15 @@ func TestParsingWorker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			producerQueue := make(chan bmp.Message, 1)
+			producerQueue := make(chan bmp.Message, 8)
 			p := &parser{
 				producerQueue: producerQueue,
 				config:        &Config{EnableRawMode: false},
 			}
 			p.parsingWorker(tt.input)
+			if msgs := collectMessages(producerQueue); len(msgs) == 0 {
+				t.Error("expected parsed messages in producer queue, got none")
+			}
 		})
 	}
 }
@@ -305,8 +308,17 @@ func TestParserNormalMode(t *testing.T) {
 	}
 
 	p.parsingWorker(input)
-	// In normal mode, initiation messages don't produce output to queue
-	// This test just verifies no panic occurs
+	msgs := collectMessages(producerQueue)
+	if len(msgs) != 1 {
+		t.Fatalf("got %d messages, want 1", len(msgs))
+	}
+	im, ok := msgs[0].Payload.(*bmp.InitiationMessage)
+	if !ok {
+		t.Fatalf("payload type = %T, want *bmp.InitiationMessage", msgs[0].Payload)
+	}
+	if im.SysName() != "xrv9k-r1" {
+		t.Errorf("SysName() = %q, want xrv9k-r1", im.SysName())
+	}
 }
 
 // TestNewParser tests parser constructor
@@ -358,5 +370,41 @@ func TestSendRawMessage_StopSignal(t *testing.T) {
 		// sendRawMessage returned via stop branch — correct
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("sendRawMessage did not return after stop signal within timeout")
+	}
+}
+
+// TestParsingWorkerInitiationPayload verifies an Initiation message reaches the
+// producer queue with its decoded TLVs, and a malformed one is dropped.
+func TestParsingWorkerInitiationPayload(t *testing.T) {
+	body := []byte{0, 2, 0, 7}
+	body = append(body, "switch1"...)
+	msgLen := bmp.CommonHeaderLength + len(body)
+	good := make([]byte, msgLen)
+	good[0] = 3
+	binary.BigEndian.PutUint32(good[1:5], uint32(msgLen))
+	good[5] = bmp.InitiationMsg
+	copy(good[bmp.CommonHeaderLength:], body)
+
+	q := make(chan bmp.Message, 2)
+	p := &parser{producerQueue: q, config: &Config{}}
+	p.parsingWorker(good)
+	msgs := collectMessages(q)
+	if len(msgs) != 1 {
+		t.Fatalf("got %d messages, want 1", len(msgs))
+	}
+	im, ok := msgs[0].Payload.(*bmp.InitiationMessage)
+	if !ok {
+		t.Fatalf("payload type = %T, want *bmp.InitiationMessage", msgs[0].Payload)
+	}
+	if im.SysName() != "switch1" {
+		t.Errorf("SysName() = %q, want switch1", im.SysName())
+	}
+
+	// TLV claims 9 bytes but only 7 follow.
+	bad := append([]byte(nil), good...)
+	binary.BigEndian.PutUint16(bad[bmp.CommonHeaderLength+2:], 9)
+	p.parsingWorker(bad)
+	if msgs := collectMessages(q); len(msgs) != 0 {
+		t.Fatalf("malformed Initiation produced %d messages, want 0", len(msgs))
 	}
 }

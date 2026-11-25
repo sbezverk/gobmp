@@ -8,7 +8,7 @@ import (
 )
 
 // IGPFlags defines IGP Flags structure populated from
-// https://tools.ietf.org/html/rfc7752#section-3.3.3.1
+// https://www.rfc-editor.org/rfc/rfc9552#section-5.3.3.1
 type IGPFlags struct {
 	DFlag bool `json:"d_flag"`
 	NFlag bool `json:"n_flag"`
@@ -26,10 +26,11 @@ func UnmarshalIGPFlags(b []byte) (*IGPFlags, error) {
 	}
 	f := &IGPFlags{}
 	p := 0
-	f.DFlag = b[p]&0x01 == 0x01
-	f.NFlag = b[p]&0x02 == 0x02
-	f.LFlag = b[p]&0x04 == 0x04
-	f.PFlag = b[p]&0x08 == 0x08
+	// RFC 9552 §5.3.3.1: |D|N|L|P|Reserved|, bit 0 is the most significant.
+	f.DFlag = b[p]&0x80 == 0x80
+	f.NFlag = b[p]&0x40 == 0x40
+	f.LFlag = b[p]&0x20 == 0x20
+	f.PFlag = b[p]&0x10 == 0x10
 
 	return f, nil
 }

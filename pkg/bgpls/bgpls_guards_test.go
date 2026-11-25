@@ -130,18 +130,32 @@ func TestUnmarshalIGPFlags(t *testing.T) {
 			input: []byte{0x00},
 		},
 		{
-			name:  "all flags set: D=bit0 N=bit1 L=bit2 P=bit3",
-			input: []byte{0x0F},
+			name:  "all flags set: D=0x80 N=0x40 L=0x20 P=0x10",
+			input: []byte{0xF0},
 			wantD: true, wantN: true, wantL: true, wantP: true,
 		},
 		{
-			name:  "only D flag set",
-			input: []byte{0x01},
+			name:  "IS-IS up/down: D only",
+			input: []byte{0x80},
 			wantD: true,
 		},
 		{
+			name:  "OSPFv2 no-unicast + propagate NSSA",
+			input: []byte{0x50},
+			wantN: true, wantP: true,
+		},
+		{
+			name:  "OSPFv3 no-unicast + local address",
+			input: []byte{0x60},
+			wantN: true, wantL: true,
+		},
+		{
+			name:  "reserved low bits ignored",
+			input: []byte{0x0F},
+		},
+		{
 			name:  "extra bytes ignored",
-			input: []byte{0x01, 0xFF},
+			input: []byte{0x80, 0xFF},
 			wantD: true,
 		},
 	}

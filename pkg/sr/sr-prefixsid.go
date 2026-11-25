@@ -76,18 +76,20 @@ func (p *PrefixSIDTLV) UnmarshalJSON(b []byte) error {
 	}
 	// Flags     PrefixSIDFlags `json:"flags,omitempty"`
 	if v, ok := objVal["flags"]; ok {
-		var flags interface{}
+		var flags map[string]json.RawMessage
 		if err := json.Unmarshal(v, &flags); err != nil {
 			return err
 		}
-		if _, ok := flags.(map[string]interface{})["r_flag"]; ok {
+		if flags == nil {
+			// A null flags field has no protocol-specific flags.
+		} else if _, ok := flags["r_flag"]; ok {
 			// ISIS flags
 			f := &ISISFlags{}
 			if err := json.Unmarshal(v, &f); err != nil {
 				return err
 			}
 			result.Flags = f
-		} else if _, ok := flags.(map[string]interface{})["np_flag"]; ok {
+		} else if _, ok := flags["np_flag"]; ok {
 			// OSPF flags
 			f := &OSPFFlags{}
 			if err := json.Unmarshal(v, &f); err != nil {
