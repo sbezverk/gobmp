@@ -176,13 +176,44 @@ func TestUnmarshalUnicastNLRI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := UnmarshalUnicastNLRI(tt.input, tt.pathID)
+			// The cases mix IPv4 and IPv6 prefixes; the bound is tested below
+			got, err := UnmarshalUnicastNLRI(tt.input, tt.pathID, true)
 			if err != nil {
 				t.Fatalf("test failed with error: %+v", err)
 			}
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Logf("Differences: %+v", deep.Equal(tt.expect, got))
 				t.Fatal("test failed as expected nlri does not match actual nlri")
+			}
+		})
+	}
+}
+
+func TestUnmarshalUnicastNLRIPrefixBound(t *testing.T) {
+	v6 := func(bits byte) []byte { return append([]byte{bits}, make([]byte, (int(bits)+7)/8)...) }
+	tests := []struct {
+		name    string
+		input   []byte
+		pathID  bool
+		ipv6    bool
+		wantErr bool
+	}{
+		{"IPv4 /32", []byte{32, 10, 0, 0, 1}, false, false, false},
+		// The flipped Path ID parse reads 0xff or 0x81 as a length, so it fails too
+		{"IPv4 /33", []byte{33, 0xff, 0xff, 0xff, 0xff, 0x80}, false, false, true},
+		{"IPv4 /33 with Path ID", []byte{0x81, 0, 0, 1, 33, 10, 0, 0, 1, 0}, true, false, true},
+		{"IPv6 /128", v6(128), false, true, false},
+		{"IPv6 /129", v6(129), false, true, true},
+		// The flipped parse would succeed and fabricate routes, so no retry
+		{"IPv4 /33 with Path ID 1", []byte{0, 0, 0, 1, 0x21, 0x0a, 0x0b, 0x0c, 0, 0}, true, false, true},
+		{"IPv6 /129 with Path ID 1", append([]byte{0, 0, 0, 1, 0x81}, make([]byte, 17)...), true, true, true},
+		{"retry: Path ID flag, none present", []byte{24, 10, 0, 0}, true, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalUnicastNLRI(tt.input, tt.pathID, tt.ipv6)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
