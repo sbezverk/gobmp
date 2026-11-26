@@ -385,6 +385,43 @@ func TestCheck_MatchingMessages(t *testing.T) {
 	}
 }
 
+// Expectations recorded while path_id was published signed still match the
+// unsigned path_id published now for the same RFC 7911 Path Identifier.
+func TestCheck_HistoricalSignedPathID(t *testing.T) {
+	const route = `{"prefix":"192.0.2.0","prefix_len":24,"peer_ip":"10.1.1.1","nexthop":"10.1.1.2","is_ipv4":true,"path_id":`
+	stored := []byte(route + `-1}`)
+	live := []byte(route + `4294967295}`)
+	storedBytes := (&StoredMessage{
+		TopicType: bmp.UnicastPrefixV4Msg,
+		Len:       uint32(len(stored)),
+		Message:   stored,
+	}).Marshal()
+
+	topicChan := make(chan []byte, 1)
+	topics := []*kafka.TopicDescriptor{
+		{
+			TopicName: "test.unicast.v4",
+			TopicType: bmp.UnicastPrefixV4Msg,
+			TopicChan: topicChan,
+		},
+	}
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	errCh := make(chan error, 1)
+	go Check(topics, storedBytes, stopCh, errCh)
+
+	topicChan <- live
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Errorf("expected success, got error: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for Check to complete")
+	}
+}
+
 func TestCheck_KeyNotInDictionary(t *testing.T) {
 	stored := &bmp_message.UnicastPrefix{
 		Prefix:    "192.0.2.0",
