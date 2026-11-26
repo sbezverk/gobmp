@@ -124,7 +124,7 @@ services:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.6
     healthcheck:
-      test: ps augwwx | egrep [S]upportedKafka
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9091 --list >/dev/null 2>&1"]
       interval: 2s
       timeout: 5s
       retries: 5
@@ -152,7 +152,7 @@ services:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.7
     healthcheck:
-      test: ps augwwx | egrep [S]upportedKafka
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
       interval: 2s
       timeout: 5s
       retries: 5
@@ -180,7 +180,7 @@ services:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.8
     healthcheck:
-      test: ps augwwx | egrep [S]upportedKafka
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9093 --list >/dev/null 2>&1"]
       interval: 2s
       timeout: 5s
       retries: 5
@@ -208,7 +208,7 @@ services:
       gobmp-xrd-1:
         ipv4_address: 10.1.1.9
     healthcheck:
-      test: ps augwwx | egrep [S]upportedKafka
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9094 --list >/dev/null 2>&1"]
       interval: 2s
       timeout: 5s
       retries: 5
