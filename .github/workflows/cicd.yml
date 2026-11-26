@@ -370,6 +370,7 @@ jobs:
       - name: Run validator v2 test cases
         run: |
           VALIDATOR_BIN="$PWD/bin/validator_v2" \
+          TESTCASE_DIR="$PWD/cmd/validator_v2/testcases/ipv4_ipv6_vpnv4_vpnv6" \
           API_SRV=http://127.0.0.1:8080 \
           KAFKA_SRV=127.0.0.1:9092 \
           ./cmd/validator_v2/testcases/testcases_runner.sh

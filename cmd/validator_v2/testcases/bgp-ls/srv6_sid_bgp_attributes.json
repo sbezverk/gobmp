@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "name": "srv6-sid-bgp-attributes",
+  "description": "Inject srv6 sid BGP-LS NLRI and validate its decoded GoBMP Kafka event.",
+  "tags": [
+    "bgp-ls",
+    "srv6-sid",
+    "announce",
+    "integration"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "bgp-ls",
+      "action": "announce",
+      "next_hops": [
+        "fd00:100::2"
+      ],
+      "nlri": {
+        "protocol_id": "bgp",
+        "instance_id": "1",
+        "link_state": {
+          "kind": "srv6_sid",
+          "local_node": {
+            "autonomous_system": 65000,
+            "bgp_router_id": "192.0.2.1"
+          },
+          "descriptors": {
+            "sid": "2001:db8:100::1"
+          }
+        },
+        "attributes": {
+          "endpoint_behavior": 5,
+          "flags": 0,
+          "algorithm": 0,
+          "peer_node_sids": [
+            {
+              "peer_as_number": 65001,
+              "peer_bgp_identifier": "192.0.2.2",
+              "flags": 128,
+              "weight": 10
+            }
+          ],
+          "sid_structure": {
+            "locator_block_length": 32,
+            "locator_node_length": 16,
+            "function_length": 16,
+            "argument_length": 0
+          }
+        }
+      },
+      "origin": "igp",
+      "local_pref": 100
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.ls_srv6_sid",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "domain_id": 1,
+      "protocol_id": 7,
+      "srv6_sid": "2001:db8:100::1"
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "domain_id": 1,
+      "protocol_id": 7,
+      "srv6_sid": "2001:db8:100::1"
+    },
+    "contains": {
+      "protocol": "BGP",
+      "local_node_asn": 65000,
+      "igp_router_id": "192.0.2.1",
+      "srv6_endpoint_behavior": {
+        "endpoint_behavior": 5,
+        "flag": 0,
+        "algo": 0
+      },
+      "srv6_bgp_peer_node_sid": {
+        "flags": {
+          "b_flag": true,
+          "s_flag": false,
+          "p_flag": false
+        },
+        "weight": 10,
+        "peer_asn": 65001,
+        "peer_id": "wAACAg=="
+      },
+      "srv6_sid_structure": {
+        "locator_block_length": 32,
+        "locator_node_length": 16,
+        "function_length": 16,
+        "argument_length": 0
+      }
+    },
+    "present": [
+      "srv6_endpoint_behavior",
+      "srv6_bgp_peer_node_sid",
+      "srv6_sid_structure"
+    ]
+  }
+}

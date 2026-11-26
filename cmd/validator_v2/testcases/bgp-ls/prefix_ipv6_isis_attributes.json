@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "name": "prefix-ipv6-isis-attributes",
+  "description": "Inject ipv6 topology prefix BGP-LS NLRI and validate its decoded GoBMP Kafka event.",
+  "tags": [
+    "bgp-ls",
+    "ipv6-topology-prefix",
+    "announce",
+    "integration"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "bgp-ls",
+      "action": "announce",
+      "next_hops": [
+        "fd00:100::2"
+      ],
+      "nlri": {
+        "protocol_id": "isis-level-1",
+        "instance_id": "3",
+        "link_state": {
+          "kind": "ipv6_topology_prefix",
+          "local_node": {
+            "autonomous_system": 65000,
+            "igp_router_id": {
+              "kind": "isis-system-id",
+              "value": "0000.0000.0005"
+            }
+          },
+          "prefix": "2001:db8:500::/48",
+          "prefix_descriptors": {
+            "multi_topology_id": 3
+          }
+        },
+        "attributes": {
+          "igp_flags": {
+            "isis_up_down": true
+          },
+          "igp_route_tags": [
+            500
+          ],
+          "prefix_metric": 30,
+          "prefix_sids": [
+            {
+              "flags": 0,
+              "algorithm": 0,
+              "value": 5000
+            }
+          ],
+          "ranges": [
+            {
+              "flags": 248,
+              "range_size": 48,
+              "prefix_sids": [
+                {
+                  "flags": 12,
+                  "algorithm": 0,
+                  "value": 16030,
+                  "is_label": true
+                }
+              ]
+            }
+          ],
+          "source_router_identifiers": [
+            "2001:db8::5"
+          ],
+          "flexible_algorithm_metrics": [
+            {
+              "algorithm": 129,
+              "metric": 120
+            }
+          ]
+        }
+      },
+      "origin": "igp",
+      "local_pref": 100
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.ls_prefix",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "domain_id": 3,
+      "protocol_id": 1,
+      "prefix": "2001:db8:500::",
+      "prefix_len": 48
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "domain_id": 3,
+      "protocol_id": 1,
+      "prefix": "2001:db8:500::",
+      "prefix_len": 48
+    },
+    "contains": {
+      "igp_router_id": "0000.0000.0005",
+      "mt_id_tlv": {
+        "mt_id": 3
+      },
+      "igp_flags": {
+        "d_flag": true
+      },
+      "route_tag": [
+        500
+      ],
+      "prefix_metric": 30,
+      "prefix_attr_tlvs": {
+        "ls_prefix_sid": [
+          {
+            "prefix_sid": 5000,
+            "algo": 0
+          }
+        ],
+        "range": {
+          "range_size": 48,
+          "prefix_sid": [
+            {
+              "prefix_sid": 16030,
+              "algo": 0
+            }
+          ]
+        },
+        "source_router_identifier": "2001:db8::5"
+      },
+      "flex_algo_prefix_metric": [
+        {
+          "flex_algo": 129,
+          "metric": 120
+        }
+      ]
+    },
+    "present": [
+      "igp_flags",
+      "prefix_attr_tlvs.range",
+      "flex_algo_prefix_metric"
+    ]
+  }
+}

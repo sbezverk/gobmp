@@ -1,0 +1,288 @@
+{
+  "schema_version": 1,
+  "name": "sr-policy-mpls-segment-types",
+  "description": "Inject sr policy candidate path BGP-LS NLRI and validate its decoded GoBMP Kafka event.",
+  "tags": [
+    "bgp-ls",
+    "sr-policy-candidate-path",
+    "announce",
+    "integration"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "bgp-ls",
+      "action": "announce",
+      "next_hops": [
+        "fd00:100::2"
+      ],
+      "nlri": {
+        "protocol_id": "segment-routing",
+        "instance_id": "0",
+        "link_state": {
+          "kind": "sr_policy_candidate_path",
+          "local_node": {
+            "autonomous_system": 65000,
+            "bgp_router_id": "192.0.2.1",
+            "ipv4_router_id_local": "192.0.2.1"
+          },
+          "candidate_path": {
+            "protocol_origin": 3,
+            "endpoint": "192.0.2.9",
+            "color": 100,
+            "originator_as": 65000,
+            "originator_address": "192.0.2.1",
+            "discriminator": 1001
+          }
+        },
+        "attributes": {
+          "policy_name": "gobmp-mpls-policy",
+          "candidate_path_name": "all-mpls-segment-descriptors",
+          "candidate_path_state": {
+            "priority": 100,
+            "flags": 0,
+            "preference": 200
+          },
+          "binding_sids": [
+            {
+              "flags": 16384,
+              "sid": "24001",
+              "specified_sid": "24002"
+            }
+          ],
+          "constraints": {
+            "flags": 32768,
+            "multi_topology_id": 4,
+            "algorithm": 128,
+            "exclude_any_affinity": [
+              1,
+              2
+            ],
+            "include_any_affinity": [
+              3
+            ],
+            "include_all_affinity": [
+              4
+            ],
+            "exclude_srlgs": [
+              1001
+            ],
+            "bandwidth": 8000000,
+            "disjoint_group": {
+              "request_flags": 8,
+              "status_flags": 4,
+              "group_id": 11
+            },
+            "bidirectional_group": {
+              "flags": 128,
+              "group_id": 12
+            },
+            "metric": {
+              "metric_type": 5,
+              "flags": 32,
+              "metric_margin": 10,
+              "metric_bound": 20000
+            }
+          },
+          "segment_lists": [
+            {
+              "flags": 28672,
+              "multi_topology_id": 4,
+              "algorithm": 128,
+              "weight": 100,
+              "segments": [
+                {
+                  "type": 1,
+                  "flags": 57344,
+                  "value": "16001"
+                },
+                {
+                  "type": 3,
+                  "flags": 57344,
+                  "algorithm": 0,
+                  "value": "16003",
+                  "value_hex": "c0000201"
+                },
+                {
+                  "type": 4,
+                  "flags": 57344,
+                  "algorithm": 1,
+                  "value": "16004",
+                  "value_hex": "20010db8000000000000000000000001"
+                },
+                {
+                  "type": 5,
+                  "flags": 57344,
+                  "value": "16005",
+                  "value_hex": "c000020100000001"
+                },
+                {
+                  "type": 6,
+                  "flags": 57344,
+                  "value": "16006",
+                  "value_hex": "c0000201c0000202"
+                },
+                {
+                  "type": 7,
+                  "flags": 57344,
+                  "value": "16007",
+                  "value_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "type": 8,
+                  "flags": 57344,
+                  "value": "16008",
+                  "value_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ],
+              "metric": {
+                "metric_type": 1,
+                "flags": 16,
+                "metric_margin": 0,
+                "metric_bound": 20000,
+                "metric": 18000
+              },
+              "bandwidth": 8000000,
+              "identifier": 7
+            }
+          ]
+        }
+      },
+      "origin": "igp",
+      "local_pref": 100
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.sr_policy_candidate_path",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "domain_id": 0,
+      "protocol_id": 9,
+      "local_ipv4_router_id": "192.0.2.1"
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "domain_id": 0,
+      "protocol_id": 9,
+      "local_ipv4_router_id": "192.0.2.1"
+    },
+    "contains": {
+      "protocol_id": 9,
+      "local_node_asn": 65000,
+      "local_ipv4_router_id": "192.0.2.1",
+      "descriptor": {
+        "protocol_origin": 3,
+        "endpoint": "192.0.2.9",
+        "policy_color": 100,
+        "originator_as": 65000,
+        "originator_addr": "192.0.2.1",
+        "discriminator": 1001,
+        "flags": {
+          "e_flag": false,
+          "o_flag": false
+        }
+      },
+      "policy_state": {
+        "policy_name": {
+          "sr_policy_name": "gobmp-mpls-policy"
+        },
+        "candidate_path_name": {
+          "symbolic_name": "all-mpls-segment-descriptors"
+        },
+        "candidate_path_state": {
+          "priority": 100,
+          "preference": 200
+        },
+        "binding_sid": {
+          "b_flag": true,
+          "binding_sid": {
+            "label": 24001
+          },
+          "provisioned_sid": {
+            "label": 24002
+          }
+        },
+        "constraints": {
+          "mtid": 4,
+          "algorithm": 128,
+          "subtlv": {
+            "1208": {
+              "excl_any_eag": [
+                1,
+                2
+              ],
+              "incl_any_eag": [
+                3
+              ],
+              "incl_all_eag": [
+                4
+              ]
+            },
+            "1209": {
+              "srlg": [
+                1001
+              ]
+            },
+            "1210": {
+              "bandwidth": 8000000.0
+            },
+            "1211": {
+              "disjoint_group_id": 11
+            },
+            "1214": {
+              "bidirectional_group_id": 12
+            }
+          },
+          "metric_constraints": [
+            {
+              "metric_type": 5,
+              "metric_margin": 10,
+              "metric_bound": 20000
+            }
+          ]
+        },
+        "segment_lists": [
+          {
+            "mtid": 4,
+            "algo": 128,
+            "weight": 100,
+            "subtlv": [
+              {
+                "segment_type": 1
+              },
+              {
+                "segment_type": 3
+              },
+              {
+                "segment_type": 4
+              },
+              {
+                "segment_type": 5
+              },
+              {
+                "segment_type": 6
+              },
+              {
+                "segment_type": 7
+              },
+              {
+                "segment_type": 8
+              }
+            ]
+          }
+        ]
+      },
+      "safi": 71
+    },
+    "present": [
+      "descriptor",
+      "policy_state",
+      "policy_state.candidate_path_name",
+      "policy_state.candidate_path_state"
+    ]
+  }
+}
