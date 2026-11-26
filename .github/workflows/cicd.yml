@@ -439,7 +439,7 @@ jobs:
         run: |
           echo "127.0.0.1 kafka-1 kafka-2 kafka-3 kafka-4" | sudo tee -a /etc/hosts
       - name: Start validator v2 integration testbed
-        run: docker compose -f "$VALIDATOR_TESTBED_COMPOSE" up --detach
+        run: XR_IMAGE="$XRD_IMAGE" docker compose -f "$VALIDATOR_TESTBED_COMPOSE" up --detach
       - name: Check gobmp Kafka and BMP sessions
         run: ./build/monitor_container.sh gobmp-multinode xr-1
       - name: Wait for bgpinjector BGP BGP-LS session
