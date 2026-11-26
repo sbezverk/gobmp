@@ -29,7 +29,7 @@ networks:
 
 services:
   xrd-host-prep:
-    image: alpine:3.20
+    image: ${ALPINE_IMAGE:-alpine:3.20}
     container_name: xrd-host-prep
     command:
       - /bin/sh
