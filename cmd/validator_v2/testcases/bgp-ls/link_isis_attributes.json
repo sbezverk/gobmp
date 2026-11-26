@@ -258,18 +258,42 @@
       "ls_adjacency_sid": [
         {
           "sid": 16017,
-          "weight": 10
+          "weight": 10,
+          "flags": {
+            "f_flag": true,
+            "b_flag": true,
+            "v_flag": false,
+            "l_flag": true,
+            "s_flag": false,
+            "p_flag": false
+          }
         },
         {
           "sid": 42,
-          "weight": 20
+          "weight": 20,
+          "flags": {
+            "f_flag": true,
+            "b_flag": false,
+            "v_flag": false,
+            "l_flag": false,
+            "s_flag": false,
+            "p_flag": false
+          }
         }
       ],
       "ls_lan_adjacency_sid": [
         {
           "sid": 16018,
           "weight": 15,
-          "neighbor_id": "0000.0000.0002"
+          "neighbor_id": "0000.0000.0002",
+          "flags": {
+            "f_flag": true,
+            "b_flag": true,
+            "v_flag": false,
+            "l_flag": true,
+            "s_flag": false,
+            "p_flag": false
+          }
         }
       ],
       "unidir_link_delay": 1200,

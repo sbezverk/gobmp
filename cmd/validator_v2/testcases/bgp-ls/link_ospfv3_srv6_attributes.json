@@ -184,14 +184,28 @@
       "ls_adjacency_sid": [
         {
           "sid": 16030,
-          "weight": 10
+          "weight": 10,
+          "flags": {
+            "b_flag": true,
+            "v_flag": true,
+            "l_flag": true,
+            "g_flag": false,
+            "p_flag": false
+          }
         }
       ],
       "ls_lan_adjacency_sid": [
         {
           "sid": 16031,
           "weight": 20,
-          "neighbor_id": "10.0.0.2"
+          "neighbor_id": "10.0.0.2",
+          "flags": {
+            "b_flag": true,
+            "v_flag": true,
+            "l_flag": true,
+            "g_flag": false,
+            "p_flag": false
+          }
         }
       ],
       "srv6_endx_sid": [
