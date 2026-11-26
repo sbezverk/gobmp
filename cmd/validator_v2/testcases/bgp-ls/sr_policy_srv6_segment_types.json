@@ -163,7 +163,7 @@
       "descriptor": {
         "protocol_origin": 1,
         "endpoint": "2001:db8:ffff::9",
-        "policy_color": 100,
+        "policy_color": 200,
         "originator_as": 65000,
         "originator_addr": "2001:db8:ffff::1",
         "discriminator": 2001,
