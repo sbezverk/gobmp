@@ -228,7 +228,7 @@
               ]
             },
             "1210": {
-              "bandwidth": 8000000.0
+              "bandwidth": 8000000
             },
             "1211": {
               "disjoint_group_id": 11
