@@ -261,8 +261,8 @@
           "weight": 10,
           "flags": {
             "f_flag": true,
-            "b_flag": true,
-            "v_flag": false,
+            "b_flag": false,
+            "v_flag": true,
             "l_flag": true,
             "s_flag": false,
             "p_flag": false
@@ -288,8 +288,8 @@
           "neighbor_id": "0000.0000.0002",
           "flags": {
             "f_flag": true,
-            "b_flag": true,
-            "v_flag": false,
+            "b_flag": false,
+            "v_flag": true,
             "l_flag": true,
             "s_flag": false,
             "p_flag": false
