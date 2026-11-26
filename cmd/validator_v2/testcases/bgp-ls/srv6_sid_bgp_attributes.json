@@ -74,7 +74,6 @@
     "contains": {
       "protocol": "BGP",
       "local_node_asn": 65000,
-      "igp_router_id": "192.0.2.1",
       "srv6_endpoint_behavior": {
         "endpoint_behavior": 5,
         "flag": 0,

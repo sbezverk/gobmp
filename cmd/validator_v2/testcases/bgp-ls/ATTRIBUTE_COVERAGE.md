@@ -21,6 +21,7 @@ field for them.
 | `link_isis_attributes.json` | Peer Node, Peer Adjacency, and Peer Set SIDs | GoBMP maps these into named fields for BGP links. This fixture uses IS-IS, so those named fields are not populated. |
 | `prefix_ipv6_ospfv3_srv6_attributes.json` | Trailing bytes of the four-byte Prefix Attribute Flags value | The current protocol-specific flags object represents the defined flag bits, not the complete original octet sequence. The fixture's final `0x01` byte is not represented by a named output bit. |
 | `srv6_sid_isis_attributes.json` | Unknown path-attribute TLV 65006 | The SRv6 SID Kafka event type has no `unknown_bgp_ls_tlvs` field. |
+| `srv6_sid_bgp_attributes.json` | BGP Router ID in the local-node descriptor | The BGP SRv6 SID event omits this descriptor from `igp_router_id`; the case does not assert it. |
 
 The two link fixtures each inject two SRLG values. The captured GoBMP runs
 showed only the first value when bgpinjector emitted repeated TLVs. The cases
