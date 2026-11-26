@@ -262,7 +262,7 @@ services:
     stdin_open: true
     tty: true
     volumes:
-    - source: ./bgp-ls/xrd-1_xrconf.cfg
+    - source: ./xrd-1_xrconf.cfg
       target: /etc/xrd/startup.cfg
       type: bind
     - xr-1:/xr-storage/

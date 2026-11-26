@@ -147,7 +147,7 @@
       "action": "add",
       "domain_id": 0,
       "protocol_id": 9,
-      "local_ipv4_router_id": "192.0.2.1"
+      "local_ipv6_router_id": "2001:db8::1"
     }
   },
   "expect": {
@@ -155,18 +155,17 @@
       "action": "add",
       "domain_id": 0,
       "protocol_id": 9,
-      "local_ipv4_router_id": "192.0.2.1"
+      "local_ipv6_router_id": "2001:db8::1"
     },
     "contains": {
       "protocol_id": 9,
       "local_node_asn": 65000,
-      "local_ipv4_router_id": "192.0.2.1",
       "descriptor": {
         "protocol_origin": 1,
-        "endpoint": "192.0.2.9",
+        "endpoint": "2001:db8:ffff::9",
         "policy_color": 100,
         "originator_as": 65000,
-        "originator_addr": "192.0.2.1",
+        "originator_addr": "2001:db8:ffff::1",
         "discriminator": 2001,
         "flags": {
           "e_flag": true,
@@ -220,7 +219,7 @@
               ]
             },
             "1210": {
-              "bandwidth": 4000000.0
+              "bandwidth": 4000000
             }
           },
           "metric_constraints": [
@@ -258,7 +257,8 @@
           }
         ]
       },
-      "safi": 71
+      "safi": 71,
+      "local_ipv6_router_id": "2001:db8::1"
     },
     "present": [
       "descriptor",
