@@ -1,0 +1,33 @@
+{
+  "address_family": "bgp-ls",
+  "action": "announce",
+  "next_hops": ["fd00:100::2"],
+  "nlri": {
+    "protocol_id": "ospf",
+    "instance_id": "0",
+    "link_state": {
+      "kind": "ipv4_topology_prefix",
+      "local_node": {"autonomous_system": 65000, "ospf_area_id": 0, "igp_router_id": {"kind": "ospf-router-id", "value": "10.0.0.1"}},
+      "prefix": "203.0.113.0/25",
+      "prefix_descriptors": {"ospf_route_type": 3}
+    },
+    "attributes": {
+      "igp_flags": {"ospf_no_unicast": true, "ospf_propagate_nssa": true},
+      "igp_route_tags": [300],
+      "igp_extended_route_tags": [4294967310],
+      "prefix_metric": 50,
+      "ospf_forwarding_address": "192.0.2.254",
+      "opaque_attributes": ["00010004deadbeef"],
+      "prefix_attribute_flags": {"flags": [128]},
+      "prefix_sids": [{"flags": 12, "algorithm": 0, "value": 16025, "is_label": true}],
+      "ranges": [{"flags": 128, "range_size": 32, "prefix_sids": [{"flags": 0, "algorithm": 0, "value": 12346}]}],
+      "source_router_identifiers": ["192.0.2.10"],
+      "source_ospf_router_ids": ["10.0.0.1"],
+      "flexible_algorithm_metrics": [{"algorithm": 128, "flags": 128, "metric": 90}],
+      "unknown_tlvs": [{"type": 65004, "value_hex": "01020304"}]
+    }
+  },
+  "origin": "igp",
+  "med": 50,
+  "local_pref": 100
+}

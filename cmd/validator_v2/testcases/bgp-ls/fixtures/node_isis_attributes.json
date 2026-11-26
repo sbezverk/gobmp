@@ -1,0 +1,47 @@
+{
+  "address_family": "bgp-ls",
+  "action": "announce",
+  "next_hops": ["fd00:100::2"],
+  "nlri": {
+    "protocol_id": "isis-level-2",
+    "instance_id": "0",
+    "link_state": {
+      "kind": "node",
+      "local_node": {
+        "autonomous_system": 65000,
+        "igp_router_id": {"kind": "isis-system-id", "value": "0000.0000.0101"}
+      }
+    },
+    "attributes": {
+      "node_flags": {"overload": true, "attached": true, "external": true, "abr": true, "router": true, "v6": true},
+      "opaque_attributes": ["deadbeef"],
+      "node_name": "gobmp-isis-node.example.net",
+      "isis_area_identifiers": ["49.0001", "49.0002"],
+      "ipv4_router_ids": ["192.0.2.1"],
+      "ipv6_router_ids": ["2001:db8::1"],
+      "srv6_capabilities": {"flags": 1},
+      "msds": [{"type": 1, "value": 10}, {"type": 2, "value": 8}],
+      "sr_algorithms": [0, 1],
+      "s_bfd_discriminators": [1001, 1002],
+      "sr_capabilities": {"ranges": [{"range_size": 8000, "sid_label": 16000}]},
+      "sr_local_blocks": [{"ranges": [{"range_size": 64, "sid_label": 15000}]}],
+      "srms_preference": 200,
+      "flexible_algorithms": [
+        {
+          "algorithm": 128,
+          "metric_type": 1,
+          "calculation_type": 0,
+          "priority": 128,
+          "exclude_any_affinity": [1, 2],
+          "include_any_affinity": [3],
+          "include_all_affinity": [4],
+          "flags": [0, 0, 0, 0],
+          "exclude_srlgs": [101]
+        }
+      ],
+      "unknown_tlvs": [{"type": 65000, "value_hex": "01020304"}]
+    }
+  },
+  "origin": "igp",
+  "local_pref": 100
+}

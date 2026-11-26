@@ -1,0 +1,267 @@
+{
+  "schema_version": 1,
+  "name": "link-ospfv3-srv6-attributes",
+  "description": "Inject link BGP-LS NLRI and validate its decoded GoBMP Kafka event.",
+  "tags": [
+    "bgp-ls",
+    "link",
+    "announce",
+    "integration"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "bgp-ls",
+      "action": "announce",
+      "next_hops": [
+        "fd00:100::2"
+      ],
+      "nlri": {
+        "protocol_id": "ospfv3",
+        "instance_id": "2",
+        "link_state": {
+          "kind": "link",
+          "local_node": {
+            "autonomous_system": 65000,
+            "ospf_area_id": 0,
+            "igp_router_id": {
+              "kind": "ospfv3-router-id",
+              "value": "10.0.0.1"
+            }
+          },
+          "remote_node": {
+            "autonomous_system": 65000,
+            "ospf_area_id": 0,
+            "igp_router_id": {
+              "kind": "ospfv3-router-id",
+              "value": "10.0.0.2"
+            }
+          },
+          "link_descriptors": {
+            "ipv6_interface_address": "2001:db8:23::1",
+            "ipv6_neighbor_address": "2001:db8:23::2"
+          }
+        },
+        "attributes": {
+          "administrative_group": 100,
+          "maximum_link_bandwidth": 8000000,
+          "maximum_reservable_bandwidth": 7000000,
+          "unreserved_bandwidth": [
+            7000000,
+            6000000,
+            5000000,
+            4000000,
+            3000000,
+            2000000,
+            1000000,
+            500000
+          ],
+          "te_default_metric": 30,
+          "igp_metric": 20,
+          "shared_risk_link_groups": [
+            301,
+            302
+          ],
+          "adjacency_sids": [
+            {
+              "flags": 224,
+              "weight": 10,
+              "sid_value": 16030
+            }
+          ],
+          "lan_adjacency_sids": [
+            {
+              "flags": 224,
+              "weight": 20,
+              "neighbor_id": "10.0.0.2",
+              "sid_value": 16031
+            }
+          ],
+          "srv6_end_x_sids": [
+            {
+              "endpoint_behavior": 5,
+              "weight": 10,
+              "sid": "2001:db8:100::1",
+              "sid_structure": {
+                "locator_block_length": 32,
+                "locator_node_length": 16,
+                "function_length": 16,
+                "argument_length": 0
+              }
+            }
+          ],
+          "srv6_lan_end_x_sids": [
+            {
+              "endpoint_behavior": 5,
+              "weight": 20,
+              "neighbor_id": "10.0.0.2",
+              "sid": "2001:db8:100::2",
+              "sid_structure": {
+                "locator_block_length": 32,
+                "locator_node_length": 16,
+                "function_length": 16,
+                "argument_length": 0
+              }
+            }
+          ],
+          "unidirectional_link_delay": 1200,
+          "min_max_unidirectional_delay": {
+            "minimum": 1100,
+            "maximum": 1500
+          },
+          "unidirectional_delay_variation": 50,
+          "unidirectional_link_loss": 100,
+          "unidirectional_residual_bandwidth": 6000000,
+          "unidirectional_available_bandwidth": 5000000,
+          "unidirectional_utilized_bandwidth": 2000000,
+          "application_specific_attributes": [
+            {
+              "standard_application_mask": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "attributes": [
+                {
+                  "type": 1088,
+                  "value_hex": "00000064"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "origin": "igp",
+      "local_pref": 100
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.ls_link",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "domain_id": 2,
+      "protocol_id": 6,
+      "igp_router_id": "10.0.0.1",
+      "remote_igp_router_id": "10.0.0.2",
+      "local_link_ip": "2001:db8:23::1"
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "domain_id": 2,
+      "protocol_id": 6,
+      "igp_router_id": "10.0.0.1",
+      "remote_igp_router_id": "10.0.0.2",
+      "local_link_ip": "2001:db8:23::1"
+    },
+    "contains": {
+      "remote_link_ip": "2001:db8:23::2",
+      "area_id": "0",
+      "local_node_asn": 65000,
+      "remote_node_asn": 65000,
+      "admin_group": 100,
+      "max_link_bw_kbps": 64000,
+      "max_resv_bw_kbps": 56000,
+      "unresv_bw_kbps": [
+        56000,
+        48000,
+        40000,
+        32000,
+        24000,
+        16000,
+        8000,
+        4000
+      ],
+      "te_default_metric": 30,
+      "igp_metric": 20,
+      "srlg": [
+        301
+      ],
+      "ls_adjacency_sid": [
+        {
+          "sid": 16030,
+          "weight": 10,
+          "flags": {
+            "b_flag": true,
+            "v_flag": true,
+            "l_flag": true,
+            "g_flag": false,
+            "p_flag": false
+          }
+        }
+      ],
+      "ls_lan_adjacency_sid": [
+        {
+          "sid": 16031,
+          "weight": 20,
+          "neighbor_id": "10.0.0.2",
+          "flags": {
+            "b_flag": true,
+            "v_flag": true,
+            "l_flag": true,
+            "g_flag": false,
+            "p_flag": false
+          }
+        }
+      ],
+      "srv6_endx_sid": [
+        {
+          "endpoint_behavior": 5,
+          "sid": "2001:db8:100::1",
+          "weight": 10,
+          "sub_tlvs": [
+            {
+              "type": 1252,
+              "locator_block_length": 32,
+              "locator_node_length": 16,
+              "function_length": 16,
+              "argument_length": 0
+            }
+          ]
+        }
+      ],
+      "srv6_lan_endx_sid": [
+        {
+          "endpoint_behavior": 5,
+          "sid": "2001:db8:100::2",
+          "weight": 20,
+          "neighbor_id": "10.0.0.2"
+        }
+      ],
+      "unidir_link_delay": 1200,
+      "unidir_link_delay_min_max": [
+        1100,
+        1500
+      ],
+      "unidir_delay_variation": 50,
+      "unidir_packet_loss": 100,
+      "unidir_residual_bw_kbps": 48000,
+      "unidir_available_bw_kbps": 40000,
+      "unidir_bw_utilization_kbps": 16000,
+      "app_spec_link_attr": [
+        {
+          "saibm_length": 4,
+          "std_app_id_bit_mask": "AAAAAQ==",
+          "sub_tlvs": [
+            {
+              "sub_tlv_type": 1088,
+              "sub_tlv_value": "AAAAZA=="
+            }
+          ]
+        }
+      ]
+    },
+    "present": [
+      "ls_adjacency_sid",
+      "ls_lan_adjacency_sid",
+      "srv6_endx_sid",
+      "srv6_lan_endx_sid",
+      "app_spec_link_attr",
+      "unidir_available_bw_kbps"
+    ]
+  }
+}

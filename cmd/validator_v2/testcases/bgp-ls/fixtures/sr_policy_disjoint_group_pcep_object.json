@@ -1,0 +1,58 @@
+{
+  "address_family": "bgp-ls",
+  "action": "announce",
+  "next_hops": ["fd00:100::2"],
+  "nlri": {
+    "protocol_id": "segment-routing",
+    "instance_id": "0",
+    "link_state": {
+      "kind": "sr_policy_candidate_path",
+      "local_node": {"autonomous_system": 65000, "bgp_router_id": "192.0.2.1", "ipv4_router_id_local": "192.0.2.1"},
+      "candidate_path": {
+        "protocol_origin": 1,
+        "endpoint": "192.0.2.9",
+        "color": 100,
+        "originator_as": 65000,
+        "originator_address": "192.0.2.1",
+        "discriminator": 1102
+      }
+    },
+    "attributes": {
+      "policy_name": "disjoint-group-pcep-object",
+      "candidate_path_name": "pcep-association-object",
+      "candidate_path_state": {"priority": 100, "flags": 0, "preference": 200},
+      "binding_sids": [{"flags": 16384, "sid": "16001", "specified_sid": "16002"}],
+      "constraints": {
+        "flags": 32768,
+        "multi_topology_id": 4,
+        "algorithm": 128,
+        "exclude_any_affinity": [1, 2],
+        "include_any_affinity": [3],
+        "include_all_affinity": [4],
+        "exclude_srlgs": [1001],
+        "bandwidth": 8000000,
+        "disjoint_group": {
+          "request_flags": 8,
+          "status_flags": 4,
+          "pcep_association_object_hex": "28100018000000000002000bc0000201002e000480000000"
+        },
+        "bidirectional_group": {"flags": 128, "group_id": 12},
+        "metric": {"metric_type": 5, "flags": 32, "metric_margin": 10, "metric_bound": 20000}
+      },
+      "segment_lists": [
+        {
+          "flags": 28672,
+          "multi_topology_id": 4,
+          "algorithm": 128,
+          "weight": 100,
+          "segments": [{"type": 1, "flags": 57344, "value": "16001"}],
+          "metric": {"metric_type": 1, "flags": 16, "metric_margin": 0, "metric_bound": 20000, "metric": 18000},
+          "bandwidth": 8000000,
+          "identifier": 8
+        }
+      ]
+    }
+  },
+  "origin": "igp",
+  "local_pref": 100
+}
