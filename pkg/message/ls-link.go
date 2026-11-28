@@ -65,6 +65,12 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	if a := link.GetLinkNeighborAddr(); a != nil {
 		msg.RemoteLinkIP = a.String()
 	}
+	// RFC 9552 Section 5.2.2: IPv4 (259/260) and IPv6 (261/262) addresses are
+	// separate Link Descriptor TLVs, so each family is published on its own.
+	msg.LocalLinkIPv4 = linkDescriptorAddress(link.Link, 259, net.IPv4len)
+	msg.RemoteLinkIPv4 = linkDescriptorAddress(link.Link, 260, net.IPv4len)
+	msg.LocalLinkIPv6 = linkDescriptorAddress(link.Link, 261, net.IPv6len)
+	msg.RemoteLinkIPv6 = linkDescriptorAddress(link.Link, 262, net.IPv6len)
 	msg.LocalNodeHash = link.LocalNodeHash
 	msg.RemoteNodeHash = link.RemoteNodeHash
 	msg.LocalNodeASN = link.GetLocalASN()
@@ -108,6 +114,17 @@ func (p *producer) lsLink(link *base.LinkNLRI, nextHop string, op int, ph *bmp.P
 	populateLSLinkAttributes(&msg, update, spf)
 
 	return &msg, nil
+}
+
+// linkDescriptorAddress returns the address in the Link Descriptor TLV of the
+// given type, or "" unless the value is exactly size octets (4 octets per
+// RFC 5305 Sections 3.2 and 3.3, 16 per RFC 6119 Sections 4.2 and 4.3).
+func linkDescriptorAddress(link *base.LinkDescriptor, typ uint16, size int) string {
+	value := link.LinkTLV[typ].Value
+	if len(value) != size {
+		return ""
+	}
+	return net.IP(value).String()
 }
 
 // populateLSLinkAttributes applies BGP-LS path-attribute metrics and properties shared by intra-AS and Inter-AS links.
