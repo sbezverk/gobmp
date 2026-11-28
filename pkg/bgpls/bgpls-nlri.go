@@ -414,7 +414,8 @@ func (ls *NLRI) GetLSSourceRouterIdentifier() (string, error) {
 	return "", fmt.Errorf("source Router ID TLV 1171 not found")
 }
 
-// GetLSSRv6ENDXSID returns SRv6 END.X SID TLV
+// GetLSSRv6ENDXSID returns the valid SRv6 End.X SID TLVs in wire order.
+// Invalid TLVs are skipped, so the error is always nil.
 func (ls *NLRI) GetLSSRv6ENDXSID() ([]*srv6.EndXSIDTLV, error) {
 	endxs := make([]*srv6.EndXSIDTLV, 0)
 	for _, tlv := range ls.LS {
@@ -423,7 +424,8 @@ func (ls *NLRI) GetLSSRv6ENDXSID() ([]*srv6.EndXSIDTLV, error) {
 		}
 		endx, err := srv6.UnmarshalSRv6EndXSIDTLV(tlv.Value)
 		if err != nil {
-			return nil, err
+			glog.V(4).Infof("skipping invalid SRv6 End.X SID TLV %d: %v", tlv.Type, err)
+			continue
 		}
 		endxs = append(endxs, endx)
 	}
@@ -756,6 +758,7 @@ func (ls *NLRI) GetSRv6SIDStructure() *srv6.SIDStructure {
 		}
 		sid, err := srv6.UnmarshalSRv6SIDStructureTLV(tlv.Value)
 		if err != nil {
+			glog.V(4).Infof("skipping invalid SRv6 SID Structure TLV %d: %v", tlv.Type, err)
 			return nil
 		}
 		return sid

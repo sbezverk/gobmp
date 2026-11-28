@@ -283,6 +283,22 @@ func TestGetLSSRv6ENDXSID_Absent(t *testing.T) {
 	}
 }
 
+func TestGetLSSRv6ENDXSIDSkipsInvalidTLV(t *testing.T) {
+	t.Run("returns the valid SID that follows a truncated TLV", func(t *testing.T) {
+		// RFC 9514 §4.1: the End.X SID TLV value is at least 22 octets.
+		ls := &NLRI{LS: []TLV{{Type: 1106, Value: []byte{0}}, {Type: 1106, Value: make([]byte, 22)}}}
+
+		got, err := ls.GetLSSRv6ENDXSID()
+
+		if err != nil {
+			t.Fatalf("GetLSSRv6ENDXSID() error = %v, want nil", err)
+		}
+		if len(got) != 1 || got[0].SID != "::" {
+			t.Errorf("GetLSSRv6ENDXSID() = %+v, want only SID ::", got)
+		}
+	})
+}
+
 func TestGetNodeSRv6CapabilitiesTLV_Absent(t *testing.T) {
 	_, err := (&NLRI{}).GetNodeSRv6CapabilitiesTLV()
 	if err == nil {

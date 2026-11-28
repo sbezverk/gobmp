@@ -2,6 +2,7 @@ package srv6
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/tools"
@@ -26,10 +27,16 @@ func (s *SIDStructure) GetLen() uint16 {
 	return s.Length
 }
 
-// UnmarshalSRv6SIDStructureTLV builds SRv6 SID Structure TLV object
+// sidStructureLen is the fixed length of the SRv6 SID Structure TLV value (RFC 9514 §8).
+const sidStructureLen = 4
+
+// UnmarshalSRv6SIDStructureTLV builds SRv6 SID Structure TLV object (RFC 9514 §8).
 func UnmarshalSRv6SIDStructureTLV(b []byte) (*SIDStructure, error) {
 	if glog.V(6) {
 		glog.Infof("SRv6 SID Structure TLV Raw: %s", tools.MessageHex(b))
+	}
+	if len(b) != sidStructureLen {
+		return nil, fmt.Errorf("srv6 SID Structure TLV length must be %d bytes, have %d", sidStructureLen, len(b))
 	}
 	st := SIDStructure{}
 	p := 0
