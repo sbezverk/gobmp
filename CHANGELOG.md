@@ -4,6 +4,12 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-27
+
+#### Fixed
+
+- BGP-LS link messages dropped the IPv6 interface and neighbor addresses (TLVs 261/262, RFC 9552 §5.2.2) of a dual-stack link: `ls_link` now carries `local_link_ipv4`, `remote_link_ipv4`, `local_link_ipv6` and `remote_link_ipv6`, as Inter-AS links already do; `local_link_ip` and `remote_link_ip` are unchanged
+
 ### 2026-11-13
 
 #### Added

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"slices"
 	"sync"
 	"testing"
 
@@ -21,6 +22,7 @@ type recordingPublisher struct {
 
 type recordedMsg struct {
 	msgType int
+	key     []byte
 	payload []byte
 }
 
@@ -29,7 +31,7 @@ func (r *recordingPublisher) PublishMessage(msgType int, msgHash []byte, msg []b
 	defer r.mu.Unlock()
 	payload := make([]byte, len(msg))
 	copy(payload, msg)
-	r.msgs = append(r.msgs, recordedMsg{msgType: msgType, payload: payload})
+	r.msgs = append(r.msgs, recordedMsg{msgType: msgType, key: slices.Clone(msgHash), payload: payload})
 	return nil
 }
 

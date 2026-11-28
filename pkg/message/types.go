@@ -312,8 +312,8 @@ type LSLink struct {
 	RemoteLinkID          uint32                        `json:"remote_link_id,omitempty"`
 	LocalLinkIP           string                        `json:"local_link_ip,omitempty"`
 	RemoteLinkIP          string                        `json:"remote_link_ip,omitempty"`
-	LocalLinkIPv4         string                        `json:"local_link_ipv4,omitempty"`  // Retains IPv4 when an Inter-AS link is dual-stack
-	LocalLinkIPv6         string                        `json:"local_link_ipv6,omitempty"`  // Retains IPv6 when an Inter-AS link is dual-stack
+	LocalLinkIPv4         string                        `json:"local_link_ipv4,omitempty"`  // Retains the local IPv4 link endpoint
+	LocalLinkIPv6         string                        `json:"local_link_ipv6,omitempty"`  // Retains the local IPv6 link endpoint
 	RemoteLinkIPv4        string                        `json:"remote_link_ipv4,omitempty"` // Retains the remote IPv4 link endpoint
 	RemoteLinkIPv6        string                        `json:"remote_link_ipv6,omitempty"` // Retains the remote IPv6 link endpoint
 	PathID                uint32                        `json:"path_id,omitempty"`          // Preserves RFC 7911 identity for parallel BGP-LS paths
