@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "peer-neighbor-down",
-  "description": "Shut down the iBGP neighbor and validate the Peer Down: reason 1 with a Cease/Administrative Shutdown NOTIFICATION (RFC 7854 section 4.9, RFC 4486).",
+  "description": "Shut down the iBGP neighbor and validate the Peer Down. cEOS 4.35.2F sends reason 1 with the Cease/Administrative Shutdown NOTIFICATION or reason 2 with an FSM event code (RFC 7854 section 4.9), so neither is checked.",
   "tags": ["peer", "peer-down", "ibgp", "event"],
   "inject": {
     "path": "/v1/routes",
@@ -31,8 +31,6 @@
       "remote_asn": 64496,
       "peer_type": 0,
       "peer_rd": "0:0",
-      "bmp_reason": 1,
-      "info_data": "/////////////////////wAVAwYC",
       "is_l": false,
       "is_ipv4": true,
       "is_adj_rib_in_post_policy": false,
@@ -42,7 +40,7 @@
       "is_loc_rib_filtered": false
     },
     "present": ["timestamp"],
-    "non_empty": ["hash", "router_hash", "router_descr"],
+    "non_empty": ["hash", "router_hash", "router_descr", "bmp_reason", "info_data"],
     "absent": [
       "error", "name", "local_asn", "local_ip", "local_port", "local_bgp_id", "remote_port",
       "remote_holddown", "adv_holddown", "adv_cap", "recv_cap", "bmp_error_code",
