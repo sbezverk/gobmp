@@ -1,17 +1,22 @@
-# cEOS integration test topology — multinode Kafka cluster
-#
-# IMPORTANT: cEOS containers use a SINGLE Docker network (gobmp-ceos-1).
-# Do NOT add a second network. See test_bed_single_kafka_ceos.yml for details.
-
+# Keep every container on this one network. Docker Compose does not keep the
+# interface order across several networks, and cEOS maps eth0 to Management0.
 networks:
   gobmp-ceos-1:
+    enable_ipv6: true
     ipam:
       config:
       - subnet: 10.1.1.0/24
-
+      # Services without a static IPv6 address take one from ip_range, so
+      # they cannot take ::3, ::20 or ::21.
+      - subnet: 2001:db8:10:1::/64
+        ip_range: 2001:db8:10:1::100/120
+        gateway: 2001:db8:10:1::1
 services:
   gobmp:
     image: localhost/gobmp:cicd
+    container_name: gobmp-multinode
+    hostname: gobmp-multinode
+    restart: on-failure
     expose:
       - 5000
     entrypoint:
@@ -32,7 +37,6 @@ services:
       - kafka-2
       - kafka-3
       - kafka-4
-
   zookeeper:
     image: zookeeper:3.7.0
     restart: always
@@ -44,13 +48,6 @@ services:
     networks:
       gobmp-ceos-1:
         ipv4_address: 10.1.1.5
-    healthcheck:
-      test: [ "CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok" ]
-      interval: 2s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
   kafka-1:
     image: confluentinc/cp-kafka:7.3.1
     restart: always
@@ -79,7 +76,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-
   kafka-2:
     image: confluentinc/cp-kafka:7.3.1
     restart: always
@@ -108,7 +104,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-
   kafka-3:
     image: confluentinc/cp-kafka:7.3.1
     restart: always
@@ -137,7 +132,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-
   kafka-4:
     image: confluentinc/cp-kafka:7.3.1
     restart: always
@@ -166,12 +160,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-
   ceos-1:
-    cap_add:
-    - NET_ADMIN
-    - SYS_ADMIN
-    - SYS_RESOURCE
+    # The only place the cEOS image is named; CI pulls it through this file.
+    image: sbezverk/ceos-lab-4.35.2f:cicd
+    container_name: ceos-1
+    privileged: true
     command:
     - /sbin/init
     - systemd.setenv=CEOS=1
@@ -182,69 +175,78 @@ services:
     - systemd.setenv=INTFTYPE=eth
     - systemd.setenv=MAPETH0=1
     - systemd.setenv=MGMT_INTF=eth0
-    container_name: ceos-1
     environment:
       CEOS: 1
       EOS_PLATFORM: ceoslab
       container: docker
-      MGMT_INTF: eth0
-      INTFTYPE: eth
       ETBA: 1
       SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT: 1
+      INTFTYPE: eth
       MAPETH0: 1
-    image: sbezverk/ceos-lab-4.35.2f:cicd
-    privileged: true
+      MGMT_INTF: eth0
     networks:
       gobmp-ceos-1:
         ipv4_address: 10.1.1.3
+        # The address ceos-1_startup.cfg sets on Management0.
+        ipv6_address: 2001:db8:10:1::3
     stdin_open: true
     tty: true
     volumes:
     - source: ./ceos-1_startup.cfg
       target: /mnt/flash/startup-config
       type: bind
-    - ceos-1:/mnt/flash/
-
-  ceos-2:
+  bgpinjector:
+    # Digest of ghcr.io/sbezverk/bgpinjector:latest (v0.0.3) on 2026-11-27.
+    image: ${BGPINJECTOR_IMAGE:-ghcr.io/sbezverk/bgpinjector@sha256:d6568355edfa9950b01f25d44d70e2e0862bbe638717dbc1928f4c3d6c13e770}
+    container_name: bgpinjector
+    hostname: bgpinjector
+    restart: on-failure
+    ports:
+      - 8080:8080
+    expose:
+      - 8080
+    entrypoint:
+      [
+        "/bgpinjector",
+        "--speaker-address=10.1.1.3:179",
+        "--router-id=192.0.2.2",
+        "--local-as=64497",
+        "--api-address=0.0.0.0:8080",
+        "--ingress-type=none",
+      ]
     cap_add:
     - NET_ADMIN
-    - SYS_ADMIN
-    - SYS_RESOURCE
-    command:
-    - /sbin/init
-    - systemd.setenv=CEOS=1
-    - systemd.setenv=EOS_PLATFORM=ceoslab
-    - systemd.setenv=container=docker
-    - systemd.setenv=ETBA=1
-    - systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1
-    - systemd.setenv=INTFTYPE=eth
-    - systemd.setenv=MAPETH0=1
-    - systemd.setenv=MGMT_INTF=eth0
-    container_name: ceos-2
-    environment:
-      CEOS: 1
-      EOS_PLATFORM: ceoslab
-      container: docker
-      MGMT_INTF: eth0
-      INTFTYPE: eth
-      ETBA: 1
-      SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT: 1
-      MAPETH0: 1
-    image: sbezverk/ceos-lab-4.35.2f:cicd
-    privileged: true
     networks:
       gobmp-ceos-1:
-        ipv4_address: 10.1.1.10
-    stdin_open: true
-    tty: true
-    volumes:
-    - source: ./ceos-2_startup.cfg
-      target: /mnt/flash/startup-config
-      type: bind
-    - ceos-2:/mnt/flash/
-
-volumes:
-  ceos-1:
-    name: ceos-1
-  ceos-2:
-    name: ceos-2
+        ipv4_address: 10.1.1.20
+        # The IPv6 and VPNv6 test cases use this address as the next hop.
+        ipv6_address: 2001:db8:10:1::20
+    depends_on:
+      - ceos-1
+  bgpinjector-ibgp:
+    # Digest of ghcr.io/sbezverk/bgpinjector:latest (v0.0.3) on 2026-11-27.
+    image: ${BGPINJECTOR_IMAGE:-ghcr.io/sbezverk/bgpinjector@sha256:d6568355edfa9950b01f25d44d70e2e0862bbe638717dbc1928f4c3d6c13e770}
+    container_name: bgpinjector-ibgp
+    hostname: bgpinjector-ibgp
+    restart: on-failure
+    ports:
+      - 8081:8080
+    expose:
+      - 8080
+    entrypoint:
+      [
+        "/bgpinjector",
+        "--speaker-address=10.1.1.3:179",
+        "--router-id=192.0.2.3",
+        "--local-as=64496",
+        "--api-address=0.0.0.0:8080",
+        "--ingress-type=none",
+      ]
+    cap_add:
+    - NET_ADMIN
+    networks:
+      gobmp-ceos-1:
+        ipv4_address: 10.1.1.21
+        ipv6_address: 2001:db8:10:1::21
+    depends_on:
+      - ceos-1

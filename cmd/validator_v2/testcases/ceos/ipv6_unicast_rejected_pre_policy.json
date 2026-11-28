@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "name": "ipv6-unicast-rejected-pre-policy",
+  "description": "An IPv6 route denied by the inbound route map still appears in pre-policy monitoring with its attributes.",
+  "tags": ["ipv6", "unicast", "announce", "pre-policy", "policy-rejected", "manual-inject"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv6/unicast",
+      "action": "announce",
+      "source": "manual-fixture",
+      "collector": "validator-v2",
+      "sequence_id": "ipv6-unicast-rejected-pre-policy-001",
+      "nlri": {
+        "prefix": "2001:db8:bad:1::/64"
+      },
+      "next_hops": ["2001:db8:10:1::20"],
+      "as_path_segments": [
+        { "type": "as_sequence", "asns": [64498] }
+      ],
+      "origin": "igp",
+      "med": 20,
+      "communities": ["64498:20"]
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.unicast_prefix_v6",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "prefix": "2001:db8:bad:1::",
+      "prefix_len": 64,
+      "peer_ip": "10.1.1.20",
+      "is_adj_rib_in_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false
+    }
+  },
+  "expect": {
+    "equals": {
+      "router_ip": "10.1.1.3",
+      "remote_bgp_id": "192.0.2.2",
+      "peer_type": 0,
+      "peer_asn": 64497,
+      "is_ipv4": false,
+      "origin_as": 64498,
+      "nexthop": "2001:db8:10:1::20",
+      "is_nexthop_ipv4": false,
+      "is_adj_rib_out_post_policy": false,
+      "is_loc_rib_filtered": false,
+      "afi": 2,
+      "safi": 1
+    },
+    "contains": {
+      "base_attrs": {
+        "origin": "igp",
+        "as_path": [64497, 64498],
+        "as_path_count": 2,
+        "as_path_segments": [{ "type": 2, "asns": [64497, 64498] }],
+        "med": 20,
+        "is_atomic_agg": false,
+        "community_list": ["64498:20"]
+      }
+    },
+    "present": ["timestamp", "base_attrs"],
+    "non_empty": ["hash", "router_hash", "peer_hash", "base_attrs.base_attr_hash"],
+    "absent": [
+      "error", "is_eor", "path_id", "base_attrs.nexthop", "base_attrs.local_pref",
+      "base_attrs.ext_community_list", "base_attrs.large_community_list"
+    ]
+  }
+}

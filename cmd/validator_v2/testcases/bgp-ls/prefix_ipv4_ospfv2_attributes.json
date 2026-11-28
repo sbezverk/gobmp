@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "name": "prefix-ipv4-ospfv2-attributes",
+  "description": "Inject ipv4 topology prefix BGP-LS NLRI and validate its decoded GoBMP Kafka event.",
+  "tags": [
+    "bgp-ls",
+    "ipv4-topology-prefix",
+    "announce",
+    "integration"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "bgp-ls",
+      "action": "announce",
+      "next_hops": [
+        "fd00:100::2"
+      ],
+      "nlri": {
+        "protocol_id": "ospf",
+        "instance_id": "0",
+        "link_state": {
+          "kind": "ipv4_topology_prefix",
+          "local_node": {
+            "autonomous_system": 65000,
+            "ospf_area_id": 0,
+            "igp_router_id": {
+              "kind": "ospf-router-id",
+              "value": "10.0.0.1"
+            }
+          },
+          "prefix": "203.0.113.0/25",
+          "prefix_descriptors": {
+            "ospf_route_type": 3
+          }
+        },
+        "attributes": {
+          "igp_flags": {
+            "ospf_no_unicast": true,
+            "ospf_propagate_nssa": true
+          },
+          "igp_route_tags": [
+            300
+          ],
+          "igp_extended_route_tags": [
+            4294967310
+          ],
+          "prefix_metric": 50,
+          "ospf_forwarding_address": "192.0.2.254",
+          "opaque_attributes": [
+            "00010004deadbeef"
+          ],
+          "prefix_attribute_flags": {
+            "flags": [
+              128
+            ]
+          },
+          "prefix_sids": [
+            {
+              "flags": 12,
+              "algorithm": 0,
+              "value": 16025,
+              "is_label": true
+            }
+          ],
+          "ranges": [
+            {
+              "flags": 128,
+              "range_size": 32,
+              "prefix_sids": [
+                {
+                  "flags": 0,
+                  "algorithm": 0,
+                  "value": 12346
+                }
+              ]
+            }
+          ],
+          "source_router_identifiers": [
+            "192.0.2.10"
+          ],
+          "source_ospf_router_ids": [
+            "10.0.0.1"
+          ],
+          "flexible_algorithm_metrics": [
+            {
+              "algorithm": 128,
+              "flags": 128,
+              "metric": 90
+            }
+          ],
+          "unknown_tlvs": [
+            {
+              "type": 65004,
+              "value_hex": "01020304"
+            }
+          ]
+        }
+      },
+      "origin": "igp",
+      "med": 50,
+      "local_pref": 100
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.ls_prefix",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "domain_id": 0,
+      "protocol_id": 3,
+      "prefix": "203.0.113.0",
+      "prefix_len": 25
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "domain_id": 0,
+      "protocol_id": 3,
+      "prefix": "203.0.113.0",
+      "prefix_len": 25
+    },
+    "contains": {
+      "igp_router_id": "10.0.0.1",
+      "ospf_route_type": 3,
+      "igp_flags": {
+        "n_flag": true,
+        "p_flag": true
+      },
+      "route_tag": [
+        300
+      ],
+      "ext_route_tag": [
+        4294967310
+      ],
+      "prefix_metric": 50,
+      "ospf_fwd_addr": "192.0.2.254",
+      "prefix_attr_tlvs": {
+        "flags": {
+          "a_flag": true
+        },
+        "ls_prefix_sid": [
+          {
+            "prefix_sid": 16025,
+            "algo": 0
+          }
+        ],
+        "range": {
+          "range_size": 32,
+          "prefix_sid": [
+            {
+              "prefix_sid": 12346
+            }
+          ]
+        },
+        "source_router_identifier": "192.0.2.10",
+        "source_ospf_router_id": "10.0.0.1"
+      },
+      "opaque_prefix_attribute": [
+        "00010004deadbeef"
+      ],
+      "flex_algo_prefix_metric": [
+        {
+          "flex_algo": 128,
+          "metric": 90
+        }
+      ],
+      "unknown_bgp_ls_tlvs": [
+        {
+          "type": 65004,
+          "value_hex": "01020304"
+        }
+      ]
+    },
+    "present": [
+      "igp_flags",
+      "ospf_fwd_addr",
+      "prefix_attr_tlvs.range",
+      "prefix_attr_tlvs.source_router_identifier",
+      "prefix_attr_tlvs.source_ospf_router_id",
+      "unknown_bgp_ls_tlvs"
+    ]
+  }
+}

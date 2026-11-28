@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "name": "vpnv4-post-policy-announce",
+  "description": "Validate post-policy L3VPN output; cEOS replaces the LOCAL_PREF received over eBGP with its default of 100.",
+  "tags": ["vpnv4", "l3vpn", "announce", "post-policy", "manual-inject"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "vpnv4",
+      "action": "announce",
+      "source": "manual-fixture",
+      "collector": "validator-v2",
+      "sequence_id": "vpnv4-post-policy-announce-001",
+      "nlri": {
+        "labels": [
+          { "value": 1001, "exp": 0, "is_bos": true }
+        ],
+        "rd": "64497:100",
+        "prefix": "192.0.2.160/27"
+      },
+      "next_hops": ["10.1.1.20"],
+      "as_path_segments": [
+        { "type": "as_sequence", "asns": [64498, 64506] }
+      ],
+      "origin": "egp",
+      "med": 310,
+      "local_pref": 250,
+      "communities": ["64498:310"],
+      "extended_communities": [
+        { "type": "route_target", "format": "two_octet_as", "asn": 64497, "local": 101 }
+      ],
+      "large_communities": [
+        { "global_admin": 64498, "local_data_1": 70, "local_data_2": 310 }
+      ]
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.l3vpn_v4",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "vpn_rd": "64497:100",
+      "prefix": "192.0.2.160",
+      "prefix_len": 27,
+      "is_adj_rib_in_post_policy": true
+    }
+  },
+  "expect": {
+    "equals": {
+      "router_ip": "10.1.1.3",
+      "remote_bgp_id": "192.0.2.2",
+      "peer_ip": "10.1.1.20",
+      "peer_type": 0,
+      "peer_asn": 64497,
+      "vpn_rd_type": 0,
+      "is_ipv4": true,
+      "origin_as": 64506,
+      "nexthop": "10.1.1.20",
+      "is_nexthop_ipv4": true,
+      "labels": [1001],
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false,
+      "is_loc_rib_filtered": false,
+      "afi": 1,
+      "safi": 128
+    },
+    "contains": {
+      "base_attrs": {
+        "origin": "egp",
+        "as_path": [64497, 64498, 64506],
+        "as_path_count": 3,
+        "as_path_segments": [{ "type": 2, "asns": [64497, 64498, 64506] }],
+        "med": 310,
+        "local_pref": 100,
+        "is_atomic_agg": false,
+        "community_list": ["64498:310"],
+        "ext_community_list": ["rt=64497:101"],
+        "large_community_list": ["64498:70:310"]
+      }
+    },
+    "present": ["timestamp", "base_attrs"],
+    "non_empty": ["hash", "router_hash", "peer_hash", "base_attrs.base_attr_hash"],
+    "absent": ["error", "is_eor", "path_id", "base_attrs.nexthop"]
+  }
+}

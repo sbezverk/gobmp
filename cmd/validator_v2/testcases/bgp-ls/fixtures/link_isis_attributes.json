@@ -1,0 +1,66 @@
+{
+  "address_family": "bgp-ls",
+  "action": "announce",
+  "next_hops": ["fd00:100::2"],
+  "nlri": {
+    "protocol_id": "isis-level-2",
+    "instance_id": "7",
+    "link_state": {
+      "kind": "link",
+      "local_node": {"autonomous_system": 65000, "igp_router_id": {"kind": "isis-system-id", "value": "0000.0000.0001"}},
+      "remote_node": {"autonomous_system": 65000, "igp_router_id": {"kind": "isis-system-id", "value": "0000.0000.0002"}},
+      "link_descriptors": {
+        "ipv4_interface_address": "192.0.2.1",
+        "ipv4_neighbor_address": "192.0.2.2",
+        "ipv6_interface_address": "2001:db8:12::1",
+        "ipv6_neighbor_address": "2001:db8:12::2",
+        "multi_topology_id": 7
+      }
+    },
+    "attributes": {
+      "local_ipv4_router_ids": ["10.0.0.1"],
+      "remote_ipv4_router_ids": ["10.0.0.2"],
+      "local_ipv6_router_ids": ["2001:db8::1"],
+      "remote_ipv6_router_ids": ["2001:db8::2"],
+      "administrative_group": 10,
+      "maximum_link_bandwidth": 1000000000,
+      "maximum_reservable_bandwidth": 900000000,
+      "unreserved_bandwidth": [900000000, 800000000, 700000000, 600000000, 500000000, 400000000, 300000000, 200000000],
+      "te_default_metric": 20,
+      "link_protection_type": 1,
+      "mpls_protocol_mask": {"ldp": true, "rsvp_te": true},
+      "igp_metric": 10,
+      "shared_risk_link_groups": [101, 202],
+      "opaque_attributes": ["01020304"],
+      "link_name": "gobmp-isis-link",
+      "msds": [{"type": 1, "value": 10}],
+      "extended_administrative_groups": [100, 200],
+      "adjacency_sids": [
+        {"flags": 176, "weight": 10, "sid_value": 16017},
+        {"flags": 128, "weight": 20, "sid_value": 42}
+      ],
+      "lan_adjacency_sids": [
+        {"flags": 176, "weight": 15, "neighbor_id": "0000.0000.0002", "sid_value": 16018}
+      ],
+      "peer_node_sids": [{"flags": 32, "weight": 10, "sid_value": 16019, "peer_as_number": 65001, "peer_bgp_identifier": "192.0.2.9"}],
+      "peer_adjacency_sids": [{"flags": 0, "weight": 20, "sid_value": 16020}],
+      "peer_set_sids": [{"flags": 0, "weight": 30, "sid_value": 16021}],
+      "unidirectional_link_delay": 1200,
+      "min_max_unidirectional_delay": {"minimum": 1100, "maximum": 1500},
+      "unidirectional_delay_variation": 50,
+      "unidirectional_link_loss": 100,
+      "unidirectional_residual_bandwidth": 750000000,
+      "unidirectional_available_bandwidth": 700000000,
+      "unidirectional_utilized_bandwidth": 250000000,
+      "graceful_link_shutdown": true,
+      "application_specific_attributes": [
+        {"standard_application_mask": [0, 0, 0, 1], "user_defined_application_mask": [0, 0, 0, 2], "attributes": [{"type": 1088, "value_hex": "00000064"}]}
+      ],
+      "rtm_capability": 3,
+      "l2_bundle_member_attributes": [{"member_link_local_id": 77, "sub_tlvs": [{"type": 1095, "value_hex": "00000a"}]}],
+      "unknown_tlvs": [{"type": 65002, "value_hex": "010203"}]
+    }
+  },
+  "origin": "igp",
+  "local_pref": 100
+}
