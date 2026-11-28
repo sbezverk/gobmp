@@ -4,6 +4,12 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-27
+
+#### Fixed
+
+- `ls_link` lost the IPv6 router IDs of a dual-stack link (RFC 9552 §5.3.2.1): the first instance of each of TLVs 1028-1031 is now also published as `local_ipv4_router_id`, `local_ipv6_router_id`, `remote_ipv4_router_id` and `remote_ipv6_router_id`, omitted unless it has a 4-octet (IPv4) or 16-octet (IPv6) value; `router_id` and `remote_router_id` are unchanged
+
 ### 2026-11-13
 
 #### Added
