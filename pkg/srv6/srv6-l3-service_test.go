@@ -1,6 +1,7 @@
 package srv6
 
 import (
+	"fmt"
 	"net"
 	"reflect"
 	"testing"
@@ -8,27 +9,58 @@ import (
 	"github.com/go-test/deep"
 )
 
-func TestUnmarshalInformationSubTLV_ShortTrailingBytes(t *testing.T) {
-	// 20-byte valid header (1 reserved + 16 SID + 1 flags + 2 endpoint behavior)
-	// followed by 1-3 trailing bytes that are too short for a sub-sub-TLV header
-	// (which requires 4 bytes: 1 reserved + 1 type + 2 length).
-	// The function must not panic; it should ignore the trailing bytes.
-	base := []byte{
-		0x00,                                                                                           // reserved
-		0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // SID (16 bytes)
-		0x00,       // flags
-		0x00, 0x06, // endpoint behavior
+func TestUnmarshalInformationSubTLV_TrailingOctets(t *testing.T) {
+	// 21 octets are the whole fixed part (RFC 9252 §3.1). One or two more are
+	// too short for a Sub-Sub-TLV header (type and 2-octet length).
+	tests := []struct {
+		name    string
+		length  int
+		wantErr bool
+	}{
+		{name: "the fixed part alone is valid", length: 21},
+		{name: "one trailing octet is rejected", length: 22, wantErr: true},
+		{name: "two trailing octets are rejected", length: 23, wantErr: true},
 	}
-	for trailing := 1; trailing <= 3; trailing++ {
-		input := make([]byte, len(base)+trailing)
-		copy(input, base)
-		got, err := UnmarshalInformationSubTLV(input)
-		if err != nil {
-			t.Fatalf("trailing=%d: unexpected error: %v", trailing, err)
-		}
-		if got.SubSubTLVs != nil {
-			t.Fatalf("trailing=%d: expected nil SubSubTLVs, got %v", trailing, got.SubSubTLVs)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := make([]byte, tt.length)
+			got, err := UnmarshalInformationSubTLV(input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("UnmarshalInformationSubTLV(%x) error = %v, want error: %t", input, err, tt.wantErr)
+			}
+			if err == nil && got.SubSubTLVs != nil {
+				t.Errorf("UnmarshalInformationSubTLV(%x) SubSubTLVs = %v, want nil", input, got.SubSubTLVs)
+			}
+		})
+	}
+}
+
+func TestUnmarshalSRv6L3ServiceSubSubTLV_LengthPastTheEndIsRejected(t *testing.T) {
+	// Spare capacity holds the octets an unchecked slice would borrow.
+	wire := []byte{0x00, 0x01, 0x00, 0x06, 40, 24, 16, 0, 16, 64}
+	for n := 2; n < len(wire); n++ {
+		t.Run(fmt.Sprintf("input cut to %d octets is rejected", n), func(t *testing.T) {
+			if got, err := UnmarshalSRv6L3ServiceSubSubTLV(wire[:n]); err == nil {
+				t.Errorf("UnmarshalSRv6L3ServiceSubSubTLV(%x) = %v, want an error", wire[:n], got)
+			}
+		})
+	}
+}
+
+func TestUnmarshalSRv6L3Service_EmptyValueIsRejected(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{name: "a nil value is rejected"},
+		{name: "a value of length zero is rejected", input: []byte{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got, err := UnmarshalSRv6L3Service(tt.input); err == nil {
+				t.Errorf("UnmarshalSRv6L3Service(%#v) = %+v, want an error", tt.input, got)
+			}
+		})
 	}
 }
 

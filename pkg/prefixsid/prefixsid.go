@@ -117,11 +117,16 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 			}
 			l := binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
-			if l == 0 {
-				return nil, fmt.Errorf("prefix SID SRv6 L3 service TLV at offset %d has zero length", p-3)
-			}
 			if p+int(l) > len(b) {
 				return nil, fmt.Errorf("prefix SID SRv6 L3 service value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+			}
+			// RFC 9252 §7: all but the first SRv6 L3 Service TLV MUST be ignored.
+			if psid.SRv6L3Service != nil {
+				p += int(l)
+				continue
+			}
+			if l == 0 {
+				return nil, fmt.Errorf("prefix SID SRv6 L3 service TLV at offset %d has zero length", p-3)
 			}
 			l3, err := srv6.UnmarshalSRv6L3Service(b[p : p+int(l)])
 			if err != nil {
