@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "name": "prefix-ipv4-isis-attributes",
+  "description": "Inject ipv4 topology prefix BGP-LS NLRI and validate its decoded GoBMP Kafka event.",
+  "tags": [
+    "bgp-ls",
+    "ipv4-topology-prefix",
+    "announce",
+    "integration"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "bgp-ls",
+      "action": "announce",
+      "next_hops": [
+        "fd00:100::2"
+      ],
+      "nlri": {
+        "protocol_id": "isis-level-2",
+        "instance_id": "0",
+        "link_state": {
+          "kind": "ipv4_topology_prefix",
+          "local_node": {
+            "autonomous_system": 65000,
+            "igp_router_id": {
+              "kind": "isis-system-id",
+              "value": "0000.0000.0004"
+            }
+          },
+          "prefix": "198.51.100.0/24",
+          "prefix_descriptors": {
+            "multi_topology_id": 4
+          }
+        },
+        "attributes": {
+          "igp_flags": {
+            "isis_up_down": true
+          },
+          "igp_route_tags": [
+            100,
+            200
+          ],
+          "igp_extended_route_tags": [
+            4294967300
+          ],
+          "prefix_metric": 20,
+          "opaque_attributes": [
+            "00010004deadbeef"
+          ],
+          "prefix_attribute_flags": {
+            "flags": [
+              128,
+              0,
+              0,
+              1
+            ]
+          },
+          "prefix_sids": [
+            {
+              "flags": 12,
+              "algorithm": 0,
+              "value": 16024,
+              "is_label": true
+            }
+          ],
+          "ranges": [
+            {
+              "flags": 248,
+              "range_size": 64,
+              "prefix_sids": [
+                {
+                  "flags": 0,
+                  "algorithm": 0,
+                  "value": 12345
+                }
+              ]
+            }
+          ],
+          "source_router_identifiers": [
+            "192.0.2.4"
+          ],
+          "flexible_algorithm_metrics": [
+            {
+              "algorithm": 128,
+              "metric": 85
+            }
+          ],
+          "unknown_tlvs": [
+            {
+              "type": 65003,
+              "value_hex": "aabbccdd"
+            }
+          ]
+        }
+      },
+      "origin": "igp",
+      "local_pref": 100
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.ls_prefix",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "domain_id": 0,
+      "protocol_id": 2,
+      "prefix": "198.51.100.0",
+      "prefix_len": 24
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "domain_id": 0,
+      "protocol_id": 2,
+      "prefix": "198.51.100.0",
+      "prefix_len": 24
+    },
+    "contains": {
+      "igp_router_id": "0000.0000.0004",
+      "mt_id_tlv": {
+        "mt_id": 4
+      },
+      "igp_flags": {
+        "d_flag": true
+      },
+      "route_tag": [
+        100,
+        200
+      ],
+      "ext_route_tag": [
+        4294967300
+      ],
+      "prefix_metric": 20,
+      "prefix_attr_tlvs": {
+        "flags": {
+          "x_flag": true
+        },
+        "ls_prefix_sid": [
+          {
+            "prefix_sid": 16024,
+            "algo": 0
+          }
+        ],
+        "range": {
+          "range_size": 64,
+          "prefix_sid": [
+            {
+              "prefix_sid": 12345
+            }
+          ]
+        },
+        "source_router_identifier": "192.0.2.4"
+      },
+      "opaque_prefix_attribute": [
+        "00010004deadbeef"
+      ],
+      "flex_algo_prefix_metric": [
+        {
+          "flex_algo": 128,
+          "metric": 85
+        }
+      ],
+      "unknown_bgp_ls_tlvs": [
+        {
+          "type": 65003,
+          "value_hex": "aabbccdd"
+        }
+      ]
+    },
+    "present": [
+      "igp_flags",
+      "route_tag",
+      "ext_route_tag",
+      "prefix_attr_tlvs.range",
+      "flex_algo_prefix_metric",
+      "unknown_bgp_ls_tlvs"
+    ]
+  }
+}

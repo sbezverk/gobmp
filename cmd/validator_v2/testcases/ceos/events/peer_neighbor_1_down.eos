@@ -1,0 +1,2 @@
+router bgp 64496
+neighbor 10.1.1.21 shutdown

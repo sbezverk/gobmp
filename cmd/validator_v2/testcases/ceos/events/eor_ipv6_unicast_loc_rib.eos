@@ -1,0 +1,4 @@
+router bgp 64496
+monitoring station gobmp
+shutdown
+no shutdown

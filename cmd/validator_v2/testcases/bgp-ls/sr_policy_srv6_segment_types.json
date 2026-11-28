@@ -1,0 +1,270 @@
+{
+  "schema_version": 1,
+  "name": "sr-policy-srv6-segment-types",
+  "description": "Inject sr policy candidate path BGP-LS NLRI and validate its decoded GoBMP Kafka event.",
+  "tags": [
+    "bgp-ls",
+    "sr-policy-candidate-path",
+    "announce",
+    "integration"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "bgp-ls",
+      "action": "announce",
+      "next_hops": [
+        "fd00:100::2"
+      ],
+      "nlri": {
+        "protocol_id": "segment-routing",
+        "instance_id": "0",
+        "link_state": {
+          "kind": "sr_policy_candidate_path",
+          "local_node": {
+            "autonomous_system": 65000,
+            "bgp_router_id": "192.0.2.1",
+            "ipv6_router_id_local": "2001:db8::1"
+          },
+          "candidate_path": {
+            "protocol_origin": 1,
+            "flags": 192,
+            "endpoint": "2001:db8:ffff::9",
+            "color": 200,
+            "originator_as": 65000,
+            "originator_address": "2001:db8:ffff::1",
+            "discriminator": 2001
+          }
+        },
+        "attributes": {
+          "policy_name": "gobmp-srv6-policy",
+          "candidate_path_name": "all-srv6-segment-descriptors",
+          "candidate_path_state": {
+            "priority": 50,
+            "flags": 0,
+            "preference": 150
+          },
+          "srv6_binding_sids": [
+            {
+              "flags": 32768,
+              "sid": "2001:db8:100::100",
+              "specified_sid": "2001:db8:100::101",
+              "sid_structure": {
+                "locator_block_length": 32,
+                "locator_node_length": 16,
+                "function_length": 16,
+                "argument_length": 0
+              }
+            }
+          ],
+          "constraints": {
+            "flags": 0,
+            "multi_topology_id": 5,
+            "algorithm": 0,
+            "exclude_any_affinity": [
+              5
+            ],
+            "include_any_affinity": [
+              6
+            ],
+            "include_all_affinity": [
+              7
+            ],
+            "exclude_srlgs": [
+              2001
+            ],
+            "bandwidth": 4000000,
+            "metric": {
+              "metric_type": 1,
+              "flags": 0,
+              "metric_margin": 5,
+              "metric_bound": 12000
+            }
+          },
+          "segment_lists": [
+            {
+              "flags": 61440,
+              "multi_topology_id": 5,
+              "algorithm": 0,
+              "weight": 200,
+              "segments": [
+                {
+                  "type": 2,
+                  "flags": 57344,
+                  "value": "2001:db8:200::1",
+                  "algorithm": 0
+                },
+                {
+                  "type": 9,
+                  "flags": 57344,
+                  "value": "2001:db8:900::9",
+                  "algorithm": 0,
+                  "value_hex": "20010db8000000000000000000000009"
+                },
+                {
+                  "type": 10,
+                  "flags": 57344,
+                  "value": "2001:db8:100::10",
+                  "algorithm": 0,
+                  "value_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                },
+                {
+                  "type": 11,
+                  "flags": 57344,
+                  "value": "2001:db8:100::11",
+                  "algorithm": 0,
+                  "value_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ],
+              "metric": {
+                "metric_type": 2,
+                "flags": 16,
+                "metric_margin": 0,
+                "metric_bound": 15000,
+                "metric": 10000
+              },
+              "bandwidth": 4000000,
+              "identifier": 8
+            }
+          ],
+          "unknown_tlvs": [
+            {
+              "type": 65007,
+              "value_hex": "01020304"
+            }
+          ]
+        }
+      },
+      "origin": "igp",
+      "local_pref": 100
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.sr_policy_candidate_path",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "domain_id": 0,
+      "protocol_id": 9,
+      "local_ipv6_router_id": "2001:db8::1"
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "domain_id": 0,
+      "protocol_id": 9,
+      "local_ipv6_router_id": "2001:db8::1"
+    },
+    "contains": {
+      "protocol_id": 9,
+      "local_node_asn": 65000,
+      "descriptor": {
+        "protocol_origin": 1,
+        "endpoint": "2001:db8:ffff::9",
+        "policy_color": 200,
+        "originator_as": 65000,
+        "originator_addr": "2001:db8:ffff::1",
+        "discriminator": 2001,
+        "flags": {
+          "e_flag": true,
+          "o_flag": true
+        }
+      },
+      "policy_state": {
+        "policy_name": {
+          "sr_policy_name": "gobmp-srv6-policy"
+        },
+        "candidate_path_name": {
+          "symbolic_name": "all-srv6-segment-descriptors"
+        },
+        "candidate_path_state": {
+          "priority": 50,
+          "preference": 150
+        },
+        "srv6_binding_sid": {
+          "b_flag": true,
+          "binding_sid": {
+            "srv6_sid": "2001:db8:100::100"
+          },
+          "specified_binding_sid": {
+            "srv6_sid": "2001:db8:100::101"
+          },
+          "sid_structure": {
+            "locator_block_length": 32,
+            "locator_node_length": 16,
+            "function_length": 16,
+            "argument_length": 0
+          }
+        },
+        "constraints": {
+          "mtid": 5,
+          "algorithm": 0,
+          "subtlv": {
+            "1208": {
+              "excl_any_eag": [
+                5
+              ],
+              "incl_any_eag": [
+                6
+              ],
+              "incl_all_eag": [
+                7
+              ]
+            },
+            "1209": {
+              "srlg": [
+                2001
+              ]
+            },
+            "1210": {
+              "bandwidth": 4000000
+            }
+          },
+          "metric_constraints": [
+            {
+              "metric_type": 1,
+              "metric_margin": 5,
+              "metric_bound": 12000
+            }
+          ]
+        },
+        "segment_lists": [
+          {
+            "mtid": 5,
+            "algo": 0,
+            "weight": 200,
+            "subtlv": [
+              {
+                "segment_type": 2
+              },
+              {
+                "segment_type": 9
+              },
+              {
+                "segment_type": 10
+              },
+              {
+                "segment_type": 11
+              }
+            ]
+          }
+        ],
+        "unknown_tlv": [
+          {
+            "Type": 65007
+          }
+        ]
+      },
+      "safi": 71,
+      "local_ipv6_router_id": "2001:db8::1"
+    },
+    "present": [
+      "descriptor",
+      "policy_state",
+      "policy_state.candidate_path_name",
+      "policy_state.candidate_path_state"
+    ]
+  }
+}

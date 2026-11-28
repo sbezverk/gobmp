@@ -1,0 +1,28 @@
+{
+  "address_family": "bgp-ls",
+  "action": "announce",
+  "next_hops": ["fd00:100::2"],
+  "nlri": {
+    "protocol_id": "ospfv3",
+    "instance_id": "1",
+    "link_state": {
+      "kind": "node",
+      "local_node": {
+        "autonomous_system": 65000,
+        "ospf_area_id": 0,
+        "igp_router_id": {"kind": "ospfv3-router-id", "value": "10.0.0.11"}
+      }
+    },
+    "attributes": {
+      "node_flags": {"abr": true, "router": true, "v6": true},
+      "node_name": "gobmp-ospfv3-node.example.net",
+      "ipv4_router_ids": ["10.0.0.11"],
+      "ipv6_router_ids": ["2001:db8:11::1"],
+      "msds": [{"type": 1, "value": 12}],
+      "s_bfd_discriminators": [2001],
+      "unknown_tlvs": [{"type": 65001, "value_hex": "aabbccdd"}]
+    }
+  },
+  "origin": "igp",
+  "local_pref": 100
+}

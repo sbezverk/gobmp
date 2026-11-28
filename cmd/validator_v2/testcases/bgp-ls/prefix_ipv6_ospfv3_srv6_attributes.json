@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "name": "prefix-ipv6-ospfv3-srv6-attributes",
+  "description": "Inject ipv6 topology prefix BGP-LS NLRI and validate its decoded GoBMP Kafka event.",
+  "tags": [
+    "bgp-ls",
+    "ipv6-topology-prefix",
+    "announce",
+    "integration"
+  ],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "bgp-ls",
+      "action": "announce",
+      "next_hops": [
+        "fd00:100::2"
+      ],
+      "nlri": {
+        "protocol_id": "ospfv3",
+        "instance_id": "4",
+        "link_state": {
+          "kind": "ipv6_topology_prefix",
+          "local_node": {
+            "autonomous_system": 65000,
+            "ospf_area_id": 0,
+            "igp_router_id": {
+              "kind": "ospfv3-router-id",
+              "value": "10.0.0.4"
+            }
+          },
+          "prefix": "2001:db8:400::/48",
+          "prefix_descriptors": {
+            "ospf_route_type": 3
+          }
+        },
+        "attributes": {
+          "igp_flags": {
+            "ospf_no_unicast": true,
+            "ospf_local_address": true
+          },
+          "prefix_metric": 40,
+          "prefix_attribute_flags": {
+            "flags": [
+              0,
+              0,
+              0,
+              1
+            ]
+          },
+          "source_router_identifiers": [
+            "2001:db8::4"
+          ],
+          "source_ospf_router_ids": [
+            "10.0.0.4"
+          ],
+          "srv6_locator": {
+            "flags": 0,
+            "algorithm": 0,
+            "metric": 40
+          },
+          "flexible_algorithm_metrics": [
+            {
+              "algorithm": 128,
+              "metric": 140
+            }
+          ],
+          "unknown_tlvs": [
+            {
+              "type": 65005,
+              "value_hex": "deadc0de"
+            }
+          ]
+        }
+      },
+      "origin": "igp",
+      "local_pref": 100
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.ls_prefix",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "domain_id": 4,
+      "protocol_id": 6,
+      "prefix": "2001:db8:400::",
+      "prefix_len": 48
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "domain_id": 4,
+      "protocol_id": 6,
+      "prefix": "2001:db8:400::",
+      "prefix_len": 48
+    },
+    "contains": {
+      "igp_router_id": "10.0.0.4",
+      "ospf_route_type": 3,
+      "igp_flags": {
+        "n_flag": true,
+        "l_flag": true
+      },
+      "prefix_metric": 40,
+      "prefix_attr_tlvs": {
+        "source_router_identifier": "2001:db8::4",
+        "source_ospf_router_id": "10.0.0.4"
+      },
+      "srv6_locator": {
+        "algo": 0,
+        "metric": 40
+      },
+      "flex_algo_prefix_metric": [
+        {
+          "flex_algo": 128,
+          "metric": 140
+        }
+      ],
+      "unknown_bgp_ls_tlvs": [
+        {
+          "type": 65005,
+          "value_hex": "deadc0de"
+        }
+      ]
+    },
+    "present": [
+      "igp_flags",
+      "prefix_attr_tlvs.source_router_identifier",
+      "prefix_attr_tlvs.source_ospf_router_id",
+      "srv6_locator",
+      "unknown_bgp_ls_tlvs"
+    ]
+  }
+}

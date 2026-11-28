@@ -1,0 +1,20 @@
+# gobgp-flowspec: sends IPv4 and IPv6 FlowSpec to ceos-1 over eBGP. bgpinjector
+# does not support FlowSpec. The events cases add and withdraw the rules.
+[global.config]
+  as = 64498
+  router-id = "192.0.2.4"
+  # Connect to ceos-1 only; do not listen for BGP connections.
+  port = -1
+
+[[neighbors]]
+  [neighbors.config]
+    neighbor-address = "10.1.1.3"
+    peer-as = 64496
+
+  [[neighbors.afi-safis]]
+    [neighbors.afi-safis.config]
+      afi-safi-name = "ipv4-flowspec"
+
+  [[neighbors.afi-safis]]
+    [neighbors.afi-safis.config]
+      afi-safi-name = "ipv6-flowspec"

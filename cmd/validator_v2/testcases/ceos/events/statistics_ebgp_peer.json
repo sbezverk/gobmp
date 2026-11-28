@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "name": "statistics-ebgp-peer",
+  "description": "Validate the periodic statistics report for the eBGP neighbor after the main suite. Only its four rejected routes (two IPv4, two IPv6 unicast) remain. The inject block withdraws an unused prefix.",
+  "tags": ["statistics", "ebgp", "event", "requires-existing-route"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/unicast",
+      "action": "withdraw",
+      "nlri": {
+        "prefix": "192.0.2.254/32"
+      }
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.statistics",
+    "timeout": "120",
+    "match": {
+      "remote_ip": "10.1.1.20",
+      "peer_type": 0
+    }
+  },
+  "expect": {
+    "equals": {
+      "router_ip": "10.1.1.3",
+      "remote_bgp_id": "192.0.2.2",
+      "remote_asn": 64497,
+      "peer_rd": "0:0",
+      "ads_rib_in": 4,
+      "prefixes_rejected_inbound": 4
+    },
+    "contains": {
+      "per_afi_adj_ribs_in": [
+        { "afi": 1, "safi": 1, "count": 2 },
+        { "afi": 2, "safi": 1, "count": 2 },
+        { "afi": 1, "safi": 128, "count": 0 },
+        { "afi": 2, "safi": 128, "count": 0 }
+      ],
+      "per_afi_pre_policy_adj_rib_in": [
+        { "afi": 1, "safi": 1, "count": 2 },
+        { "afi": 2, "safi": 1, "count": 2 },
+        { "afi": 1, "safi": 128, "count": 0 },
+        { "afi": 2, "safi": 128, "count": 0 }
+      ],
+      "per_afi_post_policy_adj_rib_in": [
+        { "afi": 1, "safi": 1, "count": 0 },
+        { "afi": 2, "safi": 1, "count": 0 },
+        { "afi": 1, "safi": 128, "count": 0 },
+        { "afi": 2, "safi": 128, "count": 0 }
+      ]
+    },
+    "present": ["timestamp"],
+    "non_empty": ["router_hash"],
+    "absent": ["error", "action"]
+  }
+}

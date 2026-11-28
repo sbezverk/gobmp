@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "name": "peer-neighbor-deconfigured",
+  "description": "Remove the iBGP neighbor from the router and validate the Peer Down: reason 5, peer de-configured, with no data (RFC 7854 section 4.9). The neighbor stays removed.",
+  "tags": ["peer", "peer-down", "ibgp", "event"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/unicast",
+      "action": "withdraw",
+      "nlri": {
+        "prefix": "192.0.2.254/32"
+      }
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.peer",
+    "timeout": "120",
+    "match": {
+      "action": "down",
+      "remote_ip": "10.1.1.21"
+    }
+  },
+  "expect": {
+    "equals": {
+      "speaker_ip": "10.1.1.3",
+      "router_name": "ceos-1",
+      "router_ip": "10.1.1.3",
+      "remote_bgp_id": "192.0.2.3",
+      "remote_asn": 64496,
+      "peer_type": 0,
+      "peer_rd": "0:0",
+      "bmp_reason": 5,
+      "is_l": false,
+      "is_ipv4": true,
+      "is_adj_rib_in_post_policy": false,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false,
+      "is_loc_rib_filtered": false
+    },
+    "present": ["timestamp"],
+    "non_empty": ["hash", "router_hash", "router_descr"],
+    "absent": [
+      "error", "name", "info_data", "local_asn", "local_ip", "local_port", "local_bgp_id",
+      "remote_port", "remote_holddown", "adv_holddown", "adv_cap", "recv_cap", "bmp_error_code",
+      "bmp_error_sub_code", "error_text", "table_name"
+    ]
+  }
+}
