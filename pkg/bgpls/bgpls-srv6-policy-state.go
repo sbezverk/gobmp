@@ -748,7 +748,8 @@ func UnmarshalSRSegmentList(b []byte) (*SRSegmentList, error) {
 	}
 	s := &SRSegmentList{}
 	p := 0
-	p++
+	// RFC 9857 Section 5.7: D through T are bits 0-7 of the 2-octet Flags
+	// field, M is bit 8.
 	s.FlagD = b[p]&0x80 == 0x80
 	s.FlagE = b[p]&0x40 == 0x40
 	s.FlagC = b[p]&0x20 == 0x20
@@ -759,8 +760,8 @@ func UnmarshalSRSegmentList(b []byte) (*SRSegmentList, error) {
 	s.FlagT = b[p]&0x01 == 0x01
 	p++
 	s.FlagM = b[p]&0x80 == 0x80
-	// Skip 2 reserved bytes
-	p += 2
+	// Skip the second Flags octet and the 2-octet RESERVED1
+	p += 3
 	s.MTID = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
 	s.Algo = b[p]
