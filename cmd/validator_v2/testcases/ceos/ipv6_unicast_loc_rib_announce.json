@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "name": "ipv6-unicast-loc-rib-announce",
+  "description": "Validate the RFC 9069 Loc-RIB output for an IPv6 best path; cEOS assigns a path ID to Loc-RIB routes.",
+  "tags": ["ipv6", "unicast", "announce", "loc-rib", "manual-inject"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv6/unicast",
+      "action": "announce",
+      "source": "manual-fixture",
+      "collector": "validator-v2",
+      "sequence_id": "ipv6-unicast-loc-rib-announce-001",
+      "nlri": {
+        "prefix": "2001:db8:102::/48"
+      },
+      "next_hops": ["2001:db8:10:1::20"],
+      "as_path_segments": [
+        { "type": "as_sequence", "asns": [64498, 64504] }
+      ],
+      "origin": "incomplete",
+      "med": 220,
+      "local_pref": 250,
+      "communities": ["64498:220"],
+      "extended_communities": [
+        { "type": "route_target", "format": "two_octet_as", "asn": 64498, "local": 220 }
+      ],
+      "large_communities": [
+        { "global_admin": 64498, "local_data_1": 60, "local_data_2": 220 }
+      ]
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.unicast_prefix_v6",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "prefix": "2001:db8:102::",
+      "prefix_len": 48,
+      "is_loc_rib": true
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "router_ip": "10.1.1.3",
+      "remote_bgp_id": "192.0.2.1",
+      "peer_ip": "0.0.0.0",
+      "peer_type": 3,
+      "peer_asn": 64496,
+      "prefix": "2001:db8:102::",
+      "prefix_len": 48,
+      "is_ipv4": false,
+      "origin_as": 64504,
+      "nexthop": "2001:db8:10:1::20",
+      "is_nexthop_ipv4": false,
+      "is_adj_rib_in_post_policy": false,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": true,
+      "is_loc_rib_filtered": false,
+      "afi": 2,
+      "safi": 1
+    },
+    "contains": {
+      "base_attrs": {
+        "origin": "incomplete",
+        "as_path": [64497, 64498, 64504],
+        "as_path_count": 3,
+        "as_path_segments": [{ "type": 2, "asns": [64497, 64498, 64504] }],
+        "med": 220,
+        "local_pref": 100,
+        "is_atomic_agg": false,
+        "community_list": ["64498:220"],
+        "ext_community_list": ["rt=64498:220"],
+        "large_community_list": ["64498:60:220"]
+      }
+    },
+    "present": ["timestamp", "base_attrs"],
+    "non_empty": ["hash", "router_hash", "peer_hash", "path_id", "base_attrs.base_attr_hash"],
+    "absent": ["error", "is_eor", "base_attrs.nexthop"]
+  }
+}

@@ -131,150 +131,6 @@ jobs:
         run: make validator
       - name: check for gobmp container
         run: docker images
-      - name: Add kafka host aliases to /etc/hosts
-        run: |
-            echo "127.0.0.1 kafka kafka-1 kafka-2 kafka-3 kafka-4" | sudo tee -a /etc/hosts
-      - name: pulling cEOS container
-        run: docker pull sbezverk/ceos-lab-4.35.2f:cicd
-        continue-on-error: true
-      - name: starts unicast v4 integration test on a single node kafka with cEOS
-        run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_ceos.yml up --detach
-      - name: wait for cEOS management plane to be ready
-        run: |
-          echo "Waiting for cEOS management plane (up to 15 min)..."
-          for i in $(seq 1 90); do
-            state=$(docker inspect --format='{{.State.Status}}' ceos-1 2>/dev/null || echo "missing")
-            if [ "$state" != "running" ]; then
-              echo "cEOS container is not running (state=$state), aborting"
-              docker logs ceos-1 || true
-              exit 1
-            fi
-            if docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
-              echo "cEOS ready after $((i * 10))s"
-              break
-            fi
-            echo "cEOS not ready yet ($i/90, state=$state)..."
-            if (( i % 5 == 0 )); then
-              echo "--- cEOS processes ---"
-              docker exec ceos-1 ps aux 2>/dev/null | head -30 || true
-              echo "--- cEOS recent logs (last 20 lines) ---"
-              docker logs --tail 20 ceos-1 2>&1 || true
-            fi
-            sleep 10
-          done
-          if ! docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
-            echo "cEOS management plane did not come up within 15 minutes"
-            docker logs ceos-1 || true
-            exit 1
-          fi
-      - name: check connection to kafka and bmp session with cEOS router
-        id: session_3
-        run: ./build/monitor_container.sh gobmp ceos-1
-        continue-on-error: true
-      - name: wait for BGP session between ceos-1 and ceos-2
-        run: |
-          echo "Waiting for BGP session to establish (up to 5 min)..."
-          established=false
-          for i in $(seq 1 60); do
-            state=$(docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null | grep "10.1.1.10" | awk '{print $10}' || true)
-            if [ "$state" = "Estab" ] || echo "$state" | grep -qE '^[0-9]+$'; then
-              echo "BGP session established after $((i * 5))s"
-              established=true
-              break
-            fi
-            echo "BGP not established yet ($i/60, state=$state)..."
-            sleep 5
-          done
-          if [ "$established" = false ]; then
-            echo "BGP session with 10.1.1.10 failed to establish after 300s"
-            docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null || true
-            exit 1
-          fi
-      - name: run validator for ipv4 unicast (cEOS single kafka)
-        id: validation_3
-        run: ./bin/validator --validate=true --kafka=127.0.0.1:9092 --msg-file=./testdata/validator/ipv4_unicast_ceos.msg
-        continue-on-error: true
-      - name: Check on failures (cEOS single kafka)
-        if: steps.session_3.outcome != 'success' || steps.validation_3.outcome != 'success'
-        run: |
-          docker ps -a
-          docker exec ceos-1 FastCli -p 15 -c "show ip bgp summ" || true
-          docker exec ceos-1 FastCli -p 15 -c "show ipv6 bgp summ" || true
-          docker exec ceos-1 FastCli -p 15 -c "show bgp monitoring" || true
-          docker logs gobmp
-          docker logs ceos-1
-          exit 1
-      - name: cleanup unicast v4 integration test on a single node kafka with cEOS
-        run: docker compose -f ./build/unicastv4-bgp/test_bed_single_kafka_ceos.yml down
-      - name: starts unicast v4 integration test on a multinode kafka with cEOS
-        run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka_ceos.yml up --detach
-      - name: wait for cEOS management plane to be ready (multinode)
-        run: |
-          echo "Waiting for cEOS management plane (up to 15 min)..."
-          for i in $(seq 1 90); do
-            state=$(docker inspect --format='{{.State.Status}}' ceos-1 2>/dev/null || echo "missing")
-            if [ "$state" != "running" ]; then
-              echo "cEOS container is not running (state=$state), aborting"
-              docker logs ceos-1 || true
-              exit 1
-            fi
-            if docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
-              echo "cEOS ready after $((i * 10))s"
-              break
-            fi
-            echo "cEOS not ready yet ($i/90, state=$state)..."
-            if (( i % 5 == 0 )); then
-              echo "--- cEOS processes ---"
-              docker exec ceos-1 ps aux 2>/dev/null | head -30 || true
-              echo "--- cEOS recent logs (last 20 lines) ---"
-              docker logs --tail 20 ceos-1 2>&1 || true
-            fi
-            sleep 10
-          done
-          if ! docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; then
-            echo "cEOS management plane did not come up within 15 minutes"
-            docker logs ceos-1 || true
-            exit 1
-          fi
-      - name: check connection to kafka and bmp session with cEOS router (multinode)
-        id: session_4
-        run: ./build/monitor_container.sh gobmp ceos-1
-        continue-on-error: true
-      - name: wait for BGP session between ceos-1 and ceos-2 (multinode)
-        run: |
-          echo "Waiting for BGP session to establish (up to 5 min)..."
-          established=false
-          for i in $(seq 1 60); do
-            state=$(docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null | grep "10.1.1.10" | awk '{print $10}' || true)
-            if [ "$state" = "Estab" ] || echo "$state" | grep -qE '^[0-9]+$'; then
-              echo "BGP session established after $((i * 5))s"
-              established=true
-              break
-            fi
-            echo "BGP not established yet ($i/60, state=$state)..."
-            sleep 5
-          done
-          if [ "$established" = false ]; then
-            echo "BGP session with 10.1.1.10 failed to establish after 300s"
-            docker exec ceos-1 FastCli -p 15 -c "show ip bgp summary" 2>/dev/null || true
-            exit 1
-          fi
-      - name: run validator for ipv4 unicast (cEOS multinode kafka)
-        id: validation_4
-        run: ./bin/validator --validate=true --kafka=127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093,127.0.0.1:9094 --msg-file=./testdata/validator/ipv4_unicast_ceos.msg
-        continue-on-error: true
-      - name: Check on failures (cEOS multinode kafka)
-        if: steps.session_4.outcome != 'success' || steps.validation_4.outcome != 'success'
-        run: |
-          docker ps -a
-          docker exec ceos-1 FastCli -p 15 -c "show ip bgp summ" || true
-          docker exec ceos-1 FastCli -p 15 -c "show ipv6 bgp summ" || true
-          docker exec ceos-1 FastCli -p 15 -c "show bgp monitoring" || true
-          docker logs gobmp
-          docker logs ceos-1
-          exit 1
-      - name: cleanup unicast v4 integration test on a multinode kafka with cEOS
-        run: docker compose -f ./build/unicastv4-bgp/test_bed_multinode_kafka_ceos.yml down
       - name: pulling FRR container
         run: docker pull sbezverk/frr_v8.4.1:cicd
       - name: check for gobmp container
@@ -394,7 +250,106 @@ jobs:
         if: always()
         run: docker compose -f "$VALIDATOR_TESTBED_COMPOSE" down
 
-          
+  # ==============================================================================
+  # Validator v2 Integration Tests (bgpinjector-driven cEOS)
+  # ==============================================================================
+  integration_tests_validator_v2_ceos:
+    needs: [tests]
+    strategy:
+        matrix:
+          os: [ubuntu-latest]
+          go-version: [1.26.x]
+    runs-on: ${{ matrix.os }}
+    env:
+      VALIDATOR_TESTBED_COMPOSE: ./cmd/validator_v2/testbed/ceos/test_bed_injector_multinode_kafka.yml
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v7
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: "**/go.sum"
+      - name: Build gobmp container
+        run: make container REGISTRY_NAME=localhost IMAGE_VERSION=cicd
+      - name: Build validator v2 binary
+        run: make validator-v2
+      - name: Pull cEOS and bgpinjector containers
+        run: docker compose -f "$VALIDATOR_TESTBED_COMPOSE" pull ceos-1 bgpinjector bgpinjector-ibgp
+      - name: Check local images
+        run: docker images
+      - name: Add Kafka broker names to /etc/hosts
+        run: |
+          echo "127.0.0.1 kafka-1 kafka-2 kafka-3 kafka-4" | sudo tee -a /etc/hosts
+      - name: Start validator v2 integration testbed
+        run: docker compose -f "$VALIDATOR_TESTBED_COMPOSE" up --detach
+      - name: Wait for cEOS management plane
+        run: timeout 15m bash -c 'until docker exec ceos-1 FastCli -p 15 -c "show version" > /dev/null 2>&1; do sleep 10; done'
+      - name: Check gobmp Kafka and BMP sessions
+        run: ./build/monitor_container.sh gobmp-multinode ceos-1
+      - name: Wait for eBGP bgpinjector session
+        run: |
+          REQUIRED_FAMILIES="ipv4/unicast ipv6/unicast vpnv4 vpnv6" \
+          ./cmd/validator_v2/testcases/wait_for_bgp_established.sh
+      - name: Wait for iBGP bgpinjector session
+        run: |
+          API=http://127.0.0.1:8081 REQUIRED_FAMILIES="ipv4/unicast ipv6/unicast" \
+          ./cmd/validator_v2/testcases/wait_for_bgp_established.sh
+      - name: Run validator v2 test cases
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/logs/validator-v2-ceos
+          runSuite() {
+            local name="$1" runner="$2" caseDir="$3" apiSrv="$4"
+            local log="/tmp/logs/validator-v2-ceos/testcases-${name}.log"
+            VALIDATOR_BIN="$PWD/bin/validator_v2" \
+            TESTCASE_DIR="$PWD/${caseDir}" \
+            API_SRV="${apiSrv}" \
+            KAFKA_SRV=127.0.0.1:9092 \
+            "${runner}" 2>&1 | tee "${log}"
+            # The runners exit 0 when they find no test case.
+            if ! grep -q "Validator test case summary: total=[1-9]" "${log}"; then
+              echo "no validator v2 test case ran in suite ${name}" >&2
+              return 1
+            fi
+          }
+          runner=./cmd/validator_v2/testcases/testcases_runner.sh
+          cases=cmd/validator_v2/testcases/ceos
+          runSuite ebgp "${runner}" "${cases}" http://127.0.0.1:8080
+          runSuite ibgp "${runner}" "${cases}/ibgp" http://127.0.0.1:8081
+          # The event cases expect the routes the eBGP suite leaves on the router.
+          runSuite events "./${cases}/events_runner.sh" "${cases}/events" http://127.0.0.1:8080
+      - name: Collect validator v2 cEOS integration logs
+        if: always()
+        run: |
+          mkdir -p /tmp/logs/validator-v2-ceos
+          docker ps -a > /tmp/logs/validator-v2-ceos/docker-ps.txt 2>&1 || true
+          docker compose -f "$VALIDATOR_TESTBED_COMPOSE" ps > /tmp/logs/validator-v2-ceos/compose-ps.txt 2>&1 || true
+          curl -s http://127.0.0.1:8080/v1/session > /tmp/logs/validator-v2-ceos/bgpinjector-session.json 2>&1 || true
+          curl -s http://127.0.0.1:8081/v1/session > /tmp/logs/validator-v2-ceos/bgpinjector-ibgp-session.json 2>&1 || true
+          for command in "show ip bgp summary" "show ipv6 bgp summary" "show bgp monitoring"; do
+            echo "# ${command}"
+            docker exec ceos-1 FastCli -p 15 -c "${command}" || true
+          done > /tmp/logs/validator-v2-ceos/ceos-1-show.txt 2>&1
+          docker exec ceos-1 bash -c 'zcat -f /var/log/agents/Bmp-*' > /tmp/logs/validator-v2-ceos/ceos-1-bmp-agent.log 2>&1 || true
+          for service in gobmp ceos-1 bgpinjector bgpinjector-ibgp zookeeper kafka-1 kafka-2 kafka-3 kafka-4; do
+            docker compose -f "$VALIDATOR_TESTBED_COMPOSE" logs "$service" > "/tmp/logs/validator-v2-ceos/${service}.log" 2>&1 || true
+          done
+      - name: Upload validator v2 cEOS integration logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-validator-v2-ceos
+          path: /tmp/logs/validator-v2-ceos/
+      - name: Cleanup validator v2 cEOS integration testbed
+        if: always()
+        run: docker compose -f "$VALIDATOR_TESTBED_COMPOSE" down
+
+
   # ==============================================================================
   # Validator v2 Integration Tests (bgpinjector-driven bgpls)
   # ==============================================================================
@@ -577,7 +532,7 @@ jobs:
   publish_gobmp:
     name: Publish gobmp to GHCR
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: [integration_tests, integration_tests_validator_v2, integration_tests_validator_v2_mup]
+    needs: [integration_tests, integration_tests_validator_v2, integration_tests_validator_v2_ceos, integration_tests_validator_v2_mup]
     runs-on: ubuntu-latest
     permissions:
       contents: read

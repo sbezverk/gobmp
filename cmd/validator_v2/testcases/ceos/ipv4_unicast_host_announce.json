@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "name": "ipv4-unicast-host-announce",
+  "description": "Inject an IPv4 host route originated by the peer AS, with only the mandatory attributes.",
+  "tags": ["ipv4", "unicast", "announce", "manual-inject"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/unicast",
+      "action": "announce",
+      "source": "manual-fixture",
+      "collector": "validator-v2",
+      "sequence_id": "ipv4-unicast-host-announce-001",
+      "nlri": {
+        "prefix": "203.0.113.1/32"
+      },
+      "next_hops": ["10.1.1.20"],
+      "origin": "igp"
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.unicast_prefix_v4",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "prefix": "203.0.113.1",
+      "prefix_len": 32,
+      "peer_ip": "10.1.1.20",
+      "is_adj_rib_in_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "router_ip": "10.1.1.3",
+      "remote_bgp_id": "192.0.2.2",
+      "peer_ip": "10.1.1.20",
+      "peer_type": 0,
+      "peer_asn": 64497,
+      "prefix": "203.0.113.1",
+      "prefix_len": 32,
+      "is_ipv4": true,
+      "origin_as": 64497,
+      "nexthop": "10.1.1.20",
+      "is_nexthop_ipv4": true,
+      "is_adj_rib_in_post_policy": false,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false,
+      "is_loc_rib_filtered": false,
+      "afi": 1,
+      "safi": 1
+    },
+    "contains": {
+      "base_attrs": {
+        "origin": "igp",
+        "as_path": [64497],
+        "as_path_count": 1,
+        "as_path_segments": [{ "type": 2, "asns": [64497] }],
+        "nexthop": "10.1.1.20",
+        "is_atomic_agg": false
+      }
+    },
+    "present": ["timestamp", "base_attrs"],
+    "non_empty": ["hash", "router_hash", "peer_hash", "base_attrs.base_attr_hash"],
+    "absent": [
+      "error",
+      "is_eor",
+      "path_id",
+      "base_attrs.med",
+      "base_attrs.local_pref",
+      "base_attrs.community_list",
+      "base_attrs.ext_community_list",
+      "base_attrs.large_community_list"
+    ]
+  }
+}

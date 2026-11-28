@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "name": "vpnv6-post-policy-announce",
+  "description": "Validate post-policy VPNv6 output; cEOS replaces the LOCAL_PREF received over eBGP with its default of 100.",
+  "tags": ["vpnv6", "l3vpn", "announce", "post-policy", "manual-inject"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "vpnv6",
+      "action": "announce",
+      "source": "manual-fixture",
+      "collector": "validator-v2",
+      "sequence_id": "vpnv6-post-policy-announce-001",
+      "nlri": {
+        "labels": [
+          { "value": 2001, "exp": 0, "is_bos": true }
+        ],
+        "rd": "192.0.2.2:200",
+        "prefix": "2001:db8:201::/48"
+      },
+      "next_hops": ["2001:db8:10:1::20"],
+      "as_path_segments": [
+        { "type": "as_sequence", "asns": [64498, 64508] }
+      ],
+      "origin": "incomplete",
+      "med": 410,
+      "local_pref": 250,
+      "communities": ["64498:410"],
+      "extended_communities": [
+        { "type": "route_target", "format": "two_octet_as", "asn": 64497, "local": 201 }
+      ],
+      "large_communities": [
+        { "global_admin": 64498, "local_data_1": 80, "local_data_2": 410 }
+      ]
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.l3vpn_v6",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "vpn_rd": "192.0.2.2:200",
+      "prefix": "2001:db8:201::",
+      "prefix_len": 48,
+      "is_adj_rib_in_post_policy": true
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "router_ip": "10.1.1.3",
+      "remote_bgp_id": "192.0.2.2",
+      "peer_ip": "10.1.1.20",
+      "peer_type": 0,
+      "peer_asn": 64497,
+      "vpn_rd": "192.0.2.2:200",
+      "vpn_rd_type": 1,
+      "prefix": "2001:db8:201::",
+      "prefix_len": 48,
+      "is_ipv4": false,
+      "origin_as": 64508,
+      "nexthop": "2001:db8:10:1::20",
+      "is_nexthop_ipv4": false,
+      "labels": [2001],
+      "is_adj_rib_in_post_policy": true,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": false,
+      "is_loc_rib_filtered": false,
+      "afi": 2,
+      "safi": 128
+    },
+    "contains": {
+      "base_attrs": {
+        "origin": "incomplete",
+        "as_path": [64497, 64498, 64508],
+        "as_path_count": 3,
+        "as_path_segments": [{ "type": 2, "asns": [64497, 64498, 64508] }],
+        "med": 410,
+        "local_pref": 100,
+        "is_atomic_agg": false,
+        "community_list": ["64498:410"],
+        "ext_community_list": ["rt=64497:201"],
+        "large_community_list": ["64498:80:410"]
+      }
+    },
+    "present": ["timestamp", "base_attrs"],
+    "non_empty": ["hash", "router_hash", "peer_hash", "base_attrs.base_attr_hash"],
+    "absent": ["error", "is_eor", "path_id", "base_attrs.nexthop"]
+  }
+}

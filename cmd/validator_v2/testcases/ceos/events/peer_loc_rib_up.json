@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "name": "peer-loc-rib-up",
+  "description": "Validate the Loc-RIB instance Peer Up sent after the BMP station restarts. cEOS sends no table name TLV, so table_name is not published.",
+  "tags": ["peer", "peer-up", "loc-rib", "event"],
+  "inject": {
+    "path": "/v1/routes",
+    "body": {
+      "address_family": "ipv4/unicast",
+      "action": "withdraw",
+      "nlri": {
+        "prefix": "192.0.2.254/32"
+      }
+    }
+  },
+  "observe": {
+    "source": "kafka",
+    "topic": "gobmp.parsed.peer",
+    "timeout": "120",
+    "match": {
+      "action": "add",
+      "peer_type": 3,
+      "is_loc_rib": true
+    }
+  },
+  "expect": {
+    "equals": {
+      "action": "add",
+      "speaker_ip": "10.1.1.3",
+      "router_name": "ceos-1",
+      "router_ip": "10.1.1.3",
+      "remote_bgp_id": "192.0.2.1",
+      "remote_asn": 64496,
+      "peer_type": 3,
+      "peer_rd": "0:0",
+      "local_asn": 64496,
+      "local_ip": "0.0.0.0",
+      "local_bgp_id": "192.0.2.1",
+      "is_l": false,
+      "is_prepolicy": false,
+      "is_ipv4": true,
+      "is_adj_rib_in_post_policy": false,
+      "is_adj_rib_out_post_policy": false,
+      "is_adj_rib_out": false,
+      "is_loc_rib": true,
+      "is_loc_rib_filtered": false
+    },
+    "contains": {
+      "adv_cap": {
+        "1": [
+          { "capability_value": "AAEAAQ==", "capability_descr": "Multiprotocol Extensions for BGP-4 : afi=1 safi=1 Unicast IPv4" },
+          { "capability_value": "AAIAAQ==", "capability_descr": "Multiprotocol Extensions for BGP-4 : afi=2 safi=1 Unicast IPv6" }
+        ],
+        "65": [{ "capability_value": "AAD78A==", "capability_descr": "Support for 4-octet AS number capability" }],
+        "69": [{ "capability_value": "AAEBAwACAQM=", "capability_descr": "ADD-PATH Capability" }]
+      },
+      "recv_cap": {
+        "1": [
+          { "capability_value": "AAEAAQ==", "capability_descr": "Multiprotocol Extensions for BGP-4 : afi=1 safi=1 Unicast IPv4" },
+          { "capability_value": "AAIAAQ==", "capability_descr": "Multiprotocol Extensions for BGP-4 : afi=2 safi=1 Unicast IPv6" }
+        ],
+        "65": [{ "capability_value": "AAD78A==", "capability_descr": "Support for 4-octet AS number capability" }],
+        "69": [{ "capability_value": "AAEBAwACAQM=", "capability_descr": "ADD-PATH Capability" }]
+      }
+    },
+    "present": ["timestamp"],
+    "non_empty": ["hash", "router_hash", "router_descr"],
+    "absent": [
+      "error",
+      "name",
+      "remote_ip",
+      "remote_port",
+      "local_port",
+      "remote_holddown",
+      "adv_holddown",
+      "info_data",
+      "bmp_reason",
+      "table_name"
+    ]
+  }
+}
