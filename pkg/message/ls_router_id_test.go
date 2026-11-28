@@ -249,6 +249,17 @@ func TestProcessMPUpdateLSLinkRouterIDsPerFamily(t *testing.T) {
 		{"omits values that have the other family's length", linkRouterIDTLVs(16, 4), linkRouterIDs{}},
 		{"keeps IPv6 when the IPv4 length is wrong", linkRouterIDTLVs(5, 16), ipv6Only},
 		{"keeps IPv4 when the IPv6 length is wrong", linkRouterIDTLVs(4, 17), ipv4Only},
+		{"publishes the first of two local IPv6 router IDs", []lsSPFTLV{
+			dual[1], {1029, net.ParseIP("2001:db8::99")}, dual[3],
+		}, ipv6Only},
+		{"publishes the first of two remote IPv4 router IDs", []lsSPFTLV{
+			dual[0], dual[2], {1030, []byte{192, 168, 1, 99}},
+		}, ipv4Only},
+		// Current behavior, not an RFC requirement: only the first instance of
+		// a TLV is read, so a later valid one does not replace a malformed one.
+		{"omits local IPv6 when a wrong length precedes a valid value", []lsSPFTLV{
+			dual[0], {1029, make([]byte, 17)}, dual[1], dual[2],
+		}, ipv4Only},
 	}
 	for _, tt := range tests {
 		for _, withdraw := range []bool{false, true} {
@@ -323,6 +334,48 @@ func TestProcessMPUpdateLSLinkRouterIDsOtherPaths(t *testing.T) {
 				assertPublishedLinkRouterIDs(t, rec, action, dualStackLinkRouterIDs)
 			})
 		}
+	}
+}
+
+// TestProcessMPUpdateLSSPFLinkRouterIDsTreatAsWithdraw checks that an SPF link
+// add without the Sequence Number TLV (1181) is published as a withdrawal that
+// keeps the router IDs (RFC 9815 Sections 5.2.4 and 7.1).
+func TestProcessMPUpdateLSSPFLinkRouterIDsTreatAsWithdraw(t *testing.T) {
+	wire := append([]byte{0x40, 0x04, 80, 4, 192, 0, 2, 2, 0}, testLSLinkNLRI80()...)
+	nlri, err := bgp.UnmarshalMPReachNLRI(wire, false, map[int]bool{})
+	if err != nil {
+		t.Fatalf("unmarshal MP NLRI: %v", err)
+	}
+	tlvs := append(linkRouterIDTLVs(4, 16), lsSPFTLV{bgpLSIGPMetricTLV, []byte{0, 0, 0, 10}})
+	rec := &recordingPublisher{}
+	p := &producer{publisher: rec}
+
+	p.processMPUpdate(nlri, AddPrefix, minimalPeerHeader(), testLSUpdate(tlvs...))
+
+	assertPublishedLinkRouterIDs(t, rec, "del", dualStackLinkRouterIDs)
+}
+
+// TestProcessMPUpdateLSInterASLinkRouterIDsNoFallback checks that Local Node
+// Descriptor sub-TLV 1028 fills local_asbr_ipv4 only, never the router-ID
+// fields that come from the BGP-LS Attribute.
+func TestProcessMPUpdateLSInterASLinkRouterIDsNoFallback(t *testing.T) {
+	wire := append([]byte{0x40, 0x04, 71, 4, 192, 0, 2, 2, 0}, messageInterASLinkElement()...)
+	nlri, err := bgp.UnmarshalMPReachNLRI(wire, false, map[int]bool{})
+	if err != nil {
+		t.Fatalf("unmarshal MP NLRI: %v", err)
+	}
+	rec := &recordingPublisher{}
+	p := &producer{publisher: rec}
+
+	p.processMPUpdate(nlri, AddPrefix, minimalPeerHeader(), testLSUpdate(lsSPFTLV{bgpLSIGPMetricTLV, []byte{0, 0, 0, 10}}))
+
+	assertPublishedLinkRouterIDs(t, rec, "add", linkRouterIDs{})
+	var got LSLink
+	if err := json.Unmarshal(rec.msgs[0].payload, &got); err != nil {
+		t.Fatalf("unmarshal ls_link JSON: %v", err)
+	}
+	if got.LocalASBRIPv4 != "192.0.2.1" {
+		t.Errorf("local_asbr_ipv4 = %q, want %q", got.LocalASBRIPv4, "192.0.2.1")
 	}
 }
 
