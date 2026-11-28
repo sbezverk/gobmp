@@ -3,9 +3,11 @@ package bgpls
 import (
 	"encoding/binary"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
+	"github.com/sbezverk/gobmp/pkg/srv6"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -342,6 +344,45 @@ func TestGetSRv6BGPPeerNodeSID_Absent(t *testing.T) {
 func TestGetSRv6SIDStructure_Absent(t *testing.T) {
 	if got := (&NLRI{}).GetSRv6SIDStructure(); got != nil {
 		t.Errorf("GetSRv6SIDStructure() absent = %v, want nil", got)
+	}
+}
+
+func TestGetSRv6SIDStructureDecodesTLV(t *testing.T) {
+	// RFC 9514 §8: the TLV value is four one-octet lengths.
+	tests := []struct {
+		name string
+		tlv  TLV
+		want *srv6.SIDStructure
+	}{
+		{
+			name: "returns the four lengths of a 4-octet TLV",
+			tlv:  TLV{Type: 1252, Length: 4, Value: []byte{40, 24, 16, 8}},
+			want: &srv6.SIDStructure{LBLength: 40, LNLength: 24, FunLength: 16, ArgLength: 8},
+		},
+		{
+			name: "returns nil for a 3-octet TLV",
+			tlv:  TLV{Type: 1252, Length: 3, Value: []byte{40, 24, 16}},
+		},
+		{
+			name: "returns nil for a 5-octet TLV",
+			tlv:  TLV{Type: 1252, Length: 5, Value: []byte{40, 24, 16, 8, 0}},
+		},
+		{
+			name: "returns nil when only another TLV type is present",
+			tlv:  TLV{Type: 1251, Length: 4, Value: []byte{40, 24, 16, 8}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ls := &NLRI{LS: []TLV{tc.tlv}}
+
+			got := ls.GetSRv6SIDStructure()
+
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("GetSRv6SIDStructure() = %+v, want %+v", got, tc.want)
+			}
+		})
 	}
 }
 
