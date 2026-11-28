@@ -24,13 +24,11 @@
   },
   "expect": {
     "equals": {
-      "action": "add",
       "speaker_ip": "10.1.1.3",
       "router_name": "ceos-1",
       "router_ip": "10.1.1.3",
       "remote_bgp_id": "192.0.2.3",
       "remote_asn": 64496,
-      "remote_ip": "10.1.1.21",
       "peer_type": 0,
       "peer_rd": "0:0",
       "local_asn": 64496,

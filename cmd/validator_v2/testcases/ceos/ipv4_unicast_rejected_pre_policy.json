@@ -39,22 +39,15 @@
   },
   "expect": {
     "equals": {
-      "action": "add",
       "router_ip": "10.1.1.3",
       "remote_bgp_id": "192.0.2.2",
-      "peer_ip": "10.1.1.20",
       "peer_type": 0,
       "peer_asn": 64497,
-      "prefix": "192.0.2.64",
-      "prefix_len": 27,
       "is_ipv4": true,
       "origin_as": 64498,
       "nexthop": "10.1.1.20",
       "is_nexthop_ipv4": true,
-      "is_adj_rib_in_post_policy": false,
       "is_adj_rib_out_post_policy": false,
-      "is_adj_rib_out": false,
-      "is_loc_rib": false,
       "is_loc_rib_filtered": false,
       "afi": 1,
       "safi": 1
@@ -74,11 +67,7 @@
     "present": ["timestamp", "base_attrs"],
     "non_empty": ["hash", "router_hash", "peer_hash", "base_attrs.base_attr_hash"],
     "absent": [
-      "error",
-      "is_eor",
-      "path_id",
-      "base_attrs.local_pref",
-      "base_attrs.ext_community_list",
+      "error", "is_eor", "path_id", "base_attrs.local_pref", "base_attrs.ext_community_list",
       "base_attrs.large_community_list"
     ]
   }

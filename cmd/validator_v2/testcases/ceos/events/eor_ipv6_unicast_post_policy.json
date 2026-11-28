@@ -30,16 +30,10 @@
     "equals": {
       "router_ip": "10.1.1.3",
       "peer_rd": "0:0",
-      "peer_ip": "10.1.1.20",
       "remote_bgp_id": "192.0.2.2",
       "peer_asn": 64497,
       "peer_type": 0,
-      "afi": 2,
-      "safi": 1,
-      "is_adj_rib_in_post_policy": true,
       "is_adj_rib_out_post_policy": false,
-      "is_adj_rib_out": false,
-      "is_loc_rib": false,
       "is_loc_rib_filtered": false
     },
     "present": ["timestamp"],

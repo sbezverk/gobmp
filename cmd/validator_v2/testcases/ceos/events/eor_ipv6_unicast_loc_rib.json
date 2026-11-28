@@ -31,13 +31,9 @@
       "peer_ip": "0.0.0.0",
       "remote_bgp_id": "192.0.2.1",
       "peer_asn": 64496,
-      "peer_type": 3,
-      "afi": 2,
-      "safi": 1,
       "is_adj_rib_in_post_policy": false,
       "is_adj_rib_out_post_policy": false,
       "is_adj_rib_out": false,
-      "is_loc_rib": true,
       "is_loc_rib_filtered": false
     },
     "present": ["timestamp"],

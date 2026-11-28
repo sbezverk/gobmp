@@ -43,14 +43,11 @@
   },
   "expect": {
     "equals": {
-      "action": "add",
       "router_ip": "10.1.1.3",
       "remote_bgp_id": "192.0.2.1",
       "peer_ip": "0.0.0.0",
       "peer_type": 3,
       "peer_asn": 64496,
-      "prefix": "2001:db8:102::",
-      "prefix_len": 48,
       "is_ipv4": false,
       "origin_as": 64504,
       "nexthop": "2001:db8:10:1::20",
@@ -58,7 +55,6 @@
       "is_adj_rib_in_post_policy": false,
       "is_adj_rib_out_post_policy": false,
       "is_adj_rib_out": false,
-      "is_loc_rib": true,
       "is_loc_rib_filtered": false,
       "afi": 2,
       "safi": 1

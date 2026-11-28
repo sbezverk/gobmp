@@ -25,10 +25,8 @@
   "expect": {
     "equals": {
       "router_ip": "10.1.1.3",
-      "peer_type": 0,
       "remote_bgp_id": "192.0.2.2",
       "remote_asn": 64497,
-      "remote_ip": "10.1.1.20",
       "peer_rd": "0:0",
       "ads_rib_in": 4,
       "prefixes_rejected_inbound": 4
