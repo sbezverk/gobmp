@@ -1,0 +1,1 @@
+global rib -a ipv6-flowspec del match destination 2001:db8:200::/48 source 2001:db8:300::/48

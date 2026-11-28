@@ -250,3 +250,17 @@ services:
         ipv6_address: 2001:db8:10:1::21
     depends_on:
       - ceos-1
+  gobgp-flowspec:
+    # CI builds this image from the pinned official osrg/gobgp source tag.
+    image: ${GOBGP_IMAGE:-localhost/gobgp:v4.8.0}
+    container_name: gobgp-flowspec
+    hostname: gobgp-flowspec
+    restart: on-failure
+    command: ["/usr/local/bin/gobgpd", "-f", "/config/gobgp.toml"]
+    volumes:
+      - ./gobgp-flowspec.toml:/config/gobgp.toml:ro
+    networks:
+      gobmp-ceos-1:
+        ipv4_address: 10.1.1.22
+    depends_on:
+      - ceos-1

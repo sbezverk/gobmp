@@ -1,0 +1,1 @@
+global rib -a ipv4-flowspec del match destination 198.51.100.0/24 protocol tcp destination-port ==80
