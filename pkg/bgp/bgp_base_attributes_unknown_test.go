@@ -273,6 +273,12 @@ func TestUnknownPathAttribute_MalformedAttrSet(t *testing.T) {
 			value:     buildAttrSetValue(65001, buildAttr(0xC0, 23, []byte{0xff})),
 			malformed: true,
 		},
+		{
+			// RFC 8669 §6: a TLV running past the end of the attribute.
+			name:      "embedded malformed Prefix-SID",
+			value:     buildAttrSetValue(65001, buildAttr(0xC0, 40, []byte{9, 0, 4})),
+			malformed: true,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

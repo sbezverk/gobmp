@@ -73,15 +73,13 @@ func (up *Update) GetBGPLSAttribute() (*bgpls.NLRI, error) {
 // Deprecated: use GetBGPLSAttribute. Kept for API compatibility.
 func (up *Update) GetNLRI29() (*bgpls.NLRI, error) { return up.GetBGPLSAttribute() }
 
-// GetAttrPrefixSID check for presence of BGP Attribute Prefix SID (40) and instantiates it
+// GetAttrPrefixSID check for presence of BGP Attribute Prefix SID (40) and instantiates it.
+// It returns what prefixsid.UnmarshalBGPAttrPrefixSID returns, which may be both
+// a result and an error.
 func (up *Update) GetAttrPrefixSID() (*prefixsid.PSid, error) {
 	for _, attr := range up.PathAttributes {
 		if attr.AttributeType == 40 {
-			psid, err := prefixsid.UnmarshalBGPAttrPrefixSID(attr.Attribute)
-			if err != nil {
-				return nil, err
-			}
-			return psid, nil
+			return prefixsid.UnmarshalBGPAttrPrefixSID(attr.Attribute)
 		}
 	}
 	return nil, NewAttributeNotFoundError(40, "Prefix SID")

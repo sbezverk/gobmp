@@ -6,13 +6,27 @@ Message updates and major project changes should be documented here.
 
 ### 2026-11-27
 
+#### Added
+
+- `base_attrs.srv6_service_malformed` is `true` when the BGP Prefix-SID attribute holds a malformed SRv6 L3 or L2 Service TLV; it is omitted otherwise. BGP-LS messages carry no `base_attrs`
+
+#### Changed
+
+- An UPDATE with a malformed SRv6 L3 or L2 Service TLV is treated as withdrawn (RFC 9252 §7): all of its routes, of every address family, are published as `del` instead of `add`, with the same hash and message key. This includes MUP ISD and DSD routes
+- An ATTR_SET whose first BGP Prefix-SID attribute holds a malformed SRv6 Service TLV (RFC 9252 §7), or cannot be parsed, for example because a TLV runs past its end (RFC 8669 §6), is now malformed (RFC 6368 §5), and the routes of the UPDATE are treated as withdrawn (RFC 7606 §7.16). They are published as `del` with `base_attrs.attr_set_malformed` set; `base_attrs.srv6_service_malformed` is not set. As for any malformed ATTR_SET, `base_attrs.attr_set` is omitted and the set is published raw in `base_attrs.unknown_attributes`. A Label-Index or Originator SRGB TLV of an invalid length does not make the set malformed
+- The SRv6 L2 Service TLV is now validated like the L3 one. Its content is still not published
+- Only the first BGP Prefix-SID attribute of an UPDATE, and of an ATTR_SET, is used for `base_attrs.prefix_sid` and `base_attrs.bgp_prefix_sid`; before, the last one was published there (RFC 7606 §3(g))
+
 #### Fixed
 
-- A truncated Sub-Sub-TLV inside an SRv6 SID Information Sub-TLV no longer panics or reads the octets that follow it. The decoded Prefix-SID is rejected instead
-- Now also rejected: an SRv6 SID Information Sub-TLV of 20 octets (RFC 9252 §7), and one or two octets left after its 21 fixed octets
+- A truncated Sub-Sub-TLV inside an SRv6 SID Information Sub-TLV no longer panics or reads the octets that follow it. The Service TLV is malformed instead
+- Now also malformed: an SRv6 SID Information Sub-TLV of 20 octets (RFC 9252 §7), and one or two octets left after its 21 fixed octets
 - A SID Structure Sub-Sub-TLV whose length is not 6 (RFC 9252 §3.2.1) but fits in its Sub-TLV is logged and left out of the output, and the rest of the attribute is kept (RFC 9252 §7). Before, a shorter one rejected the attribute and a longer one was decoded from its first 6 octets
-- A rejected attribute drops only the decoded `prefix_sid` and `base_attrs.prefix_sid`, including any Label-Index and SRGB in it. `base_attrs.bgp_prefix_sid` is not affected by these checks. Announcements are still published as `add`, because treat-as-withdraw is not implemented. MUP ISD and DSD announcements with a rejected attribute are not published
-- Only the first SRv6 L3 Service TLV in the attribute is used; later ones are ignored, even if empty or malformed, but must still fit within the attribute (RFC 9252 §7)
+- A Label-Index TLV whose length is not 7 (RFC 8669 §3.1) is no longer decoded, and no longer shifts the TLVs which follow it
+- On IPv4 and IPv6 labeled unicast routes, a Label-Index TLV of an invalid length, or an Originator SRGB TLV shorter than 2 octets, discards the attribute: `prefix_sid` and `base_attrs.prefix_sid` are omitted and announcements stay `add` (RFC 8669 §6). Other routes of the same UPDATE are not affected
+- Other address families ignore those TLVs (RFC 8669 §3.1, §3.2): only the bad TLV is left out, and the rest of the attribute, including SRv6 Service TLVs, is published. Before, a short Originator SRGB rejected the whole attribute. An attribute holding only such TLVs is now published as `"prefix_sid": {}`; before, it was omitted or, for some longer Label-Index TLVs, held a misread `label_index`
+- An attribute which cannot be parsed, or holds a malformed SRv6 Service TLV, drops `prefix_sid` and `base_attrs.prefix_sid`. `base_attrs.bgp_prefix_sid` is not affected by these checks. Outside ATTR_SET, and unless an SRv6 Service TLV is malformed, announcements stay `add`. MUP ISD and DSD announcements whose Prefix-SID is dropped or holds no decoded TLV are not published unless treated as withdrawn
+- Only the first SRv6 L3 Service TLV and the first L2 Service TLV in the attribute are used; later ones are ignored, even if empty or malformed, but must still fit within the attribute (RFC 9252 §7)
 
 ### 2026-11-13
 

@@ -2,12 +2,16 @@ package prefixsid
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/sbezverk/gobmp/pkg/srv6"
 	"github.com/sbezverk/tools"
 )
+
+// labelIndexLength is the Label-Index TLV Length (RFC 8669 §3.1).
+const labelIndexLength = 7
 
 // LabelIndexTLV defines Label index TLV
 // https://tools.ietf.org/html/rfc8669#section-3.1
@@ -47,7 +51,17 @@ func (p *PSid) IsEmpty() bool {
 	return p.LabelIndex == nil && p.OriginatorSRGB == nil && p.SRv6L3Service == nil && p.SRv6L2Service == nil
 }
 
-// UnmarshalBGPAttrPrefixSID instantiates a prefix sid object
+// ErrSRv6ServiceMalformed marks a malformed SRv6 L3 or L2 Service TLV, which
+// requires treat-as-withdraw (RFC 9252 §7).
+var ErrSRv6ServiceMalformed = errors.New("malformed SRv6 Service TLV")
+
+// UnmarshalBGPAttrPrefixSID instantiates a prefix sid object. A Label-Index or
+// Originator SRGB TLV of an invalid length is reported with a result holding the
+// other TLVs: only labeled unicast discards the attribute for it (RFC 8669 §6),
+// other families ignore the TLV (RFC 8669 §3.1, §3.2). Any other error returns
+// no result, and a malformed SRv6 Service TLV is reported as
+// ErrSRv6ServiceMalformed in preference to a length error. The content of the
+// SRv6 L2 Service TLV is validated but not returned.
 func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 	if glog.V(6) {
 		glog.Infof("UnmarshalBGPAttrPrefixSID Raw: %+v", tools.MessageHex(b))
@@ -56,20 +70,36 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 		LabelIndex:     nil,
 		OriginatorSRGB: nil,
 	}
+	// lengthErr collects errors which leave the TLV framing intact, so the walk
+	// goes on to the remaining TLVs.
+	var lengthErr error
+	l2Seen := false
 	for p := 0; p < len(b); {
 		if p+3 > len(b) {
-			return nil, fmt.Errorf("prefix SID truncated at offset %d: need at least 3 bytes for TLV header, have %d", p, len(b)-p)
+			err := fmt.Errorf("prefix SID truncated at offset %d: need at least 3 bytes for TLV header, have %d", p, len(b)-p)
+			if b[p] == 5 || b[p] == 6 {
+				return nil, fmt.Errorf("%w: %w", ErrSRv6ServiceMalformed, err)
+			}
+			return nil, err
 		}
 		switch b[p] {
 		case 1:
 			p++
-			if p+9 > len(b) {
-				return nil, fmt.Errorf("prefix SID label index TLV truncated at offset %d: need 9 bytes, have %d", p, len(b)-p)
+			length := binary.BigEndian.Uint16(b[p : p+2])
+			p += 2
+			if p+int(length) > len(b) {
+				return nil, fmt.Errorf("prefix SID label index TLV truncated at offset %d: need %d bytes, have %d", p, length, len(b)-p)
+			}
+			// RFC 8669 §3.1 fixes the length.
+			if length != labelIndexLength {
+				lengthErr = errors.Join(lengthErr,
+					fmt.Errorf("prefix SID label index TLV length %d, want %d", length, labelIndexLength))
+				p += int(length)
+				continue
 			}
 			psid.LabelIndex = &LabelIndexTLV{}
 			psid.LabelIndex.Type = 1
-			psid.LabelIndex.Length = binary.BigEndian.Uint16(b[p : p+2])
-			p += 2
+			psid.LabelIndex.Length = length
 			// Skip reserved byte
 			p++
 			psid.LabelIndex.Flags = binary.BigEndian.Uint16(b[p : p+2])
@@ -78,23 +108,24 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 			p += 4
 		case 3:
 			p++
-			if p+4 > len(b) {
-				return nil, fmt.Errorf("prefix SID originator SRGB TLV truncated at offset %d: need 4 bytes, have %d", p, len(b)-p)
+			length := binary.BigEndian.Uint16(b[p : p+2])
+			p += 2
+			if p+int(length) > len(b) {
+				return nil, fmt.Errorf("prefix SID originator SRGB value truncated at offset %d: need %d bytes, have %d", p, length, len(b)-p)
+			}
+			if length < 2 {
+				lengthErr = errors.Join(lengthErr,
+					fmt.Errorf("prefix SID originator SRGB length too short: need at least 2 bytes for Flags, have %d", length))
+				p += int(length)
+				continue
 			}
 			psid.OriginatorSRGB = &OriginatorSRGBTLV{}
 			psid.OriginatorSRGB.Type = 3
-			psid.OriginatorSRGB.Length = binary.BigEndian.Uint16(b[p : p+2])
-			p += 2
+			psid.OriginatorSRGB.Length = length
 			psid.OriginatorSRGB.Flags = binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
 			psid.OriginatorSRGB.SRGB = make([]SRGB, 0)
-			if psid.OriginatorSRGB.Length < 2 {
-				return nil, fmt.Errorf("prefix SID originator SRGB length too short: need at least 2 bytes for Flags, have %d", psid.OriginatorSRGB.Length)
-			}
 			srgbBytes := int(psid.OriginatorSRGB.Length - 2)
-			if p+srgbBytes > len(b) {
-				return nil, fmt.Errorf("prefix SID originator SRGB value truncated at offset %d: need %d bytes, have %d", p, srgbBytes, len(b)-p)
-			}
 			srgbCount := srgbBytes / 6
 			for i := 0; i < srgbCount; i++ {
 				srgb := SRGB{}
@@ -110,29 +141,38 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 			}
 			// Skip any trailing bytes not forming a complete SRGB entry
 			p += srgbBytes - srgbCount*6
-		case 5:
-			p++
-			if p+2 > len(b) {
-				return nil, fmt.Errorf("prefix SID SRv6 L3 service TLV truncated at offset %d: need 2 bytes for length, have %d", p, len(b)-p)
+		case 5, 6:
+			isL2, name := b[p] == 6, "L3"
+			if isL2 {
+				name = "L2"
 			}
+			p++
 			l := binary.BigEndian.Uint16(b[p : p+2])
 			p += 2
 			if p+int(l) > len(b) {
-				return nil, fmt.Errorf("prefix SID SRv6 L3 service value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+				return nil, fmt.Errorf("%w: prefix SID SRv6 %s service value truncated at offset %d: need %d bytes, have %d",
+					ErrSRv6ServiceMalformed, name, p, l, len(b)-p)
 			}
-			// RFC 9252 §7: all but the first SRv6 L3 Service TLV MUST be ignored.
-			if psid.SRv6L3Service != nil {
+			// RFC 9252 §7: all but the first SRv6 Service TLV of a type MUST be ignored.
+			if (isL2 && l2Seen) || (!isL2 && psid.SRv6L3Service != nil) {
 				p += int(l)
 				continue
 			}
 			if l == 0 {
-				return nil, fmt.Errorf("prefix SID SRv6 L3 service TLV at offset %d has zero length", p-3)
+				return nil, fmt.Errorf("%w: prefix SID SRv6 %s service TLV at offset %d has zero length",
+					ErrSRv6ServiceMalformed, name, p-3)
 			}
-			l3, err := srv6.UnmarshalSRv6L3Service(b[p : p+int(l)])
+			// RFC 9252 §2: both Service TLVs have the same Sub-TLV structure.
+			service, err := srv6.UnmarshalSRv6L3Service(b[p : p+int(l)])
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("%w: prefix SID SRv6 %s service TLV at offset %d: %w",
+					ErrSRv6ServiceMalformed, name, p-3, err)
 			}
-			psid.SRv6L3Service = l3
+			if isL2 {
+				l2Seen = true
+			} else {
+				psid.SRv6L3Service = service
+			}
 			p += int(l)
 		default:
 			p++
@@ -147,7 +187,7 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 			p += l
 		}
 	}
-	return &psid, nil
+	return &psid, lengthErr
 }
 
 // Equal compares two PSid objects for equality (RFC 8669)

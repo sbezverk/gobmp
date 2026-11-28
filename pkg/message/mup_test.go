@@ -542,8 +542,8 @@ func TestProducerMUPDiscoveryInvalidPrefixSIDIsSkipped(t *testing.T) {
 		attr []byte
 	}{
 		{name: "an empty attribute", attr: []byte{}},
-		{name: "an L3 Service TLV of length zero", attr: []byte{0x05, 0x00, 0x00}},
-		{name: "a 20-octet Information Sub-TLV", attr: srv6PrefixSIDValue(srv6InfoSubTLV(srv6InfoFixed()[:20]))},
+		{name: "a TLV header cut short", attr: []byte{0x09, 0x00}},
+		{name: "a TLV running past the end of the attribute", attr: []byte{0x09, 0x00, 0x04}},
 	} {
 		for _, route := range routes {
 			t.Run(route.name+" with "+tt.name+" is skipped", func(t *testing.T) {
