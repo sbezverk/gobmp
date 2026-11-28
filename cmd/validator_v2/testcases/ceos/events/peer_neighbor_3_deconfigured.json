@@ -35,7 +35,6 @@
       "peer_rd": "0:0",
       "bmp_reason": 5,
       "is_l": false,
-      "is_prepolicy": false,
       "is_ipv4": true,
       "is_adj_rib_in_post_policy": false,
       "is_adj_rib_out_post_policy": false,

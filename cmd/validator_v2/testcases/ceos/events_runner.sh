@@ -50,15 +50,22 @@ waitForInjection() {
 # Apply configuration lines to the cEOS container.
 # Arguments:
 #   File with the configuration lines.
+# Returns:
+#   1 if FastCli fails or EOS rejects a line. EOS prints an error starting
+#   with "% "; the "% " check does not rely on the FastCli exit status.
 #######################################
 applyTrigger() {
   local triggerFile="$1"
+  local output
+  local status=0
 
-  {
+  output="$({
     echo "configure"
     cat -- "${triggerFile}"
     echo "end"
-  } | docker exec -i "${CEOS_CONTAINER}" FastCli -p 15
+  } | docker exec -i "${CEOS_CONTAINER}" FastCli -p 15 2>&1)" || status=1
+  printf '%s\n' "${output}"
+  ((status == 0)) && ! grep -q '^% ' <<<"${output}"
 }
 
 #######################################

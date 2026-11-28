@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "vpnv4-route-eor",
-  "description": "Validate the End-of-RIB marker published on the VPNv4 route topic after the BMP station restarts.",
+  "description": "Validate the End-of-RIB marker published on the VPNv4 route topic after the BMP station restarts. An End-of-RIB carries no route, next hop or route distinguisher (RFC 4724 section 2), so action, next hop and RD type fields are not checked.",
   "tags": ["vpnv4", "end-of-rib", "pre-policy", "event"],
   "inject": {
     "path": "/v1/routes",
@@ -19,6 +19,8 @@
     "timeout": "120",
     "match": {
       "is_eor": true,
+      "afi": 1,
+      "safi": 128,
       "peer_ip": "10.1.1.20",
       "is_adj_rib_in_post_policy": false,
       "is_adj_rib_out": false,
@@ -27,15 +29,11 @@
   },
   "expect": {
     "equals": {
-      "action": "del",
       "router_ip": "10.1.1.3",
       "remote_bgp_id": "192.0.2.2",
       "peer_ip": "10.1.1.20",
       "peer_type": 0,
       "peer_asn": 64497,
-      "is_ipv4": true,
-      "is_nexthop_ipv4": true,
-      "vpn_rd_type": 0,
       "is_eor": true,
       "is_adj_rib_in_post_policy": false,
       "is_adj_rib_out_post_policy": false,

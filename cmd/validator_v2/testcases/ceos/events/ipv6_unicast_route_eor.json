@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "ipv6-unicast-route-eor",
-  "description": "Validate the End-of-RIB marker published on the IPv6 unicast route topic after the BMP station restarts. gobmp publishes the empty MP_UNREACH_NLRI with action del.",
+  "description": "Validate the End-of-RIB marker published on the IPv6 unicast route topic after the BMP station restarts. An End-of-RIB carries no route or next hop (RFC 4724 section 2), so action and next hop fields are not checked.",
   "tags": ["ipv6", "unicast", "end-of-rib", "pre-policy", "event"],
   "inject": {
     "path": "/v1/routes",
@@ -19,6 +19,8 @@
     "timeout": "120",
     "match": {
       "is_eor": true,
+      "afi": 2,
+      "safi": 1,
       "peer_ip": "10.1.1.20",
       "is_adj_rib_in_post_policy": false,
       "is_adj_rib_out": false,
@@ -27,14 +29,11 @@
   },
   "expect": {
     "equals": {
-      "action": "del",
       "router_ip": "10.1.1.3",
       "remote_bgp_id": "192.0.2.2",
       "peer_ip": "10.1.1.20",
       "peer_type": 0,
       "peer_asn": 64497,
-      "is_ipv4": false,
-      "is_nexthop_ipv4": false,
       "is_eor": true,
       "is_adj_rib_in_post_policy": false,
       "is_adj_rib_out_post_policy": false,

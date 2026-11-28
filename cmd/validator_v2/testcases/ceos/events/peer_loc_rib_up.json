@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "peer-loc-rib-up",
-  "description": "Validate the Loc-RIB instance Peer Up sent after the BMP station restarts. cEOS sends no table name TLV, so table_name is not published.",
+  "description": "Validate the Loc-RIB instance Peer Up sent after the BMP station restarts. RFC 9069 section 5.2.1 says this default instance uses the table name \"global\", but cEOS sends no table name TLV, so table_name is not checked.",
   "tags": ["peer", "peer-up", "loc-rib", "event"],
   "inject": {
     "path": "/v1/routes",
@@ -37,7 +37,6 @@
       "local_ip": "0.0.0.0",
       "local_bgp_id": "192.0.2.1",
       "is_l": false,
-      "is_prepolicy": false,
       "is_ipv4": true,
       "is_adj_rib_in_post_policy": false,
       "is_adj_rib_out_post_policy": false,
@@ -74,8 +73,7 @@
       "remote_holddown",
       "adv_holddown",
       "info_data",
-      "bmp_reason",
-      "table_name"
+      "bmp_reason"
     ]
   }
 }

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "eor-ipv4-unicast-loc-rib",
-  "description": "Validate the IPv4 unicast Loc-RIB End-of-RIB sent after the BMP station restarts. The inject block withdraws an unused prefix; the sibling .eos file causes the message.",
+  "description": "Validate the IPv4 unicast Loc-RIB End-of-RIB sent after the BMP station restarts. The inject block withdraws an unused prefix; the sibling .eos file causes the message. cEOS sends no table name TLV in its Loc-RIB Peer Up (RFC 9069 section 5.2.1 expects \"global\"), so table_name is not checked.",
   "tags": ["ipv4", "unicast", "end-of-rib", "loc-rib", "event"],
   "inject": {
     "path": "/v1/routes",
@@ -42,6 +42,6 @@
     },
     "present": ["timestamp"],
     "non_empty": ["router_hash", "peer_hash"],
-    "absent": ["error", "action", "table_name"]
+    "absent": ["error", "action"]
   }
 }

@@ -32,6 +32,7 @@
       "prefix_len": 26,
       "peer_ip": "10.1.1.20",
       "is_adj_rib_out": true,
+      "is_adj_rib_out_post_policy": true,
       "origin_as": 64497
     }
   },
