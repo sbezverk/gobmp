@@ -4,6 +4,12 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-27
+
+#### Fixed
+
+- BGP-LS SR Segment List TLV 1205 (RFC 9857 §5.7) flags were read one octet late, so `d_flag` reported the M bit and the other flags did not match the wire: `d_flag` to `m_flag` in `policy_state.segment_lists` are now read from bits 0-8
+
 ### 2026-11-13
 
 #### Added
