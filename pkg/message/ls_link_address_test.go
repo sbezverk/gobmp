@@ -1,6 +1,7 @@
 package message
 
 import (
+	"cmp"
 	"encoding/json"
 	"slices"
 	"testing"
@@ -33,11 +34,20 @@ func TestPublishedLSLinkAddresses(t *testing.T) {
 		localIPv4: "198.51.100.1", remoteIPv4: "198.51.100.2",
 		localIPv6: "2001:db8::1", remoteIPv6: "2001:db8::2",
 	}
+	// RFC 9815 Sections 5.2.2 and 5.2.4: an SPF link needs an IGP Metric (1095)
+	// and a Sequence Number (1181), else it is published as a withdrawal.
+	spfAttribute := benchPathAttr(benchOptional, 29, slices.Concat(
+		benchTLV(1095, 0, 0, 0, 10),
+		benchTLV(1181, 0, 0, 0, 0, 0, 0, 0, 1),
+	))
 	tests := []struct {
 		name        string
+		safi        byte // zero means 71 (BGP-LS)
 		descriptors [][]byte
+		attribute   []byte
 		withdraw    bool
 		want        addresses
+		wantRD      string
 	}{
 		{
 			name:        "publishes only IPv4 keys for IPv4 descriptors",
@@ -78,6 +88,37 @@ func TestPublishedLSLinkAddresses(t *testing.T) {
 			name: "omits all address keys when there are no address descriptors",
 		},
 		{
+			name:        "publishes the RD and both families for a BGP-LS-VPN link",
+			safi:        72,
+			descriptors: [][]byte{localIPv4, remoteIPv4, localIPv6, remoteIPv6},
+			want:        dualStack,
+			wantRD:      "65000:1",
+		},
+		{
+			name:        "keeps the RD and both families when a BGP-LS-VPN link is withdrawn",
+			safi:        72,
+			descriptors: [][]byte{localIPv4, remoteIPv4, localIPv6, remoteIPv6},
+			withdraw:    true,
+			want:        dualStack,
+			wantRD:      "65000:1",
+		},
+		{
+			name:        "publishes both families for a BGP-LS-SPF link",
+			safi:        80,
+			descriptors: [][]byte{localIPv4, remoteIPv4, localIPv6, remoteIPv6},
+			attribute:   spfAttribute,
+			want:        dualStack,
+		},
+		{
+			name:        "keeps both families when a BGP-LS-SPF link is withdrawn",
+			safi:        80,
+			descriptors: [][]byte{localIPv4, remoteIPv4, localIPv6, remoteIPv6},
+			withdraw:    true,
+			want:        dualStack,
+		},
+		// The legacy local_link_ip/remote_link_ip values in the next two cases
+		// record current behavior, not behavior an RFC requires.
+		{
 			name:        "omits the IPv6 key for a 4-octet value in an IPv6 descriptor",
 			descriptors: [][]byte{benchTLV(261, 198, 51, 100, 1)},
 			want:        addresses{localIP: "198.51.100.1"},
@@ -93,14 +134,29 @@ func TestPublishedLSLinkAddresses(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			nlri := lsUnknownTLVTestNLRI(2, base.ISISL2, slices.Concat([][]byte{localNode, remoteNode}, tc.descriptors)...)
-			mpAttr := benchMPReach(16388, 71, []byte{203, 0, 113, 1}, nlri)
+			safi := cmp.Or(tc.safi, 71)
+			protocol := base.ISISL2
+			if safi == 80 {
+				protocol = base.Direct // RFC 9815 Section 5.2
+			}
+			nlri := lsUnknownTLVTestNLRI(2, protocol, slices.Concat([][]byte{localNode, remoteNode}, tc.descriptors)...)
+			nextHop := []byte{203, 0, 113, 1}
+			if safi == 72 {
+				// RFC 9552 Section 5.2: an RD precedes the NLRI body and the next hop.
+				nlri = testLSVPNEntry(2, testRD, nlri[4:])
+				nextHop = append(make([]byte, 8), nextHop...)
+			}
+			mpAttr := benchMPReach(16388, safi, nextHop, nlri)
 			wantAction := "add"
 			if tc.withdraw {
-				mpAttr = benchPathAttr(benchOptional, bgp.MP_UNREACH_NLRI, append([]byte{0x40, 0x04, 71}, nlri...))
+				mpAttr = benchPathAttr(benchOptional, bgp.MP_UNREACH_NLRI, append([]byte{0x40, 0x04, safi}, nlri...))
 				wantAction = "del"
 			}
-			update, err := bgp.UnmarshalBGPUpdate(benchUpdate([][]byte{mpAttr}, nil))
+			attrs := [][]byte{mpAttr}
+			if tc.attribute != nil {
+				attrs = append(attrs, tc.attribute)
+			}
+			update, err := bgp.UnmarshalBGPUpdate(benchUpdate(attrs, nil))
 			if err != nil {
 				t.Fatalf("unmarshal BGP UPDATE: %v", err)
 			}
@@ -126,14 +182,15 @@ func TestPublishedLSLinkAddresses(t *testing.T) {
 				t.Fatalf("unmarshal published event: %v", err)
 			}
 			for key, want := range map[string]string{
-				"action":           wantAction,
-				"hash":             "",
-				"local_link_ip":    tc.want.localIP,
-				"remote_link_ip":   tc.want.remoteIP,
-				"local_link_ipv4":  tc.want.localIPv4,
-				"remote_link_ipv4": tc.want.remoteIPv4,
-				"local_link_ipv6":  tc.want.localIPv6,
-				"remote_link_ipv6": tc.want.remoteIPv6,
+				"action":              wantAction,
+				"hash":                "",
+				"route_distinguisher": tc.wantRD,
+				"local_link_ip":       tc.want.localIP,
+				"remote_link_ip":      tc.want.remoteIP,
+				"local_link_ipv4":     tc.want.localIPv4,
+				"remote_link_ipv4":    tc.want.remoteIPv4,
+				"local_link_ipv6":     tc.want.localIPv6,
+				"remote_link_ipv6":    tc.want.remoteIPv6,
 			} {
 				value, present := payload[key]
 				if want == "" {
