@@ -522,30 +522,43 @@ func TestProducerMUPDiscoveryWithoutPrefixSIDIsSkipped(t *testing.T) {
 }
 
 func TestProducerMUPDiscoveryInvalidPrefixSIDIsSkipped(t *testing.T) {
+	routes := []struct {
+		name string
+		nlri []byte
+	}{
+		{"ISD", []byte{
+			0x01, 0x00, 0x01, 0x0c,
+			0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
+			0x18, 0x0a, 0x0a, 0x0a,
+		}},
+		{"DSD", []byte{
+			0x01, 0x00, 0x02, 0x0c,
+			0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
+			0x0a, 0x0a, 0x0a, 0x01,
+		}},
+	}
 	for _, tt := range []struct {
 		name string
 		attr []byte
 	}{
-		{name: "empty", attr: []byte{}},
-		{name: "malformed", attr: []byte{0x05, 0x00, 0x00}},
+		{name: "an empty attribute", attr: []byte{}},
+		{name: "a TLV header cut short", attr: []byte{0x09, 0x00}},
+		{name: "a TLV running past the end of the attribute", attr: []byte{0x09, 0x00, 0x04}},
 	} {
-		t.Run(tt.name, func(t *testing.T) {
-			update := minimalUpdate()
-			update.PathAttributes = []bgp.PathAttribute{{AttributeType: 40, Attribute: tt.attr}}
-			nlri := mupReachNLRI([]byte{
-				0x01, 0x00, 0x01, 0x0c,
-				0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x64,
-				0x18, 0x0a, 0x0a, 0x0a,
-			}, false)
+		for _, route := range routes {
+			t.Run(route.name+" with "+tt.name+" is skipped", func(t *testing.T) {
+				update := minimalUpdate()
+				update.PathAttributes = []bgp.PathAttribute{{AttributeType: 40, Attribute: tt.attr}}
 
-			msgs, err := mupProducer().mup(nlri, AddPrefix, minimalPeerHeader(), update)
-			if err != nil {
-				t.Fatalf("mup() unexpected error: %+v", err)
-			}
-			if len(msgs) != 0 {
-				t.Fatalf("mup() returned %d messages, want 0 for an announcement with %s Prefix-SID", len(msgs), tt.name)
-			}
-		})
+				msgs, err := mupProducer().mup(mupReachNLRI(route.nlri, false), AddPrefix, minimalPeerHeader(), update)
+				if err != nil {
+					t.Fatalf("mup(%x, Prefix-SID %x) error = %v, want nil", route.nlri, tt.attr, err)
+				}
+				if len(msgs) != 0 {
+					t.Errorf("mup(%x, Prefix-SID %x) = %d messages, want 0", route.nlri, tt.attr, len(msgs))
+				}
+			})
+		}
 	}
 }
 

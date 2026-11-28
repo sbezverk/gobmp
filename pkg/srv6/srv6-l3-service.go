@@ -11,6 +11,15 @@ import (
 	"github.com/sbezverk/tools"
 )
 
+const (
+	// sidStructureLength is the SID Structure Sub-Sub-TLV length, fixed by
+	// RFC 9252 §3.2.1.
+	sidStructureLength = 6
+	// informationSubTLVMinLength is the shortest SRv6 SID Information Sub-TLV
+	// RFC 9252 §7 does not call malformed.
+	informationSubTLVMinLength = 21
+)
+
 // SIDStructureSubSubTLV defines a structure of SID's Structure Sub Sub TLV
 // https://tools.ietf.org/html/draft-dawra-bess-srv6-services-02#section-2.1.2.1
 type SIDStructureSubSubTLV struct {
@@ -24,8 +33,8 @@ type SIDStructureSubSubTLV struct {
 
 // UnmarshalSIDStructureSubSubTLV instantiates SID Structure Sub Sub TLV
 func UnmarshalSIDStructureSubSubTLV(b []byte) (*SIDStructureSubSubTLV, error) {
-	if len(b) < 6 {
-		return nil, fmt.Errorf("srv6 SID Structure sub-sub-TLV too short: need 6 bytes, have %d", len(b))
+	if len(b) != sidStructureLength {
+		return nil, fmt.Errorf("srv6 SID Structure sub-sub-TLV invalid length: need %d bytes, have %d", sidStructureLength, len(b))
 	}
 	p := 0
 	tlv := &SIDStructureSubSubTLV{}
@@ -100,8 +109,8 @@ func (istlv *InformationSubTLV) UnmarshalJSON(b []byte) error {
 
 // UnmarshalInformationSubTLV instantiates Information SubT LV
 func UnmarshalInformationSubTLV(b []byte) (*InformationSubTLV, error) {
-	if len(b) < 20 {
-		return nil, fmt.Errorf("srv6 Information sub-TLV too short: need 20 bytes, have %d", len(b))
+	if len(b) < informationSubTLVMinLength {
+		return nil, fmt.Errorf("srv6 Information sub-TLV too short: need %d bytes, have %d", informationSubTLVMinLength, len(b))
 	}
 	// Skip Reserved byte
 	p := 1
@@ -112,7 +121,8 @@ func UnmarshalInformationSubTLV(b []byte) (*InformationSubTLV, error) {
 	p++
 	tlv.EndpointBehavior = binary.BigEndian.Uint16(b[p : p+2])
 	p += 2
-	if len(b)-p >= 4 {
+	// The octet at p is RESERVED, Sub-Sub-TLVs follow it.
+	if len(b) > informationSubTLVMinLength {
 		stlv, err := UnmarshalSRv6L3ServiceSubSubTLV(b[p:])
 		if err != nil {
 			return nil, err
@@ -181,6 +191,9 @@ func UnmarshalSRv6L3Service(b []byte) (*L3Service, error) {
 	l3 := L3Service{
 		SubTLVs: make(map[uint8][]SvcSubTLV),
 	}
+	if len(b) == 0 {
+		return nil, fmt.Errorf("srv6 L3 Service TLV too short: need 1 byte, have %d", len(b))
+	}
 	// Skipping reserved byte
 	stlv, err := UnmarshalSRv6L3ServiceSubTLV(b[1:])
 	if err != nil {
@@ -228,21 +241,34 @@ func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]SvcSubTLV, error) {
 	return m, nil
 }
 
-// UnmarshalSRv6L3ServiceSubSubTLV instantiates L3 Service Sub TLV
+// UnmarshalSRv6L3ServiceSubSubTLV decodes the Sub-Sub-TLVs which follow the
+// reserved octet in b, keyed by type. A SID Structure whose length is not 6 is
+// logged and left out. A header or length running past the end of b is an error.
 func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8][]SvcSubSubTLV, error) {
-	var err error
 	m := make(map[uint8][]SvcSubSubTLV)
 	for p := 1; p < len(b); {
+		if p+3 > len(b) {
+			return nil, fmt.Errorf("srv6 L3 Service sub-sub-TLV truncated at offset %d: need 3 bytes for header, have %d", p, len(b)-p)
+		}
 		t := b[p]
 		p++
 		l := binary.BigEndian.Uint16(b[p : p+2])
 		p += 2
+		if p+int(l) > len(b) {
+			return nil, fmt.Errorf("srv6 L3 Service sub-sub-TLV value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
+		}
 		var s SvcSubSubTLV
 		switch t {
 		case 1:
-			if s, err = UnmarshalSIDStructureSubSubTLV(b[p : p+int(l)]); err != nil {
-				return nil, err
+			structure, err := UnmarshalSIDStructureSubSubTLV(b[p : p+int(l)])
+			if err != nil {
+				// RFC 9252 §7: a length which fits the enclosing Sub-TLV does not
+				// make a Sub-Sub-TLV malformed, so only this entry is dropped.
+				glog.Errorf("ignoring srv6 L3 Service sub-sub-TLV at offset %d: %v", p-3, err)
+				p += int(l)
+				continue
 			}
+			s = structure
 		default:
 			s = make([]byte, l)
 			copy(s.([]byte), b[p:p+int(l)])

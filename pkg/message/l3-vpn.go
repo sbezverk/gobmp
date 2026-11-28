@@ -69,8 +69,10 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 	}
 	prfxs := make([]L3VPNPrefix, 0)
 	afi, safi := mpFamily(nlri)
-	// The Prefix-SID attribute is the same for all routes of the UPDATE.
-	psid, psidErr := update.GetAttrPrefixSID()
+	// The Prefix-SID attribute is the same for all routes of the UPDATE. Errors
+	// are logged with the base attributes, and a result returned beside one lacks
+	// only the TLVs which VPN routes ignore (RFC 8669 §3.1, §3.2).
+	psid, _ := update.GetAttrPrefixSID()
 	nextHop := nlri.GetNextHop()
 	for _, e := range nlril3vpn.NLRI {
 		prfx := L3VPNPrefix{
@@ -145,9 +147,7 @@ func (p *producer) l3vpn(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update 
 		}
 		prfx.VPNRD = e.RD.String()
 		prfx.VPNRDType = e.RD.Type
-		if psidErr == nil {
-			prfx.PrefixSID = psid
-		}
+		prfx.PrefixSID = psid
 		prfxs = append(prfxs, prfx)
 	}
 

@@ -21,6 +21,7 @@ type recordingPublisher struct {
 
 type recordedMsg struct {
 	msgType int
+	key     string // broker key
 	payload []byte
 }
 
@@ -29,7 +30,7 @@ func (r *recordingPublisher) PublishMessage(msgType int, msgHash []byte, msg []b
 	defer r.mu.Unlock()
 	payload := make([]byte, len(msg))
 	copy(payload, msg)
-	r.msgs = append(r.msgs, recordedMsg{msgType: msgType, payload: payload})
+	r.msgs = append(r.msgs, recordedMsg{msgType: msgType, key: string(msgHash), payload: payload})
 	return nil
 }
 

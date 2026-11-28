@@ -60,11 +60,8 @@ func (p *producer) mup(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, update *b
 	// ISD and DSD routes carry their SRv6 SID and endpoint behavior in the
 	// Prefix-SID attribute, the same way L3VPN routes do.
 	psid, err := update.GetAttrPrefixSID()
-	if err != nil {
-		psid = nil
-		if !errors.Is(err, bgp.NewAttributeNotFoundError(40, "Prefix SID")) {
-			glog.Errorf("error getting Prefix SID attribute: %v", err)
-		}
+	if err != nil && !errors.Is(err, bgp.NewAttributeNotFoundError(40, "Prefix SID")) {
+		glog.Errorf("error getting Prefix SID attribute: %v", err)
 	}
 	nextHop := nlri.GetNextHop()
 	for _, e := range route.Route {

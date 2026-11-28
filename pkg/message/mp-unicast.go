@@ -81,8 +81,16 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 	// for all routes of the UPDATE.
 	var psid *prefixsid.PSid
 	var psidErr error
+	baseAttrs := update.BaseAttributes
 	if label {
 		psid, psidErr = update.GetAttrPrefixSID()
+		// RFC 8669 §6 discards a malformed attribute for labeled unicast only,
+		// so the other routes of the UPDATE keep their view of it.
+		if psid != nil && psidErr != nil {
+			discarded := *baseAttrs
+			discarded.PrefixSID = nil
+			baseAttrs = &discarded
+		}
 	}
 	nextHop := nlri.GetNextHop()
 	for _, e := range u.NLRI {
@@ -97,7 +105,7 @@ func (p *producer) unicast(nlri bgp.MPNLRI, op int, ph *bmp.PerPeerHeader, updat
 			Timestamp:      ph.GetPeerTimestamp(),
 			PrefixLen:      int32(e.Length),
 			PathID:         int32(e.PathID),
-			BaseAttributes: update.BaseAttributes,
+			BaseAttributes: baseAttrs,
 			AFI:            afi,
 			SAFI:           safi,
 		}

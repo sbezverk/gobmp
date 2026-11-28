@@ -90,6 +90,9 @@ type BaseAttributes struct {
 	// AttrSetMalformed requests treat-as-withdraw for a malformed ATTR_SET
 	// (RFC 7606 Section 7.16, RFC 6368 Section 5).
 	AttrSetMalformed bool `json:"attr_set_malformed,omitempty"`
+	// SRv6ServiceMalformed requests treat-as-withdraw for a malformed SRv6
+	// Service TLV in the Prefix-SID attribute (RFC 9252 Section 7).
+	SRv6ServiceMalformed bool `json:"srv6_service_malformed,omitempty"`
 	// NHCAttr retains the raw NHC attribute value for forensic use.
 	NHCAttr []byte `json:"nhc_attr,omitempty"`
 	// NHC contains the decoded NHC when its characteristics are usable.
@@ -118,6 +121,10 @@ type BaseAttributes struct {
 	// validation on receipt uses a non-allocating walk; this cache is populated
 	// on the first detailed decode requested by a producer.
 	bgplsParsed *bgpls.NLRI `json:"-"`
+
+	// prefixSIDMalformed reports a Prefix-SID attribute which cannot be parsed
+	// or holds a malformed SRv6 Service TLV. UnmarshalAttrSet reads it.
+	prefixSIDMalformed bool
 }
 
 // UnknownPathAttribute is the raw form of a BGP path attribute that
@@ -267,6 +274,10 @@ func (ba *BaseAttributes) Equal(oba *BaseAttributes) (bool, []string) {
 		equal = false
 		diffs = append(diffs, "attr_set_malformed mismatch")
 	}
+	if ba.SRv6ServiceMalformed != oba.SRv6ServiceMalformed {
+		equal = false
+		diffs = append(diffs, "srv6_service_malformed mismatch")
+	}
 	if asEqual, asDiffs := ba.AttrSet.Equal(oba.AttrSet); !asEqual {
 		equal = false
 		diffs = append(diffs, asDiffs...)
@@ -336,6 +347,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 	dPathSeen := false
 	peDistSeen := false
 	attrSetSeen := false
+	prefixSIDSeen := false
 	for _, attr := range attrs {
 		b := attr.Attribute
 		switch attr.AttributeType {
@@ -486,6 +498,11 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 				baseAttr.NHC = nhc
 			}
 		case 40:
+			// RFC 7606 §3(g): all but the first Prefix-SID attribute are discarded.
+			if prefixSIDSeen {
+				continue
+			}
+			prefixSIDSeen = true
 			// RFC 8669: BGP Prefix-SID
 			var err error
 			// Will be removed in the future in favor of PrefixSID
@@ -496,7 +513,8 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			}
 			baseAttr.PrefixSID, err = prefixsid.UnmarshalBGPAttrPrefixSID(b)
 			if err != nil {
-				baseAttr.PrefixSID = nil
+				baseAttr.SRv6ServiceMalformed = errors.Is(err, prefixsid.ErrSRv6ServiceMalformed)
+				baseAttr.prefixSIDMalformed = !errors.Is(err, prefixsid.ErrTLVLength)
 				glog.Errorf("failed to unmarshal Prefix-SID attribute with error: %+v", err)
 			}
 		case 128:
