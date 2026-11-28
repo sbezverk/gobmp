@@ -3,6 +3,8 @@ package prefixsid
 import (
 	"net"
 	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -81,6 +83,98 @@ func TestUnmarshalBGPAttrPrefixSID(t *testing.T) {
 			if !reflect.DeepEqual(tt.expect, got) {
 				t.Errorf("Diffs: %+v\n", deep.Equal(tt.expect, got))
 				t.Fatalf("test failed as expected prefix sid %+v does not match the actual %+v", tt.expect, got)
+			}
+		})
+	}
+}
+
+// firstL3ServiceTLV is a valid SRv6 L3 Service TLV (type 5) carrying one
+// 21-octet SRv6 SID Information Sub-TLV for 2001:db8::1, behavior 19.
+var firstL3ServiceTLV = []byte{
+	0x05, 0x00, 0x19, 0x00,
+	0x01, 0x00, 0x15, 0x00,
+	0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+	0x00, 0x00, 0x13, 0x00,
+}
+
+func TestUnmarshalBGPAttrPrefixSIDIgnoresLaterL3ServiceTLVs(t *testing.T) {
+	// RFC 9252 §7: all but the first SRv6 L3 Service TLV are ignored.
+	labelIndexTLV := []byte{0x01, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa4}
+	want := &PSid{
+		LabelIndex: &LabelIndexTLV{Type: 1, Length: 7, LabelIndex: 164},
+		SRv6L3Service: &srv6.L3Service{
+			SubTLVs: map[uint8][]srv6.SvcSubTLV{
+				1: {&srv6.InformationSubTLV{SID: "2001:db8::1", EndpointBehavior: 19}},
+			},
+		},
+	}
+	tests := []struct {
+		name     string
+		laterTLV []byte
+	}{
+		{name: "ignores a later empty TLV", laterTLV: []byte{0x05, 0x00, 0x00}},
+		{name: "ignores a later malformed TLV", laterTLV: []byte{0x05, 0x00, 0x03, 0x00, 0x01, 0x00}},
+		{name: "keeps the first SID when a later TLV is also valid", laterTLV: []byte{
+			0x05, 0x00, 0x19, 0x00,
+			0x01, 0x00, 0x15, 0x00,
+			0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+			0x00, 0x00, 0x14, 0x00,
+		}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			input := slices.Concat(firstL3ServiceTLV, tc.laterTLV, labelIndexTLV)
+
+			got, err := UnmarshalBGPAttrPrefixSID(input)
+
+			if err != nil {
+				t.Fatalf("UnmarshalBGPAttrPrefixSID(%x) error = %v, want nil", input, err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("UnmarshalBGPAttrPrefixSID(%x) differs from want: %v", input, deep.Equal(got, want))
+			}
+		})
+	}
+}
+
+func TestUnmarshalBGPAttrPrefixSIDRejectsBadL3ServiceTLVs(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []byte
+		wantErr string
+	}{
+		{
+			name:    "rejects a first TLV that runs past the attribute end",
+			input:   []byte{0x05, 0x00, 0x04, 0x00},
+			wantErr: "SRv6 L3 service value truncated at offset 3: need 4 bytes, have 1",
+		},
+		{
+			name:    "rejects a later TLV that runs past the attribute end",
+			input:   slices.Concat(firstL3ServiceTLV, []byte{0x05, 0x00, 0x04, 0x00}),
+			wantErr: "SRv6 L3 service value truncated at offset 31: need 4 bytes, have 1",
+		},
+		{
+			name:    "rejects a zero-length first TLV",
+			input:   []byte{0x05, 0x00, 0x00},
+			wantErr: "SRv6 L3 service TLV at offset 0 has zero length",
+		},
+		{
+			name:    "rejects a first TLV whose Information Sub-TLV is too short",
+			input:   []byte{0x05, 0x00, 0x05, 0x00, 0x01, 0x00, 0x01, 0x00},
+			wantErr: "srv6 Information sub-TLV too short",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := UnmarshalBGPAttrPrefixSID(tc.input)
+
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("UnmarshalBGPAttrPrefixSID(%x) error = %v, want it to contain %q", tc.input, err, tc.wantErr)
+			}
+			if got != nil {
+				t.Errorf("UnmarshalBGPAttrPrefixSID(%x) = %+v, want nil", tc.input, got)
 			}
 		})
 	}
