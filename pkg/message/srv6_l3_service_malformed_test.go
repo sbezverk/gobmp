@@ -19,6 +19,9 @@ func srv6InfoFixed() []byte {
 // srv6SIDStructure is a SID Structure Sub-Sub-TLV (RFC 9252 §3.2.1).
 func srv6SIDStructure() []byte { return []byte{0x01, 0x00, 0x06, 40, 24, 16, 0, 16, 64} }
 
+// srv6ShortSIDStructure is a SID Structure Sub-Sub-TLV of length five.
+func srv6ShortSIDStructure() []byte { return []byte{0x01, 0x00, 0x05, 40, 24, 16, 0, 16} }
+
 // srv6PrefixSIDValue returns a Prefix-SID attribute value holding one SRv6 L3
 // Service TLV whose Sub-TLVs are subTLVs.
 func srv6PrefixSIDValue(subTLVs []byte) []byte {
@@ -97,12 +100,8 @@ func TestMalformedSRv6L3ServiceDropsPrefixSIDWithoutTreatAsWithdraw(t *testing.T
 			srv6PrefixSIDValue(srv6InfoSubTLV(withTail([]byte{0x02, 0xff, 0xff})))},
 		{"an unknown Sub-Sub-TLV length reaching into the next Sub-TLV is rejected",
 			srv6PrefixSIDValue(append(srv6InfoSubTLV(withTail([]byte{0x02, 0x00, 0x04})), next...))},
-		{"a SID Structure of length zero is rejected",
-			srv6PrefixSIDValue(srv6InfoSubTLV(withTail([]byte{0x01, 0x00, 0x00})))},
-		{"a SID Structure of length five is rejected",
-			srv6PrefixSIDValue(srv6InfoSubTLV(withTail([]byte{0x01, 0x00, 0x05, 40, 24, 16, 0, 16})))},
-		{"a SID Structure of length seven is rejected",
-			srv6PrefixSIDValue(srv6InfoSubTLV(withTail([]byte{0x01, 0x00, 0x07, 40, 24, 16, 0, 16, 64, 0})))},
+		{"an overrunning length after a short SID Structure is rejected",
+			srv6PrefixSIDValue(srv6InfoSubTLV(withTail(srv6ShortSIDStructure(), []byte{0x02, 0x00, 0x04})))},
 		{"an Information Sub-TLV of length zero is rejected",
 			srv6PrefixSIDValue(srv6InfoSubTLV(nil))},
 		{"an Information Sub-TLV without the trailing reserved octet is rejected",
@@ -181,7 +180,53 @@ func TestMalformedSRv6L3ServiceOnLabeledUnicastDropsPrefixSIDWithoutTreatAsWithd
 	}
 }
 
-func TestValidSRv6L3ServiceIsPublishedOnEveryRoute(t *testing.T) {
+func TestSIDStructureOfWrongLengthLeavesTheRestOfThePrefixSID(t *testing.T) {
+	// Two Information Sub-TLVs, the first with a short SID Structure, followed by
+	// the Label-Index and Originator SRGB TLVs (RFC 8669 §3).
+	second := srv6InfoFixed()
+	second[16] = 2 // SID 2001:db8:1:1::2
+	psid := slices.Concat(
+		srv6PrefixSIDValue(slices.Concat(
+			srv6InfoSubTLV(append(srv6InfoFixed(), srv6ShortSIDStructure()...)),
+			srv6InfoSubTLV(append(second, srv6SIDStructure()...)))),
+		[]byte{0x01, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa4},
+		[]byte{0x03, 0x00, 0x08, 0x00, 0x00, 0x00, 0x3e, 0x80, 0x00, 0x1f, 0x40})
+	var want any
+	if err := json.Unmarshal([]byte(`{"label_index":{"last_index":164},`+
+		`"originator_srgb":{"srgb":[{"first":16000,"number":8000}]},`+
+		`"srv6_l3_service":{"sub_tlvs":{"1":[{"sid":"2001:db8:1:1::","endpoint_behavior":19},`+
+		`{"sid":"2001:db8:1:1::2","endpoint_behavior":19,"sub_sub_tlvs":{"1":[{"locator_block_length":40,`+
+		`"locator_node_length":24,"function_length":16,"argument_length":0,"transposition_length":16,`+
+		`"transposition_offset":64}]}}]}}}`), &want); err != nil {
+		t.Fatalf("json.Unmarshal(wanted prefix_sid) error = %v, want nil", err)
+	}
+
+	for i, payload := range srv6VPNPayloads(t, psid, false) {
+		var got struct {
+			Action    string `json:"action"`
+			Prefix    string `json:"prefix"`
+			PrefixSID any    `json:"prefix_sid"`
+			BaseAttrs struct {
+				PrefixSID any `json:"prefix_sid"`
+			} `json:"base_attrs"`
+		}
+		if err := json.Unmarshal(payload, &got); err != nil {
+			t.Fatalf("producingWorker(%x) payload %s: decode error %v, want a route", psid, payload, err)
+		}
+		wantPrefix := []string{"10.0.0.0", "10.0.1.0"}[i]
+		if got.Action != "add" || got.Prefix != wantPrefix {
+			t.Errorf("producingWorker(%x) = %s %s, want add %s", psid, got.Action, got.Prefix, wantPrefix)
+		}
+		if !reflect.DeepEqual(got.PrefixSID, want) {
+			t.Errorf("producingWorker(%x) prefix_sid = %v, want %v", psid, got.PrefixSID, want)
+		}
+		if !reflect.DeepEqual(got.BaseAttrs.PrefixSID, want) {
+			t.Errorf("producingWorker(%x) base_attrs.prefix_sid = %v, want %v", psid, got.BaseAttrs.PrefixSID, want)
+		}
+	}
+}
+
+func TestWellFormedSRv6L3ServiceIsPublishedOnEveryRoute(t *testing.T) {
 	const structure = `{"locator_block_length":40,"locator_node_length":24,"function_length":16,` +
 		`"argument_length":0,"transposition_length":16,"transposition_offset":64}`
 	other := srv6InfoFixed()
@@ -197,6 +242,13 @@ func TestValidSRv6L3ServiceIsPublishedOnEveryRoute(t *testing.T) {
 			wantSubSubs: `,"sub_sub_tlvs":{"1":[` + structure + `]}`},
 		{name: "an unknown Sub-Sub-TLV of length zero is published empty", tail: []byte{0x02, 0x00, 0x00},
 			wantSubSubs: `,"sub_sub_tlvs":{"2":[""]}`},
+		{name: "a SID Structure of length zero is left out", tail: []byte{0x01, 0x00, 0x00}},
+		{name: "a SID Structure of length five is left out", tail: srv6ShortSIDStructure()},
+		{name: "a SID Structure of length seven is left out",
+			tail: []byte{0x01, 0x00, 0x07, 40, 24, 16, 0, 16, 64, 0}},
+		{name: "a SID Structure after one of the wrong length is published",
+			tail:        slices.Concat(srv6ShortSIDStructure(), srv6SIDStructure()),
+			wantSubSubs: `,"sub_sub_tlvs":{"1":[` + structure + `]}`},
 		{name: "a second valid L3 Service TLV is ignored", later: srv6PrefixSIDValue(srv6InfoSubTLV(other))},
 		{name: "a second malformed L3 Service TLV is ignored",
 			later: srv6PrefixSIDValue(srv6InfoSubTLV(other[:20]))},

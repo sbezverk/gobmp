@@ -9,8 +9,9 @@ Message updates and major project changes should be documented here.
 #### Fixed
 
 - A truncated Sub-Sub-TLV inside an SRv6 SID Information Sub-TLV no longer panics or reads the octets that follow it. The decoded Prefix-SID is rejected instead
-- Now also rejected: an SRv6 SID Information Sub-TLV of 20 octets (RFC 9252 §7), one or two octets left after its 21 fixed octets, and a SID Structure Sub-Sub-TLV whose length is not 6 (RFC 9252 §3.2.1)
-- A rejected attribute drops only the decoded `prefix_sid` and `base_attrs.prefix_sid`, including any Label-Index and SRGB in it. `base_attrs.bgp_prefix_sid` is not affected by these checks. Routes are still published as `add`, because treat-as-withdraw is not implemented. MUP ISD and DSD announcements with a rejected attribute are not published
+- Now also rejected: an SRv6 SID Information Sub-TLV of 20 octets (RFC 9252 §7), and one or two octets left after its 21 fixed octets
+- A SID Structure Sub-Sub-TLV whose length is not 6 (RFC 9252 §3.2.1) but fits in its Sub-TLV is logged and left out of the output, and the rest of the attribute is kept (RFC 9252 §7). Before, a shorter one rejected the attribute and a longer one was decoded from its first 6 octets
+- A rejected attribute drops only the decoded `prefix_sid` and `base_attrs.prefix_sid`, including any Label-Index and SRGB in it. `base_attrs.bgp_prefix_sid` is not affected by these checks. Announcements are still published as `add`, because treat-as-withdraw is not implemented. MUP ISD and DSD announcements with a rejected attribute are not published
 - Only the first SRv6 L3 Service TLV in the attribute is used; later ones are ignored, even if empty or malformed, but must still fit within the attribute (RFC 9252 §7)
 
 ### 2026-11-13

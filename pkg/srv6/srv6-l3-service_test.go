@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -42,6 +43,65 @@ func TestUnmarshalSRv6L3ServiceSubSubTLV_LengthPastTheEndIsRejected(t *testing.T
 		t.Run(fmt.Sprintf("input cut to %d octets is rejected", n), func(t *testing.T) {
 			if got, err := UnmarshalSRv6L3ServiceSubSubTLV(wire[:n]); err == nil {
 				t.Errorf("UnmarshalSRv6L3ServiceSubSubTLV(%x) = %v, want an error", wire[:n], got)
+			}
+		})
+	}
+}
+
+func TestUnmarshalSRv6L3ServiceSubSubTLV_SIDStructureOfWrongLength(t *testing.T) {
+	// RFC 9252 §7: only a length that does not fit the enclosing Sub-TLV makes a
+	// Sub-Sub-TLV malformed.
+	var (
+		reserved   = []byte{0x00}
+		empty      = []byte{0x01, 0x00, 0x00}
+		short      = []byte{0x01, 0x00, 0x05, 40, 24, 16, 0, 16}
+		long       = []byte{0x01, 0x00, 0x07, 40, 24, 16, 0, 16, 64, 0}
+		valid      = []byte{0x01, 0x00, 0x06, 40, 24, 16, 0, 16, 64}
+		unknown    = []byte{0x02, 0x00, 0x01, 0xaa}
+		overrun    = []byte{0x01, 0x00, 0x06, 40}
+		shortStart = []byte{0x01, 0x00}
+	)
+	structure := &SIDStructureSubSubTLV{LocalBlockLength: 40, LocalNodeLength: 24, FunctionLength: 16,
+		TranspositionLength: 16, TranspositionOffset: 64}
+	onlyStructure := map[uint8][]SvcSubSubTLV{1: {structure}}
+	nothing := map[uint8][]SvcSubSubTLV{}
+	tests := []struct {
+		name    string
+		input   []byte
+		want    map[uint8][]SvcSubSubTLV
+		wantErr bool
+	}{
+		{name: "leaves out a SID Structure of length zero",
+			input: slices.Concat(reserved, empty), want: nothing},
+		{name: "leaves out a SID Structure of length five",
+			input: slices.Concat(reserved, short), want: nothing},
+		{name: "leaves out a SID Structure of length seven",
+			input: slices.Concat(reserved, long), want: nothing},
+		{name: "decodes a valid SID Structure after an empty one",
+			input: slices.Concat(reserved, empty, valid), want: onlyStructure},
+		{name: "decodes a valid SID Structure after a short one",
+			input: slices.Concat(reserved, short, valid), want: onlyStructure},
+		{name: "decodes a valid SID Structure after a long one",
+			input: slices.Concat(reserved, long, valid), want: onlyStructure},
+		{name: "keeps a valid SID Structure before a long one",
+			input: slices.Concat(reserved, valid, long), want: onlyStructure},
+		{name: "keeps an unknown Sub-Sub-TLV after a short SID Structure",
+			input: slices.Concat(reserved, short, unknown),
+			want:  map[uint8][]SvcSubSubTLV{2: {[]byte{0xaa}}}},
+		{name: "rejects an overrunning length after a short SID Structure",
+			input: slices.Concat(reserved, short, overrun), wantErr: true},
+		{name: "rejects a truncated header after a long SID Structure",
+			input: slices.Concat(reserved, long, shortStart), wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := UnmarshalSRv6L3ServiceSubSubTLV(tt.input)
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("UnmarshalSRv6L3ServiceSubSubTLV(%x) error = %v, want error: %t", tt.input, err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("UnmarshalSRv6L3ServiceSubSubTLV(%x) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
 	}

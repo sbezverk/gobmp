@@ -241,9 +241,10 @@ func UnmarshalSRv6L3ServiceSubTLV(b []byte) (map[uint8][]SvcSubTLV, error) {
 	return m, nil
 }
 
-// UnmarshalSRv6L3ServiceSubSubTLV instantiates L3 Service Sub TLV
+// UnmarshalSRv6L3ServiceSubSubTLV decodes the Sub-Sub-TLVs which follow the
+// reserved octet in b, keyed by type. A SID Structure whose length is not 6 is
+// logged and left out. A header or length running past the end of b is an error.
 func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8][]SvcSubSubTLV, error) {
-	var err error
 	m := make(map[uint8][]SvcSubSubTLV)
 	for p := 1; p < len(b); {
 		if p+3 > len(b) {
@@ -259,9 +260,15 @@ func UnmarshalSRv6L3ServiceSubSubTLV(b []byte) (map[uint8][]SvcSubSubTLV, error)
 		var s SvcSubSubTLV
 		switch t {
 		case 1:
-			if s, err = UnmarshalSIDStructureSubSubTLV(b[p : p+int(l)]); err != nil {
-				return nil, err
+			structure, err := UnmarshalSIDStructureSubSubTLV(b[p : p+int(l)])
+			if err != nil {
+				// RFC 9252 §7: a length which fits the enclosing Sub-TLV does not
+				// make a Sub-Sub-TLV malformed, so only this entry is dropped.
+				glog.Errorf("ignoring srv6 L3 Service sub-sub-TLV at offset %d: %v", p-3, err)
+				p += int(l)
+				continue
 			}
+			s = structure
 		default:
 			s = make([]byte, l)
 			copy(s.([]byte), b[p:p+int(l)])
