@@ -4,6 +4,13 @@ Message updates and major project changes should be documented here.
 
 ## [Unreleased]
 
+### 2026-11-27
+
+#### Fixed
+
+- SRv6 SID Structure TLV 1252 (RFC 9514 §8) with a length other than 4 is rejected: `srv6_sid_structure`, or the End.X SID TLV 1106 carrying it, is omitted. A value shorter than 4 octets previously crashed the process
+- An invalid SRv6 End.X SID TLV 1106 no longer removes the whole `srv6_endx_sid` list from link messages: only that TLV is skipped
+
 ### 2026-11-13
 
 #### Added
