@@ -3,6 +3,7 @@ package message
 import (
 	"encoding/binary"
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -55,6 +56,44 @@ func messageSRPolicyStateUpdateWithSegmentList() *bgp.Update {
 		AttributeType: 29,
 		Attribute:     value,
 	}}}
+}
+
+func TestLSSrPolicyCandidatePathPublishesSegmentListFlags(t *testing.T) {
+	// RFC 9857 Section 5.7: Flags D, E, C and V set, MTID 2, Algorithm 128,
+	// Weight 10.
+	segmentList := []byte{0xf0, 0x00, 0x00, 0x00, 0x00, 0x02, 0x80, 0x00, 0x00, 0x00, 0x00, 0x0a}
+	update := &bgp.Update{PathAttributes: []bgp.PathAttribute{{
+		AttributeType: 29,
+		Attribute:     messageSRPolicyStateTLV(1205, segmentList),
+	}}}
+	ph := makePeerHeader(t, bmp.PeerType0, 0)
+	p := &producer{}
+
+	msg, err := p.lsSSRPolicyCandidatePath(messageSRPolicyCandidatePathNLRI(), "192.0.2.9", 0, ph, update)
+	if err != nil {
+		t.Fatalf("lsSSRPolicyCandidatePath() error = %v", err)
+	}
+	payload, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	var published struct {
+		PolicyState struct {
+			SegmentLists []map[string]any `json:"segment_lists"`
+		} `json:"policy_state"`
+	}
+	if err := json.Unmarshal(payload, &published); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+
+	want := []map[string]any{{
+		"d_flag": true, "e_flag": true, "c_flag": true, "v_flag": true,
+		"r_flag": false, "f_flag": false, "a_flag": false, "t_flag": false, "m_flag": false,
+		"mtid": float64(2), "algo": float64(128), "weight": float64(10),
+	}}
+	if got := published.PolicyState.SegmentLists; !reflect.DeepEqual(got, want) {
+		t.Errorf("published segment lists = %v, want %v", got, want)
+	}
 }
 
 func TestLSSrPolicyCandidatePathIncludesPolicyState(t *testing.T) {

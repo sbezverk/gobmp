@@ -2,6 +2,7 @@ package bgpls
 
 import (
 	"encoding/binary"
+	"reflect"
 	"testing"
 )
 
@@ -158,13 +159,11 @@ func TestGetSRCandidatePathConstraints_NotFound(t *testing.T) {
 
 // TestGetSRSegmentList verifies GetSRSegmentList parses TLV type 1205.
 func TestGetSRSegmentList(t *testing.T) {
-	// 12-byte minimum: reserved(1), flags(1), flags2(1), reserved(1), MTID(2), Algo(1), reserved(1), Weight(4)
-	// flags byte at offset 1: all clear
+	// RFC 9857 Section 5.7, 12-byte minimum: Flags(2), RESERVED1(2), MTID(2),
+	// Algorithm(1), RESERVED2(1), Weight(4)
 	value := []byte{
-		0x00,       // reserved
-		0x00,       // flags byte
-		0x00,       // flags2 (FlagM)
-		0x00,       // reserved
+		0x00, 0x00, // Flags, all clear
+		0x00, 0x00, // RESERVED1
 		0x00, 0x00, // MTID = 0
 		0x00,                   // Algo = 0
 		0x00,                   // reserved
@@ -189,10 +188,61 @@ func TestGetSRSegmentList(t *testing.T) {
 	}
 }
 
+// TestUnmarshalSRSegmentListFlags verifies each flag bit position of
+// RFC 9857 Section 5.7 and the fixed fields that follow the flags.
+func TestUnmarshalSRSegmentListFlags(t *testing.T) {
+	tests := []struct {
+		name  string
+		flags uint16
+		want  SRSegmentList
+	}{
+		{name: "sets no flag when all bits are clear", flags: 0x0000},
+		{name: "sets D from bit 0", flags: 0x8000, want: SRSegmentList{FlagD: true}},
+		{name: "sets E from bit 1", flags: 0x4000, want: SRSegmentList{FlagE: true}},
+		{name: "sets C from bit 2", flags: 0x2000, want: SRSegmentList{FlagC: true}},
+		{name: "sets V from bit 3", flags: 0x1000, want: SRSegmentList{FlagV: true}},
+		{name: "sets R from bit 4", flags: 0x0800, want: SRSegmentList{FlagR: true}},
+		{name: "sets F from bit 5", flags: 0x0400, want: SRSegmentList{FlagF: true}},
+		{name: "sets A from bit 6", flags: 0x0200, want: SRSegmentList{FlagA: true}},
+		{name: "sets T from bit 7", flags: 0x0100, want: SRSegmentList{FlagT: true}},
+		{name: "sets M from bit 8", flags: 0x0080, want: SRSegmentList{FlagM: true}},
+		{name: "sets all nine flags", flags: 0xff80, want: SRSegmentList{
+			FlagD: true, FlagE: true, FlagC: true, FlagV: true, FlagR: true,
+			FlagF: true, FlagA: true, FlagT: true, FlagM: true,
+		}},
+		{name: "ignores the undefined bits 9 to 15", flags: 0x007f},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			value := []byte{
+				0x00, 0x00, // Flags, filled in below
+				0xff, 0xff, // RESERVED1, ignored by a receiver
+				0x00, 0x02, // MTID = 2
+				0x80,                   // Algorithm = 128
+				0xff,                   // RESERVED2, ignored by a receiver
+				0x00, 0x00, 0x00, 0x0a, // Weight = 10
+			}
+			binary.BigEndian.PutUint16(value, tc.flags)
+			want := tc.want
+			want.MTID, want.Algo, want.Weight = 2, 128, 10
+
+			got, err := UnmarshalSRSegmentList(value)
+
+			if err != nil {
+				t.Fatalf("UnmarshalSRSegmentList(%#x) error = %v", value, err)
+			}
+			if !reflect.DeepEqual(*got, want) {
+				t.Errorf("UnmarshalSRSegmentList(%#x) = %+v, want %+v", value, *got, want)
+			}
+		})
+	}
+}
+
 // TestGetSRSegmentList_Multiple verifies multiple segment lists are returned.
 func TestGetSRSegmentList_Multiple(t *testing.T) {
 	value := []byte{
-		0x00, 0x00, 0x00, 0x00, // reserved + flags
+		0x00, 0x00, 0x00, 0x00, // Flags + RESERVED1
 		0x00, 0x00, // MTID
 		0x00, 0x00, // Algo + reserved
 		0x00, 0x00, 0x00, 0x05, // Weight = 5
