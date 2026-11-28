@@ -365,6 +365,42 @@ func TestLabeledUnicastPrefixSIDDiscardLeavesOtherRoutesAlone(t *testing.T) {
 	}
 }
 
+// With no other TLV left, no empty prefix_sid object is published.
+func TestPrefixSIDHoldingOnlyBadTLVLengthsIsOmitted(t *testing.T) {
+	shortLabelIndex := []byte{0x01, 0x00, 0x06, 0, 0, 0, 0, 0, 0}
+	shortSRGB := []byte{0x03, 0x00, 0x01, 0}
+	tests := []struct {
+		name string
+		psid []byte
+	}{
+		{"a Label-Index of length six", shortLabelIndex},
+		{"an Originator SRGB of length one", shortSRGB},
+		{"a bad Label-Index beside a bad Originator SRGB", slices.Concat(shortLabelIndex, shortSRGB)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name+" publishes no prefix_sid", func(t *testing.T) {
+			check := func(family, action string, payloads [][]byte) {
+				t.Helper()
+				for _, payload := range payloads {
+					got := decodeSRv6Route(t, payload)
+					if got.Action != action || got.PrefixSID != nil || got.BaseAttrs["prefix_sid"] != nil {
+						t.Errorf("producingWorker(%x) %s action, prefix_sid, base_attrs.prefix_sid = %q, %v, %v, want %q, none, none",
+							tt.psid, family, got.Action, got.PrefixSID, got.BaseAttrs["prefix_sid"], action)
+					}
+				}
+			}
+			attr := benchPathAttr(benchOptionalTra, 40, tt.psid)
+			check("VPNv4", "add", srv6VPNPayloads(t, 1, tt.psid, false))
+			check("VPNv4", "del", srv6VPNPayloads(t, 1, tt.psid, true))
+			check("VPNv6", "add", srv6VPNPayloads(t, 2, tt.psid, false))
+			check("unicast IPv4", "add", srv6Payloads(t, bmp.UnicastPrefixV4Msg, append(benchCommonAttrs(nil),
+				benchMPReach(1, 1, benchV4NH, benchRepeat(2, benchV4Prefix)), attr)))
+			check("labeled unicast IPv4", "add", srv6Payloads(t, bmp.UnicastPrefixV4Msg, append(benchCommonAttrs(nil),
+				benchMPReach(1, 4, benchV4NH, benchRepeat(2, benchLUPrefix)), attr)))
+		})
+	}
+}
+
 // A MUP discovery route needs the SRv6 SID, which a bad Label-Index must not
 // take away (RFC 8669 §3.1).
 func TestBadLabelIndexLeavesMUPDiscoveryRoutesAnnounced(t *testing.T) {
@@ -529,7 +565,7 @@ func TestAttrSetWithMalformedPrefixSIDWithdrawsRoutes(t *testing.T) {
 			embedded: [][]byte{prefixSID(slices.Concat(shortLabelIndex, service)...)},
 			want:     `{` + srv6ServiceJSON + `}`},
 		{name: "an Originator SRGB of length one stays announced",
-			embedded: [][]byte{prefixSID(0x03, 0x00, 0x01, 0)}, want: `{}`},
+			embedded: [][]byte{prefixSID(0x03, 0x00, 0x01, 0)}, want: `null`},
 		{name: "a later malformed Prefix-SID is ignored", embedded: [][]byte{valid, badService}},
 		{name: "a malformed SRv6 Service TLV withdraws", embedded: [][]byte{badService}, malformed: true},
 		{name: "a malformed SRv6 Service TLV after a Label-Index of length six withdraws",

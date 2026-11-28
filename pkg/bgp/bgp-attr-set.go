@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"slices"
 )
 
 // errAttrSetNested marks a nested ATTR_SET: unsupported, not malformed (RFC 6368 §5).
@@ -116,17 +115,13 @@ func UnmarshalAttrSet(b []byte) (*AttrSet, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ATTR_SET: failed to build BaseAttributes from embedded attributes: %w", err)
 	}
-	// The first Prefix-SID attribute is malformed when the prefixsid decoder
-	// returns no result for it: it cannot be parsed (RFC 8669 §6) or holds a
-	// malformed SRv6 Service TLV (RFC 9252 §7). An empty attribute yields an
-	// empty, non-nil result, and so does one holding only a Label-Index or
-	// Originator SRGB of a rejected length, which are ignored outside labeled
-	// unicast (RFC 8669 §3.1, §3.2).
-	prefixSIDMalformed := baseAttrs.PrefixSID == nil &&
-		slices.ContainsFunc(inner, func(a PathAttribute) bool { return a.AttributeType == 40 })
 	// RFC 6368 §5: malformed embedded attributes make the ATTR_SET malformed.
+	// The first Prefix-SID attribute is malformed when it cannot be parsed
+	// (RFC 8669 §6) or holds a malformed SRv6 Service TLV (RFC 9252 §7), not for
+	// a Label-Index or Originator SRGB of a rejected length, which are ignored
+	// outside labeled unicast (RFC 8669 §3.1, §3.2).
 	if baseAttrs.DPathMalformed || baseAttrs.PEDistinguisherLabelsMalformed ||
-		baseAttrs.TunnelEncapMalformed || baseAttrs.NHCMalformed || prefixSIDMalformed {
+		baseAttrs.TunnelEncapMalformed || baseAttrs.NHCMalformed || baseAttrs.prefixSIDMalformed {
 		return nil, fmt.Errorf("ATTR_SET: embedded attribute is malformed")
 	}
 	if nested {

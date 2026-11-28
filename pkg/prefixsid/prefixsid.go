@@ -55,13 +55,18 @@ func (p *PSid) IsEmpty() bool {
 // requires treat-as-withdraw (RFC 9252 §7).
 var ErrSRv6ServiceMalformed = errors.New("malformed SRv6 Service TLV")
 
+// ErrTLVLength marks a Label-Index or Originator SRGB TLV of an invalid length,
+// which does not make the attribute unparseable.
+var ErrTLVLength = errors.New("invalid prefix SID TLV length")
+
 // UnmarshalBGPAttrPrefixSID instantiates a prefix sid object. A Label-Index or
-// Originator SRGB TLV of an invalid length is reported with a result holding the
-// other TLVs: only labeled unicast discards the attribute for it (RFC 8669 §6),
-// other families ignore the TLV (RFC 8669 §3.1, §3.2). Any other error returns
-// no result, and a malformed SRv6 Service TLV is reported as
-// ErrSRv6ServiceMalformed in preference to a length error. The content of the
-// SRv6 L2 Service TLV is validated but not returned.
+// Originator SRGB TLV of an invalid length is reported as ErrTLVLength with a
+// result holding the other TLVs, or no result if that would be empty: only
+// labeled unicast discards the attribute for it (RFC 8669 §6), other families
+// ignore the TLV (RFC 8669 §3.1, §3.2). Any other error returns no result, and a
+// malformed SRv6 Service TLV is reported as ErrSRv6ServiceMalformed in
+// preference to a length error. The content of the SRv6 L2 Service TLV is
+// validated but not returned.
 func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 	if glog.V(6) {
 		glog.Infof("UnmarshalBGPAttrPrefixSID Raw: %+v", tools.MessageHex(b))
@@ -185,6 +190,12 @@ func UnmarshalBGPAttrPrefixSID(b []byte) (*PSid, error) {
 				return nil, fmt.Errorf("prefix SID unknown TLV value truncated at offset %d: need %d bytes, have %d", p, l, len(b)-p)
 			}
 			p += l
+		}
+	}
+	if lengthErr != nil {
+		lengthErr = fmt.Errorf("%w: %w", ErrTLVLength, lengthErr)
+		if psid.IsEmpty() {
+			return nil, lengthErr
 		}
 	}
 	return &psid, lengthErr

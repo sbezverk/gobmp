@@ -121,6 +121,10 @@ type BaseAttributes struct {
 	// validation on receipt uses a non-allocating walk; this cache is populated
 	// on the first detailed decode requested by a producer.
 	bgplsParsed *bgpls.NLRI `json:"-"`
+
+	// prefixSIDMalformed reports a Prefix-SID attribute which cannot be parsed
+	// or holds a malformed SRv6 Service TLV. UnmarshalAttrSet reads it.
+	prefixSIDMalformed bool
 }
 
 // UnknownPathAttribute is the raw form of a BGP path attribute that
@@ -510,6 +514,7 @@ func unmarshalBaseAttrsFromSlice(attrs []PathAttribute, as4hint *bool) (*BaseAtt
 			baseAttr.PrefixSID, err = prefixsid.UnmarshalBGPAttrPrefixSID(b)
 			if err != nil {
 				baseAttr.SRv6ServiceMalformed = errors.Is(err, prefixsid.ErrSRv6ServiceMalformed)
+				baseAttr.prefixSIDMalformed = !errors.Is(err, prefixsid.ErrTLVLength)
 				glog.Errorf("failed to unmarshal Prefix-SID attribute with error: %+v", err)
 			}
 		case 128:

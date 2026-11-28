@@ -183,8 +183,8 @@ func TestUnmarshalBGPAttrPrefixSIDRejectsBadL3ServiceTLVs(t *testing.T) {
 
 // RFC 9252 §7 and RFC 8669 §6 call for different error handling, so only a
 // malformed SRv6 Service TLV is reported as ErrSRv6ServiceMalformed. A bad
-// Label-Index or SRGB length also returns the rest of the attribute, which
-// families other than labeled unicast publish (RFC 8669 §3.1, §3.2).
+// Label-Index or SRGB length also returns the rest of the attribute, if any,
+// which families other than labeled unicast publish (RFC 8669 §3.1, §3.2).
 func TestUnmarshalBGPAttrPrefixSIDTellsSRv6ServiceErrorsApart(t *testing.T) {
 	l3Only := &PSid{SRv6L3Service: &srv6.L3Service{SubTLVs: map[uint8][]srv6.SvcSubTLV{
 		1: {&srv6.InformationSubTLV{SID: "2001:db8::1", EndpointBehavior: 19}},
@@ -201,11 +201,12 @@ func TestUnmarshalBGPAttrPrefixSIDTellsSRv6ServiceErrorsApart(t *testing.T) {
 		validL2        = append([]byte{0x06}, firstL3ServiceTLV[1:]...)
 	)
 	tests := []struct {
-		name        string
-		input       []byte
-		wantService bool // an ErrSRv6ServiceMalformed error
-		wantErr     string
-		want        *PSid // returned beside the error
+		name          string
+		input         []byte
+		wantService   bool // an ErrSRv6ServiceMalformed error
+		wantLengthErr bool // an ErrTLVLength error
+		wantErr       string
+		want          *PSid // returned beside the error
 	}{
 		{name: "a zero-length L2 TLV", input: badL2, wantService: true,
 			wantErr: "SRv6 L2 service TLV at offset 0 has zero length"},
@@ -225,19 +226,20 @@ func TestUnmarshalBGPAttrPrefixSIDTellsSRv6ServiceErrorsApart(t *testing.T) {
 			wantService: true, wantErr: "L2 service"},
 		{name: "a malformed L3 TLV after a valid L2 TLV", input: slices.Concat(validL2, badL3),
 			wantService: true, wantErr: "L3 service"},
-		{name: "a Label-Index of length six", input: shortLabelIndex, wantErr: "label index TLV length 6",
-			want: &PSid{}},
-		{name: "a Label-Index of length eight", input: longLabelIndex, wantErr: "label index TLV length 8",
-			want: &PSid{}},
-		{name: "an Originator SRGB of length one", input: shortSRGB, wantErr: "originator SRGB length too short",
-			want: &PSid{}},
+		{name: "a Label-Index of length six", input: shortLabelIndex, wantLengthErr: true,
+			wantErr: "label index TLV length 6"},
+		{name: "a Label-Index of length eight", input: longLabelIndex, wantLengthErr: true,
+			wantErr: "label index TLV length 8"},
+		{name: "an Originator SRGB of length one", input: shortSRGB, wantLengthErr: true,
+			wantErr: "originator SRGB length too short"},
 		{name: "a Label-Index of length six before a valid L3 TLV",
-			input: slices.Concat(shortLabelIndex, firstL3ServiceTLV), wantErr: "label index TLV length 6", want: l3Only},
+			input: slices.Concat(shortLabelIndex, firstL3ServiceTLV), wantLengthErr: true,
+			wantErr: "label index TLV length 6", want: l3Only},
 		{name: "a short Originator SRGB after a Label-Index", input: slices.Concat(labelIndex, shortSRGB),
-			wantErr: "originator SRGB length too short",
-			want:    &PSid{LabelIndex: &LabelIndexTLV{Type: 1, Length: 7, LabelIndex: 164}}},
-		{name: "each of two bad TLVs", input: slices.Concat(shortLabelIndex, shortSRGB),
-			wantErr: "length 6, want 7\nprefix SID originator SRGB length too short", want: &PSid{}},
+			wantLengthErr: true, wantErr: "originator SRGB length too short",
+			want: &PSid{LabelIndex: &LabelIndexTLV{Type: 1, Length: 7, LabelIndex: 164}}},
+		{name: "each of two bad TLVs", input: slices.Concat(shortLabelIndex, shortSRGB), wantLengthErr: true,
+			wantErr: "length 6, want 7\nprefix SID originator SRGB length too short"},
 		{name: "a TLV running past the end after a Label-Index of length six",
 			input: slices.Concat(shortLabelIndex, overrun), wantErr: "unknown TLV value truncated"},
 		{name: "a malformed L3 TLV after a Label-Index of length six",
@@ -262,6 +264,9 @@ func TestUnmarshalBGPAttrPrefixSIDTellsSRv6ServiceErrorsApart(t *testing.T) {
 			}
 			if isService := errors.Is(err, ErrSRv6ServiceMalformed); isService != tc.wantService {
 				t.Errorf("errors.Is(%v, ErrSRv6ServiceMalformed) = %t, want %t", err, isService, tc.wantService)
+			}
+			if isLength := errors.Is(err, ErrTLVLength); isLength != tc.wantLengthErr {
+				t.Errorf("errors.Is(%v, ErrTLVLength) = %t, want %t", err, isLength, tc.wantLengthErr)
 			}
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("UnmarshalBGPAttrPrefixSID(%x) = %+v, want %+v", tc.input, got, tc.want)

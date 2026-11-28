@@ -26,8 +26,7 @@ func TestBaseAttributesSRv6ServiceMalformed(t *testing.T) {
 	}{
 		{name: "a malformed L3 Service TLV sets the flag", attrs: [][]byte{badL3}, want: true, wantLegacy: true},
 		{name: "a malformed L2 Service TLV sets the flag", attrs: [][]byte{badL2}, want: true, wantLegacy: true},
-		{name: "a bad Label-Index length leaves a decoded prefix_sid", attrs: [][]byte{shortLabelIndex},
-			wantSID: true},
+		{name: "a lone bad Label-Index length publishes no prefix_sid", attrs: [][]byte{shortLabelIndex}},
 		{name: "an unparseable attribute publishes no prefix_sid", attrs: [][]byte{overrun}},
 		{name: "a valid attribute leaves the flag unset", attrs: [][]byte{labelIndex}, wantLegacy: true, wantSID: true},
 		{name: "a later malformed attribute is ignored", attrs: [][]byte{labelIndex, badL3},
@@ -63,7 +62,8 @@ func TestBaseAttributesSRv6ServiceMalformed(t *testing.T) {
 // the caller can apply the rule of the route's address family (RFC 8669 §3.1).
 func TestGetAttrPrefixSIDReturnsTheRestWithTheError(t *testing.T) {
 	update := &Update{PathAttributes: []PathAttribute{
-		{AttributeType: 40, Attribute: []byte{0x01, 0x00, 0x06, 0, 0, 0, 0, 0, 0}},
+		// The short Label-Index is followed by an Originator SRGB TLV.
+		{AttributeType: 40, Attribute: []byte{0x01, 0x00, 0x06, 0, 0, 0, 0, 0, 0, 0x03, 0x00, 0x02, 0, 0}},
 	}}
 	got, err := update.GetAttrPrefixSID()
 	if err == nil || got == nil || got.LabelIndex != nil {
