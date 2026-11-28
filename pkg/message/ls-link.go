@@ -120,14 +120,19 @@ func populateLSLinkAttributes(msg *LSLink, update *bgp.Update, spf bool) {
 		// (1029/1031) router-ID TLVs are chosen by which TLV is present, never
 		// by the BMP peer's address family (V-flag) - both local and remote
 		// auxiliary router-IDs MUST be included independently of peer
-		// transport. Prefer IPv4, fall back to IPv6.
-		msg.RouterID = lslink.GetLocalIPv4RouterID()
+		// transport. Each TLV has its own field; router_id and
+		// remote_router_id prefer IPv4 and fall back to IPv6.
+		msg.LocalIPv4RouterID = lslink.GetLocalIPv4RouterID()
+		msg.LocalIPv6RouterID = lslink.GetLocalIPv6RouterID()
+		msg.RemoteIPv4RouterID = lslink.GetRemoteIPv4RouterID()
+		msg.RemoteIPv6RouterID = lslink.GetRemoteIPv6RouterID()
+		msg.RouterID = msg.LocalIPv4RouterID
 		if msg.RouterID == "" {
-			msg.RouterID = lslink.GetLocalIPv6RouterID()
+			msg.RouterID = msg.LocalIPv6RouterID
 		}
-		msg.RemoteRouterID = lslink.GetRemoteIPv4RouterID()
+		msg.RemoteRouterID = msg.RemoteIPv4RouterID
 		if msg.RemoteRouterID == "" {
-			msg.RemoteRouterID = lslink.GetRemoteIPv6RouterID()
+			msg.RemoteRouterID = msg.RemoteIPv6RouterID
 		}
 		if msd, err := lslink.GetLinkMSD(); err == nil {
 			msg.LinkMSD = msd

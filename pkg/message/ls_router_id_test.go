@@ -2,6 +2,8 @@ package message
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
 	"testing"
 
 	"github.com/sbezverk/gobmp/pkg/base"
@@ -147,6 +149,233 @@ func TestLSLink_RouterID_ByTLVPresence(t *testing.T) {
 				t.Errorf("RemoteRouterID = %q, want %q", msg.RemoteRouterID, tt.wantRemote)
 			}
 		})
+	}
+}
+
+// linkRouterIDs lists the router-ID values expected in published ls_link JSON.
+// An empty value means the field must be omitted.
+type linkRouterIDs struct {
+	local, remote          string
+	localIPv4, localIPv6   string
+	remoteIPv4, remoteIPv6 string
+}
+
+// assertPublishedLinkRouterIDs checks the single published ls_link message.
+func assertPublishedLinkRouterIDs(t *testing.T, rec *recordingPublisher, wantAction string, want linkRouterIDs) {
+	t.Helper()
+	if len(rec.msgs) != 1 || rec.msgs[0].msgType != bmp.LSLinkMsg {
+		t.Fatalf("published messages = %+v, want one ls_link", rec.msgs)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(rec.msgs[0].payload, &fields); err != nil {
+		t.Fatalf("unmarshal ls_link JSON: %v", err)
+	}
+	if fields["action"] != wantAction {
+		t.Errorf("action = %v, want %q", fields["action"], wantAction)
+	}
+	for name, value := range map[string]string{
+		"router_id":             want.local,
+		"remote_router_id":      want.remote,
+		"local_ipv4_router_id":  want.localIPv4,
+		"local_ipv6_router_id":  want.localIPv6,
+		"remote_ipv4_router_id": want.remoteIPv4,
+		"remote_ipv6_router_id": want.remoteIPv6,
+	} {
+		got, present := fields[name]
+		if value == "" {
+			if present {
+				t.Errorf("%s = %v, want field omitted", name, got)
+			}
+			continue
+		}
+		if got != value {
+			t.Errorf("%s = %v, want %q", name, got, value)
+		}
+	}
+}
+
+// linkRouterIDTLVs builds TLVs 1028-1031 with the given value lengths.
+func linkRouterIDTLVs(ipv4Length, ipv6Length int) []lsSPFTLV {
+	resize := func(value []byte, length int) []byte {
+		return append(value, make([]byte, 17)...)[:length]
+	}
+	return []lsSPFTLV{
+		{1028, resize([]byte{10, 0, 0, 1}, ipv4Length)},
+		{1029, resize(net.ParseIP("2001:db8::1"), ipv6Length)},
+		{1030, resize([]byte{192, 168, 1, 1}, ipv4Length)},
+		{1031, resize(net.ParseIP("2001:db8::2"), ipv6Length)},
+	}
+}
+
+var dualStackLinkRouterIDs = linkRouterIDs{
+	local: "10.0.0.1", remote: "192.168.1.1",
+	localIPv4: "10.0.0.1", localIPv6: "2001:db8::1",
+	remoteIPv4: "192.168.1.1", remoteIPv6: "2001:db8::2",
+}
+
+// TestProcessMPUpdateLSLinkRouterIDsPerFamily decodes SAFI 71 Link NLRIs and
+// BGP-LS Attribute TLVs 1028-1031 from wire bytes. RFC 9552 Section 5.3.2.1:
+// "All auxiliary Router-IDs of both the local and the remote node MUST be
+// included in the link attribute of each Link NLRI."
+func TestProcessMPUpdateLSLinkRouterIDsPerFamily(t *testing.T) {
+	dual := linkRouterIDTLVs(4, 16)
+	ipv4Only := linkRouterIDs{
+		local: "10.0.0.1", remote: "192.168.1.1",
+		localIPv4: "10.0.0.1", remoteIPv4: "192.168.1.1",
+	}
+	ipv6Only := linkRouterIDs{
+		local: "2001:db8::1", remote: "2001:db8::2",
+		localIPv6: "2001:db8::1", remoteIPv6: "2001:db8::2",
+	}
+	tests := []struct {
+		name string
+		tlvs []lsSPFTLV
+		want linkRouterIDs
+	}{
+		{"publishes both families of a dual-stack link", dual, dualStackLinkRouterIDs},
+		{"publishes only IPv4 fields for an IPv4 link", []lsSPFTLV{dual[0], dual[2]}, ipv4Only},
+		{"publishes only IPv6 fields for an IPv6 link", []lsSPFTLV{dual[1], dual[3]}, ipv6Only},
+		{"fills each side from its own TLV", []lsSPFTLV{dual[0], dual[3]}, linkRouterIDs{
+			local: "10.0.0.1", remote: "2001:db8::2",
+			localIPv4: "10.0.0.1", remoteIPv6: "2001:db8::2",
+		}},
+		{"omits all fields without router-ID TLVs", []lsSPFTLV{testLSSequence()}, linkRouterIDs{}},
+		{"omits all fields without a BGP-LS Attribute", nil, linkRouterIDs{}},
+		// The wrong-length cases describe current handling. RFC 9552 Section
+		// 8.2.2 asks for the whole BGP-LS Attribute to be discarded instead.
+		{"omits empty values", linkRouterIDTLVs(0, 0), linkRouterIDs{}},
+		{"omits values one octet short", linkRouterIDTLVs(3, 15), linkRouterIDs{}},
+		{"omits values one octet long", linkRouterIDTLVs(5, 17), linkRouterIDs{}},
+		{"omits values that have the other family's length", linkRouterIDTLVs(16, 4), linkRouterIDs{}},
+		{"keeps IPv6 when the IPv4 length is wrong", linkRouterIDTLVs(5, 16), ipv6Only},
+		{"keeps IPv4 when the IPv6 length is wrong", linkRouterIDTLVs(4, 17), ipv4Only},
+		{"publishes the first of two local IPv6 router IDs", []lsSPFTLV{
+			dual[1], {1029, net.ParseIP("2001:db8::99")}, dual[3],
+		}, ipv6Only},
+		{"publishes the first of two remote IPv4 router IDs", []lsSPFTLV{
+			dual[0], dual[2], {1030, []byte{192, 168, 1, 99}},
+		}, ipv4Only},
+		// Current behavior, not an RFC requirement: only the first instance of
+		// a TLV is read, so a later valid one does not replace a malformed one.
+		{"omits local IPv6 when a wrong length precedes a valid value", []lsSPFTLV{
+			dual[0], {1029, make([]byte, 17)}, dual[1], dual[2],
+		}, ipv4Only},
+	}
+	for _, tt := range tests {
+		for _, withdraw := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s, withdraw=%t", tt.name, withdraw), func(t *testing.T) {
+				var nlri bgp.MPNLRI
+				var err error
+				operation, action := AddPrefix, "add"
+				if withdraw {
+					nlri, err = bgp.UnmarshalMPUnReachNLRI(append([]byte{0x40, 0x04, 71}, testLSLinkNLRI80()...), map[int]bool{})
+					operation, action = DelPrefix, "del"
+				} else {
+					nlri, err = bgp.UnmarshalMPReachNLRI(append([]byte{0x40, 0x04, 71, 4, 192, 0, 2, 2, 0}, testLSLinkNLRI80()...), false, map[int]bool{})
+				}
+				if err != nil {
+					t.Fatalf("unmarshal MP NLRI: %v", err)
+				}
+				update := &bgp.Update{}
+				if tt.tlvs != nil {
+					update = testLSUpdate(tt.tlvs...)
+				}
+				rec := &recordingPublisher{}
+				p := &producer{publisher: rec}
+
+				p.processMPUpdate(nlri, operation, minimalPeerHeader(), update)
+
+				assertPublishedLinkRouterIDs(t, rec, action, tt.want)
+			})
+		}
+	}
+}
+
+// TestProcessMPUpdateLSLinkRouterIDsOtherPaths checks that BGP-LS-VPN, BGP-LS-SPF
+// and Inter-AS ls_link messages carry the same router-ID fields.
+func TestProcessMPUpdateLSLinkRouterIDsOtherPaths(t *testing.T) {
+	linkBody := testLSLinkNLRI80()[4:]
+	tests := []struct {
+		name string
+		safi byte
+		nlri []byte
+	}{
+		{"BGP-LS-VPN link", 72, testLSVPNEntry(2, testRD, linkBody)},
+		{"BGP-LS-SPF link", 80, testLSLinkNLRI80()},
+		{"Inter-AS link", 71, messageInterASLinkElement()},
+	}
+	// RFC 9815 requires the sequence number and IGP metric for an SPF link add.
+	tlvs := append(linkRouterIDTLVs(4, 16), testLSSequence(), lsSPFTLV{bgpLSIGPMetricTLV, []byte{0, 0, 0, 10}})
+	for _, tt := range tests {
+		for _, withdraw := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s publishes both families, withdraw=%t", tt.name, withdraw), func(t *testing.T) {
+				var nlri bgp.MPNLRI
+				var err error
+				operation, action := AddPrefix, "add"
+				if withdraw {
+					nlri, err = bgp.UnmarshalMPUnReachNLRI(append([]byte{0x40, 0x04, tt.safi}, tt.nlri...), map[int]bool{})
+					operation, action = DelPrefix, "del"
+				} else {
+					// SAFI 72 prefixes the next hop with an 8-octet zero RD.
+					header := []byte{0x40, 0x04, tt.safi, 4, 192, 0, 2, 2, 0}
+					if tt.safi == 72 {
+						header = testLSVPNMPReachHeader[:]
+					}
+					nlri, err = bgp.UnmarshalMPReachNLRI(append(append([]byte{}, header...), tt.nlri...), false, map[int]bool{})
+				}
+				if err != nil {
+					t.Fatalf("unmarshal MP NLRI: %v", err)
+				}
+				rec := &recordingPublisher{}
+				p := &producer{publisher: rec}
+
+				p.processMPUpdate(nlri, operation, minimalPeerHeader(), testLSUpdate(tlvs...))
+
+				assertPublishedLinkRouterIDs(t, rec, action, dualStackLinkRouterIDs)
+			})
+		}
+	}
+}
+
+// TestProcessMPUpdateLSSPFLinkRouterIDsTreatAsWithdraw checks that an SPF link
+// add without the Sequence Number TLV (1181) is published as a withdrawal that
+// keeps the router IDs (RFC 9815 Sections 5.2.4 and 7.1).
+func TestProcessMPUpdateLSSPFLinkRouterIDsTreatAsWithdraw(t *testing.T) {
+	wire := append([]byte{0x40, 0x04, 80, 4, 192, 0, 2, 2, 0}, testLSLinkNLRI80()...)
+	nlri, err := bgp.UnmarshalMPReachNLRI(wire, false, map[int]bool{})
+	if err != nil {
+		t.Fatalf("unmarshal MP NLRI: %v", err)
+	}
+	tlvs := append(linkRouterIDTLVs(4, 16), lsSPFTLV{bgpLSIGPMetricTLV, []byte{0, 0, 0, 10}})
+	rec := &recordingPublisher{}
+	p := &producer{publisher: rec}
+
+	p.processMPUpdate(nlri, AddPrefix, minimalPeerHeader(), testLSUpdate(tlvs...))
+
+	assertPublishedLinkRouterIDs(t, rec, "del", dualStackLinkRouterIDs)
+}
+
+// TestProcessMPUpdateLSInterASLinkRouterIDsNoFallback checks that Local Node
+// Descriptor sub-TLV 1028 fills local_asbr_ipv4 only, never the router-ID
+// fields that come from the BGP-LS Attribute.
+func TestProcessMPUpdateLSInterASLinkRouterIDsNoFallback(t *testing.T) {
+	wire := append([]byte{0x40, 0x04, 71, 4, 192, 0, 2, 2, 0}, messageInterASLinkElement()...)
+	nlri, err := bgp.UnmarshalMPReachNLRI(wire, false, map[int]bool{})
+	if err != nil {
+		t.Fatalf("unmarshal MP NLRI: %v", err)
+	}
+	rec := &recordingPublisher{}
+	p := &producer{publisher: rec}
+
+	p.processMPUpdate(nlri, AddPrefix, minimalPeerHeader(), testLSUpdate(lsSPFTLV{bgpLSIGPMetricTLV, []byte{0, 0, 0, 10}}))
+
+	assertPublishedLinkRouterIDs(t, rec, "add", linkRouterIDs{})
+	var got LSLink
+	if err := json.Unmarshal(rec.msgs[0].payload, &got); err != nil {
+		t.Fatalf("unmarshal ls_link JSON: %v", err)
+	}
+	if got.LocalASBRIPv4 != "192.0.2.1" {
+		t.Errorf("local_asbr_ipv4 = %q, want %q", got.LocalASBRIPv4, "192.0.2.1")
 	}
 }
 

@@ -302,6 +302,8 @@ type LSLink struct {
 	Timestamp             string                        `json:"timestamp,omitempty"`
 	IGPRouterID           string                        `json:"igp_router_id,omitempty"`
 	RouterID              string                        `json:"router_id,omitempty"`
+	LocalIPv4RouterID     string                        `json:"local_ipv4_router_id,omitempty"`
+	LocalIPv6RouterID     string                        `json:"local_ipv6_router_id,omitempty"`
 	LSID                  uint32                        `json:"ls_id,omitempty"`
 	Protocol              string                        `json:"protocol,omitempty"`
 	ProtocolID            base.ProtoID                  `json:"protocol_id,omitempty"`
@@ -334,6 +336,8 @@ type LSLink struct {
 	LocalNodeHash         string                        `json:"local_node_hash,omitempty"`
 	RemoteIGPRouterID     string                        `json:"remote_igp_router_id,omitempty"`
 	RemoteRouterID        string                        `json:"remote_router_id,omitempty"`
+	RemoteIPv4RouterID    string                        `json:"remote_ipv4_router_id,omitempty"`
+	RemoteIPv6RouterID    string                        `json:"remote_ipv6_router_id,omitempty"`
 	LocalNodeASN          uint32                        `json:"local_node_asn,omitempty"`
 	RemoteNodeASN         uint32                        `json:"remote_node_asn,omitempty"`
 	RemoteASN             uint32                        `json:"remote_asn,omitempty"`                      // Neighboring AS from Inter-AS Link Descriptor TLV 270
